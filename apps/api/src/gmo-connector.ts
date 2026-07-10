@@ -51,12 +51,17 @@ export function extractTransferCode(applicantName: string): string | null {
 }
 
 // ── sunabar 生レスポンス → DepositTransaction[] ───────────────────────
-// ponytail: フィールド名は GMO 法人口座編 仕様 v1.20.1 §入出金明細照会
-// (transactionType 1=入金/2=出金・remarks 摘要・itemKey 明細キー)基準。sunabar
-// personal /accounts/transactions は同じ中核項目を返す(実疎通で外形確認)。ただし
-// 入金が populate されたときに振込依頼人名が remitterName/applicantName/remarks の
-// どこに載るかは REAL 入金でしか確定できない(擬似入金は人間ゲート=金銭 — 証跡
-// docs/planning/c4/sunabar-e2e-evidence.md)。それまで候補を全部見る防御的パース。
+// 実測確定(2026-07-11・REAL 入金・docs/planning/c4/sunabar-e2e-evidence.md §7):
+// sunabar personal は /accounts/deposit-transactions を提供せず(405)、入金は
+// /accounts/transactions が返す。振込入金の依頼人名は remitterName/applicantName
+// ではなく **remarks** に「振込 <全角依頼人名>」形で着地する(実データ例
+// remarks="振込 スナバ　タロウ")。remitterName=U-HA6M 設定時に remarks="振込 U-HA6M"
+// になるか(全角変換・切り詰め)は U-HA6M 入金の着地時に確定 — evidence §7 未確定1点。
+// フィールド: transactionType 1=入金/2=出金・amount 金額・transactionDate 取引日・
+// itemKey 明細キー(GMO 法人口座編 仕様 v1.20.1 と同中核項目)。remitterName/
+// applicantName を先に見る防御的パースは本番(法人口座編)互換のため残す — personal
+// では未存在で remarks に fall through する。extractTransferCode が「振込 」接頭辞を
+// 前方一致で吸収し U-XXXX を抽出する。
 export function parseTransactions(raw: unknown): DepositTransaction[] {
   const txs = (raw as { transactions?: unknown })?.transactions;
   if (!Array.isArray(txs)) return [];

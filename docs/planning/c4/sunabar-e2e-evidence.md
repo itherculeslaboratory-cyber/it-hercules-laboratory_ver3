@@ -119,3 +119,21 @@ POST /transfer/request  {"accountId":..., 誤った振込情報キー} -> 400 WG
 1. **入金 populate 時の依頼人名フィールド**: 個人 `/accounts/transactions` で振込依頼人名が `remitterName` / `applicantName` / `remarks` のどこに載るかは REAL 入金でのみ確定。コネクタ `parseTransactions` は候補を全部見る防御的パースで暫定対応済み（§4 の入金発生後に 1 件で確定・`gmo-connector.ts` の ponytail コメント参照）。
 2. **本番（live）差分**: ホスト（`api.gmo-aozora.com`）・OAuth2.0/OIDC 認証・レート制限実数は GMO 本番契約（人間ゲート）後。接続層は `GMO_CONNECTOR_MODE` で分離済み・live は明示 throw。
 3. **擬似入金の実行**: §4 の人間 1 手（ポータル or 承認付き API 振込）。
+
+## 7. 依頼人名の着地フィールド — 実測確定(2026-07-11・ユーザーのポータル操作による実入金)
+
+ユーザーが sunabar ポータルで実施した ATM 入金/出金・他行振込の実験が受取口座 `302010013543` に着地し、`GET /personal/v1/accounts/transactions` の実レスポンスで以下を確定(読み取り専用・トークン redacted):
+
+```
+count: 3
+{'transactionDate': '2026-07-11', 'transactionType': '1', 'amount': '10000', 'remarks': 'ATM セブン', 'itemKey': '26809'}
+{'transactionDate': '2026-07-11', 'transactionType': '2', 'amount': '5000',  'remarks': 'ATM セブン', 'itemKey': '26812'}
+{'transactionDate': '2026-07-11', 'transactionType': '1', 'amount': '5000',  'remarks': '振込 スナバ　タロウ', 'itemKey': '26815'}
+```
+
+確定事項:
+1. **依頼人名は `remarks` に「振込 <全角名>」形で載る**。`remitterName` / `applicantName` フィールドは personal レスポンスに存在しない。
+2. `transactionType` は**文字列** `'1'`(入金)/`'2'`(出金)。`amount` も文字列。
+3. `/accounts/deposit-transactions` は personal では 405(§5)。入出金は `/accounts/transactions` 一本。
+
+**未確定(1点のみ)**: `remitterName=U-HA6M` を設定した振込が `remarks="振込 U-HA6M"` になるか(全角変換・切り詰めの有無)は、U-HA6M 入金の着地時に確定する。振込リクエスト applyNo `2026071100000001` は承認待ちのまま存置(ユーザー判断で後日: ポータルの振込入金シミュレート(依頼人名=U-HA6M)か applyNo 承認のどちらか1手 → `reconcileOnce` 再実行で (ii) クローズ)。
