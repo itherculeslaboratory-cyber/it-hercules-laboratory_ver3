@@ -54484,7 +54484,7 @@
   "group": "g03-知識",
   "category": "掲示板/コミュニティ",
   "kind": "思想",
-  "statement": "知の広場の設計目標は「意見交換と化学反応(異視点の衝突・合意形成・セレンディピティ)の最大化」であり、従来型BBSの形式に固定しない。C5 設計で topic 第一級化(Zulip型: channel=画面/機能+必須topic)・合意/対立の可視化投影(Polis型: Agree/Disagree/Pass を append-only イベントで収集し consensus/divisive statement を LLM 不要・決定論で都度算出)等の機構を検討し、採否は C5 冒頭で裁定する。骨格は V3-BBS-01 の3柱を維持する。",
+  "statement": "知の広場の設計目標は「意見交換と化学反応(異視点の衝突・合意形成・セレンディピティ)の最大化」であり、従来型BBSの形式に固定しない。C5 設計で topic 第一級化(Zulip型: channel=画面/機能+必須topic)・合意/対立の可視化投影(Polis型: Agree/Disagree/Pass を append-only イベントで収集し consensus/divisive statement を LLM 不要・決定論で都度算出)等の機構を採用する(2026-07-10 第8回裁定で採用確定・詳細設計は C5)。骨格は V3-BBS-01 の3柱を維持する。",
   "scores": {
    "bv": {
     "v": 5,
@@ -54524,11 +54524,17 @@
     "evidence": "「9で書いてあるように、したいことは意見交換や化学反応です。なので、従来は掲示板が一番近いシステムでしたが、もっといい、方法やUIがあるかもです。調べて。」",
     "trust": "高",
     "date": "2026-07-10"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-8.md",
+    "evidence": "第8回裁定①「採用です。」(Zulip型topic第一級化+Polis型合意/対立投影を C5 設計に採用確定・R3)",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
   "conflict": null,
-  "ambiguity": "具体機構(Zulip型topic/Polis型投影)は研究推奨案(research/plaza-papers-gaps-2026-07-10.md)であり、採否は C5 冒頭でユーザー裁定"
+  "ambiguity": "具体機構(Zulip型topic/Polis型投影)は研究推奨案(research/plaza-papers-gaps-2026-07-10.md)であり、採否は C5 冒頭でユーザー裁定 → 2026-07-10 第8回裁定: 2機構(Zulip型topic第一級化・Polis型合意/対立投影)の採用を確定。"
  },
  {
   "id": "V3-PPR-30",
@@ -54676,6 +54682,12 @@
     "evidence": "「研究者や開発者がいつまでも、掲示板や、自分の目でこのサイトまで来なくなるかもしれません。…代理AIが寄ってきて、データをとって、または自分たちの成果を格納して、化学反応を起こし、その成果をユーザーに持って帰るかもしれません。そのような図書館のようなシステムになるかもしれません。そういうことも想定してほしい。」",
     "trust": "高",
     "date": "2026-07-10"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-8.md",
+    "evidence": "第8回裁定③「異論無いです。」(第2波配置をユーザー確認)",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
@@ -54725,6 +54737,12 @@
    {
     "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
     "evidence": "「Dockerから私のシステムにWEBみたいに接続して、さらにmodみたいに閣僚性あってもいいよね。WEBは制限がほんとに多いから。また、Dockerが中間に入ることで、ゲームからデータを取得するAPIも作れるよね。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-8.md",
+    "evidence": "第8回裁定③「異論無いです。」(第2波配置をユーザー確認)",
     "trust": "高",
     "date": "2026-07-10"
    }
