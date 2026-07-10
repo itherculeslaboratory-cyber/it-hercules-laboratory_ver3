@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { deriveActorId } from "@ihl/truth";
-import { SESSION_SECRET, makeEnv, makeEnvelope } from "./helpers";
+import { FakeR2Bucket, SESSION_SECRET, makeEnv, makeEnvelope } from "./helpers";
 import {
   issueMagicToken,
   issueSessionToken,
@@ -158,18 +158,42 @@ describe("C2 auth — session state + middleware paths", () => {
     expect(body.actor_id).toBe(await deriveActorId("dev@ihl.local"));
   });
 
-  it("V3-AUT-17: write actor_id === session principal (Bearer session)", async () => {
+  it("V3-AUT-17: STORED envelope provenance.actor_id === session principal (Bearer session)", async () => {
     const email = "writer@example.com";
     const actorId = await deriveActorId(email);
     const session = await issueSessionToken(actorId, SESSION_SECRET);
+    const bucket = new FakeR2Bucket();
     const res = await app.request(
       "/events",
       { method: "POST", headers: bearer(session), body: JSON.stringify(makeEnvelope()) },
-      makeEnv(),
+      makeEnv(bucket),
     );
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { actor_id: string };
-    expect(body.actor_id).toBe(actorId);
+    const { key, actor_id } = (await res.json()) as { key: string; actor_id: string };
+    expect(actor_id).toBe(actorId); // response echo
+    // Assert the PERSISTED record, not just the echo — this is what V3-AUT-17 protects.
+    const stored = JSON.parse(String(bucket.objects.get(key)!.body));
+    expect(stored.provenance.actor_id).toBe(actorId);
+  });
+
+  it("V3-AUT-17: client-forged provenance.actor_id is OVERWRITTEN with the session principal", async () => {
+    const actorId = await deriveActorId("owner@example.com");
+    const session = await issueSessionToken(actorId, SESSION_SECRET);
+    const forged = makeEnvelope({
+      provenance: { generator_kind: "human", actor_id: "victim-forged-actor-id" },
+    });
+    const bucket = new FakeR2Bucket();
+    const res = await app.request(
+      "/events",
+      { method: "POST", headers: bearer(session), body: JSON.stringify(forged) },
+      makeEnv(bucket),
+    );
+    expect(res.status).toBe(201);
+    const { key } = (await res.json()) as { key: string };
+    const stored = JSON.parse(String(bucket.objects.get(key)!.body));
+    // The forged actor_id must NOT survive to Truth.
+    expect(stored.provenance.actor_id).toBe(actorId);
+    expect(stored.provenance.actor_id).not.toBe("victim-forged-actor-id");
   });
 
   it("logout clears cookie (Max-Age=0) and is protected", async () => {

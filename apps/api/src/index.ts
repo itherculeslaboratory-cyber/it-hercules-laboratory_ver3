@@ -68,10 +68,15 @@ app.route("/api/v1", obsRoutes);
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,
 // storage-enforced: docs/planning/c1/r2-put-if-absent-evidence.md).
-// V3-AUT-17: response echoes the authenticated actor_id (session principal),
-// so writes are attributable to the session, not client-forged identity.
+// V3-AUT-17 (本人スコープ): the STORED envelope's provenance.actor_id is
+// force-stamped to the session principal — a client-forged provenance.actor_id
+// is overwritten before persistence, never trusted. Response echoes the same.
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);
+  const actorId = c.get("actorId");
+  if (body && typeof body === "object" && typeof (body as { provenance?: unknown }).provenance === "object" && (body as { provenance?: unknown }).provenance) {
+    (body as { provenance: Record<string, unknown> }).provenance.actor_id = actorId;
+  }
   const result = await new TruthStore(c.env.TRUTH).putEvent(body);
   if (result.status === "invalid") {
     return c.json({ error: "INVALID_ENVELOPE", details: result.errors }, 400);
@@ -79,7 +84,7 @@ app.post("/events", async (c) => {
   if (result.status === "conflict") {
     return c.json({ error: "DUPLICATE_EVENT", key: result.key }, 409);
   }
-  return c.json({ key: result.key, actor_id: c.get("actorId") }, 201);
+  return c.json({ key: result.key, actor_id: actorId }, 201);
 });
 
 export default app;

@@ -11,6 +11,9 @@ status: draft
 
 ## 今どこ
 
+**Phase C2 コア完了・受け入れ (a)(b)(d) 成立**（2026-07-11 — `docs/planning/c2/REPORT-ver3-phase-c2-2026-07-10.md`）。認証（署名付きステートレスセッション）+ 観測コア API 8 route + ScreenDef Renderer 土台 + CL-04 57route 照合 + CL-08 訂正。`npm run lint` 9 GATE 全 OK（contrast GATE 新設含む）/ `npm test` = **149 passed / 0 failed**。要件 ID↔TC = `docs/planning/c2/tc-coverage.md`（16/16 自動化可能 green・V3-FND-02 のみ構造的担保で分母除外）。
+**未達（受け入れ (c) の UI 通貫・V3-OBS-22 画面層）= 設計裁定待ち**: ブラウザ→API クロスオリジン認証モデル（§4.3 未規定）+ Renderer データ束縛未実装。API 層 5 機能は実 worker E2E で green（`docs/planning/c2/e2e-evidence.md`）。詳細と推奨修正は C2 レポート §「未達・設計裁定待ち」。
+
 **Phase C1 完了**（2026-07-10 — `docs/planning/c1/REPORT-ver3-phase-c1-2026-07-10.md`）。
 
 - CL-01〜13 negative TC 全 green（`tests/cl-01`〜`cl-13`・13 ファイル / 101 テスト。RED→GREEN 逐語ログ = `docs/planning/c1/tc-red-green-log.md`）。以降これが回帰条件 — 1 本でも赤に転じた PR は fail（開発計画 R-03）。

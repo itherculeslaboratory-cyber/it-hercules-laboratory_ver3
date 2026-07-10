@@ -98,6 +98,7 @@ worker（wrangler dev, local）側の実リクエストログ:
 1. **ブラウザ→API のクロスオリジン認証**: next(:3000)→worker(:8787) は別オリジン。ブラウザ UI から保護 API を叩くには (a) worker に CORS（`Access-Control-Allow-*` + credentials）と (b) クロスサイト cookie（`SameSite=None; Secure` あるいは同一オリジン dev プロキシ）が必要。設計 §4.3 は API を別オリジン前提にしつつこの点を規定していない。**推奨: 同一オリジン dev プロキシ（next rewrites で `/api/*`→worker）**。E2E タスクの範囲外として独断実装せず、設計裁定に回す。
 2. **ログイン画面「開発トークンでログイン」ボタン**（§1.4 V3-AUT-05）: 現状 action が `GET /session`（認証しない）。上記(1)が解決するまでブラウザでの 1-click セッション確立が成立しないため据え置き。E2E では契約が E2E 用に明示許可する `Bearer <session token>`（§1.3）で認証を実測。
 3. **compat-date**: §2 の通り同梱 workerd が 2026-07-01 未対応。将来の wrangler 更新でオーバーライド撤去可。
+4. **画面 form ↔ API スキーマ契約の不整合**（批評家指摘・当初未開示 → 本追記で開示）: `screen-defs/obs-entry.json` の capture-form は flat な `measure_item`/`measure_value` を送り `domain` field を持たないが、`schemas/events/obs-capture.schema.json` は `domain`（必須）+ `measurements[]{item,kind,value}` を要求する。上記(1) のクロスオリジンが解決しても、Renderer に body 整形（flat→`measurements[]`）と domain 文脈伝播が無いため capture POST は 400 になる。`screen-defs/individual-detail.json` の観測履歴カード・QR 値はハードコードのモック（`2026-07-10 体長 65mm` / `https://ihl.example/qr/sample-token`）で、QR 発行 action の path は `/api/v1/individuals/detail/qr`（individual_id が literal "detail" のプレースホルダ）。これらは ScreenDef が静的描画土台であることの帰結で、修正には Renderer のランタイム・データ束縛機能が要る（設計裁定 → `REPORT-ver3-phase-c2-2026-07-10.md` §「未達・設計裁定待ち」の推奨修正 (b)(c)）。
 
 ## 7. スクリーンショット（`docs/planning/c2/e2e-screenshots/`）
 

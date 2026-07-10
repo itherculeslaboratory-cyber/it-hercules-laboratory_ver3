@@ -17,9 +17,9 @@
   --civ-text: #141410;
   --civ-text-muted: #5a5a52;
   --civ-border: #dad9d2;
-  --civ-primary: #0f9d6b;        /* mint CTA — AA on white */
+  --civ-primary: #0b7a55;        /* green CTA — white-on 5.34:1 / on-bg 5.16:1 = WCAG AA (scripts/check-contrast.mjs) */
   --civ-primary-text: #ffffff;
-  --civ-focus: #0f9d6b;
+  --civ-focus: #0b7a55;
   --civ-danger: #b3261e;         /* AA on danger-bg */
   --civ-danger-bg: #fbeae8;
 
@@ -60,9 +60,9 @@
   --civ-text: #141410;
   --civ-text-muted: #5a5a52;
   --civ-border: #dad9d2;
-  --civ-primary: #0f9d6b;
+  --civ-primary: #0b7a55;
   --civ-primary-text: #ffffff;
-  --civ-focus: #0f9d6b;
+  --civ-focus: #0b7a55;
   --civ-danger: #b3261e;
   --civ-danger-bg: #fbeae8;
 }
