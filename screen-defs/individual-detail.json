@@ -1,0 +1,45 @@
+{
+  "screen_id": "individual-detail",
+  "route": "/individuals/detail",
+  "title": "個体の詳細",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "個体の詳細", "level": 1 } },
+            { "id": "history-title", "type": "heading", "props": { "text": "観測履歴", "level": 2 } },
+            {
+              "id": "history",
+              "type": "list",
+              "children": [
+                {
+                  "id": "obs-1",
+                  "type": "card",
+                  "children": [
+                    { "id": "obs-1-date", "type": "text", "props": { "text": "2026-07-10 体長 65 mm" } }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "issue-qr",
+              "type": "button",
+              "props": { "label": "QR ラベルを発行する", "variant": "primary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/detail/qr" }
+            },
+            { "id": "qr", "type": "qr-code", "props": { "value": "https://ihl.example/qr/sample-token" } }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "qr", "to_screen_id": "qr-resume", "label": "QR を読むと観測再開へ" }
+  ]
+}

@@ -1,0 +1,322 @@
+@import "tailwindcss";
+
+/* =============================================================================
+ * ThemePack (V3-UIX-16) — the ONE token-definition file.
+ * Raw hex is permitted HERE ONLY; every other file references var(--civ-*).
+ * scripts/check-ui-tokens.mjs excludes this file and rejects raw color elsewhere.
+ * Upper-bound rules (design-c2 §4.3): type scale <=4, weight 300/400 only,
+ * spacing 4/8/12/16/24/32 (Tailwind p-1/2/3/4/6/8), radius 12px single,
+ * shadow forbidden, motion 150-300ms.
+ * ========================================================================== */
+
+/* --- Light pack (prefers-color-scheme default) --- */
+:root {
+  --civ-bg: #fbfbf9;
+  --civ-surface: #ffffff;
+  --civ-surface-2: #f2f2ef;
+  --civ-text: #141410;
+  --civ-text-muted: #5a5a52;
+  --civ-border: #dad9d2;
+  --civ-primary: #0f9d6b;        /* mint CTA — AA on white */
+  --civ-primary-text: #ffffff;
+  --civ-focus: #0f9d6b;
+  --civ-danger: #b3261e;         /* AA on danger-bg */
+  --civ-danger-bg: #fbeae8;
+
+  --civ-radius: 12px;
+  --civ-tap: 44px;               /* min tap target (V3-UIX-81) */
+  --civ-motion: 220ms;           /* 150-300ms band */
+  --civ-font: Inter, "Noto Sans JP", system-ui, -apple-system, sans-serif;
+
+  /* type scale (<=4 sizes) */
+  --civ-fs-1: 0.875rem;
+  --civ-fs-2: 1rem;
+  --civ-fs-3: 1.25rem;
+  --civ-fs-4: 1.75rem;
+}
+
+/* --- Dark pack (brand base #0D0D0D / #1A1A1A) --- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --civ-bg: #0d0d0d;
+    --civ-surface: #1a1a1a;
+    --civ-surface-2: #242424;
+    --civ-text: #f2f2f0;
+    --civ-text-muted: #a8a8a2;
+    --civ-border: #2e2e2e;
+    --civ-primary: #2dd4a7;      /* mint CTA on dark */
+    --civ-primary-text: #06231a;
+    --civ-focus: #2dd4a7;
+    --civ-danger: #ff6b5e;
+    --civ-danger-bg: #2a1512;
+  }
+}
+
+/* --- data-theme hard overrides (win in both directions) --- */
+:root[data-theme="light"] {
+  --civ-bg: #fbfbf9;
+  --civ-surface: #ffffff;
+  --civ-surface-2: #f2f2ef;
+  --civ-text: #141410;
+  --civ-text-muted: #5a5a52;
+  --civ-border: #dad9d2;
+  --civ-primary: #0f9d6b;
+  --civ-primary-text: #ffffff;
+  --civ-focus: #0f9d6b;
+  --civ-danger: #b3261e;
+  --civ-danger-bg: #fbeae8;
+}
+:root[data-theme="dark"] {
+  --civ-bg: #0d0d0d;
+  --civ-surface: #1a1a1a;
+  --civ-surface-2: #242424;
+  --civ-text: #f2f2f0;
+  --civ-text-muted: #a8a8a2;
+  --civ-border: #2e2e2e;
+  --civ-primary: #2dd4a7;
+  --civ-primary-text: #06231a;
+  --civ-focus: #2dd4a7;
+  --civ-danger: #ff6b5e;
+  --civ-danger-bg: #2a1512;
+}
+
+html,
+body {
+  background: var(--civ-bg);
+  color: var(--civ-text);
+  font-family: var(--civ-font);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+/* =============================================================================
+ * V3-UIX-81 common layer — a11y + 7 states applied to every interactive part.
+ * Individual screens NEVER re-implement any of this.
+ * States: default / hover / focus-visible / active / disabled / loading / error
+ * ========================================================================== */
+.civ-interactive {
+  min-height: var(--civ-tap);
+  min-width: var(--civ-tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  font-family: inherit;
+  font-weight: 400;
+  font-size: var(--civ-fs-2);
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;                          /* shadow forbidden */
+  transition:
+    background-color var(--civ-motion) ease,
+    color var(--civ-motion) ease,
+    border-color var(--civ-motion) ease,
+    opacity var(--civ-motion) ease;
+}
+.civ-interactive:hover:not([disabled]):not([aria-disabled="true"]) {
+  border-color: var(--civ-text-muted);
+}
+.civ-interactive:focus-visible {
+  outline: 2px solid var(--civ-focus);
+  outline-offset: 2px;
+}
+.civ-interactive:active:not([disabled]):not([aria-disabled="true"]) {
+  transform: translateY(1px);
+}
+.civ-interactive[disabled],
+.civ-interactive[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.civ-interactive[data-loading="true"],
+.civ-interactive[aria-busy="true"] {
+  cursor: progress;
+  opacity: 0.8;
+}
+.civ-interactive[data-loading="true"]::after,
+.civ-interactive[aria-busy="true"]::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: civ-spin 0.7s linear infinite;
+}
+.civ-interactive[aria-invalid="true"],
+.civ-interactive[data-invalid="true"] {
+  border-color: var(--civ-danger);
+}
+@keyframes civ-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* prefers-reduced-motion: stop all transition/animation (V3-UIX-81) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* =============================================================================
+ * Catalog component classes (semantic; consumed by the Renderer).
+ * ========================================================================== */
+.civ-app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--civ-bg);
+}
+.civ-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.civ-heading {
+  font-weight: 300;
+  font-size: var(--civ-fs-4);
+  color: var(--civ-text);
+  margin: 0;
+}
+.civ-heading[data-level="2"] {
+  font-size: var(--civ-fs-3);
+}
+.civ-text {
+  font-size: var(--civ-fs-2);
+  color: var(--civ-text);
+  margin: 0;
+}
+.civ-text[data-muted="true"] {
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+}
+.civ-card {
+  background: var(--civ-surface);
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--civ-radius);
+  display: block;
+}
+.civ-qr {
+  width: 200px;
+  height: 200px;
+  background: var(--civ-surface);
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.civ-qr svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* button variants */
+.civ-button {
+  padding: 0 16px;
+}
+.civ-button[data-variant="primary"] {
+  background: var(--civ-primary);
+  color: var(--civ-primary-text);
+  border-color: var(--civ-primary);
+}
+.civ-button[data-variant="secondary"] {
+  background: var(--civ-surface-2);
+  color: var(--civ-text);
+}
+.civ-button[data-variant="ghost"] {
+  background: transparent;
+  color: var(--civ-text);
+  border-color: transparent;
+}
+
+/* link */
+.civ-link {
+  color: var(--civ-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: 4px;
+  outline: none;
+}
+.civ-link:focus-visible {
+  outline: 2px solid var(--civ-focus);
+  outline-offset: 2px;
+}
+
+/* form + field */
+.civ-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.civ-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.civ-label {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+  font-weight: 400;
+}
+.civ-input {
+  min-height: var(--civ-tap);
+  padding: 8px 12px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface);
+  color: var(--civ-text);
+  font-family: inherit;
+  font-size: var(--civ-fs-2);
+  outline: none;
+  transition: border-color var(--civ-motion) ease;
+}
+.civ-input:focus-visible {
+  outline: 2px solid var(--civ-focus);
+  outline-offset: 2px;
+}
+.civ-input[aria-invalid="true"],
+.civ-input[data-invalid="true"] {
+  border-color: var(--civ-danger);
+}
+.civ-field-error {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-danger);
+}
+.civ-form-error {
+  background: var(--civ-danger-bg);
+  color: var(--civ-danger);
+  border-radius: var(--civ-radius);
+  padding: 8px 12px;
+  font-size: var(--civ-fs-1);
+}

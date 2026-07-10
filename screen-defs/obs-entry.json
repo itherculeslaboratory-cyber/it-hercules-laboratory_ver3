@@ -1,0 +1,38 @@
+{
+  "screen_id": "obs-entry",
+  "route": "/observe/entry",
+  "title": "観測を記録する",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "観測を記録する", "level": 1 } },
+            {
+              "id": "capture-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/captures", "body_from": "capture-form" },
+              "children": [
+                { "id": "species", "type": "field", "props": { "variant": "text", "name": "species_candidate", "label": "種の候補（任意・ユーザー入力）", "placeholder": "例: Dynastes hercules" } },
+                { "id": "measure-item", "type": "field", "props": { "variant": "text", "name": "measure_item", "label": "計測項目", "placeholder": "例: 体長", "required": true } },
+                { "id": "measure-value", "type": "field", "props": { "variant": "number", "name": "measure_value", "label": "計測値", "placeholder": "例: 65", "required": true } },
+                { "id": "sire", "type": "field", "props": { "variant": "text", "name": "sire_id", "label": "父個体 ID（任意）", "placeholder": "individual/..." } },
+                { "id": "dam", "type": "field", "props": { "variant": "text", "name": "dam_id", "label": "母個体 ID（任意）", "placeholder": "individual/..." } },
+                { "id": "photo", "type": "field", "props": { "variant": "photo", "name": "photo", "label": "写真" } },
+                { "id": "submit", "type": "button", "props": { "label": "記録する", "variant": "primary", "type": "submit" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "submit", "to_screen_id": "obs-detail", "label": "記録後に詳細ビューへ" }
+  ]
+}

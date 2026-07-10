@@ -1,0 +1,38 @@
+{
+  "screen_id": "home",
+  "route": "/",
+  "title": "ホーム",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "観測ホーム", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "新しい観測を始めるか、個体を開きます。", "muted": true } },
+            {
+              "id": "start-observe",
+              "type": "button",
+              "props": { "label": "観測を始める", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "obs-domain-select" }
+            },
+            {
+              "id": "open-individual",
+              "type": "button",
+              "props": { "label": "個体を開く", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "individual-detail" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "start-observe", "to_screen_id": "obs-domain-select", "label": "観測ドメイン選択へ" },
+    { "from": "open-individual", "to_screen_id": "individual-detail", "label": "個体詳細へ" }
+  ]
+}

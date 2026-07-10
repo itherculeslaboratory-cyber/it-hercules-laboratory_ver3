@@ -1,0 +1,45 @@
+{
+  "screen_id": "obs-detail",
+  "route": "/observe/detail",
+  "title": "観測の詳細",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "観測の詳細", "level": 1 } },
+            {
+              "id": "summary",
+              "type": "card",
+              "children": [
+                { "id": "domain", "type": "text", "props": { "text": "ドメイン: 生き物" } },
+                { "id": "measures", "type": "text", "props": { "text": "計測: 体長 65 mm", "muted": true } }
+              ]
+            },
+            {
+              "id": "photos",
+              "type": "list",
+              "children": [
+                { "id": "photo-1", "type": "image", "props": { "src": "/api/v1/observation/detail/image/photo-1", "alt": "観測写真 1" } }
+              ]
+            },
+            {
+              "id": "to-individual",
+              "type": "button",
+              "props": { "label": "個体詳細を開く", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "individual-detail" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "to-individual", "to_screen_id": "individual-detail", "label": "個体詳細へ" }
+  ]
+}

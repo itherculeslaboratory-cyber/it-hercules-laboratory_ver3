@@ -1,0 +1,35 @@
+{
+  "screen_id": "obs-domain-select",
+  "route": "/observe",
+  "title": "観測ドメインを選ぶ",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "何を観測しますか？", "level": 1 } },
+            {
+              "id": "domains",
+              "type": "list",
+              "children": [
+                { "id": "d-biology", "type": "button", "props": { "label": "生き物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
+                { "id": "d-mineral", "type": "button", "props": { "label": "鉱物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
+                { "id": "d-digital", "type": "button", "props": { "label": "デジタル", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
+                { "id": "d-place", "type": "button", "props": { "label": "場所", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
+                { "id": "d-custom", "type": "button", "props": { "label": "カスタム", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "d-biology", "to_screen_id": "obs-entry", "label": "生き物ドメインで観測入力へ" }
+  ]
+}

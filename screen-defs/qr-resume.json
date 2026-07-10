@@ -1,0 +1,38 @@
+{
+  "screen_id": "qr-resume",
+  "route": "/qr/resume",
+  "title": "観測を再開する",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "個体が見つかりました", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "この個体の文脈で観測を続けます。", "muted": true } },
+            {
+              "id": "context",
+              "type": "card",
+              "children": [
+                { "id": "ind-id", "type": "text", "props": { "text": "個体 ID: individual/sample" } }
+              ]
+            },
+            {
+              "id": "resume",
+              "type": "button",
+              "props": { "label": "この個体で観測を続ける", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "obs-entry" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "resume", "to_screen_id": "obs-entry", "label": "個体文脈付きで観測入力へ" }
+  ]
+}

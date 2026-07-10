@@ -8,8 +8,8 @@
     "tests"
   ],
   "scripts": {
-    "lint": "node scripts/lint-filenames.mjs && node scripts/check-generated.mjs && node scripts/check-agents-sync.mjs && node scripts/validate-schemas.mjs && node scripts/check-frontmatter.mjs && node scripts/codegen-schemas.mjs --check",
-    "test": "npm test -w apps/api -w tests",
+    "lint": "node scripts/lint-filenames.mjs && node scripts/check-generated.mjs && node scripts/check-agents-sync.mjs && node scripts/validate-schemas.mjs && node scripts/check-frontmatter.mjs && node scripts/codegen-schemas.mjs --check && node scripts/check-ui-tokens.mjs",
+    "test": "npm test -w apps/api -w tests -w apps/web",
     "codegen": "node scripts/codegen-schemas.mjs",
     "codegen:check": "node scripts/codegen-schemas.mjs --check"
   }

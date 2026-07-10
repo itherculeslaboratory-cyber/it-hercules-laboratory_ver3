@@ -1,0 +1,40 @@
+{
+  "screen_id": "login",
+  "route": "/login",
+  "title": "ログイン",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "IHL にログイン", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "メールアドレスにログインリンクを送ります。", "muted": true } },
+            {
+              "id": "magic-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/auth/magic-link", "body_from": "magic-form" },
+              "children": [
+                { "id": "email", "type": "field", "props": { "variant": "text", "name": "email", "label": "メールアドレス", "placeholder": "you@example.com", "required": true } },
+                { "id": "send", "type": "button", "props": { "label": "ログインリンクを送る", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "dev-login",
+              "type": "button",
+              "props": { "label": "開発トークンでログイン", "variant": "secondary" },
+              "action": { "kind": "api", "method": "GET", "path": "/api/v1/auth/session" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "dev-login", "to_screen_id": "home", "label": "開発トークン認証後にホームへ" }
+  ]
+}
