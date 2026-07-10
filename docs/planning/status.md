@@ -41,6 +41,7 @@ status: draft
 | LICENSE 確定 | AI が候補比較を提示 → ユーザー確定。確定まで private | 未 |
 | CL-07 裁定 4 点 | ①形式=JPEG確定 ②実装経路第1手=jSquash on Workers（$0硬制約なら CF Images） ③受け入れ条件をバイト級→契約級互換に読み替え ④EXIF transpose を ver3 の正しい挙動として採用（ver2 実装は未適用）。材料 `docs/planning/c3/cl-07-thumbnail-options.md` | 未 |
 | Resend DNS（CF トークン権限） | Resend 送信ドメイン DNS 検証には Cloudflare API トークンに DNS 編集スコープが要る（現状 `CF_API_TOKEN` のスコープ未確認）。`RESEND_API_KEY` 自体も D:\env に未取得 | 未 |
+| C4 完了条件 (ii) クローズ（sandbox） | 「照合一致→台帳 append」セグメントは実 API データで未走（sunabar 3 口座とも明細 0・擬似入金＝金銭＝人間ゲート）。人間が sunabar ポータルで受取口座 `302010013543` へ擬似入金 1 手（依頼人名＝対象 actor の `GET /api/v1/gmo/transfer-code` 値）→ `reconcileOnce` 再走 で成立。手順 = `docs/planning/c4/sunabar-e2e-evidence.md` §4/§5。無改修で成立（本波実装のまま） | 未 |
 | GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`） | 未 |
 | collector ingest 実鍵投入 | `COLLECTOR_PRIVATE_KEY_PEM`（Ed25519 秘密鍵）生成・`COLLECTOR_PUBLIC_KEYS` 登録・本番 `INGEST_URL` 配線 | 未 |
 | 公開の実施 | repo / OSS スナップショットの実際の公開 | 未 |
