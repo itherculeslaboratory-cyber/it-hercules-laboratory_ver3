@@ -6,6 +6,10 @@ import addFormats from "ajv-formats";
 import type { ValidateFunction } from "ajv/dist/2020";
 
 import envelopeSchema from "../../../schemas/events/envelope.schema.json";
+import obsCapture from "../../../schemas/events/obs-capture.schema.json";
+import obsPhoto from "../../../schemas/events/obs-photo.schema.json";
+import obsTemplate from "../../../schemas/events/obs-template.schema.json";
+import indQr from "../../../schemas/events/ind-qr.schema.json";
 import consentRecord from "../../../schemas/frozen/consent-record.schema.json";
 import embeddingManifest from "../../../schemas/frozen/embedding-manifest.schema.json";
 import individualKey from "../../../schemas/frozen/individual-key.schema.json";
@@ -28,6 +32,15 @@ const FROZEN: Record<string, object> = {
   "transfer-code": transferCode,
 };
 
+// C2 observation-core event data schemas (schemas/events/*, non-frozen).
+// Validated as envelope.data when dataschema points at schemas/events/<name>.
+const EVENTS: Record<string, object> = {
+  "obs-capture": obsCapture,
+  "obs-photo": obsPhoto,
+  "obs-template": obsTemplate,
+  "ind-qr": indQr,
+};
+
 // strict:false — frozen schemas carry x_ihl_* self-description keywords.
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 addFormats(ajv);
@@ -36,8 +49,8 @@ const compiled = new Map<string, ValidateFunction>();
 function validatorFor(name: string): ValidateFunction {
   let v = compiled.get(name);
   if (!v) {
-    const schema = name === "envelope" ? envelopeSchema : FROZEN[name];
-    if (!schema) throw new Error(`Unknown frozen schema: ${name}`);
+    const schema = name === "envelope" ? envelopeSchema : (FROZEN[name] ?? EVENTS[name]);
+    if (!schema) throw new Error(`Unknown schema: ${name}`);
     v = ajv.compile(schema);
     compiled.set(name, v);
   }
@@ -66,6 +79,12 @@ export function frozenSchemaFor(dataschema: string): string | null {
   return m && m[1] in FROZEN ? m[1] : null;
 }
 
+/** Map a dataschema URI-reference to a schemas/events/* data schema name. */
+export function eventSchemaFor(dataschema: string): string | null {
+  const m = dataschema.match(/(?:^|\/)events\/([a-z0-9-]+)\.schema\.json$/);
+  return m && m[1] in EVENTS ? m[1] : null;
+}
+
 /** Validate data against one of the schemas/frozen/* contracts (CL-02..13). */
 export function validateFrozen(
   name: string,
@@ -87,7 +106,7 @@ export function validateEnvelope(envelope: unknown): {
 
   const e = envelope as { dataschema?: unknown; data?: unknown };
   if (typeof e.dataschema === "string") {
-    const name = frozenSchemaFor(e.dataschema);
+    const name = frozenSchemaFor(e.dataschema) ?? eventSchemaFor(e.dataschema);
     if (name) {
       const inner = run(name, e.data);
       if (!inner.valid) {

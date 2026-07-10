@@ -1,29 +1,66 @@
 import { readFileSync } from "node:fs";
-import { ulid, type R2BucketLite, type R2PutOptions } from "@ihl/truth";
+import {
+  ulid,
+  type R2BucketLite,
+  type R2ObjectLite,
+  type R2ListResult,
+  type R2PutOptions,
+} from "@ihl/truth";
 
 /**
  * In-memory R2 fake. Conditional-put semantics MIRROR THE LIVE EVIDENCE
  * (docs/planning/c1/r2-put-if-absent-evidence.md): with
  * onlyIf { etagDoesNotMatch: "*" } and an existing key, put returns null —
  * no throw, no overwrite, first body/etag win. Without onlyIf, put overwrites
- * (plain R2 behaviour).
+ * (plain R2 behaviour). get/list mirror the workers R2Bucket subset the
+ * observation-core projections read (design-c2 §3.1).
  */
 export class FakeR2Bucket implements R2BucketLite {
-  objects = new Map<string, { body: string; etag: string }>();
+  objects = new Map<
+    string,
+    { body: string | Uint8Array; etag: string; contentType?: string }
+  >();
   private seq = 0;
 
   async put(
     key: string,
-    value: string,
+    value: string | ArrayBuffer | ArrayBufferView,
     options?: R2PutOptions,
   ): Promise<{ key: string; etag: string } | null> {
     if (options?.onlyIf?.etagDoesNotMatch === "*" && this.objects.has(key)) {
       return null; // write rejected — first-wins (live-verified)
     }
-    const rec = { body: String(value), etag: `etag-${++this.seq}` };
+    const body = typeof value === "string" ? value : toU8(value);
+    const rec = { body, etag: `etag-${++this.seq}`, contentType: options?.httpMetadata?.contentType };
     this.objects.set(key, rec);
     return { key, etag: rec.etag };
   }
+
+  async get(key: string): Promise<R2ObjectLite | null> {
+    const rec = this.objects.get(key);
+    if (!rec) return null;
+    const bytes = typeof rec.body === "string" ? new TextEncoder().encode(rec.body) : rec.body;
+    return {
+      text: async () =>
+        typeof rec.body === "string" ? rec.body : new TextDecoder().decode(rec.body),
+      arrayBuffer: async () =>
+        bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      httpMetadata: rec.contentType ? { contentType: rec.contentType } : undefined,
+    };
+  }
+
+  async list(options?: { prefix?: string }): Promise<R2ListResult> {
+    const prefix = options?.prefix ?? "";
+    return {
+      objects: [...this.objects.keys()]
+        .filter((k) => k.startsWith(prefix))
+        .map((k) => ({ key: k })),
+    };
+  }
+}
+
+function toU8(v: ArrayBuffer | ArrayBufferView): Uint8Array {
+  return v instanceof ArrayBuffer ? new Uint8Array(v) : new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
 }
 
 export const DEV_TOKEN = "test-dev-token";

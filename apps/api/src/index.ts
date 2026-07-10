@@ -4,6 +4,7 @@ import { TruthStore, deriveActorId } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
+import { obsRoutes } from "./observation-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -59,6 +60,10 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 
 // Auth routes (§1.3): magic-link / verify / session / logout.
 app.route("/api/v1/auth", authRoutes);
+
+// Observation core (§3.2): captures / upload / detail / image / templates /
+// individuals observations + qr / qr resolve. All protected (not in PUBLIC_ROUTES).
+app.route("/api/v1", obsRoutes);
 
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,
