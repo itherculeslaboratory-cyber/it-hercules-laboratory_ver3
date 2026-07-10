@@ -1,0 +1,11 @@
+# Heavy parity/reference deps — component venv ONLY, never committed (design-c3 §4).
+# PyTorch reference path + ONNX runtime + tokenizer. Install:
+#   .venv/Scripts/python -m pip install -r requirements-parity.txt
+# Pins reflect the versions parity was proven against (see ruri-parity-evidence.md).
+onnxruntime>=1.27
+sentence-transformers>=5.6
+transformers>=5.13
+sentencepiece>=0.2
+huggingface_hub>=0.30
+numpy>=2.0
+# torch is pulled in by sentence-transformers (CPU wheel on Windows).

@@ -1,0 +1,8 @@
+# component-local heavy deps and model artifacts — never committed (design-c3 §4)
+.venv/
+__pycache__/
+models/
+*.onnx
+*.npy
+# HF cache if pointed here
+.hf-cache/
