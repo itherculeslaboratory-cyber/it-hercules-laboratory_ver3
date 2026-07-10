@@ -158,6 +158,39 @@ describe("C2 auth — session state + middleware paths", () => {
     expect(body.actor_id).toBe(await deriveActorId("dev@ihl.local"));
   });
 
+  it("V3-AUT-05: POST /dev-login mints a session cookie for the fixed dev actor", async () => {
+    const res = await app.request(
+      "/api/v1/auth/dev-login",
+      { method: "POST", headers: JSON_HEADERS },
+      makeEnv(),
+    );
+    expect(res.status).toBe(200);
+    const devActor = await deriveActorId("dev@ihl.local");
+    expect(await res.json()).toEqual({ actor_id: devActor });
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    expect(setCookie).toMatch(/^ihl_session=/);
+    expect(setCookie).toMatch(/HttpOnly/i);
+    expect(setCookie).toMatch(/SameSite=Lax/i);
+    // The minted cookie authenticates a protected write as the dev actor.
+    const cookie = setCookie.split(";")[0];
+    const write = await app.request(
+      "/events",
+      { method: "POST", headers: { Cookie: cookie, ...JSON_HEADERS }, body: JSON.stringify(makeEnvelope()) },
+      makeEnv(),
+    );
+    expect(write.status).toBe(201);
+    expect(((await write.json()) as { actor_id: string }).actor_id).toBe(devActor);
+  });
+
+  it("V3-AUT-05: /dev-login is 404 in prod (DEV_TOKEN unset) — no prod surface", async () => {
+    const res = await app.request(
+      "/api/v1/auth/dev-login",
+      { method: "POST", headers: JSON_HEADERS },
+      { ...makeEnv(), DEV_TOKEN: undefined },
+    );
+    expect(res.status).toBe(404);
+  });
+
   it("V3-AUT-17: STORED envelope provenance.actor_id === session principal (Bearer session)", async () => {
     const email = "writer@example.com";
     const actorId = await deriveActorId(email);

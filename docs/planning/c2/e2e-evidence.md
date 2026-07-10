@@ -93,12 +93,15 @@ worker（wrangler dev, local）側の実リクエストログ:
 
 > capture の envelope.id はプレーン ULID、photo と qr は `putEventAt` で**ドメイン配置キー**（capture 前方一致 / token O(1) 解決）に格納 — design-c2 §3.1 の通り。
 
-## 6. 未解決事項（人間/設計裁定待ち）
+## 6. 未解決事項（当初）と第2パスでの解消
 
-1. **ブラウザ→API のクロスオリジン認証**: next(:3000)→worker(:8787) は別オリジン。ブラウザ UI から保護 API を叩くには (a) worker に CORS（`Access-Control-Allow-*` + credentials）と (b) クロスサイト cookie（`SameSite=None; Secure` あるいは同一オリジン dev プロキシ）が必要。設計 §4.3 は API を別オリジン前提にしつつこの点を規定していない。**推奨: 同一オリジン dev プロキシ（next rewrites で `/api/*`→worker）**。E2E タスクの範囲外として独断実装せず、設計裁定に回す。
-2. **ログイン画面「開発トークンでログイン」ボタン**（§1.4 V3-AUT-05）: 現状 action が `GET /session`（認証しない）。上記(1)が解決するまでブラウザでの 1-click セッション確立が成立しないため据え置き。E2E では契約が E2E 用に明示許可する `Bearer <session token>`（§1.3）で認証を実測。
-3. **compat-date**: §2 の通り同梱 workerd が 2026-07-01 未対応。将来の wrangler 更新でオーバーライド撤去可。
-4. **画面 form ↔ API スキーマ契約の不整合**（批評家指摘・当初未開示 → 本追記で開示）: `screen-defs/obs-entry.json` の capture-form は flat な `measure_item`/`measure_value` を送り `domain` field を持たないが、`schemas/events/obs-capture.schema.json` は `domain`（必須）+ `measurements[]{item,kind,value}` を要求する。上記(1) のクロスオリジンが解決しても、Renderer に body 整形（flat→`measurements[]`）と domain 文脈伝播が無いため capture POST は 400 になる。`screen-defs/individual-detail.json` の観測履歴カード・QR 値はハードコードのモック（`2026-07-10 体長 65mm` / `https://ihl.example/qr/sample-token`）で、QR 発行 action の path は `/api/v1/individuals/detail/qr`（individual_id が literal "detail" のプレースホルダ）。これらは ScreenDef が静的描画土台であることの帰結で、修正には Renderer のランタイム・データ束縛機能が要る（設計裁定 → `REPORT-ver3-phase-c2-2026-07-10.md` §「未達・設計裁定待ち」の推奨修正 (b)(c)）。
+> 下記 1/2/4 は第2パス（2026-07-11）で**実装解消済み**。詳細は `REPORT-ver3-phase-c2-2026-07-10.md` §「批評家 major 再指摘の解消（第2パス）」。据え置き記録は誠実性のため残す。
+
+1. **~~ブラウザ→API のクロスオリジン認証~~ → 解消**: `apps/web/next.config.mjs` に rewrites `/api/:path*`→worker を追加し `api.ts` を同一オリジン相対に変更。HttpOnly `ihl_session` cookie がクロスサイト cookie / CORS 無しで流れる（当初推奨の「同一オリジン dev プロキシ」を採用）。
+2. **~~「開発トークンでログイン」ボタン~~ → 解消**: `POST /api/v1/auth/dev-login`（公開・DEV_TOKEN 設定時のみ・本番 404）を新設。固定 dev actor（`deriveActorId("dev@ihl.local")`・§1.4）のセッション cookie を 1-click 発行。`login.json` の dev ボタンをこの route へ。auth.test で発行成功 + 本番 404 を実測。
+3. **compat-date**: §2 の通り同梱 workerd が 2026-07-01 未対応。将来の wrangler 更新でオーバーライド撤去可（未解消・環境要因）。
+4. **~~画面 form ↔ API スキーマ契約の不整合~~ → 解消**: `obs-entry.json` に `domain` select + 計測をドット名 `measurements.0.item|value` + form `props.static`（`measurements.0.kind`/`species_confirmed_by`）を追加し、Renderer FormNode が `{domain, measurements:[{item,kind,value}], ...}` に整形して POST（renderer.test 実測）。`individual-detail.json` はハードコードのモック（履歴 `65mm` / QR 値 / literal "detail" path）を撤去し実データ束縛へ（履歴 = `GET /individuals/{{params.id}}/observations`、QR path = `{{params.id}}` 補間、QR 値 = `{{result.token}}`）。Renderer に `{{...}}` 補間・mount-fetch・list 束縛・result 束縛・transitions 消費を追加（renderer.test 4 本で実測）。
+5. **残: §7 実ブラウザ通貫クリックスルーの再走**: 上記 1/2/4 で通貫は成立可能になり renderer/API 単体で緑。実ブラウザでの 1 セッション通貫（wrangler+next+Chromium）は本サンドボックス非搭載のため未再走。本 §4 の 2 スイート（UI 土台描画/遷移 + API 直叩きデータパイプライン）は据え置きのまま green。⑤ に従い実ブラウザ緑を盲目で主張しない。
 
 ## 7. スクリーンショット（`docs/planning/c2/e2e-screenshots/`）
 

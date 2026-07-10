@@ -27,7 +27,7 @@
               "id": "dev-login",
               "type": "button",
               "props": { "label": "開発トークンでログイン", "variant": "secondary" },
-              "action": { "kind": "api", "method": "GET", "path": "/api/v1/auth/session" }
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/auth/dev-login" }
             }
           ]
         }

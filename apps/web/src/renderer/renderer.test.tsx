@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, act, waitFor } from "@testing-library/react";
 import { Renderer } from "./renderer";
-import type { ScreenDef } from "./types";
+import type { Action, ScreenDef } from "./types";
 import { allScreenDefs } from "@/lib/screendefs";
 // GATE logic under test (color discipline). Imported for the negative case.
 import { scanColors } from "../../../../scripts/check-ui-tokens.mjs";
@@ -145,6 +145,153 @@ describe("Renderer — form aria-invalid (field regime)", () => {
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.getByLabelText(/項目/)).toHaveAttribute("aria-invalid", "true");
     expect(onAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("Renderer runtime — body-shaping, transitions, data-binding", () => {
+  it("shapes the form body to the API contract (static inject + dotted nesting)", async () => {
+    const onAction = vi.fn(async () => ({}));
+    const action: Action = { kind: "api", method: "POST", path: "/api/v1/observation/captures" };
+    render(
+      <Renderer
+        onAction={onAction}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "capture-form",
+              type: "form",
+              action,
+              props: { static: { "measurements.0.kind": "number", "species_confirmed_by": "user" } },
+              children: [
+                { id: "domain", type: "field", props: { variant: "text", name: "domain", label: "ドメイン", required: true } },
+                { id: "mi", type: "field", props: { variant: "text", name: "measurements.0.item", label: "項目", required: true } },
+                { id: "mv", type: "field", props: { variant: "number", name: "measurements.0.value", label: "値", required: true } },
+                { id: "submit", type: "button", props: { label: "記録する", type: "submit" } },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/ドメイン/), { target: { value: "biology" } });
+    fireEvent.change(screen.getByLabelText(/項目/), { target: { value: "体長" } });
+    fireEvent.change(screen.getByLabelText(/値/), { target: { value: "65" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "記録する" }));
+    });
+    expect(onAction).toHaveBeenCalledWith(action, {
+      domain: "biology",
+      species_confirmed_by: "user",
+      measurements: [{ kind: "number", item: "体長", value: "65" }],
+    });
+  });
+
+  it("consumes transitions[] on a successful api action (carries the response id)", async () => {
+    const onAction = vi.fn(async () => ({ capture_id: "C1" }));
+    const onNavigate = vi.fn();
+    render(
+      <Renderer
+        onAction={onAction}
+        onNavigate={onNavigate}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "capture-form",
+              type: "form",
+              action: { kind: "api", method: "POST", path: "/api/v1/observation/captures" },
+              children: [{ id: "submit", type: "button", props: { label: "記録する", type: "submit" } }],
+            },
+          ],
+          transitions: [{ from: "capture-form", to_screen_id: "obs-detail" }],
+        }}
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "記録する" }));
+    });
+    expect(onNavigate).toHaveBeenCalledWith("obs-detail", { id: "C1" });
+  });
+
+  it("binds a list to mount-fetched data via {{params.id}} + interpolated items", async () => {
+    const onAction = vi.fn(async (a: Action) => {
+      if (a.kind === "api" && a.path === "/api/v1/individuals/ind-1/observations") {
+        return { observations: [{ measurements: [{ item: "体長", value: 65 }] }] };
+      }
+      return undefined;
+    });
+    render(
+      <Renderer
+        onAction={onAction}
+        params={{ id: "ind-1" }}
+        def={{
+          screen_id: "individual-detail",
+          route: "/individuals/detail",
+          title: "t",
+          nodes: [
+            {
+              id: "history",
+              type: "list",
+              props: {
+                source_path: "/api/v1/individuals/{{params.id}}/observations",
+                bind_items: "data.history.observations",
+                item_text: "{{measurements.0.item}} {{measurements.0.value}}",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(await screen.findByText("体長 65")).toBeInTheDocument();
+    expect(onAction).toHaveBeenCalledWith({
+      kind: "api",
+      method: "GET",
+      path: "/api/v1/individuals/ind-1/observations",
+    });
+  });
+
+  it("interpolates {{params.id}} into an action path and binds the result into a qr-code", async () => {
+    const onAction = vi.fn(async () => ({ token: "TK123" }));
+    const onNavigate = vi.fn();
+    render(
+      <Renderer
+        onAction={onAction}
+        onNavigate={onNavigate}
+        params={{ id: "ind-1" }}
+        def={{
+          screen_id: "individual-detail",
+          route: "/individuals/detail",
+          title: "t",
+          nodes: [
+            {
+              id: "issue-qr",
+              type: "button",
+              props: { label: "QR 発行" },
+              action: { kind: "api", method: "POST", path: "/api/v1/individuals/{{params.id}}/qr" },
+            },
+            { id: "qr", type: "qr-code", props: { value: "{{result.token}}" } },
+          ],
+          transitions: [{ from: "issue-qr", to_screen_id: "qr-resume" }],
+        }}
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "QR 発行" }));
+    });
+    expect(onAction).toHaveBeenCalledWith({
+      kind: "api",
+      method: "POST",
+      path: "/api/v1/individuals/ind-1/qr",
+    });
+    expect(onNavigate).toHaveBeenCalledWith("qr-resume", { token: "TK123" });
+    await waitFor(() =>
+      expect(screen.getByRole("img")).toHaveAttribute("aria-label", "QRコード: TK123"),
+    );
   });
 });
 

@@ -13,33 +13,30 @@
           "type": "page",
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "個体の詳細", "level": 1 } },
+            { "id": "ind-id", "type": "text", "props": { "text": "個体 ID: {{params.id}}", "muted": true } },
             { "id": "history-title", "type": "heading", "props": { "text": "観測履歴", "level": 2 } },
             {
               "id": "history",
               "type": "list",
-              "children": [
-                {
-                  "id": "obs-1",
-                  "type": "card",
-                  "children": [
-                    { "id": "obs-1-date", "type": "text", "props": { "text": "2026-07-10 体長 65 mm" } }
-                  ]
-                }
-              ]
+              "props": {
+                "source_path": "/api/v1/individuals/{{params.id}}/observations",
+                "bind_items": "data.history.observations",
+                "item_text": "{{species_candidate}} {{measurements.0.item}} {{measurements.0.value}}{{measurements.0.unit}}"
+              }
             },
             {
               "id": "issue-qr",
               "type": "button",
               "props": { "label": "QR ラベルを発行する", "variant": "primary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/detail/qr" }
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/{{params.id}}/qr" }
             },
-            { "id": "qr", "type": "qr-code", "props": { "value": "https://ihl.example/qr/sample-token" } }
+            { "id": "qr", "type": "qr-code", "props": { "value": "{{result.token}}" } }
           ]
         }
       ]
     }
   ],
   "transitions": [
-    { "from": "qr", "to_screen_id": "qr-resume", "label": "QR を読むと観測再開へ" }
+    { "from": "issue-qr", "to_screen_id": "qr-resume", "label": "QR 発行後に観測再開へ" }
   ]
 }

@@ -8,10 +8,18 @@ export function generateStaticParams() {
 
 export default async function ScreenPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ screen: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { screen } = await params;
   if (!allScreenDefIds().includes(screen)) notFound();
-  return <Renderer def={loadScreenDef(screen)} />;
+  const sp = await searchParams;
+  const query: Record<string, string> = {};
+  for (const [k, v] of Object.entries(sp)) {
+    if (typeof v === "string") query[k] = v;
+    else if (Array.isArray(v) && typeof v[0] === "string") query[k] = v[0];
+  }
+  return <Renderer def={loadScreenDef(screen)} params={query} />;
 }

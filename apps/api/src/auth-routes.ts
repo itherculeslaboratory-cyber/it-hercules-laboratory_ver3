@@ -65,6 +65,25 @@ authRoutes.get("/session", async (c) => {
   return c.json({ authenticated: true, actor_id: payload.sub });
 });
 
+// POST /dev-login (公開・dev 限定): §1.4 V3-AUT-05「画面内トークン認証ボタン」の実体。
+// DEV_TOKEN が設定されている（= dev）ときのみ、固定 dev actor（deriveActorId(
+// "dev@ihl.local")・§1.4）のセッション cookie を 1-click 発行する。本番は
+// DEV_TOKEN 未設定 → 404（この経路は存在しない）。付与範囲は既存 DEV_TOKEN Bearer
+// と同一の決定的 dev actor で、新たな権限面を増やさない。
+authRoutes.post("/dev-login", async (c) => {
+  if (!c.env.DEV_TOKEN) return c.json({ error: "NOT_FOUND" }, 404);
+  const actorId = await deriveActorId("dev@ihl.local");
+  const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
+  setCookie(c, "ihl_session", session, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: SESSION_TTL,
+  });
+  return c.json({ actor_id: actorId });
+});
+
 // POST /logout (保護): clear cookie (Max-Age=0). Stateless — no server-side purge.
 authRoutes.post("/logout", (c) => {
   deleteCookie(c, "ihl_session", { path: "/" });

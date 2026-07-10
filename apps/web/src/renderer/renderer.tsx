@@ -10,38 +10,113 @@ import React, {
 import QRCode from "qrcode";
 import { cn } from "@/lib/cn";
 import { apiUrl } from "@/lib/api";
-import type { Action, ScreenDef, ScreenNode } from "./types";
+import type { Action, ScreenDef, ScreenNode, Transition } from "./types";
 
 /* -------------------------------------------------------------------------- *
- * Action execution + form-invalid propagation via context.
- * Individual catalog parts read these; screens never wire a11y/state by hand.
+ * Runtime scope + action execution.
+ *
+ * The renderer is data-driven: screens bind to live API data instead of
+ * hardcoding it. Three scopes feed `{{...}}` interpolation and list binding:
+ *   - params : URL query (?id=…) — the runtime individual/capture id.
+ *   - data   : responses of node `source_path` GETs, keyed by node id.
+ *   - result : the parsed response of the last successful action.
+ * Individual catalog parts read these via context; screens stay declarative
+ * and never wire a11y/state/data-fetch by hand.
  * -------------------------------------------------------------------------- */
 
 export type Execute = (
   action: Action,
   body?: Record<string, unknown>,
-) => void | Promise<void>;
+) => Promise<unknown>;
 
-const ExecuteCtx = createContext<Execute>(async () => {});
+export type Scope = {
+  params: Record<string, string>;
+  data: Record<string, unknown>;
+  result: Record<string, unknown>;
+};
+
+type DataSink = {
+  setNodeData: (id: string, value: unknown) => void;
+  setActionResult: (value: unknown) => void;
+};
+
+const ExecuteCtx = createContext<Execute>(async () => undefined);
 const InvalidCtx = createContext<Set<string>>(new Set());
+const ScopeCtx = createContext<Scope>({ params: {}, data: {}, result: {} });
+const TransitionsCtx = createContext<Transition[]>([]);
+const NavigateCtx = createContext<(to: string, query?: Record<string, string>) => void>(
+  () => {},
+);
+const DataSinkCtx = createContext<DataSink>({
+  setNodeData: () => {},
+  setActionResult: () => {},
+});
 
-function defaultExecute(onNavigate?: (to: string) => void): Execute {
-  return async (action, body) => {
+/** Resolve a dotted path (`measurements.0.value`) against a value. */
+export function getPath(obj: unknown, path: string): unknown {
+  return path
+    .split(".")
+    .reduce<unknown>((o, k) => (o == null ? undefined : (o as Record<string, unknown>)[k]), obj);
+}
+
+/** Replace `{{ dotted.path }}` in `tpl` with values from `scope`. */
+export function interpolate(tpl: string, scope: unknown): string {
+  return tpl.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, p: string) => {
+    const v = getPath(scope, p);
+    return v == null ? "" : String(v);
+  });
+}
+
+/** Assign into a nested object, creating arrays for numeric segments. */
+export function setPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const keys = path.split(".");
+  let cur: Record<string, unknown> = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    if (cur[k] == null) cur[k] = /^\d+$/.test(keys[i + 1]) ? [] : {};
+    cur = cur[k] as Record<string, unknown>;
+  }
+  cur[keys[keys.length - 1]] = value;
+}
+
+function readQuery(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  return Object.fromEntries(new URLSearchParams(window.location.search).entries());
+}
+
+// screen_id → real route. `home` is served at "/", every other def at "/s/<id>".
+function screenHref(to: string, query?: Record<string, string>): string {
+  const base = to === "home" ? "/" : `/s/${to}`;
+  const qs = query && Object.keys(query).length ? "?" + new URLSearchParams(query).toString() : "";
+  return base + qs;
+}
+
+// Common id-ish response fields worth carrying into the next screen as query.
+function queryFromResult(result: unknown): Record<string, string> {
+  const r = (result ?? {}) as Record<string, unknown>;
+  const q: Record<string, string> = {};
+  if (typeof r.token === "string") q.token = r.token;
+  if (typeof r.capture_id === "string") q.id = r.capture_id;
+  else if (typeof r.individual_id === "string") q.id = r.individual_id;
+  return q;
+}
+
+function defaultExecute(onNavigate?: (to: string, query?: Record<string, string>) => void): Execute {
+  return async (action) => {
     if (action.kind === "navigate") {
       if (onNavigate) onNavigate(action.to);
-      // action.to is a screen_id, not a URL. Map it to the real route:
-      // `home` is served at "/", every other screen-def at "/s/<id>".
-      else if (typeof window !== "undefined")
-        window.location.assign(action.to === "home" ? "/" : `/s/${action.to}`);
-      return;
+      else if (typeof window !== "undefined") window.location.assign(screenHref(action.to));
+      return undefined;
     }
     const res = await fetch(apiUrl(action.path), {
       method: action.method,
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: action.method === "GET" ? undefined : JSON.stringify(body ?? {}),
+      body: action.method === "GET" ? undefined : JSON.stringify({}),
     });
     if (!res.ok) throw new Error(`api ${res.status}`);
+    const ct = res.headers.get("content-type") ?? "";
+    return ct.includes("application/json") ? await res.json() : undefined;
   };
 }
 
@@ -52,6 +127,55 @@ function defaultExecute(onNavigate?: (to: string) => void): Execute {
 
 function props(node: ScreenNode): Record<string, unknown> {
   return node.props ?? {};
+}
+
+// Fetch node.props.source_path (GET) on mount, store the response at data[id].
+function useSource(node: ScreenNode) {
+  const p = props(node);
+  const scope = useContext(ScopeCtx);
+  const execute = useContext(ExecuteCtx);
+  const { setNodeData } = useContext(DataSinkCtx);
+  const path = p.source_path ? interpolate(String(p.source_path), scope) : "";
+  useEffect(() => {
+    if (!path) return;
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path }))
+      .then((r) => {
+        if (alive && r !== undefined) setNodeData(node.id, r);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path]);
+}
+
+// Run a node action: interpolate api paths against scope, capture the result,
+// then follow a matching transition (api actions only — navigate self-routes).
+function useRunAction(nodeId: string) {
+  const execute = useContext(ExecuteCtx);
+  const scope = useContext(ScopeCtx);
+  const transitions = useContext(TransitionsCtx);
+  const navigate = useContext(NavigateCtx);
+  const { setActionResult } = useContext(DataSinkCtx);
+  return useCallback(
+    async (action: Action, body?: Record<string, unknown>) => {
+      const act: Action =
+        action.kind === "api"
+          ? { ...action, path: interpolate(action.path, scope) }
+          : action;
+      // Keep the single-arg call shape when there is no body (buttons), so
+      // action executors observed in tests see exactly the action.
+      const result = body === undefined ? await execute(act) : await execute(act, body);
+      if (act.kind === "api") {
+        if (result && typeof result === "object") setActionResult(result);
+        const t = transitions.find((x) => x.from === nodeId);
+        if (t) navigate(t.to_screen_id, queryFromResult(result));
+      }
+    },
+    [execute, scope, transitions, navigate, setActionResult, nodeId],
+  );
 }
 
 function Children({ nodes }: { nodes?: ScreenNode[] }) {
@@ -66,11 +190,9 @@ function Children({ nodes }: { nodes?: ScreenNode[] }) {
 
 function ButtonNode({ node }: { node: ScreenNode }) {
   const p = props(node);
-  const execute = useContext(ExecuteCtx);
+  const run = useRunAction(node.id);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(
-    p.error ? String(p.error) : null,
-  );
+  const [error, setError] = useState<string | null>(p.error ? String(p.error) : null);
   const loading = pending || p.loading === true;
   const disabled = p.disabled === true || loading;
 
@@ -79,13 +201,13 @@ function ButtonNode({ node }: { node: ScreenNode }) {
     setError(null);
     setPending(true);
     try {
-      await execute(node.action);
+      await run(node.action);
     } catch (e) {
       setError((e as Error)?.message ?? String(e));
     } finally {
       setPending(false);
     }
-  }, [node.action, disabled, execute]);
+  }, [node.action, disabled, run]);
 
   return (
     <>
@@ -180,11 +302,9 @@ function FieldNode({ node }: { node: ScreenNode }) {
 
 function FormNode({ node }: { node: ScreenNode }) {
   const p = props(node);
-  const execute = useContext(ExecuteCtx);
+  const run = useRunAction(node.id);
   const [pending, setPending] = useState(false);
-  const [formError, setFormError] = useState<string | null>(
-    p.error ? String(p.error) : null,
-  );
+  const [formError, setFormError] = useState<string | null>(p.error ? String(p.error) : null);
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
 
   const onSubmit = useCallback(
@@ -204,20 +324,26 @@ function FormNode({ node }: { node: ScreenNode }) {
       }
       setFormError(null);
       if (!node.action) return;
+      // Shape the request body to the API contract: static injects first
+      // (e.g. measurement.kind, species_confirmed_by), then dotted field names
+      // (`measurements.0.item`) nest into the arrays the schema requires.
       const body: Record<string, unknown> = {};
+      const stat = p.static as Record<string, unknown> | undefined;
+      if (stat) for (const [k, v] of Object.entries(stat)) setPath(body, k, v);
       fd.forEach((v, k) => {
-        body[k] = v;
+        const s = typeof v === "string" ? v : "";
+        if (s.trim() !== "") setPath(body, k, s);
       });
       setPending(true);
       try {
-        await execute(node.action, body);
+        await run(node.action, body);
       } catch (err) {
         setFormError((err as Error)?.message ?? String(err));
       } finally {
         setPending(false);
       }
     },
-    [node.action, execute],
+    [node.action, run, p.static],
   );
 
   return (
@@ -240,9 +366,44 @@ function FormNode({ node }: { node: ScreenNode }) {
   );
 }
 
+function ListNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  useSource(node);
+  const scope = useContext(ScopeCtx);
+
+  // Data-bound list: repeat the item template over a bound array. Each element
+  // is the interpolation scope for `item_text` (e.g. "{{measurements.0.item}}").
+  if (p.bind_items) {
+    const items = (getPath(scope, String(p.bind_items)) as unknown[]) ?? [];
+    const tpl = String(p.item_text ?? "");
+    return (
+      <ul className="civ-list">
+        {items.map((it, i) => (
+          <li key={i}>
+            <article className="civ-card">
+              <p className="civ-text">{interpolate(tpl, it)}</p>
+            </article>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <ul className="civ-list">
+      {(node.children ?? []).map((c) => (
+        <li key={c.id}>
+          <NodeView node={c} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function QrNode({ node }: { node: ScreenNode }) {
   const p = props(node);
-  const value = String(p.value ?? p.token ?? "");
+  const scope = useContext(ScopeCtx);
+  const value = interpolate(String(p.value ?? p.token ?? ""), scope);
   const [svg, setSvg] = useState("");
   useEffect(() => {
     let alive = true;
@@ -267,6 +428,7 @@ function QrNode({ node }: { node: ScreenNode }) {
 
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
+  const scope = useContext(ScopeCtx);
   switch (node.type) {
     case "app-shell":
       return (
@@ -285,14 +447,14 @@ export function NodeView({ node }: { node: ScreenNode }) {
       const Tag = (level >= 2 ? "h2" : "h1") as "h1" | "h2";
       return (
         <Tag className="civ-heading" data-level={String(level)}>
-          {String(p.text ?? node.id)}
+          {interpolate(String(p.text ?? node.id), scope)}
         </Tag>
       );
     }
     case "text":
       return (
         <p className="civ-text" data-muted={p.muted === true || undefined}>
-          {String(p.text ?? "")}
+          {interpolate(String(p.text ?? ""), scope)}
         </p>
       );
     case "button":
@@ -302,15 +464,7 @@ export function NodeView({ node }: { node: ScreenNode }) {
     case "field":
       return <FieldNode node={node} />;
     case "list":
-      return (
-        <ul className="civ-list">
-          {(node.children ?? []).map((c) => (
-            <li key={c.id}>
-              <NodeView node={c} />
-            </li>
-          ))}
-        </ul>
-      );
+      return <ListNode node={node} />;
     case "card":
       return (
         <article className="civ-card">
@@ -322,14 +476,14 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return (
         <img
           className="civ-image"
-          src={String(p.src ?? "")}
+          src={interpolate(String(p.src ?? ""), scope)}
           alt={String(p.alt ?? "")}
         />
       );
     case "qr-code":
       return <QrNode node={node} />;
     case "link": {
-      const href = String(p.href ?? p.to ?? "#");
+      const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (
         <a className="civ-link" href={href}>
           {String(p.label ?? p.text ?? href)}
@@ -344,16 +498,48 @@ export function NodeView({ node }: { node: ScreenNode }) {
 export interface RendererProps {
   def: ScreenDef;
   onAction?: Execute;
-  onNavigate?: (to: string) => void;
+  onNavigate?: (to: string, query?: Record<string, string>) => void;
+  /** URL query scope (?id=…). Defaults to window.location.search in the browser. */
+  params?: Record<string, string>;
 }
 
-export function Renderer({ def, onAction, onNavigate }: RendererProps) {
+export function Renderer({ def, onAction, onNavigate, params }: RendererProps) {
+  const [data, setData] = useState<Record<string, unknown>>({});
+  const [result, setResult] = useState<Record<string, unknown>>({});
   const execute = onAction ?? defaultExecute(onNavigate);
+
+  const navigate = useCallback(
+    (to: string, query?: Record<string, string>) => {
+      if (onNavigate) onNavigate(to, query);
+      else if (typeof window !== "undefined") window.location.assign(screenHref(to, query));
+    },
+    [onNavigate],
+  );
+  const setNodeData = useCallback(
+    (id: string, value: unknown) => setData((d) => ({ ...d, [id]: value })),
+    [],
+  );
+  const setActionResult = useCallback(
+    (value: unknown) =>
+      setResult((r) => ({ ...r, ...(value && typeof value === "object" ? (value as object) : {}) })),
+    [],
+  );
+
+  const scope: Scope = { params: params ?? readQuery(), data, result };
+
   return (
     <ExecuteCtx.Provider value={execute}>
-      {def.nodes.map((n) => (
-        <NodeView key={n.id} node={n} />
-      ))}
+      <ScopeCtx.Provider value={scope}>
+        <TransitionsCtx.Provider value={def.transitions ?? []}>
+          <NavigateCtx.Provider value={navigate}>
+            <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
+              {def.nodes.map((n) => (
+                <NodeView key={n.id} node={n} />
+              ))}
+            </DataSinkCtx.Provider>
+          </NavigateCtx.Provider>
+        </TransitionsCtx.Provider>
+      </ScopeCtx.Provider>
     </ExecuteCtx.Provider>
   );
 }

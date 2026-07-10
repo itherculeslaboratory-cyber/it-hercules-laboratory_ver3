@@ -17,6 +17,9 @@ const PUBLIC_ROUTES = [
   "/api/v1/auth/magic-link",
   "/api/v1/auth/verify",
   "/api/v1/auth/session",
+  // dev-only 1-click login (§1.4 V3-AUT-05). Self-gates on DEV_TOKEN: 404 in
+  // prod where DEV_TOKEN is unset, so exposing the path adds no prod surface.
+  "/api/v1/auth/dev-login",
 ];
 
 // Auth middleware (§1.5). Order: PUBLIC → Cookie → Bearer session → Bearer DEV_TOKEN → 401.
