@@ -1,0 +1,6 @@
+name = "ihl-api-ver3"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+
+# アカウント ID・ルート・シークレット等の実値は wrangler secret / ダッシュボード /
+# ローカル .env で管理し、本ファイルにはコミットしない（.env.example の型のみが正本）。

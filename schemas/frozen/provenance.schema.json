@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/frozen/provenance.schema.json",
+  "title": "Truth Provenance Meta (CL-02)",
+  "description": "Truth レコードの再現性メタ。既存レコードに付与済みのフィールド契約で、スキーマ変更は既存 replay を壊す（要件定義書 CL-02 / V3-FND-15）。ver2 の provenance 断片に value_origin（計測値・埋め込みの出所）を加えた凍結形。envelope.schema.json の provenance 拡張とは別層（frozen/README.md 参照）。",
+  "x_ihl_cl": "CL-02",
+  "x_ihl_status": "frozen",
+  "x_ihl_layer": "truth",
+  "x_ihl_source": "schemas/common/provenance.schema.yaml + schemas/dictionaries/value_origin.yaml@4a56cf6",
+  "type": "object",
+  "required": ["run_id", "schema_version", "input_hash", "created_at"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "この値を生成したパイプライン run の ID。再現性の一次キー。"
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "レコードのスキーマ版。破壊的変更は +1（append-only なので既存イベントは書き換えない）。"
+    },
+    "input_hash": {
+      "type": "string",
+      "description": "入力（画像バイト列・元イベント等）のハッシュ。決定論的再生成の突合キー。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "value_origin": {
+      "type": "string",
+      "enum": [
+        "direct_observed",
+        "image_derived",
+        "environment_derived",
+        "lineage_derived",
+        "estimated",
+        "imputed",
+        "aggregate",
+        "model_inference",
+        "unknown"
+      ],
+      "description": "計測値・集計値・埋め込みの出所（schemas/dictionaries/value_origin.yaml 正本）。measurement / embedding を伴うイベントにのみ付与。値は append-only 追加のみ。"
+    },
+    "model_name": { "type": "string" },
+    "model_version": { "type": "string" },
+    "pipeline_name": { "type": "string" },
+    "pipeline_version": { "type": "string" }
+  },
+  "additionalProperties": false
+}

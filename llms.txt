@@ -1,0 +1,20 @@
+# it-hercules-laboratory_ver3
+
+> ゼロから再設計する次世代文明 OS。データ・思想・要件は ver1/ver2 から継承し、コードはゼロベース。最大の読者は AI: 機械可読（JSON/YAML/frontmatter 付き md）が正本で、人間可読ビューは生成物。Truth は repo の外（Cloudflare R2 append-only）にあり、repo が持つのは契約（スキーマ）と投影を再生成する純粋関数。AI 向け規約の正本は AGENTS.md、5 不変条項（10 年コスト最小・fork 文化・append-only・人間ゲート・批評家ゲート）に全要件が従う。
+
+## Start here
+- [AGENTS.md](AGENTS.md): AI 向け規約の正本。読む順・5 不変条項・禁止事項・人間ゲート 5 種
+- [README.md](README.md): 人間 spine 入口。単一 repo 宣言・clone・読む順
+- [docs/onboarding.md](docs/onboarding.md): 30 分で立ち上がるパス
+- [docs/architecture.md](docs/architecture.md): レイヤーと feature→code の地図
+
+## Canonical SSOT（機械可読・手で書く）
+- [01-requirements/srs.md](01-requirements/srs.md): 最終要件定義書（凍結 REQ・§1.2 に不変条項）
+- [01-requirements/registry.json](01-requirements/registry.json): 要件レジストリの機械可読正本
+- [schemas/frozen/](schemas/frozen/): CL-01〜13 形式凍結スキーマ（唯一のスキーマ正本 schemas/ 配下）
+- [04-traceability/rtm.json](04-traceability/rtm.json): RTM 正本（csv/md は生成ビュー）
+
+## Design & knowledge
+- [02-design/constitution.md](02-design/constitution.md): 設計書憲法 v2（C1〜C6・批評家ゲート）
+- [docs/knowledge/index.md](docs/knowledge/index.md): ドメイン Wiki の 1 行カタログ
+- [docs/planning/status.md](docs/planning/status.md): 今どこ・人間ゲート待ち

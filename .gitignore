@@ -1,0 +1,14 @@
+# dependencies / build artifacts
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+.wrangler/
+__pycache__/
+.venv/
+coverage/
+
+# secrets — real values never committed (.env.example is the only tracked template)
+.env
+.env.*
+!.env.example

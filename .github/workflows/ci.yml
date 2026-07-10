@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # frozen-diff step needs the base commit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install
+
+      - name: Lint (filenames / generated / agents-sync / schemas / frontmatter)
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # PR-only: if schemas/frozen/ changed, tests/ MUST change too (CL-01..13 形式凍結 — 要件定義書 §6.3).
+      - name: Frozen schema change gate
+        if: github.event_name == 'pull_request'
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          changed=$(git diff --name-only "$base" "$head")
+          frozen=$(echo "$changed" | grep '^schemas/frozen/' || true)
+          if [ -n "$frozen" ]; then
+            echo "schemas/frozen/ changed in this PR:"
+            echo "$frozen"
+            tests=$(echo "$changed" | grep '^tests/' || true)
+            if [ -z "$tests" ]; then
+              echo "::error::schemas/frozen/ changed but no tests/ changes — CL negative TC 緑化が必須です (§6.3)."
+              exit 1
+            fi
+            echo "tests/ also changed — OK."
+          else
+            echo "No schemas/frozen/ changes — gate not applicable."
+          fi

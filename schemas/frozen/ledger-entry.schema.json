@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/frozen/ledger-entry.schema.json",
+  "title": "Ledger Entry — Karma / Platinum Coin (CL-12)",
+  "description": "既存の全ミューテーションが R2 INSERT ONLY で記録済み。台帳形式変更で残高/信用の再計算が狂う（要件定義書 CL-12 / V3-KRM-19）。カルマ台帳（karma_event・増減）とプラチナ功績章台帳（coin_event・付与のみ）の 2 変種を oneOf で表す（ver2 schemas/economy/karma_event.schema.yaml・coin_event.schema.yaml）。PT 影響力台帳（pt_event）も同一の append-only パターンだが CL-12 の対象は『カルマ/プラチナ』のため本スキーマは 2 変種に限定。",
+  "x_ihl_cl": "CL-12",
+  "x_ihl_status": "frozen",
+  "x_ihl_layer": "truth",
+  "x_ihl_source": "schemas/economy/karma_event.schema.yaml + schemas/economy/coin_event.schema.yaml@4a56cf6",
+  "oneOf": [
+    { "$ref": "#/$defs/karma_event" },
+    { "$ref": "#/$defs/coin_event" }
+  ],
+  "$defs": {
+    "karma_event": {
+      "title": "Karma Event",
+      "type": "object",
+      "description": "カルマ台帳エントリ。value 層 / count 層の 2 層、delta は増減可。",
+      "required": ["karma_event_id", "actor_id", "layer", "delta", "created_at", "schema_version"],
+      "properties": {
+        "karma_event_id": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "layer": { "type": "string", "enum": ["value", "count"] },
+        "delta": { "type": "number" },
+        "reason_code": {
+          "type": "string",
+          "enum": ["monthly_batch", "dispute", "fee_unpaid", "manual", "other"]
+        },
+        "dispute_event_ref": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "schema_version": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "coin_event": {
+      "title": "Coin Event (Platinum)",
+      "type": "object",
+      "description": "プラチナ功績章台帳エントリ。grant_amount は付与のみ（>= 0）。",
+      "required": ["coin_event_id", "actor_id", "grant_amount", "created_at", "schema_version"],
+      "properties": {
+        "coin_event_id": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "grant_amount": { "type": "number", "minimum": 0 },
+        "reason_code": {
+          "type": "string",
+          "enum": ["vote_reward", "contribution_rebate", "manual", "other"]
+        },
+        "vote_event_ref": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "schema_version": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

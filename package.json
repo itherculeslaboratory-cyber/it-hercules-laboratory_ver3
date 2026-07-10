@@ -1,0 +1,13 @@
+{
+  "name": "it-hercules-laboratory-ver3",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "node scripts/lint-filenames.mjs && node scripts/check-generated.mjs && node scripts/check-agents-sync.mjs && node scripts/validate-schemas.mjs && node scripts/check-frontmatter.mjs",
+    "test": "npm test -w apps/api"
+  }
+}

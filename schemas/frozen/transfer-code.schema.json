@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/frozen/transfer-code.schema.json",
+  "title": "GMO Transfer Code (CL-11)",
+  "description": "既存ユーザーに導出済みの振込コード。導出関数を変えると入金照合が破綻（要件定義書 CL-11 / V3-MKT-12 / FR-GMO-01）。導出: SHA-256(userId) の先頭 3 バイトを big-endian uint24 とし、Base36 大文字化して 'U-' を前置、4 桁未満は zfill(4)、6 桁超は末尾 6 桁（ver2 libs/ihl/payments/gmo_transfer_code.py derive_transfer_code）。uint24 の Base36 は最大 5 文字のため実運用は U-XXXX〜U-XXXXX。既存ユーザー全員分のテストベクタ回帰は C1（1 件でも不一致なら fail）。",
+  "x_ihl_cl": "CL-11",
+  "x_ihl_status": "frozen",
+  "x_ihl_source": "libs/ihl/payments/gmo_transfer_code.py derive_transfer_code@4a56cf6",
+  "type": "object",
+  "required": ["transfer_code"],
+  "properties": {
+    "transfer_code": {
+      "type": "string",
+      "pattern": "^U-[0-9A-Z]{4,6}$",
+      "description": "deriveTransferCode(userId) の出力。'U-' + Base36 大文字 4〜6 桁。注意: fixtures/oracle/gmo-transfer-code.json の 'IHL-EXAMPLE-8PCT' は GMO stub レスポンスのデモ値であり、この導出関数の出力形式ではない。"
+    }
+  },
+  "additionalProperties": false
+}

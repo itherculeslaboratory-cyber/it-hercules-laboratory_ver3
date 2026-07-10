@@ -1,0 +1,18 @@
+# CODEOWNERS — folder design §8 step 8.
+# 個人 repo のため所有者は @itherculeslaboratory-cyber に統一。
+# 区分（design / impl / bots）はコメントで示す。
+
+# --- design: 要件・設計・凍結スキーマ ---
+/01-requirements/   @itherculeslaboratory-cyber
+/02-design/         @itherculeslaboratory-cyber
+/schemas/frozen/    @itherculeslaboratory-cyber
+
+# --- impl: アプリ・共有コード・部品 ---
+/apps/          @itherculeslaboratory-cyber
+/libs/          @itherculeslaboratory-cyber
+/packages/      @itherculeslaboratory-cyber
+/components/    @itherculeslaboratory-cyber
+
+# --- bots: 生成物（手編集禁止・逆流検知対象） ---
+/docs/generated/            @itherculeslaboratory-cyber
+/packages/**/generated/     @itherculeslaboratory-cyber

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/frozen/tag-event.schema.json",
+  "title": "Tag Event (CL-13)",
+  "description": "既存タグイベントは append-only tag_event。集約ビューの前提を変えると既存タグ集計が不整合（要件定義書 CL-13 / V3-OBS-63 / FR-DATA-15）。集約（aggregate）ビューは投影層で再生成する派生物であり Truth ではない。ver2 schemas/events/tag_event.schema.yaml の形状を凍結。",
+  "x_ihl_cl": "CL-13",
+  "x_ihl_status": "frozen",
+  "x_ihl_layer": "truth",
+  "x_ihl_source": "schemas/events/tag_event.schema.yaml@4a56cf6",
+  "type": "object",
+  "required": [
+    "tag_event_id",
+    "target_type",
+    "target_id",
+    "tag",
+    "tag_type",
+    "action",
+    "source_type",
+    "created_at",
+    "schema_version"
+  ],
+  "properties": {
+    "tag_event_id": { "type": "string" },
+    "target_type": {
+      "type": "string",
+      "enum": ["capture", "individual", "cross", "measurement"]
+    },
+    "target_id": { "type": "string" },
+    "tag": { "type": "string" },
+    "tag_type": {
+      "type": "string",
+      "description": "タグ種別。enum 正本は schemas/dictionaries/tag_type.yaml（ver2 では enum_ref 弱参照）。厳格 enum 値の展開は C1 で codegen 時に確定。"
+    },
+    "action": {
+      "type": "string",
+      "description": "タグ操作。enum 正本は schemas/dictionaries/tag_action.yaml。C1 で codegen 展開。"
+    },
+    "source_type": {
+      "type": "string",
+      "description": "タグ付与元。enum 正本は schemas/dictionaries/source_type.yaml。C1 で codegen 展開。"
+    },
+    "source_id": { "type": "string" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "reason": { "type": "string" },
+    "evidence_ref": { "type": "string" },
+    "model_name": { "type": "string" },
+    "model_version": { "type": "string" },
+    "run_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "schema_version": { "type": "integer", "minimum": 1 }
+  },
+  "additionalProperties": false
+}

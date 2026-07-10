@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/frozen/embedding-manifest.schema.json",
+  "title": "Embedding Manifest (CL-08)",
+  "description": "既存の埋め込みベクトルの契約。次元/正規化が非互換だと類似検索が全断（要件定義書 CL-08 / V3-OBS-09 / FR-18-07）。ADR-V3-EMB-01 で 384 一本化が確定したため embedding_dim=384・normalized_flag=true を凍結値とする（ver2 実装 embedding.py の DINOV2_DIM=384 / DUMMY_DIM=384・L2 正規化と一致）。raw float32 バイナリ（base64 不使用・V3-WIK-19）で 1 ベクトル = 384*4 = 1536 バイト。",
+  "x_ihl_cl": "CL-08",
+  "x_ihl_status": "frozen",
+  "x_ihl_layer": "truth",
+  "x_ihl_source": "schemas/manifest/embedding_manifest.schema.yaml + libs/ihl/observation/embedding.py@4a56cf6",
+  "type": "object",
+  "required": [
+    "embedding_id",
+    "capture_id",
+    "individual_id",
+    "image_id",
+    "embedding_dim",
+    "embedding_file",
+    "vector_offset",
+    "normalized_flag",
+    "model_name",
+    "model_version",
+    "schema_version",
+    "run_id",
+    "created_at"
+  ],
+  "properties": {
+    "embedding_id": { "type": "string" },
+    "capture_id": { "type": "string" },
+    "individual_id": { "type": "string" },
+    "image_id": { "type": "string" },
+    "embedding_dim": {
+      "const": 384,
+      "description": "ADR-V3-EMB-01 で 384 一本化（DINOv2 ViT-S/14 系・ruri-v3-70m）。768 はエスケープハッチで実装しない。"
+    },
+    "embedding_file": {
+      "type": "string",
+      "description": "raw float32 バイナリファイル（Universe 単位 embeddings.bin・V3-WIK-19）へのパス。"
+    },
+    "vector_offset": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "embeddings.bin 内のバイトオフセット。"
+    },
+    "vector_length": {
+      "type": "integer",
+      "description": "ベクトルのバイト長。384 次元 float32 = 1536。C1 で dim との整合を検証。"
+    },
+    "normalized_flag": {
+      "const": true,
+      "description": "L2 正規化済み（embedding.py は常に norm 除算）。cosine 検索の前提。"
+    },
+    "part_type": { "type": "string" },
+    "embedding_model": { "type": "string" },
+    "embedding_version": { "type": "string" },
+    "input_image_path": { "type": "string" },
+    "input_hash": { "type": "string" },
+    "preprocessing_name": { "type": "string" },
+    "preprocessing_version": { "type": "string" },
+    "model_name": {
+      "type": "string",
+      "description": "ver2: 'dinov2_vits14'（本番）/ 'dummy'（CI）。const は付けない（CI dummy を許容）。"
+    },
+    "model_version": { "type": "string" },
+    "pipeline_name": { "type": "string" },
+    "pipeline_version": { "type": "string" },
+    "snapshot_id": { "type": "string" },
+    "value_origin": { "type": "string" },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "run_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
