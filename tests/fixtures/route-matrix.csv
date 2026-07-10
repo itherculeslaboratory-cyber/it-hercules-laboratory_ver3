@@ -25,7 +25,7 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/solid-observation/commit,VPS,Workers,W2,infra-route-021,protected,planned,
 —,POST,/api/v1/observation/dictionary-extensions,VPS,Workers,W2,infra-route-022,protected,planned,
 —,POST,/api/v1/observation/measurements,VPS,Workers,W2,infra-route-023,protected,planned,
-—,POST,/api/v1/observation/search,VPS,Workers,W2,infra-route-024,protected,planned,
+—,POST,/api/v1/observation/search,VPS,Workers,W2,infra-route-024,protected,implemented,決定論梯子 whitelist→subset→embedding(C3・design-c3 §1)
 —,POST,/api/v1/observation/targets/search,VPS,Workers,W2,infra-route-025,protected,planned,
 —,POST,/api/v1/observation/templates,VPS,Workers,W2,infra-route-026,protected,planned,
 —,POST,/api/v1/observation/upload,VPS,Workers,W2,infra-route-027,protected,planned,

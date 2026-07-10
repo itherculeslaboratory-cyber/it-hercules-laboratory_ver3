@@ -3,10 +3,14 @@
 // data.actor_id from the session principal (V3-AUT-17): a client-supplied
 // actor_id in the body is ignored, never trusted.
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+// CL-08 / design-c3 §1: embeddings are frozen at 384 dims. A manifest whose
+// embedding_dim differs is blocked from search (ver2 scoring.py:44 guard).
+const EMBEDDING_DIM = 384;
 
 const CAPTURE_TYPE = "ihl.obs.capture.v1";
 const PHOTO_TYPE = "ihl.obs.photo.v1";
@@ -52,6 +56,42 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 // data() of a stored envelope (projections return the data part only).
 function dataOf(e: Record<string, unknown>): Record<string, unknown> {
   return (e.data ?? {}) as Record<string, unknown>;
+}
+
+// Load one capture's embedding vector via its frozen manifest + embeddings.bin
+// (design-c3 §1 "R2 読取投影"). Layout: embeddings/manifest/<capture_id>.json →
+// { embedding_dim, embedding_file, vector_offset }; the raw float32 vector lives
+// at vector_offset in the embeddings.bin blob. Returns null if no embedding
+// exists or the bytes are out of range. The dim guard (≠384 → block) is applied
+// by the caller against EMBEDDING_DIM (ver2 scoring.py:44 / CL-08).
+async function loadVector(
+  bucket: Bindings["TRUTH"],
+  captureId: string,
+): Promise<Float32Array | null> {
+  const mObj = await bucket.get(`embeddings/manifest/${captureId}.json`);
+  if (!mObj) return null;
+  const m = JSON.parse(await mObj.text()) as {
+    embedding_dim?: number;
+    embedding_file?: string;
+    vector_offset?: number;
+  };
+  const dim = m.embedding_dim ?? 0;
+  if (!dim || !m.embedding_file) return null;
+  const binObj = await bucket.get(m.embedding_file);
+  if (!binObj) return null;
+  const buf = await binObj.arrayBuffer();
+  const offset = m.vector_offset ?? 0;
+  if (offset < 0 || offset % 4 !== 0 || offset + dim * 4 > buf.byteLength) return null;
+  return new Float32Array(buf.slice(offset, offset + dim * 4));
+}
+
+// A measurement's numeric value, or null if not numeric/absent.
+function measureValue(cap: Record<string, unknown>, item: string): number | null {
+  const ms = Array.isArray(cap.measurements) ? cap.measurements : [];
+  for (const m of ms as Record<string, unknown>[]) {
+    if (m.item === item && typeof m.value === "number") return m.value;
+  }
+  return null;
 }
 
 const CAPTURE_FIELDS = [
@@ -152,6 +192,74 @@ obsRoutes.post("/observation/templates", async (c) => {
   if (res.status === "invalid") return c.json({ error: "INVALID_TEMPLATE", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_TEMPLATE", key: res.key }, 409);
   return c.json({ template_id: templateId }, 202);
+});
+
+// POST /observation/search — deterministic similarity ladder (V3-OBS-10 / CL-08,
+// design-c3 §1). ① whitelist (exact-match filter) → ② subset (measurement range
+// filter) → ③ embedding (384-dim cosine rank via frozen cosineSimilarity).
+// ladder_stage reports the deepest rung engaged. No resident index / FAISS / LLM
+// (invariant clause ①). Deterministic: candidates sorted by capture_id, cosine
+// ties broken by capture_id asc → same input ⇒ same ranking.
+obsRoutes.post("/observation/search", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
+
+  const topK = typeof body.top_k === "number" && body.top_k >= 1 ? Math.min(100, Math.floor(body.top_k)) : 10;
+
+  // ponytail: full capture-type prefix scan, O(n) per query — no resident index
+  // (design-c3 §1 "R2 list→都度計算"). A projection index is a later rung if n grows.
+  let candidates = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`)).map(dataOf);
+  candidates.sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id)));
+
+  // ① whitelist — exact-match filters (only those the request supplied).
+  if (typeof body.domain === "string") candidates = candidates.filter((x) => x.domain === body.domain);
+  if (typeof body.species === "string") candidates = candidates.filter((x) => x.species_candidate === body.species);
+  if (typeof body.subject_ref === "string") candidates = candidates.filter((x) => x.subject_ref === body.subject_ref);
+  let stage = "whitelist";
+
+  // ② subset — deterministic measurement range filter.
+  const ranges = Array.isArray(body.measurements) ? (body.measurements as Record<string, unknown>[]) : [];
+  if (ranges.length) {
+    stage = "subset";
+    candidates = candidates.filter((x) =>
+      ranges.every((r) => {
+        const v = measureValue(x, String(r.item));
+        if (v === null) return false;
+        if (typeof r.min === "number" && v < r.min) return false;
+        if (typeof r.max === "number" && v > r.max) return false;
+        return true;
+      }),
+    );
+  }
+
+  // ③ embedding — cosine rank against a 384-dim query vector.
+  let queryVec: Float32Array | null = null;
+  if (Array.isArray(body.query_vector)) {
+    queryVec = Float32Array.from(body.query_vector as number[]);
+  } else if (typeof body.query_capture_id === "string") {
+    queryVec = await loadVector(c.env.TRUTH, body.query_capture_id);
+    if (!queryVec) return c.json({ error: "QUERY_EMBEDDING_NOT_FOUND" }, 400);
+  }
+
+  if (queryVec) {
+    if (queryVec.length !== EMBEDDING_DIM) return c.json({ error: "QUERY_DIM_MISMATCH", dim: queryVec.length }, 400);
+    stage = "embedding";
+    const scored: { capture_id: string; score: number }[] = [];
+    for (const cap of candidates) {
+      const capId = String(cap.capture_id);
+      const vec = await loadVector(c.env.TRUTH, capId);
+      if (!vec) continue; // no embedding for this capture
+      if (vec.length !== EMBEDDING_DIM) continue; // 遮断: manifest embedding_dim ≠ 384 (CL-08)
+      scored.push({ capture_id: capId, score: cosineSimilarity(queryVec, vec) });
+    }
+    scored.sort((a, b) => b.score - a.score || a.capture_id.localeCompare(b.capture_id));
+    return c.json({ ladder_stage: stage, results: scored.slice(0, topK) });
+  }
+
+  return c.json({
+    ladder_stage: stage,
+    results: candidates.slice(0, topK).map((x) => ({ capture_id: String(x.capture_id) })),
+  });
 });
 
 // GET /observation/{capture_id} — detail projection: capture + photos[].

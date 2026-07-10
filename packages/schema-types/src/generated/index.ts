@@ -3,6 +3,7 @@
 // direction: schemas/ -> generated (one-way; edit the schema, then re-run)
 // regenerate: node scripts/codegen-schemas.mjs
 export * from "./api/health";
+export * from "./api/observation-search";
 export * from "./events/envelope";
 export * from "./events/ind-qr";
 export * from "./events/obs-capture";
