@@ -41,7 +41,8 @@
     },
     "format": {
       "type": "string",
-      "description": "画像フォーマット。要件 CL-07/FR-18-06 は『JPEG』を規定するが、ver2 実装 image.py の resize_long_edge は format='PNG' で保存しておりスタブも PNG。この矛盾（JPEG 要件 vs PNG 実装）の確定値は C1 実機照合で確定。const は付けない。"
+      "const": "jpeg",
+      "description": "画像フォーマット = JPEG（const 固定）。要件 CL-07/FR-18-06 は JPEG を規定。ver2 実装 image.py の resize_long_edge は format='PNG' で保存していたが、ver3 は greenfield（守るべき本番 thumbnail 実体なし）のため 2026-07-11 第10回ユーザー裁定で JPEG に確定。生成経路は jSquash on Workers（@jsquash/jpeg + @jsquash/resize、長辺512px）。EXIF transpose は ver2 未実装で ver3 から採用（@jsquash/jpeg preserveOrientation でリサイズ前に適用）。裁定材料 docs/planning/c3/cl-07-thumbnail-options.md ／ 裁定 docs/planning/rulings/user-ruling-2026-07-11-round-10.md。"
     },
     "source_image_path": { "type": "string" },
     "input_hash": { "type": "string" },

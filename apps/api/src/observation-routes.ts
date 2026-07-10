@@ -4,6 +4,7 @@
 // actor_id in the body is ignored, never trusted.
 import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
+import { generateThumbnail } from "./thumbnail";
 import type { Bindings, Variables } from "./env";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -14,6 +15,7 @@ const EMBEDDING_DIM = 384;
 
 const CAPTURE_TYPE = "ihl.obs.capture.v1";
 const PHOTO_TYPE = "ihl.obs.photo.v1";
+const THUMBNAIL_TYPE = "ihl.obs.thumbnail.v1";
 const TEMPLATE_TYPE = "ihl.obs.template.v1";
 const QR_TYPE = "ihl.ind.qr.v1";
 
@@ -27,6 +29,7 @@ function envelope(
   dataschema: string,
   actorId: string,
   data: Record<string, unknown>,
+  provenance?: Record<string, unknown>,
 ) {
   return {
     specversion: "1.0",
@@ -35,7 +38,7 @@ function envelope(
     type,
     time: new Date().toISOString(),
     dataschema,
-    provenance: { generator_kind: "human", actor_id: actorId },
+    provenance: provenance ?? { generator_kind: "human", actor_id: actorId },
     data,
   };
 }
@@ -163,6 +166,49 @@ obsRoutes.post("/observation/upload", async (c) => {
   );
   if (res.status === "invalid") return c.json({ error: "INVALID_PHOTO", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_PHOTO", key: res.key }, 409);
+
+  // CL-07 thumbnail (第10回裁定 — JPEG / jSquash on Workers / 長辺512px / EXIF
+  // transpose). BEST-EFFORT: a non-image or codec failure must NOT fail the
+  // upload — the original blob + photo event are the append-only truth. The
+  // thumbnail is a re-generatable derived artifact keyed under its own type so it
+  // never leaks into the photos[] projection.
+  try {
+    const thumb = await generateThumbnail(bytes, contentType);
+    const thumbKey = `media/thumbnail/${photoId}`;
+    await store(c).putBlob(thumbKey, thumb.bytes, "image/jpeg");
+    // individual_id is required by the frozen manifest; derive it from the
+    // capture's subject_ref ("individual/<id>"), "" if the capture has none.
+    const cap = await store(c).readEvent(`truth/${CAPTURE_TYPE}/${captureId}.json`);
+    const subjectRef = cap ? String(dataOf(cap).subject_ref ?? "") : "";
+    const individualId = subjectRef.startsWith("individual/")
+      ? subjectRef.slice("individual/".length)
+      : "";
+    const thumbId = ulid();
+    const manifest = {
+      thumbnail_id: thumbId,
+      capture_id: captureId,
+      image_id: photoId,
+      individual_id: individualId,
+      thumbnail_path: thumbKey,
+      width_px: thumb.width,
+      height_px: thumb.height,
+      format: thumb.format,
+      schema_version: 1,
+      run_id: photoId,
+      created_at: new Date().toISOString(),
+    };
+    await store(c).putEventAt(
+      `truth/${THUMBNAIL_TYPE}/${captureId}-${photoId}.json`,
+      envelope(THUMBNAIL_TYPE, thumbId, "schemas/frozen/thumbnail.schema.json", actorId, manifest, {
+        generator_kind: "agent",
+        agent_name: "thumbnail-jsquash",
+        input_event_ids: [photoId],
+      }),
+    );
+  } catch {
+    // non-image / codec failure → skip thumbnail; the upload already succeeded.
+  }
+
   return c.json({ photo_id: photoId, sha256: data.sha256 }, 202);
 });
 
