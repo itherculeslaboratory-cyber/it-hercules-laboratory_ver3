@@ -9587,11 +9587,17 @@
     "evidence": "会話399 T05:33「99%は共有すればいい。ブランドロゴとか1%は保持…ガラパゴスしたくない。あれはゴミ」",
     "trust": "中",
     "date": "2026-03-24"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "第7回裁定: ambiguity「ゲーム観測等をスコープに含めるか未決定」を「含める(第2波)」と解消(V3-OBS-70 新規採番)",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
   "conflict": null,
-  "ambiguity": "IHLの観測アーキに6種分類/C-USBを正式採用するか、ゲーム観測等をスコープに含めるか未決定",
+  "ambiguity": "IHLの観測アーキに6種分類/C-USBを正式採用するか、ゲーム観測等をスコープに含めるか未決定 → 2026-07-10 第7回裁定: ゲーム観測等を第2波スコープに含めると確定(V3-OBS-70)。",
   "group": "g02-観測個体",
   "v1_score": 13,
   "v1_tier": "B",
@@ -14984,7 +14990,7 @@
  },
  {
   "id": "V3-VID-07",
-  "statement": "完成後、システムの思想・開発苦労・既存の不透明性への不満などをネタに1分ショート動画を毎日複数プラットフォームで自動発信し、宣伝費を抑えて集客する。投稿スタックに溜め1日1本自動投稿(週1作業で毎日投稿)。ネタは研究/システム/開発難航の3系統で、生成方法自体もAIに考えさせる。",
+  "statement": "完成後、システムの思想・開発苦労・既存の不透明性への不満などをネタに短尺動画を毎日複数プラットフォームで自動発信し、宣伝費を抑えて集客する(尺は内容が決める — 1分固定を撤廃・2026-07-10 第7回裁定)。投稿スタックに溜め1日1本自動投稿(週1作業で毎日投稿)。ネタは研究/システム/開発難航の3系統で、生成方法自体もAIに考えさせる。",
   "category": "動画/発信",
   "kind": "アイデア",
   "philosophy": [
@@ -15031,6 +15037,12 @@
     "evidence": "conv399 2026-03-30 'ショート動画を毎日出して動線作る'",
     "trust": "中",
     "date": "2026-03-30"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "第7回裁定・修正承認(R3/R4):「つたえたいことがつたえられるなら、短くても長くても何でもいいんだから。」— 1分固定を撤廃",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
@@ -15060,7 +15072,7 @@
   "ds": 3,
   "score_v2": 45,
   "tier_v2": "A",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第2波",
   "wave_why": "desireテーマ「動画自動量産ライン」既定=第2波(§2/§5)",
   "hold": false
@@ -34505,7 +34517,7 @@
  },
  {
   "id": "V3-VID-23",
-  "statement": "学習コスト最小化のため各仕様をショート動画/まとめ動画/文章版/英語版/翻訳版/派生動画で提供し、シリーズごとに1分導入動画を必ず用意する。翻訳/派生動画は導線URL確保を条件に自由に許可し、より分かりやすい道があればそちらへ誘導する。原本は残す。",
+  "statement": "学習コスト最小化のため各仕様をショート動画/まとめ動画/文章版/英語版/翻訳版/派生動画で提供し、シリーズごとに短尺導入動画(尺は内容が決める・1分固定を撤廃 — 2026-07-10 第7回裁定)を必ず用意する。動画には字幕・文章版をアクセシビリティ媒体として必ず対提供する(V3-UIX-81 と接続)。翻訳/派生動画は導線URL確保を条件に自由に許可し、より分かりやすい道があればそちらへ誘導する。原本は残す。",
   "category": "動画/発信",
   "kind": "機能要件",
   "philosophy": [
@@ -34534,6 +34546,12 @@
     "evidence": "2026-03-24 'URL固定で動画だけ差し替え/1分導入動画必須/学習コストゼロへ'",
     "trust": "中",
     "date": "2026-03-24"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "第7回裁定・修正承認(R3/R4): 尺自由+「字幕必要な人」等の多媒体到達(Q10)を対提供として明文化",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
@@ -34563,7 +34581,7 @@
   "ds": 2,
   "score_v2": 16,
   "tier_v2": "B",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第2波",
   "wave_why": "desireテーマ「動画自動量産ライン」既定=第2波(§2/§5)",
   "hold": false
@@ -53609,7 +53627,7 @@
  },
  {
   "id": "V3-VID-14",
-  "statement": "プラットフォーム別(YouTube/TikTok/X)にタイトル/タグを文字数制限・SEOで最適化し、字幕は太字白文字黒縁下部配置1行22文字2行までのスタイルで音声とタイミング整合を自動化、チャプターも付与する。",
+  "statement": "プラットフォーム別(YouTube/TikTok/X)のタイトル/タグは「内容を正確に表す」ことをSEO最適化より上位の制約とし(釣りタイトル/サムネ禁止 — 誇張ゼロと同源・動画批評家ゲートで機械検査)、その制約内で文字数制限・SEO調整を行う(2026-07-10 第7回裁定で優先順位を明文化)。字幕は太字白文字黒縁下部配置1行22文字2行までのスタイルで音声とタイミング整合を自動化、チャプターも付与する。",
   "category": "動画/発信",
   "kind": "非機能要件",
   "philosophy": [],
@@ -53623,6 +53641,12 @@
     "evidence": "subtitle.model.json / title.model.json / tag.model.json platform別",
     "trust": "中",
     "date": "2026-04-01"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "第7回裁定・修正承認(R3/R4):「タイトルと表紙で一意にわかる方が大事」「内容が大事」— 正確性>SEO を明文化(YouTube公式推奨とも一致)",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
@@ -53652,7 +53676,7 @@
   "ds": 1,
   "score_v2": 2,
   "tier_v2": "C",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第2波",
   "wave_why": "desireテーマ「動画自動量産ライン」既定=第2波(§2/§5)",
   "hold": false
@@ -54353,5 +54377,360 @@
   "superseded": null,
   "conflict": null,
   "ambiguity": "ユーザー原文は Opus を軽量側に含める(『軽量モデル(Sonnet / Opus)』)。既定は Sonnet とし、Opus の自動運転使用可否はコスト実測後に調整(B7 §9.3)。"
+ },
+ {
+  "id": "V3-VID-29",
+  "group": "g08-動画その他",
+  "category": "動画/発信",
+  "kind": "制約",
+  "statement": "動画制作は内容ファーストを制約とする: 投資順位は 台本・構成 > 音声/字幕 > 画像 > モーション演出。標準形は静止画+立ち絵+字幕+合成音声の構造化解説型(ゆっくり型可)とし、リッチモーション追加を台本改善より優先してはならない。装飾過多(seductive details)は動画批評家ゲートの検査項目とする。伝えたいことが伝わるなら尺は短くても長くてもよい。",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "全動画成果物の品質と制作コストを規定する横断制約"
+   },
+   "ui": {
+    "v": 3,
+    "why": "視聴者の理解度・完走率に直結(Guo2014/Mayer)"
+   },
+   "dep": {
+    "v": 4,
+    "why": "動画パイプライン(V3-VID-01/17/28)全体に効く"
+   },
+   "diff": {
+    "v": 2,
+    "why": "制約の明文化+批評家チェック項目追加のみ"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-10(第7回)「そんなことより、内容が大事」「ゆっくり動画でいいんだから」",
+  "score_v2": 60,
+  "tier_v2": "A",
+  "philosophy": [
+   "誇張ゼロ",
+   "10年コスト最小"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "動画パイプライン(V3-VID-01・第2波)と同波(第7回裁定 2026-07-10)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "「最近のAI動画嫌いです。本質的じゃない。とりあえず、リッチに画像動かしてみたりしているけど、そんなことより、内容が大事。だから、面白いと人が感じる構成だったり、台本などのほうが大事です。ゆっくり動画でいいんだから。」「つたえたいことがつたえられるなら、短くても長くても何でもいいんだから。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null
+ },
+ {
+  "id": "V3-VID-30",
+  "group": "g08-動画その他",
+  "category": "動画/発信",
+  "kind": "機能要件",
+  "statement": "タイトルとサムネイルを動画の一意検索キーとして設計する: サムネイルに要点文言・シリーズ名・話数を必須で載せ、「あの動画どこだっけ」をタイトル+サムネ+説明1行の一覧・検索ビューで解決できるようにする(routing_table の投影で実装・常駐DB不要)。タイトル/サムネは内容を正確に表す(V3-VID-14 の上位制約と同源)。",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "動画資産の検索性・再利用性を規定"
+   },
+   "ui": {
+    "v": 4,
+    "why": "「あの情報調べたい」の到達時間を直接短縮"
+   },
+   "dep": {
+    "v": 3,
+    "why": "V3-VID-14(タイトル/タグ)・ROUTE-A routing_table と接続"
+   },
+   "diff": {
+    "v": 2,
+    "why": "一覧ビューは投影1本"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-10(第7回)",
+  "score_v2": 60,
+  "tier_v2": "B",
+  "philosophy": [
+   "10年コスト最小"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "動画パイプラインと同波(第7回裁定 2026-07-10)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "「構造化されてて、あの動画どこだっけ？とか　あの情報調べたい。でタイトルと表紙で一意にわかる方が大事。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null
+ },
+ {
+  "id": "V3-BBS-36",
+  "group": "g03-知識",
+  "category": "掲示板/コミュニティ",
+  "kind": "思想",
+  "statement": "知の広場の設計目標は「意見交換と化学反応(異視点の衝突・合意形成・セレンディピティ)の最大化」であり、従来型BBSの形式に固定しない。C5 設計で topic 第一級化(Zulip型: channel=画面/機能+必須topic)・合意/対立の可視化投影(Polis型: Agree/Disagree/Pass を append-only イベントで収集し consensus/divisive statement を LLM 不要・決定論で都度算出)等の機構を検討し、採否は C5 冒頭で裁定する。骨格は V3-BBS-01 の3柱を維持する。",
+  "scores": {
+   "bv": {
+    "v": 5,
+    "why": "知の広場の存在目的そのものを規定"
+   },
+   "ui": {
+    "v": 4,
+    "why": "化学反応の可視化はコミュニティ体験の核"
+   },
+   "dep": {
+    "v": 4,
+    "why": "V3-BBS-01/10/11・V3-GOV-14(信頼レベル写像)と接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "Polis型投影はPCA+K-means決定論で実装可(seed固定)"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-10(第7回)「したいことは意見交換や化学反応です」",
+  "score_v2": 100,
+  "tier_v2": "A",
+  "philosophy": [
+   "Truth-append-only",
+   "10年コスト最小"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "V3-BBS-01(第1波S)の設計方針であり同波。機構の採否裁定は C5 冒頭(第7回裁定 2026-07-10)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "「9で書いてあるように、したいことは意見交換や化学反応です。なので、従来は掲示板が一番近いシステムでしたが、もっといい、方法やUIがあるかもです。調べて。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": "具体機構(Zulip型topic/Polis型投影)は研究推奨案(research/plaza-papers-gaps-2026-07-10.md)であり、採否は C5 冒頭でユーザー裁定"
+ },
+ {
+  "id": "V3-PPR-30",
+  "group": "g03-知識",
+  "category": "論文/研究",
+  "kind": "機能要件",
+  "statement": "研究者でない一般ユーザーが論文級の成果物を簡単に作れる仕組みを提供する: Data Descriptor(データ論文)型テンプレートの節単位穴埋め+観測イベントからの投影による自動充填+主張-証拠リンク(充足キーを claim の証拠に自動リンク・未検証 claim は「仮説」ラベル固定)。V3-PPR-01 の条件P×観測JSON突合を機械版 Stage1(事前妥当性検査)として使う。LLM は任意トグルの助言に留める(既定OFF)。",
+  "scores": {
+   "bv": {
+    "v": 5,
+    "why": "「一番論文が作りやすい、研究者にとって天国のような場」の中核機能"
+   },
+   "ui": {
+    "v": 4,
+    "why": "テンプレ+穴埋め+自動充填で非研究者の作成障壁を除去"
+   },
+   "dep": {
+    "v": 4,
+    "why": "V3-PPR-01/06/17・観測イベント投影と接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "テンプレ設計と自動充填投影。Registered Reports の Stage1 概念を機械化"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-10(第7回)「テンプレート化と穴埋め中って思っています」「作ってほしい」",
+  "score_v2": 100,
+  "tier_v2": "A",
+  "philosophy": [
+   "Truth-append-only",
+   "10年コスト最小"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "V3-PPR-01(第1波S)の利用面であり同波(C5 で消化)(第7回裁定 2026-07-10)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "「そして、それを研究者じゃない、一般のユーザーが簡単に作るにはどうすればいいかを考えて作ってほしい。私は、テンプレート化と穴埋め中って思っています。けどもっと良い方法があるかも。データの紐づけも可能ですしね。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null
+ },
+ {
+  "id": "V3-UIX-81",
+  "group": "g07-UIUX",
+  "category": "UI/UX",
+  "kind": "制約",
+  "statement": "ScreenDef Renderer の共通層で WCAG 2.2 AA 相当のアクセシビリティを保証する: キーボード操作完結・スクリーンリーダー対応(セマンティックロール/aria)・state の確定列挙(default/hover/focus-visible/active/disabled/loading/error の7種)・prefers-reduced-motion 尊重・タップターゲット44px以上・コントラストAA。個別画面でなく Renderer/部品層で一括担保する(UI-as-data の利点)。重要文書(利用規約等)は視覚(法的版/小5版)×聴覚(読み上げ/動画)×字幕の多媒体マトリクスで提供する(V3-SEC-21/22・V3-VID-23 と接続)。",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "目が見えない/耳が聞こえない/手がない人への到達を共通層で保証"
+   },
+   "ui": {
+    "v": 5,
+    "why": "全画面のアクセシビリティ品質を一括で決める"
+   },
+   "dep": {
+    "v": 5,
+    "why": "ScreenDef Renderer(V3-UIX-17/18)・V3-UIX-76(fork文化)・V3-SEC-21/22 と接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "Renderer共通層で一括実装(後付けは高コスト)。C2 で state 7種を受け入れTC化"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-10(第7回)「目が見えない人・耳が聞こえない人・手がない人」「誰にとっても最高のUIを」",
+  "score_v2": 100,
+  "tier_v2": "A",
+  "philosophy": [
+   "フォーク文化"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "Renderer 土台(C2)への後付けが高コストな横断制約のため同波(第7回裁定 2026-07-10)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "「・視覚媒体 法的文書がいい人 小学5年生レベルの文章がいい人 ・聴覚媒体 長い動画でまとめで全てみたい人 ショートでそこだけ知りたい人 字幕必要な人 ・目が見えない人 ・耳が聞こえない人 ・手がない人。」「いろんなひとがいます。その人たちには仲間がいます。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null
+ },
+ {
+  "id": "V3-AIP-100",
+  "group": "g09-AIプロセス",
+  "category": "AI運用/開発プロセス",
+  "kind": "機能要件",
+  "statement": "使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)がシステムの利用者になることを想定し、機械可読のアクセス面を提供する。schemas/ 正本から read 系 API/ツール定義(将来的に MCP 相当)を機械生成し、エージェントがデータ取得・成果格納・化学反応の結果の持ち帰りをできる導線を設計する。実装スタックは不変条項①に従い常駐DB・常駐vector基盤を追加しない(R2投影+既存384埋め込みの範囲)。認証・レート制御・PII 境界は人間ユーザーと同一の deny-by-default を通す。",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "「代理AIが寄ってきて成果を持ち帰る図書館」シナリオへの備え"
+   },
+   "ui": {
+    "v": 3,
+    "why": "人間UI非経由の利用導線(第2波で顕在化)"
+   },
+   "dep": {
+    "v": 3,
+    "why": "schemas/ SSOT(C1確立済み)・CL-04 deny-by-default と接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "codegen 拡張で read 系ツール定義を機械生成"
+   }
+  },
+  "ds": 4,
+  "ds_why": "ユーザー直筆 2026-07-10(第7回)。ただし本人が「今私はこれは微妙かも」と留保",
+  "score_v2": 48,
+  "tier_v2": "B",
+  "philosophy": [
+   "10年コスト最小",
+   "Truth-append-only"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "ユーザー留保(「微妙かも」)+外部エージェント実用の成熟待ち。設計上の拡張点(schemas SSOT)は第1波から保たれる(第7回裁定 2026-07-10)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "「研究者や開発者がいつまでも、掲示板や、自分の目でこのサイトまで来なくなるかもしれません。…代理AIが寄ってきて、データをとって、または自分たちの成果を格納して、化学反応を起こし、その成果をユーザーに持って帰るかもしれません。そのような図書館のようなシステムになるかもしれません。そういうことも想定してほしい。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": "ユーザー自身が「今は微妙かも。私が理解できていないだけかも」と留保 → 実装着手は第2波ゲート通過時に再裁定。参照動画(R-5_2nsF_ZM)の実装スタック(Redis常駐+vector基盤)は不変条項①抵触で不採用、思想のみ採用(research/yt-intake-2026-07-10.md)"
+ },
+ {
+  "id": "V3-OBS-70",
+  "group": "g02-観測個体",
+  "category": "観測",
+  "kind": "機能要件",
+  "statement": "Docker 中間層(C-USB 観測拡張)を介した外部ゲーム等からの観測データ取得 API 接続と、mod 的な拡張性(ユーザー拡張は本体を経ず Docker 側で自由に発展し、本体接続は C-USB 契約のみ)を第2波スコープに含める。Web の制約(ブラウザサンドボックス)は Docker 側で回避する。V3-OBS-44 の ambiguity「ゲーム観測等をスコープに含めるか未決定」を「含める」と裁定。",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "ゲーム・外部ソフト由来の観測データで研究母数を拡大"
+   },
+   "ui": {
+    "v": 3,
+    "why": "mod的拡張はパワーユーザーの導線"
+   },
+   "dep": {
+    "v": 4,
+    "why": "V3-OBS-44(C-USB Lite 受入API)・V3-MKT-47(Docker拡張フォーク)・V3-SEC-45(サンドボックス隔離)と接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "C-USB 契約の範囲でデータ形状を固定すれば本体側は追加実装最小"
+   }
+  },
+  "ds": 4,
+  "ds_why": "ユーザー直筆 2026-07-10(第7回)",
+  "score_v2": 36,
+  "tier_v2": "B",
+  "philosophy": [
+   "フォーク文化",
+   "10年コスト最小"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "観測 input 拡張(V3-OBS-44)の拡張シナリオ。第1波は V3-OBS-22 コアに集中(第7回裁定 2026-07-10)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-7.md",
+    "evidence": "「Dockerから私のシステムにWEBみたいに接続して、さらにmodみたいに閣僚性あってもいいよね。WEBは制限がほんとに多いから。また、Dockerが中間に入ることで、ゲームからデータを取得するAPIも作れるよね。」",
+    "trust": "高",
+    "date": "2026-07-10"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null
  }
 ]
