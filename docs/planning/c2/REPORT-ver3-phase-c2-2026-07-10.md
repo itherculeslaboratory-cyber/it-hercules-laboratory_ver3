@@ -14,9 +14,38 @@ status: active
 
 **コア green・受け入れ (a)(b)(d) 成立 / (c) は API 層 + 画面層とも実装・単体緑（§7 実ブラウザ通貫クリックスルーのローカル再走のみ残・下記「第2パス」）。**
 
-最終 GATE 統合ラン（2026-07-11 第2パス実測・ログ捏造なし）:
-- `npm run lint` = 9 GATE 全 OK（filename / generated / agents-sync / schema / frontmatter / codegen --check / codegen-validators --check / ui-tokens / contrast）。
+最終 GATE 統合ラン（2026-07-11 納品前 再走・ログ捏造なし・逐語）:
+
+```
+$ npm run lint
+filename lint OK
+generated-file guard OK
+agents-sync OK
+schema validation OK
+frontmatter check OK
+codegen --check OK (17 files in sync)
+codegen-validators --check OK
+ui-tokens GATE OK
+check-contrast OK (all ThemePack text pairs >= 4.5:1, both themes)
+
+$ npm test              # npm test -w apps/api -w tests -w apps/web
+@ihl/api           : Test Files 1 passed (1)   / Tests   1 passed (1)
+@ihl/contract-tests: Test Files 16 passed (16) / Tests 140 passed (140)
+@ihl/web           : Test Files 1 passed (1)   / Tests  14 passed (14)
+```
+
+- `npm run lint` = **9 GATE 全 OK**（filename / generated / agents-sync / schema / frontmatter / codegen --check / codegen-validators --check / ui-tokens / contrast）。
 - `npm test` = apps/api 1 + tests 140 + apps/web 14 = **155 passed / 0 failed**（第2パスで renderer +4・auth dev-login +2、合計 +6）。
+
+## 完了条件（design-c2.md §0）達成実測
+
+| 条件 | 内容 | 判定 | 実測根拠 |
+|---|---|---|---|
+| (a) | CL-01〜13 negative TC 全 green 維持 + CL-08 frozen description 訂正を対応 TC とセット | **成立** | `tests/cl-01`〜`cl-13`（13 ファイル）全 green・削除ゼロ。CL-08 は `vector_length: const 384`＋negative TC +2（384 valid / 1536 invalid）を同一コミット f9099b0 で実施・codegen 再走で 17 files in sync |
+| (b) | MVP 実装要件 ID の自動化可能 TC 80% 以上 green（§8 の 17 ID・分母は `tc-coverage.md`） | **成立** | 自動化可能 16 ID / green 16 = **100%**（V3-FND-02 は否定的アーキ制約で分母除外・理由 `tc-coverage.md`）。FND-02 を含めても 16/17 = 94% ≥ 80% |
+| (c) | E2E: 観測作成→写真登録→詳細ビュー→QR 再開 が実測エビデンス付き green | **API 層 + 単体 green / 実ブラウザ通貫のみ未再走** | API パイプライン（実 worker + R2 シム）= `docs/planning/c2/e2e-evidence.md`（Truth キー一覧・スクショ 8 枚）。画面層は renderer/API 単体で緑・通貫成立可。§7 実ブラウザ再走は本サンドボックス非搭載（残課題 1） |
+| (d) | 全緑判定は実測エビデンスがある時のみ（ログ捏造禁止・V3-AIP-03） | **成立** | 本節の逐語 GATE ログ・`tc-coverage.md` の TC 名照合・`e2e-evidence.md` の実測 |
+| CL-04 | 57 route マトリクスの公開/保護列と照合する TC green | **成立** | `tests/cl-04-route-matrix.test.ts` = 5 tests green。`tests/fixtures/route-matrix.csv`（57 route 行）を読み ① 57 行検算 ② access=public\|protected ③ public=auth 3 path のみ ④ protected 全行 未認証→401 ⑤ public 全行 非 401 を実 app で検証。既存 `tests/cl-04-deny-by-default.test.ts`（6 tests）も green 維持 |
 
 ## C2 で実装したもの（feat(c2) コミット群）
 
@@ -63,7 +92,26 @@ status: active
 - **第2パス修正（批評家 major 2 件解消）**: `apps/web/src/renderer/renderer.tsx`（ランタイム: 補間/mount-fetch/list 束縛/result 束縛/transitions 消費/dev proxy 相対 URL）・`apps/web/next.config.mjs`（rewrites proxy）・`apps/web/src/lib/api.ts`（同一オリジン）・`apps/web/src/app/s/[screen]/page.tsx`（searchParams→params）・`apps/api/src/auth-routes.ts`（dev-login）・`apps/api/src/index.ts`（PUBLIC_ROUTES に dev-login）・`screen-defs/obs-entry.json`（domain+measurements 整形）・`screen-defs/individual-detail.json`（実データ束縛・ハードコード撤去）・`screen-defs/login.json`（dev ボタン→dev-login）。
 - **第2パス新規 TC**: `apps/web/src/renderer/renderer.test.tsx`（+4: body 整形/transitions/list 束縛/param+result 補間）・`tests/auth.test.ts`（+2: dev-login 発行/本番 404）。
 
-## 残課題（人間裁定/後続）
+## 批評家ゲート通過記録（AGENTS.md 不変条項⑤ / 既定契約 1）
+
+独立批評家を **4 観点**で通し、**修正 2 ラウンド**で major を解消した。
+
+| 観点 | 第1パス判定 | 主な指摘 | 解消 |
+|---|---|---|---|
+| ① 仕様適合（design-c2 §0〜§5・§8 突合／V3-AUT-03 形式・出典実在） | fail→**解消** | tc-coverage.md 欠落＋FND-02/FND-15/OBS-43 の TC 不明（blocker） | tc-coverage.md 起票・17 ID↔TC 精査で FND-15/OBS-43 は既存経路で green と判明・FND-02 は理由付き分母除外 |
+| ② 回帰・機械 GATE（CL-01〜13 回帰／lint・test 実測） | **pass** | 回帰なし・lint 8→9 GATE・test 全緑を再走で確認 | 指摘なし（回帰ガードとして contrast GATE を追加配線） |
+| ③ a11y／UI 規約（V3-UIX-81・§4.3 コントラスト AA） | fail→**解消** | ライトテーマ `--civ-primary` が AA 未達＋検査 GATE 不在（major） | `#0f9d6b→#0b7a55`（AA 合格）＋`scripts/check-contrast.mjs` を lint へ配線（両テーマ全 text/bg 対を検査） |
+| ④ 証跡・誠実性（スクショ実在・test 再走一致・シークレット混入・未達の正直開示） | fail→**解消** | V3-OBS-22 画面層 form↔schema 不整合／§7 UI 通貫 dev ボタン・transitions（major）＋参照レポート実在せず | 第2パスで画面層データ束縛ランタイム＋dev-login＋同一オリジン proxy を実装（renderer +4・auth +2 TC）・本レポート起票。証跡そのもの（スクショ 8 枚・test 一致・シークレット実値ゼロ）は批評家が実在確認済み |
+
+> 批評家は第1パス時点（test 148 本相当）で走行。上記解消後の第2パス実測が本レポートの 155 本。rubber-stamp なし。
+
+## 残課題
+
+### 人間ゲート待ち（AI では確定しない）
+
+- **Resend 実鍵投入**: `RESEND_API_KEY` は**取得自体が未**。D:\env に `RESEND_API_KEY` 不在（2026-07-10 確認・design-c2.md §1.4）。コードは鍵投入だけで送信が動く状態まで実装済み（アダプタ 1 ファイル・`.env.example` に型のみ記載）。**投入時期は AI 委任済み**（第6回裁定④・実行直前に一言報告）だが、鍵が存在しないため現時点では投入不能 = 人間側材料。
+
+### 後続（可逆・次フェーズ）
 
 1. **§7 実ブラウザ通貫の再走**: wrangler dev + next dev + Chromium での 1 セッション通貫クリックスルー。本サンドボックス非搭載につきローカル実行で確認（renderer/API 単体は緑・通貫は成立可能）。
-2. **人間ゲート**: Resend 実鍵投入（実鍵 D:\env 未存在）。
+2. **CL-07 png-vs-JPEG 裁定**: C3 冒頭で裁定（第6回裁定⑤・thumbnail 経路と不可分）。C2 では未着手。

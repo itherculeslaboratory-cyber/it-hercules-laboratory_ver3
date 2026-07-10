@@ -11,8 +11,7 @@ status: draft
 
 ## 今どこ
 
-**Phase C2 コア完了・受け入れ (a)(b)(d) 成立 + 批評家 major 2 件解消（第2パス）**（2026-07-11 — `docs/planning/c2/REPORT-ver3-phase-c2-2026-07-10.md`）。認証（署名付きステートレスセッション）+ 観測コア API 8 route + ScreenDef Renderer（データ束縛ランタイム）+ CL-04 57route 照合 + CL-08 訂正。`npm run lint` 9 GATE 全 OK / `npm test` = **155 passed / 0 failed**。要件 ID↔TC = `docs/planning/c2/tc-coverage.md`（16/16 自動化可能 green・V3-FND-02 のみ構造的担保で分母除外）。
-**第2パスで解消（受け入れ (c) 画面層）**: (a) 同一オリジン dev プロキシ（next rewrites）で cookie 通す・(b) obs-entry form を obs-capture schema へ整形（domain+measurements）・(c) Renderer に補間/mount-fetch/list 束縛/transitions 消費・(d) `POST /auth/dev-login`（dev 限定・本番 404）で dev ボタン実機能化。individual-detail のハードコード撤去→実データ束縛。renderer +4 / auth +2 TC で単体緑。**残**: §7 実ブラウザ通貫クリックスルーのローカル再走のみ（本サンドボックス非搭載・通貫は成立可能）。
+**Phase C2 完了・納品**（2026-07-11 — `docs/planning/c2/REPORT-ver3-phase-c2-2026-07-10.md`）。受け入れ (a)(b)(d) 成立・(c) は API 層＋単体緑（実ブラウザ通貫のみローカル再走待ち）・批評家 4 観点/2 ラウンド通過。認証（署名付きステートレスセッション）+ 観測コア API 8 route + ScreenDef Renderer（データ束縛ランタイム）+ CL-04 57route 照合 + CL-08 vector_length=384 訂正。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK / `npm test` = apps/api 1 + tests 140 + apps/web 14 = **155 passed / 0 failed**。要件 ID↔TC = `docs/planning/c2/tc-coverage.md`（自動化可能 16/16 green = 100%・V3-FND-02 のみ否定的アーキ制約で分母除外）。
 
 **Phase C1 完了**（2026-07-10 — `docs/planning/c1/REPORT-ver3-phase-c1-2026-07-10.md`）。
 
@@ -23,13 +22,16 @@ status: draft
 
 ## 次（最優先）
 
-**C2: 認証 + 観測コア MVP**（開発計画 §3.1 C2）。**着手前裁定は完了**（2026-07-10 第6回 — `docs/planning/rulings/user-ruling-2026-07-10-round-6.md`）。
+**C3: 観測拡張 + 類似検索梯子**（開発計画 §3.1 C3・着手前の人間ゲート = なし）。
 
-- セッション = **署名付きステートレストークン**（V3-AUT-03 修正承認・サーバ側ストアなし・保持方法は C2 設計で確定）→ CL-03 実セッション実装（C1 は DEV_TOKEN スタンドイン）。
-- email 正規化 = 入口で `strip().lower()` 統一（第6回裁定③）。CL-08 `vector_length` = 要素数 384 に確定 — frozen description 訂正は C2 で対応 TC とセットで実施。
-- マジックリンク認証（Resend SMTP 互換・dev_token フォールバック = V3-AUT-05）。**実鍵投入の時期は AI 委任済み**（第6回裁定④・実行直前に一言報告）。
-- V3-OBS-22 スコープ実装 + ScreenDef Renderer 土台。CL-04 は 57 route マトリクスの公開/保護列と照合。
-- CL-07 png-vs-JPEG は C3 冒頭裁定（第6回裁定⑤）。
+- **C3 冒頭裁定**: CL-07 png-vs-JPEG（第6回裁定⑤・thumbnail 経路の実装方式＝wasm / Cloudflare Images / クライアント生成 と不可分）。
+- 類似検索の決定論梯子（whitelist→subset→embedding・V3-OBS-10）。既存 R2 埋め込み（384・C2 で CL-08 確定）に対する類似検索 TC green（CL-08 回帰）。
+- thumbnail 経路（CL-07 の Workers 実装 or VPS 残置の裁定）。新経路出力 vs 既存契約（長辺 512px JPEG/EXIF）の比較 TC green。
+- SwitchBot 連携（V3-OBS-28）・wiki ingest CLI 拡張（ruri-v3-70m backend 追加）。
+
+### C2 からの持ち越し（後続・可逆）
+
+- §7 実ブラウザ通貫クリックスルーのローカル再走（wrangler dev + next dev + Chromium・本サンドボックス非搭載）。renderer/API 単体は緑・通貫は成立可能。
 
 ## 人間ゲート一覧（AI では確定しない）
 

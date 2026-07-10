@@ -8,7 +8,7 @@ status: active
 # C2 要件ID ↔ TC 対応表
 
 > 設計契約: `docs/planning/c2/design-c2.md` §8（受け入れ (b)「MVP-実装要件 ID の自動化可能 TC 80% 以上 green」の分母）。
-> 判定は実測（`npm run lint` 全 GATE PASS / `npm test` = apps/api 1 + tests 138 + apps/web 10 = **149 passed / 0 failed**・2026-07-11 実行）。ログ捏造禁止（受け入れ (d)）。
+> 判定は実測（`npm run lint` 9 GATE 全 PASS / `npm test` = apps/api 1 + tests 140 + apps/web 14 = **155 passed / 0 failed**・2026-07-11 再走）。ログ捏造禁止（受け入れ (d)）。
 > 「TC」= 当該要件を担保するテスト、またはスキーマ正本を lint/vitest が validate している経路（本 repo 確立パターン: 要件 → それを規定する `schemas/` 正本 → CL/observation テスト or codegen-validators GATE）。
 
 ## 対応表（17 ID）
