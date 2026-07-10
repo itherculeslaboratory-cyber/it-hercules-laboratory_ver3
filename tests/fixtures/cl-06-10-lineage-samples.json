@@ -1,0 +1,60 @@
+{
+  "_meta": {
+    "purpose": "CL-06 親子参照 + CL-10 実トークン解決 TC の固定サンプル (design-c3 §2)。",
+    "ver2_commit": "686fc09",
+    "date": "2026-07-11",
+    "provenance": {
+      "individual_ids": "REAL — ihl-ver2 docs/ver2-human-signoff.md の 2026-06-26 UAT で人間サインオフ済みの capture_id (cap_Dyn_45d54257 / cap_Dyn_4a1fe934 / cap_Dyn_53c6ac1a) から ver2 の決定的規則 individual_id = ind_{capture_id[4:]} (libs/ihl/observation/solid_commit.py:74) で導出。個体 ID 自体は実サンプル。",
+      "lineage_links": "SYNTHETIC — ver2 のローカル truth store (.ihl-local-r2) にも fixtures/tests にも sire_id/dam_id を実際に結んだ血統レコードは保存されていない (parent_link_event は実行時 uuid 生成で永続サンプルなし)。よって 3 個体間の親子リンクは format 検証用に合成。値は捏造ではなく実 ID を配線したもの。",
+      "qr_token": "REAL code-path — token は cl-shape-samples.json cl-10 と同一 (ver2 placement_store.create_qr_token / new_qr_token=secrets.token_urlsafe(24) の実出力)。placement/qr_tokens レコードは ver2 disk 上に永続化されていないため expires_at のみ解決 TC 用に調整。"
+    }
+  },
+  "lineage": {
+    "child": {
+      "individual_id": "ind_Dyn_4a1fe934",
+      "local_label_text": "玉-2026-3",
+      "species": "Dynastes hercules hercules",
+      "sire_id": "ind_Dyn_45d54257",
+      "dam_id": "ind_Dyn_53c6ac1a",
+      "observation_target_domain": "biological",
+      "record_version": 1,
+      "schema_version": 1,
+      "run_id": "solid_commit",
+      "created_at": "2026-06-26T10:00:00+00:00"
+    },
+    "sire": {
+      "individual_id": "ind_Dyn_45d54257",
+      "species": "Dynastes hercules hercules",
+      "observation_target_domain": "biological",
+      "record_version": 1,
+      "schema_version": 1,
+      "run_id": "solid_commit",
+      "created_at": "2026-06-26T09:00:00+00:00"
+    },
+    "dam": {
+      "individual_id": "ind_Dyn_53c6ac1a",
+      "species": "Dynastes hercules hercules",
+      "observation_target_domain": "biological",
+      "record_version": 1,
+      "schema_version": 1,
+      "run_id": "solid_commit",
+      "created_at": "2026-06-26T09:30:00+00:00"
+    }
+  },
+  "qr_valid": {
+    "schema": "env_qr_token_v1",
+    "token": "u_y5hhd4xxYMP5wlk8zD4j5WmoYMiReO",
+    "placement_id": "pl_399b56ed9dbfca389d1f665799de72a4",
+    "actor_id": "lab_researcher",
+    "created_at": "2026-07-11T10:00:00+00:00",
+    "expires_at": "2099-01-01T00:00:00+00:00"
+  },
+  "qr_expired": {
+    "schema": "env_qr_token_v1",
+    "token": "u_y5hhd4xxYMP5wlk8zD4j5WmoYMiReO",
+    "placement_id": "pl_399b56ed9dbfca389d1f665799de72a4",
+    "actor_id": "lab_researcher",
+    "created_at": "2026-07-10T10:55:13+00:00",
+    "expires_at": "2026-07-10T11:55:13+00:00"
+  }
+}
