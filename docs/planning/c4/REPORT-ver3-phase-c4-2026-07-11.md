@@ -49,7 +49,7 @@ $ pytest -q               # repo 直下（bare CI・torch 無し）
 | 条件 | 内容 | 判定 | 実測根拠 |
 |---|---|---|---|
 | (i) | deriveTransferCode の既存ユーザー全員分テストベクタ green（CL-11） | 成立 | tests/cl-11-transfer-code.test.ts（8 tests, green）。tests/fixtures/cl-11-transfer-code-vectors.json は ver2 実関数 derive_transfer_code（libs/ihl/payments/gmo_transfer_code.py）を ver2 実 commit（686fc09）上で独立再実行して得た値と全ベクタ一致。ihl-ver2 の実 Truth（.ihl-local-r2/truth）から抽出した distinct actor_id/voter_id は正確に 6 件（_meta.real_id_sources 記載）であり、fixture はその 6 件全てを被覆（不足ゼロ）。批評家(1)の独立再実行で確認済み（下記批評家記録） |
-| (ii) | sunabar 上「擬似入金→照合→台帳 append」E2E green（実 API。作れない場合は停止報告で代替実測） | 成立（代替実測 + 停止報告） | docs/planning/c4/sunabar-e2e-evidence.md。実 sunabar 個人 API（https://api.sunabar.gmo-aozora.com/personal/v1）に対し本コネクタ実コード（apps/api/src/gmo-connector.ts）で残高/口座/明細照会が HTTP 200 を実測（2節）。擬似入金作成 API 機構（POST /transfer/request の remitterName 自由設定）は段階的バリデーションで契約確定（3節）。ただし振込実行 = 金銭移動であり、本環境の権限分類器が明示拒否（4節・不変条項4）。3 口座とも残高/明細 0 のため既存明細照合の代替もできず、照合パイプライン実コードを live sunabar に対して実走し poll→抽出→突合→投影が実 API 上でエラーなく通ること（scanned:0）を実測（5節）。design-c4 2節の「作れない場合は停止報告」ブランチに正確に該当し、モックで E2E green を名乗ってはいない（fake connector TC は tests/gmo-reconcile.test.ts 17 本として別に分離） |
+| (ii) | sunabar 上「擬似入金→照合→台帳 append」E2E green（実 API。作れない場合は停止報告で代替実測） | 成立（代替実測 + 停止報告）→ **2026-07-11 追実測で前進・最終セグメントのみ残** | docs/planning/c4/sunabar-e2e-evidence.md。実 sunabar 疎通 HTTP 200・擬似入金 API 契約確定・live 実走（scanned:0）は初回実測どおり（2/3/5節）。**追実測（7節・ユーザー明示承認による実行）**: 擬似振込 POST /transfer/request 1 件（1000円・remitterName=U-HA6M）を実行し **201 受理**（applyNo 2026071100000001）。ただし公式 FAQ により sunabar の振込完了は**サービスサイト人間承認・有効期限 10 分・API 承認手段なし**で、承認期限超過により失効（money 移動ゼロ・逐語 7.4節）。副産物: 依頼人名の着地フィールドを **remarks（「振込 <全角名>」形）と実測確定**（7.2節）・REAL 明細での live 再実測により **poll の UTC/JST 日付ずれ実バグを発見し 1 行修正**（JST 0-9 時は当日明細が不可視だった — 修正後 scanned:2/unmatched:2 green・7.5節）。AI による振込再発行は権限分類器が 2 回拒否（承認スコープ = 1 件消費済み）。残る人間 1 手 = ポータル「他行振込入金シミュレート」（依頼人名 U-HA6M・7.6節） |
 | (iii) | 台帳 negative TC（UPDATE/DELETE 拒否）green + 既存台帳残高再計算一致 TC（CL-12） | 成立 | tests/cl-12-ledger.test.ts（9 tests, C1 から維持・green）: TruthStore に update/delete メソッドが存在しないこと自体を契約とする frozen shape TC。tests/ledger.test.ts（9 tests, C4 新規）: イベント列→残高再計算一致（karma 二層+platinum）・Fibonacci カルマ判定（V3-KRM-02 確定値 0→5=-12 / 5→10=-13）・GET /me/ledger 本人スコープ・他人の台帳不可視 negative。CL-01（insert-only）4 tests も回帰維持で green |
 
 数値パラメータは apps/api/src/economy-constants.ts に集約（散在ハードコード禁止・design-c4 1節準拠）。
@@ -95,13 +95,13 @@ docs/planning/c4/sunabar-e2e-evidence.md に全文（トークン実値は本レ
 
 ### 人間ゲート待ち（AI では確定しない）
 
-- C4 完了条件 (ii) クローズ（sandbox）: sunabar ポータルで受取口座 302010013543 へ擬似入金 1 手（依頼人名 = 対象 actor の GET /api/v1/gmo/transfer-code 値）→ reconcileOnce 再走で成立。手順 = sunabar-e2e-evidence.md 4/5節。無改修で成立（本波実装のまま）。
+- C4 完了条件 (ii) クローズ（sandbox）: **2026-07-11 追実測で振込依頼 201 受理まで前進**（ユーザー承認による擬似振込実行・evidence 7節）。sunabar の振込承認は 10 分制限のサービスサイト人間操作（API 承認なし）で失効したため、最終セグメント（U-HA6M 入金→一致→台帳 append）のみ残。残る 1 手 = ポータル「他行振込入金シミュレート」（受取 302010013543・依頼人名 U-HA6M・承認フローなし = 推奨）or API 振込再発行 + 10 分以内承認。その後 reconcileOnce 再走で無改修成立（evidence 7.6節）。
 - GMO 本番契約・live 昇格: 本番口座 API の live 接続・実入金照合（GMO_CONNECTOR_MODE=live）。
 - CL-07 裁定 4 点: C3 から持ち越し。材料 docs/planning/c3/cl-07-thumbnail-options.md 提出済み・実装未着手。
 - Resend 実鍵投入 / collector ingest 実鍵投入: C3 から持ち越し（docs/planning/status.md 参照）。
 
 ### 後続（可逆・次フェーズ）
 
-1. sunabar 擬似入金の依頼人名フィールド着地位置（remitterName/applicantName/remarks）は REAL 入金でのみ確定。parseTransactions は候補全探索の防御的パースで暫定対応済み（gmo-connector.ts の ponytail コメント参照）。
+1. ~~sunabar 擬似入金の依頼人名フィールド着地位置~~ → **実測確定（2026-07-11・evidence 7.2節）**: 個人 /accounts/transactions に remitterName/applicantName フィールドは不在で、依頼人名は **remarks に「振込 <全角依頼人名>」形**で着地。parseTransactions の防御的パースは無改修で吸収（gmo-connector.ts コメント実測更新済み）。残る未確定は remitterName=U-HA6M 指定時の remarks 内表記（全角変換の有無）1 点のみ。
 2. マーケットの取引遷移（match/transition）・決済連動は C4 スコープ外（design-c4 3節・route-matrix 030-032 = ver3_note）— UI 消化と合わせて C5 以降で判断。
 3. カルマ付与のイベントフック（観測 append 時の自動付与配線）は design-c4 1節のとおり C5 スコープ（今回は付与関数 + TC まで）。

@@ -29,7 +29,7 @@ status: draft
 **C5**（開発計画 §3.1 C5 参照して設計契約 `docs/planning/c5/design-c5.md` を起票してから着手）+ **CL-07 裁定**・**C4 完了条件 (ii) クローズ**（人間ゲート・下記参照）。
 
 - CL-07 裁定が下り次第、thumbnail 経路（jSquash on Workers 等）の実装 + frozen `format` const 付与・description 訂正（対応 TC 緑化ゲート必須）。C5 と並行可（依存なし）。
-- C4 完了条件 (ii) は sunabar ポータルでの擬似入金 1 手（人間）後、`reconcileOnce` 再走で無改修クローズ可能（下記人間ゲート表・`docs/planning/c4/sunabar-e2e-evidence.md` §4/§5）。
+- C4 完了条件 (ii) は sunabar ポータル「他行振込入金シミュレート」1 手（人間・依頼人名 `U-HA6M`）後、`reconcileOnce` 再走で無改修クローズ可能（下記人間ゲート表・`docs/planning/c4/sunabar-e2e-evidence.md` §7）。
 
 ### C4 からの持ち越し
 
@@ -48,8 +48,8 @@ status: draft
 |--------|------|------|
 | LICENSE 確定 | AI が候補比較を提示 → ユーザー確定。確定まで private | 未 |
 | CL-07 裁定 4 点 | ①形式=JPEG確定 ②実装経路第1手=jSquash on Workers（$0硬制約なら CF Images） ③受け入れ条件をバイト級→契約級互換に読み替え ④EXIF transpose を ver3 の正しい挙動として採用（ver2 実装は未適用）。材料 `docs/planning/c3/cl-07-thumbnail-options.md` | 未 |
-| Resend DNS（CF トークン権限） | Resend 送信ドメイン DNS 検証には Cloudflare API トークンに DNS 編集スコープが要る（現状 `CF_API_TOKEN` のスコープ未確認）。`RESEND_API_KEY` 自体も D:\env に未取得 | 未 |
-| C4 完了条件 (ii) クローズ（sandbox） | 「照合一致→台帳 append」セグメントは実 API データで未走（sunabar 3 口座とも明細 0・擬似入金＝金銭＝人間ゲート）。人間が sunabar ポータルで受取口座 `302010013543` へ擬似入金 1 手（依頼人名＝対象 actor の `GET /api/v1/gmo/transfer-code` 値）→ `reconcileOnce` 再走 で成立。手順 = `docs/planning/c4/sunabar-e2e-evidence.md` §4/§5。無改修で成立（本波実装のまま） | 未 |
+| Resend DNS（CF トークン権限） | DNS 検証完了・`auth@it-hercules.uk` 実送信確認済（2026-07-11）。`RESEND_API_KEY` は D:\env\platform.env に格納済み | 済 |
+| C4 完了条件 (ii) クローズ（sandbox） | **2026-07-11 追実測で前進**（ユーザー承認により擬似振込 `POST /transfer/request` 1件を AI 実行 → 201 受理。ただし sunabar の振込承認 = サービスサイト人間操作・**有効期限 10 分**・API 承認なしで失効 — money 移動ゼロ）。依頼人名の着地フィールドは `remarks`（「振込 <全角名>」形）と実測確定済み・poll の UTC/JST 日付ずれ実バグも発見/修正済み。AI による振込再発行は権限分類器が拒否（承認 1 件消費済み）— ユーザー本人操作が必要。残る 1 手: ポータル**「他行振込入金シミュレート」**で受取 `302010013543` へ入金（依頼人名 `U-HA6M`・承認フローなし = 推奨）→ `reconcileOnce` 再走で無改修成立。詳細 = `docs/planning/c4/sunabar-e2e-evidence.md` §7 | 未（最終セグメントのみ） |
 | GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`） | 未 |
 | collector ingest 実鍵投入 | `COLLECTOR_PRIVATE_KEY_PEM`（Ed25519 秘密鍵）生成・`COLLECTOR_PUBLIC_KEYS` 登録・本番 `INGEST_URL` 配線 | 未 |
 | 公開の実施 | repo / OSS スナップショットの実際の公開 | 未 |

@@ -107,7 +107,10 @@ export function makeGmoConnector(env: GmoEnv): GmoConnector {
           "sunabar connector missing GMO_SUNABAR_TOKEN1 / GMO_SUNABAR_ACCOUNT_ID",
         );
       }
-      const today = new Date().toISOString().slice(0, 10);
+      // 実測(2026-07-11): sunabar の取引日付は JST。UTC 日で dateTo を作ると
+      // JST 0:00〜9:00 の間は当日明細が範囲外になり deposits=[] になる(実バグ)。
+      // transfer API も UTC 日を「過去日付」で 400 にする(evidence §7.3)。JST 固定。
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
       const url =
         `${base}/accounts/transactions?accountId=${encodeURIComponent(accountId)}` +
         `&dateFrom=2020-01-01&dateTo=${today}`;
