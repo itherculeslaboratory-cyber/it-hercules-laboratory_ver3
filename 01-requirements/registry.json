@@ -18904,6 +18904,12 @@
     "evidence": "Keepノート2026-04-04「写真は色補正しない。できるだけそのままの事実が欲しい」",
     "trust": "中",
     "date": "2026-04-04"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-10.md",
+    "evidence": "「形式 = JPEG 経路 = jSquash on Workers 比較 = 契約級互換 EXIF transpose = 採用 全部YESです。」(CL-07 4点確定)",
+    "trust": "高",
+    "date": "2026-07-11"
    }
   ],
   "superseded": null,
