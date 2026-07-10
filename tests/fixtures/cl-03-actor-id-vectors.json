@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "generated_by": "ver2 libs/ihl/governance/pii.py hash_actor_id (actual run)",
+    "ver2_commit": "686fc09",
+    "date": "2026-07-10"
+  },
+  "contract": "Two layers. (1) Identity derivation — PURE: actor_id = sha256('<salt>:<raw_email>').hexdigest(), salt from env IHL_PII_SALT (dev default 'ihl-pii-salt'); auth_session.issue_magic_link hashes email.strip().lower(), but apps/api/routes/auth.py magic-link route hashes body.email RAW (no strip/lower) for the pii_access_event — ver2 inconsistency, C1 must pin one normalization. (2) Session resolution — LOOKUP: resolve_actor_id(token) -> in-memory AuthSessionStore.sessions dict (opaque secrets.token_urlsafe(32) session token -> actor_id); NOT derivable, NOT vector-able. Token extraction order: X-IHL-Session header wins over 'Authorization: Bearer <token>'. Gate: IHL_AUTH_BYPASS truthy -> auth off; else IHL_AUTH_REQUIRED truthy -> 401 AUTH_REQUIRED without valid session.",
+  "derivation_vectorable": true,
+  "session_vectorable": false,
+  "vectors": [
+    {
+      "raw": "synthetic-user-a",
+      "salt": "ihl-pii-salt",
+      "actor_id": "62bd51e675eb79f8bf709031f57c07bba8f949fb20386ccc47519a3ddc61815f"
+    },
+    {
+      "raw": "synthetic-user-b",
+      "salt": "ihl-pii-salt",
+      "actor_id": "a87812ac27d9ff7138ceb637cc8e787037663540075b77ce9c067b5cca3912dd"
+    },
+    {
+      "raw": "Synthetic-User-A",
+      "salt": "ihl-pii-salt",
+      "actor_id": "5bf856e959f5083bb6e0dfb47f597f2237f177047e4ae4c541db72071a34fcdc"
+    },
+    {
+      "raw": " synthetic-user-a ",
+      "salt": "ihl-pii-salt",
+      "actor_id": "987bfaef58dcdd6bfb4985c964f5f6d1c99b25e13f031e0c699d948d25dd0f52"
+    },
+    {
+      "raw": "",
+      "salt": "ihl-pii-salt",
+      "actor_id": "18ca8151fd0cbc3b2576df968e6d1c39954a71012c9ea2c69134b165e198735b"
+    }
+  ],
+  "negative_tc_guidance": "TC-a: hash vectors above must match ver3 reimplementation byte-for-byte (salt explicit). TC-b: GET /auth/session without token -> 401 AUTH_REQUIRED. TC-c: unknown/expired session token -> 401. TC-d: X-IHL-Session takes precedence over Authorization Bearer when both sent. TC-e (attribution break): actor_id derived with different salt or un-normalized email must NOT equal the stored actor_id -> existing records lose attribution; assert mismatch is detected."
+}

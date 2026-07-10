@@ -1,0 +1,87 @@
+{
+  "_meta": {
+    "generated_by": "ver2 libs/ihl/payments/gmo_transfer_code.py derive_transfer_code (actual run)",
+    "ver2_commit": "686fc09",
+    "date": "2026-07-10",
+    "real_id_sources": ".ihl-local-r2/truth actor_id/voter_id + ver2 unit-test ids",
+    "algorithm": "SHA-256(utf-8 userId) -> first 3 bytes as big-endian uint24 -> Base36 uppercase -> zfill(4) if <4 chars -> keep last 6 if >6 (unreachable: uint24 Base36 max 5 chars) -> prefix 'U-'"
+  },
+  "vectors": [
+    {
+      "user_id": "@demo",
+      "transfer_code": "U-94Z5O"
+    },
+    {
+      "user_id": "@voter_test",
+      "transfer_code": "U-8RTPQ"
+    },
+    {
+      "user_id": "breeder_a",
+      "transfer_code": "U-1L2GG"
+    },
+    {
+      "user_id": "lab_researcher",
+      "transfer_code": "U-4CQ31"
+    },
+    {
+      "user_id": "party_a",
+      "transfer_code": "U-37TBI"
+    },
+    {
+      "user_id": "9e6e01c9007686d8c541809d0a6e1c5e5c016b7373570f2aac29f40edb2be662",
+      "transfer_code": "U-14942"
+    },
+    {
+      "user_id": "user-demo",
+      "transfer_code": "U-5EGFC"
+    },
+    {
+      "user_id": "user-20260414-abc12def",
+      "transfer_code": "U-4FVFM"
+    },
+    {
+      "user_id": "u_collector",
+      "transfer_code": "U-8FGN5"
+    },
+    {
+      "user_id": "",
+      "transfer_code": "U-8VTTW"
+    },
+    {
+      "user_id": " ",
+      "transfer_code": "U-24S87"
+    },
+    {
+      "user_id": "a",
+      "transfer_code": "U-7WKN5"
+    },
+    {
+      "user_id": "0",
+      "transfer_code": "U-3QQQZ"
+    },
+    {
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "transfer_code": "U-6DW4H"
+    },
+    {
+      "user_id": "ユーザー太郎",
+      "transfer_code": "U-20M1S"
+    },
+    {
+      "user_id": "🦎",
+      "transfer_code": "U-3YIXN"
+    },
+    {
+      "user_id": "user-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "transfer_code": "U-1DUH6"
+    },
+    {
+      "user_id": "USER-DEMO",
+      "transfer_code": "U-5S84K"
+    },
+    {
+      "user_id": "user-demo\n",
+      "transfer_code": "U-XYYN"
+    }
+  ]
+}

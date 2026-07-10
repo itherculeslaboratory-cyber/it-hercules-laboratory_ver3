@@ -19,7 +19,7 @@ jobs:
       - name: Install
         run: npm install
 
-      - name: Lint (filenames / generated / agents-sync / schemas / frontmatter)
+      - name: Lint (filenames / generated / agents-sync / schemas / frontmatter / codegen-check)
         run: npm run lint
 
       - name: Test

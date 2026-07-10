@@ -11,19 +11,21 @@ status: draft
 
 ## 今どこ
 
-**Phase C0 完了直後** — 新 repo（`it-hercules-laboratory_ver3` / ローカル `D:\claude\systems\ihl-ver3`）の初期化中。
+**Phase C1 完了**（2026-07-10 — `docs/planning/c1/REPORT-ver3-phase-c1-2026-07-10.md`）。
 
-- ルート衛生 3 点（`.gitignore` / `.oss-export-ignore` / `.env.example`）作成済み。
-- 人間 spine（README・onboarding・architecture・constitution・本 status）と AI 入口（AGENTS・CLAUDE・llms.txt）を並行執筆中。
-- 継承 copy（`01-requirements/`・`02-design/adr/`・`schemas/frozen/`・`docs/knowledge/`・`assets/`）はコピー元 commit `4a56cf6` を frontmatter `source` に記録して持ち込む。
+- CL-01〜13 negative TC 全 green（`tests/cl-01`〜`cl-13`・13 ファイル / 101 テスト。RED→GREEN 逐語ログ = `docs/planning/c1/tc-red-green-log.md`）。以降これが回帰条件 — 1 本でも赤に転じた PR は fail（開発計画 R-03）。
+- R2 put-if-absent は**実機検証済み・mode=storage**（実バケット `ihl-ver3-truth-dev` で 2 重 put → 先勝ち・後発 null。証跡 = `docs/planning/c1/r2-put-if-absent-evidence.md`）。append-only はストレージ層強制。
+- append-only 基盤 = `packages/truth`（envelope 検証 / TruthStore put-if-absent / contracts 移植）+ `apps/api` deny-by-default + `POST /events`。
+- schemas/ → TS 型 codegen（`scripts/codegen-schemas.mjs`）が root lint チェーン = CI で回る（完了条件③）。
 
 ## 次（最優先）
 
-**C1: CL-01〜13 negative TC の緑化**（フォルダ設計 §8 手順11・要件定義書 §6.4）。
+**C2: 認証 + 観測コア MVP**（開発計画 §3.1 C2）。
 
-- `schemas/frozen/` に CL-01〜13 の JSON Schema を持ち込み、`tests/` に negative TC を常駐させ緑化する。
-- 以降、この CL negative TC を回帰条件とし、`schemas/frozen/` の変更は TC 緑化とセットでのみ許可。
-- 機械 GATE（filename lint・生成物手編集検知）を `scripts/` に実装し CI 接続。
+- V3-AUT-03（JWT vs opaque）の裁定を C2 冒頭で確定 → CL-03 実セッション実装（C1 は DEV_TOKEN スタンドイン）。
+- マジックリンク認証（Resend SMTP 互換・dev_token フォールバック = V3-AUT-05）。実鍵投入は人間ゲート。
+- V3-OBS-22 スコープ実装 + ScreenDef Renderer 土台。CL-04 は 57 route マトリクスの公開/保護列と照合。
+- C1 実機照合で見つかった ver2 側の要裁定 3 点（CL-08 vector_length の意味 / CL-03 email 正規化不整合 / CL-07 png-vs-JPEG）を C2 冒頭で確定。
 
 ## 人間ゲート一覧（AI では確定しない）
 

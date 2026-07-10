@@ -1,16 +1,13 @@
 {
-  "name": "@ihl/api",
+  "name": "@ihl/contract-tests",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
   "scripts": {
-    "test": "vitest run",
-    "deploy": "wrangler deploy"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@ihl/truth": "*",
-    "hono": "^4.6.0"
+    "@ihl/truth": "*"
   },
   "devDependencies": {
     "vitest": "^2.1.0"

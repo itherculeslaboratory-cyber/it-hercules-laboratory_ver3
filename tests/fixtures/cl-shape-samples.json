@@ -1,0 +1,130 @@
+{
+  "_meta": {
+    "generated_by": "ver2 real code paths: EventStore.write_karma_event/write_tag_event (schema-validated), PlacementStore.create_qr_token (stored record), others mirrored from apps/api/main.py legal_agree / components/{thumbnail,embedding}_builder/run.py and validated against ver2 SchemaRegistry",
+    "ver2_commit": "686fc09",
+    "date": "2026-07-10",
+    "ver2_validation": {
+      "cl-02": "common/provenance (base, without value_origin) PASS",
+      "cl-05": "no ver2 yaml schema (ad-hoc record in main.py) — shape copied verbatim",
+      "cl-06": "capture/individual PASS",
+      "cl-07": "manifest/thumbnail_manifest PASS",
+      "cl-08": "manifest/embedding_manifest PASS",
+      "cl-10": "stored env_qr_token_v1 record from actual create_qr_token run",
+      "cl-12": "economy/karma_event PASS (EventStore validate) + economy/coin_event PASS",
+      "cl-13": "events/tag_event PASS (EventStore validate)"
+    }
+  },
+  "cl-02": {
+    "run_id": "run_c1_fixture_0001",
+    "schema_version": 1,
+    "input_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "created_at": "2026-07-10T10:55:13+00:00",
+    "model_name": "dummy",
+    "model_version": "0.1.0",
+    "pipeline_name": "phase1",
+    "pipeline_version": "0.1.0",
+    "value_origin": "image_derived"
+  },
+  "cl-05": {
+    "schema": "legal_agree_v1",
+    "agree_id": "agree_ad41dce2f9ee",
+    "actor_id": "62bd51e675eb79f8bf709031f57c07bba8f949fb20386ccc47519a3ddc61815f",
+    "terms_version": "draft-2026-06",
+    "is_draft_terms": true,
+    "legal_gate": "HUMAN-02-LEGAL"
+  },
+  "cl-06": {
+    "individual_id": "ind_demo_0001",
+    "local_label_text": "A-01",
+    "species": "Correlophus ciliatus",
+    "birth_or_hatch_date": "2025-11-02",
+    "source_type": "manual_import",
+    "observation_target_domain": "biological",
+    "record_version": 1,
+    "schema_version": 1,
+    "run_id": "run_c1_fixture_0001",
+    "created_at": "2026-07-10T10:55:13+00:00"
+  },
+  "cl-07": {
+    "thumbnail_id": "thumb_cap_demo_0001",
+    "capture_id": "cap_demo_0001",
+    "image_id": "img_cap_demo_0001",
+    "individual_id": "ind_demo_0001",
+    "thumbnail_path": "thumbnails/thumb_cap_demo_0001.png",
+    "width_px": 512,
+    "height_px": 384,
+    "format": "png",
+    "source_image_path": "input/cap_demo_0001.jpg",
+    "input_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "thumbnail_version": 1,
+    "pipeline_name": "phase1",
+    "pipeline_version": "0.1.0",
+    "schema_version": 1,
+    "run_id": "run_c1_fixture_0001",
+    "created_at": "2026-07-10T10:55:13+00:00"
+  },
+  "cl-08": {
+    "embedding_id": "emb_cap_demo_0001",
+    "capture_id": "cap_demo_0001",
+    "individual_id": "ind_demo_0001",
+    "image_id": "img_cap_demo_0001",
+    "embedding_dim": 384,
+    "embedding_file": "embeddings/emb_cap_demo_0001.npy",
+    "vector_offset": 0,
+    "vector_length": 384,
+    "normalized_flag": true,
+    "input_image_path": "input/cap_demo_0001.jpg",
+    "input_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "preprocessing_name": "long_edge_512_png",
+    "preprocessing_version": "0.1.0",
+    "model_name": "dummy",
+    "model_version": "0.1.0",
+    "pipeline_name": "phase1",
+    "pipeline_version": "0.1.0",
+    "snapshot_id": "snap_cap_demo_0001",
+    "value_origin": "image_derived",
+    "schema_version": 1,
+    "run_id": "run_c1_fixture_0001",
+    "created_at": "2026-07-10T10:55:13+00:00"
+  },
+  "cl-10": {
+    "schema": "env_qr_token_v1",
+    "token": "u_y5hhd4xxYMP5wlk8zD4j5WmoYMiReO",
+    "placement_id": "pl_399b56ed9dbfca389d1f665799de72a4",
+    "actor_id": "lab_researcher",
+    "created_at": "2026-07-10T10:55:13.772636+00:00",
+    "expires_at": "2026-07-10T11:55:13+00:00"
+  },
+  "cl-12": {
+    "karma_event_id": "karma_bd45ebefee06",
+    "actor_id": "lab_researcher",
+    "layer": "value",
+    "delta": -2.0,
+    "reason_code": "dispute",
+    "created_at": "2026-07-10T10:55:13+00:00",
+    "schema_version": 1,
+    "dispute_event_ref": "dsp_0068bf4298e4"
+  },
+  "cl-12-coin": {
+    "coin_event_id": "coin_472313e45c14",
+    "actor_id": "lab_researcher",
+    "grant_amount": 1.0,
+    "reason_code": "vote_reward",
+    "vote_event_ref": "vote_1ede5d4eb6b6",
+    "created_at": "2026-07-10T10:55:13+00:00",
+    "schema_version": 1
+  },
+  "cl-13": {
+    "tag_event_id": "tag_a3cd2d745361",
+    "target_type": "individual",
+    "target_id": "ind_demo_0001",
+    "tag": "orange-base",
+    "tag_type": "color",
+    "action": "add",
+    "source_type": "human_added",
+    "created_at": "2026-07-10T10:55:13+00:00",
+    "schema_version": 1,
+    "confidence": 0.9,
+    "source_id": "lab_researcher"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "generated_by": "ver2 libs/ihl/env/collector_ingest.py (canonical_json + verify_collector_signature, actual run)",
+    "ver2_commit": "686fc09",
+    "date": "2026-07-10",
+    "key_provenance": "fresh Ed25519 test keypair generated at fixture build; private key intentionally NOT persisted (no production/device key involved)",
+    "canonical_json_rules": "recursively sorted object keys; compact separators (',' ':'); scalars via json.dumps compact; message signed = '<timestamp_ms>.<canonical_json(body)>'",
+    "signature_encoding": "base64 (standard) of raw 64-byte Ed25519 signature",
+    "verify_note": "verify_collector_signature enforces max_skew_ms=600000; ver3 TC must pass now_ms=int(timestamp) to replay this fixture"
+  },
+  "collector_id": "collector-fixture-01",
+  "timestamp": "1783680913411",
+  "payload": {
+    "schema": "env_collector_ingest_v1",
+    "userId": "u_collector",
+    "capturedAt": "2026-06-10T03:00:00.000Z",
+    "placementId": "pl_1234567890abcdef1234567890abcdef",
+    "readings": [
+      {
+        "deviceId": "meter-local-1",
+        "measurements": {
+          "temperatureC": 24.5,
+          "humidityPct": 51,
+          "co2Ppm": 720,
+          "batteryPct": 99
+        }
+      }
+    ]
+  },
+  "canonical_json": "{\"capturedAt\":\"2026-06-10T03:00:00.000Z\",\"placementId\":\"pl_1234567890abcdef1234567890abcdef\",\"readings\":[{\"deviceId\":\"meter-local-1\",\"measurements\":{\"batteryPct\":99,\"co2Ppm\":720,\"humidityPct\":51,\"temperatureC\":24.5}}],\"schema\":\"env_collector_ingest_v1\",\"userId\":\"u_collector\"}",
+  "signed_message": "1783680913411.{\"capturedAt\":\"2026-06-10T03:00:00.000Z\",\"placementId\":\"pl_1234567890abcdef1234567890abcdef\",\"readings\":[{\"deviceId\":\"meter-local-1\",\"measurements\":{\"batteryPct\":99,\"co2Ppm\":720,\"humidityPct\":51,\"temperatureC\":24.5}}],\"schema\":\"env_collector_ingest_v1\",\"userId\":\"u_collector\"}",
+  "signature_base64": "aRwou76czjvGcxFdGj4DJ6F9xlIjaLr5hybXrY4I4fnQSSMCB5/0NvOa7LbuUCC40Z3sA54LW8klUuwFRtBXDg==",
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEANxuPV2uZwh9HRNefkVImhxkKOce+7GBfMQFxtMA4f8U=\n-----END PUBLIC KEY-----\n",
+  "expected_valid": {
+    "ok": true,
+    "collector_id": "collector-fixture-01"
+  },
+  "tampered": {
+    "payload": {
+      "schema": "env_collector_ingest_v1",
+      "userId": "u_collector",
+      "capturedAt": "2026-06-10T03:00:00.000Z",
+      "placementId": "pl_1234567890abcdef1234567890abcdef",
+      "readings": [
+        {
+          "deviceId": "meter-local-1",
+          "measurements": {
+            "temperatureC": 30.0,
+            "humidityPct": 51,
+            "co2Ppm": 720,
+            "batteryPct": 99
+          }
+        }
+      ]
+    },
+    "signature_base64": "aRwou76czjvGcxFdGj4DJ6F9xlIjaLr5hybXrY4I4fnQSSMCB5/0NvOa7LbuUCC40Z3sA54LW8klUuwFRtBXDg==",
+    "expected": {
+      "ok": false,
+      "error": "COLLECTOR_SIGNATURE_INVALID"
+    }
+  }
+}

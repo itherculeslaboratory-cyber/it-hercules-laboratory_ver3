@@ -4,3 +4,10 @@ compatibility_date = "2026-07-01"
 
 # アカウント ID・ルート・シークレット等の実値は wrangler secret / ダッシュボード /
 # ローカル .env で管理し、本ファイルにはコミットしない（.env.example の型のみが正本）。
+# DEV_TOKEN（C1 の認証スタンドイン）も wrangler secret で投入し、ここに値を書かない。
+
+# Truth バケット（append-only・put-if-absent は storage 層で強制 —
+# docs/planning/c1/r2-put-if-absent-evidence.md）
+[[r2_buckets]]
+binding = "TRUTH"
+bucket_name = "ihl-ver3-truth-dev"

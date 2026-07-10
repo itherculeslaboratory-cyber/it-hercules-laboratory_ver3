@@ -1,0 +1,11 @@
+{
+  "name": "@ihl/schema-types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TS types generated from schemas/ (one-way codegen; do not edit generated files)",
+  "main": "./src/generated/index.ts",
+  "types": "./src/generated/index.ts",
+  "devDependencies": {
+    "json-schema-to-typescript": "^15.0.4"
+  }
+}
