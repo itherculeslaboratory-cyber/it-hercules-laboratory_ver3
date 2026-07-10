@@ -11,7 +11,7 @@ status: draft
 
 ## 今どこ
 
-**Phase C2 完了・納品**（2026-07-11 — `docs/planning/c2/REPORT-ver3-phase-c2-2026-07-10.md`）。受け入れ (a)(b)(d) 成立・(c) は API 層＋単体緑（実ブラウザ通貫のみローカル再走待ち）・批評家 4 観点/2 ラウンド通過。認証（署名付きステートレスセッション）+ 観測コア API 8 route + ScreenDef Renderer（データ束縛ランタイム）+ CL-04 57route 照合 + CL-08 vector_length=384 訂正。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK / `npm test` = apps/api 1 + tests 140 + apps/web 14 = **155 passed / 0 failed**。要件 ID↔TC = `docs/planning/c2/tc-coverage.md`（自動化可能 16/16 green = 100%・V3-FND-02 のみ否定的アーキ制約で分母除外）。
+**Phase C2 完了・納品**（2026-07-11 — `docs/planning/c2/REPORT-ver3-phase-c2-2026-07-10.md`）。受け入れ **(a)(b)(c)(d) 全成立**・批評家 4 観点/3 ラウンド通過（第3パス fix3 で §7 実ブラウザ通貫 E2E を Chromium 実機で実走・green 実測して (c) を解消）。認証（署名付きステートレスセッション）+ 観測コア API 8 route + ScreenDef Renderer（データ束縛ランタイム）+ CL-04 57route 照合 + CL-08 vector_length=384 訂正。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK / `npm test` = apps/api 1 + tests 140 + apps/web 15 = **156 passed / 0 failed** / `npm run e2e -w apps/web` = 実ブラウザ **2 passed / 0 failed**（`docs/planning/c2/e2e-evidence.md`）。要件 ID↔TC = `docs/planning/c2/tc-coverage.md`（自動化可能 16/16 green = 100%・V3-FND-02 のみ否定的アーキ制約で分母除外）。
 
 **Phase C1 完了**（2026-07-10 — `docs/planning/c1/REPORT-ver3-phase-c1-2026-07-10.md`）。
 
@@ -29,9 +29,9 @@ status: draft
 - thumbnail 経路（CL-07 の Workers 実装 or VPS 残置の裁定）。新経路出力 vs 既存契約（長辺 512px JPEG/EXIF）の比較 TC green。
 - SwitchBot 連携（V3-OBS-28）・wiki ingest CLI 拡張（ruri-v3-70m backend 追加）。
 
-### C2 からの持ち越し（後続・可逆）
+### C2 からの持ち越し
 
-- §7 実ブラウザ通貫クリックスルーのローカル再走（wrangler dev + next dev + Chromium・本サンドボックス非搭載）。renderer/API 単体は緑・通貫は成立可能。
+- なし。§7 実ブラウザ通貫クリックスルーは C2 第3パス（fix3・976dbc0）で実走・green 実測済み（`docs/planning/c2/e2e-evidence.md`）。
 
 ## 人間ゲート一覧（AI では確定しない）
 
