@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-listing.schema.json",
+  "title": "Market Listing data (ihl.mkt.listing.v1)",
+  "description": "マーケット出品イベント ihl.mkt.listing.v1 の data 部（V3-MKT-01・出品/閲覧まで）。Truth キー truth/ihl.mkt.listing.v1/<listing_id>.json に append。一覧/詳細は投影で都度再計算（不変条項①）。取引遷移（match/transition）・決済連動は C4 対象外（後波）。",
+  "x_ihl_req": "V3-MKT-01",
+  "x_ihl_source": "docs/planning/c4/design-c4.md §3",
+  "type": "object",
+  "required": ["listing_id", "actor_id", "title"],
+  "properties": {
+    "listing_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "出品の一意キー（<listing_ulid>）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "出品者の actor_id（CL-03 導出・本人スコープ V3-AUT-17）。"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "出品タイトル。"
+    },
+    "description": {
+      "type": "string",
+      "description": "出品説明（任意）。"
+    },
+    "price": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "希望価格（円・任意）。決済連動は C4 対象外。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "出品時刻。"
+    },
+    "schema_version": {
+      "type": "integer",
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

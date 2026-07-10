@@ -19,6 +19,7 @@ const VALIDATOR_NAME: Record<string, string> = {
   "obs-photo": "obsPhoto",
   "obs-template": "obsTemplate",
   "ind-qr": "indQr",
+  "mkt-listing": "mktListing",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -42,7 +43,7 @@ const FROZEN_NAMES = new Set([
   "transfer-code",
 ]);
 
-const EVENT_NAMES = new Set(["obs-capture", "obs-photo", "obs-template", "ind-qr"]);
+const EVENT_NAMES = new Set(["obs-capture", "obs-photo", "obs-template", "ind-qr", "mkt-listing"]);
 
 function validatorFor(name: string): ValidateFn {
   const exportName = VALIDATOR_NAME[name];

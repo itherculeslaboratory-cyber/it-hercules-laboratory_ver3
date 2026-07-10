@@ -29,11 +29,11 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/observation/targets/search,VPS,Workers,W2,infra-route-025,protected,planned,
 —,POST,/api/v1/observation/templates,VPS,Workers,W2,infra-route-026,protected,planned,
 —,POST,/api/v1/observation/upload,VPS,Workers,W2,infra-route-027,protected,planned,
-—,GET,/api/v1/market/listings,VPS,Workers,W2,infra-route-028,protected,planned,
-—,GET,/api/v1/market/listings/{listing_id},VPS,Workers,W2,infra-route-029,protected,planned,
-—,GET,/api/v1/market/transfer/{listing_id},VPS,Workers,W2,infra-route-030,protected,planned,
-—,POST,/api/v1/market/listings/{listing_id}/match,VPS,Workers,W2,infra-route-031,protected,planned,
-—,POST,/api/v1/market/listings/{listing_id}/transition,VPS,Workers,W2,infra-route-032,protected,planned,
+—,GET,/api/v1/market/listings,VPS,Workers,W2,infra-route-028,protected,implemented,一覧投影(design-c4 §3・V3-MKT-01 出品/閲覧まで)
+—,GET,/api/v1/market/listings/{listing_id},VPS,Workers,W2,infra-route-029,protected,implemented,詳細投影(design-c4 §3・POST /market/listings 出品も同波・ver2 matrix 未登録の ver3 新規 route)
+—,GET,/api/v1/market/transfer/{listing_id},VPS,Workers,W2,infra-route-030,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)
+—,POST,/api/v1/market/listings/{listing_id}/match,VPS,Workers,W2,infra-route-031,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)
+—,POST,/api/v1/market/listings/{listing_id}/transition,VPS,Workers,W2,infra-route-032,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)
 —,GET,/api/v1/board/{category}/threads,VPS,Workers,W2,infra-route-033,protected,planned,
 —,GET,/api/v1/board/categories,VPS,Workers,W2,infra-route-034,protected,planned,
 —,GET,/api/v1/component-board,VPS,Workers,W2,infra-route-035,protected,planned,

@@ -6,6 +6,7 @@ export * from "./api/health";
 export * from "./api/observation-search";
 export * from "./events/envelope";
 export * from "./events/ind-qr";
+export * from "./events/mkt-listing";
 export * from "./events/obs-capture";
 export * from "./events/obs-photo";
 export * from "./events/obs-template";

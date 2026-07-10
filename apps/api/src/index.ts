@@ -8,6 +8,7 @@ import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
 import { ledgerRoutes } from "./ledger-routes";
 import { gmoRoutes } from "./gmo-routes";
+import { marketRoutes } from "./market-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -87,6 +88,11 @@ app.route("/api/v1", ledgerRoutes);
 // POST /gmo/expected-payment・GET /gmo/reconciliation/meta。全て本人スコープ・保護。
 // 照合ジョブ reconcileOnce はサーバ内関数(Cron 配線は C5)。
 app.route("/api/v1", gmoRoutes);
+
+// Market skeleton (design-c4 §3 / V3-MKT-01): POST /market/listings(出品)・
+// GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
+// 取引遷移(match/transition)・決済連動は C4 対象外。
+app.route("/api/v1", marketRoutes);
 
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,

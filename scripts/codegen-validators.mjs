@@ -38,6 +38,7 @@ const SCHEMAS = [
   ["obsPhoto", "events/obs-photo.schema.json"],
   ["obsTemplate", "events/obs-template.schema.json"],
   ["indQr", "events/ind-qr.schema.json"],
+  ["mktListing", "events/mkt-listing.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],
