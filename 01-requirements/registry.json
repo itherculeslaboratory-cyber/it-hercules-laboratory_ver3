@@ -10053,6 +10053,12 @@
     "evidence": "KEEP①と② 2026-03-20: 「embeddingを観測撮影時に必ず生成する（制式採用・凍結）」",
     "trust": "中",
     "date": "2026-03-20"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-6.md",
+    "evidence": "第6回裁定②「推奨 = 384(要素数)に確定し、スキーマの description を訂正。CL-08 でokです。」— embedding manifest の vector_length は要素数(=embedding_dim=384)と確定。frozen description 訂正はC2でTCとセット",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
@@ -29583,7 +29589,7 @@
  },
  {
   "id": "V3-AUT-03",
-  "statement": "セッションはver4-infra-agreement準拠のopaque session_tokenをサーバ側検証で解決する方式をver3の正とし、旧JWT(localStorage保持)方式は置換する。トークンは平文JWTのlocalStorage直置きを避け、有効期限・失効管理をサーバ側で持つ。",
+  "statement": "ver3のセッションは署名付きステートレストークン(HMAC/JWT系・サーバ側セッションストアなし)を正とする(2026-07-10 第6回裁定でopaque+サーバ側ストア方式から変更)。平文トークンのlocalStorage直置きは引き続き禁止し、保持方法はHttpOnly Cookie等の安全な手段をC2設計で確定する。失効は短めTTL(30日目安)+マジックリンク再ログインで担保し、強制失効が要件化した場合はKVデニーリスト等を後付けする。actor_id導出(CL-03凍結・sha256系)は不変とする。",
   "category": "認証/ユーザー",
   "kind": "制約",
   "scores": {
@@ -29623,6 +29629,12 @@
     "evidence": "03-新規登録.md:126,142 FR-REG-26 / NFR-REG-05",
     "trust": "高",
     "date": "2026-06-07"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-6.md",
+    "evidence": "第6回裁定①「Aでいいです。そんなにログインとかをめんどくさくしてほしくないって思いあるので。」(案A=署名付きステートレス。R3/R4適用・修正承認)",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,
@@ -40869,6 +40881,12 @@
     "evidence": "STATUS.md:40「書き込み・個人設定…本人スコープ」",
     "trust": "高",
     "date": "2026-07-05"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-10-round-6.md",
+    "evidence": "第6回裁定③「OKです。」— email正規化は入口で strip().lower() に統一(セッション経路=既存actor_id主系を正)。旧piiイベントのrawハッシュはv0封印・遡及変換なし",
+    "trust": "高",
+    "date": "2026-07-10"
    }
   ],
   "superseded": null,

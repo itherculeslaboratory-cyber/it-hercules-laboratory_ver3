@@ -20,12 +20,13 @@ status: draft
 
 ## 次（最優先）
 
-**C2: 認証 + 観測コア MVP**（開発計画 §3.1 C2）。
+**C2: 認証 + 観測コア MVP**（開発計画 §3.1 C2）。**着手前裁定は完了**（2026-07-10 第6回 — `docs/planning/rulings/user-ruling-2026-07-10-round-6.md`）。
 
-- V3-AUT-03（JWT vs opaque）の裁定を C2 冒頭で確定 → CL-03 実セッション実装（C1 は DEV_TOKEN スタンドイン）。
-- マジックリンク認証（Resend SMTP 互換・dev_token フォールバック = V3-AUT-05）。実鍵投入は人間ゲート。
+- セッション = **署名付きステートレストークン**（V3-AUT-03 修正承認・サーバ側ストアなし・保持方法は C2 設計で確定）→ CL-03 実セッション実装（C1 は DEV_TOKEN スタンドイン）。
+- email 正規化 = 入口で `strip().lower()` 統一（第6回裁定③）。CL-08 `vector_length` = 要素数 384 に確定 — frozen description 訂正は C2 で対応 TC とセットで実施。
+- マジックリンク認証（Resend SMTP 互換・dev_token フォールバック = V3-AUT-05）。**実鍵投入の時期は AI 委任済み**（第6回裁定④・実行直前に一言報告）。
 - V3-OBS-22 スコープ実装 + ScreenDef Renderer 土台。CL-04 は 57 route マトリクスの公開/保護列と照合。
-- C1 実機照合で見つかった ver2 側の要裁定 3 点（CL-08 vector_length の意味 / CL-03 email 正規化不整合 / CL-07 png-vs-JPEG）を C2 冒頭で確定。
+- CL-07 png-vs-JPEG は C3 冒頭裁定（第6回裁定⑤）。
 
 ## 人間ゲート一覧（AI では確定しない）
 
