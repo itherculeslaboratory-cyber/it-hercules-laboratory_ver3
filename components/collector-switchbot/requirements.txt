@@ -1,0 +1,4 @@
+# collector-switchbot runtime deps. Install into the base python or a venv:
+#   C:/Users/sawad/AppData/Local/Programs/Python/Python312/python.exe -m pip install -r requirements.txt
+cryptography>=42     # Ed25519 sign (canonical_json protocol; CL-09)
+requests>=2.31       # SwitchBot Cloud API + ingest POST (lazy-imported)

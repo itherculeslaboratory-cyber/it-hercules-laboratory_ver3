@@ -5,6 +5,7 @@ import type { Bindings, Variables } from "./env";
 import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
 import { obsRoutes } from "./observation-routes";
+import { collectorRoutes } from "./collector-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -20,6 +21,10 @@ const PUBLIC_ROUTES = [
   // dev-only 1-click login (§1.4 V3-AUT-05). Self-gates on DEV_TOKEN: 404 in
   // prod where DEV_TOKEN is unset, so exposing the path adds no prod surface.
   "/api/v1/auth/dev-login",
+  // collector ingest (design-c3 §3): public at the session layer, self-gated by
+  // Ed25519 signature — the signature IS the credential (CL-09). Unsigned/forged
+  // → 401 inside the route, so no session surface is exposed.
+  "/api/v1/collector/ingest",
 ];
 
 // Auth middleware (§1.5). Order: PUBLIC → Cookie → Bearer session → Bearer DEV_TOKEN → 401.
@@ -67,6 +72,10 @@ app.route("/api/v1/auth", authRoutes);
 // Observation core (§3.2): captures / upload / detail / image / templates /
 // individuals observations + qr / qr resolve. All protected (not in PUBLIC_ROUTES).
 app.route("/api/v1", obsRoutes);
+
+// Collector ingest (§3 design-c3): POST /api/v1/collector/ingest. Ed25519
+// signature-authenticated (public at session layer, self-gated by signature).
+app.route("/api/v1", collectorRoutes);
 
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,

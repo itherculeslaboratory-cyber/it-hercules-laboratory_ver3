@@ -10,6 +10,10 @@ export type Bindings = {
   MAIL_FROM?: string;
   PUBLIC_APP_URL?: string;
   IHL_DEV_EXPOSE_MAGIC_TOKEN?: string;
+  // CL-09 collector ingest: JSON map { "<collector_id>": "<Ed25519 SPKI PEM>" }
+  // of registered collector public keys. The signature IS the credential
+  // (design-c3 §3) — an unregistered collector_id is rejected 401.
+  COLLECTOR_PUBLIC_KEYS?: string;
 };
 
 export type Variables = { actorId: string };
