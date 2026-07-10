@@ -6,6 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "vitest run",
+    "dev:e2e": "wrangler dev --port 8787 --local --ip 127.0.0.1 --compatibility-date 2026-05-03",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
@@ -13,6 +14,7 @@
     "hono": "^4.6.0"
   },
   "devDependencies": {
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "wrangler": "^4.86.0"
   }
 }

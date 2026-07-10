@@ -29,7 +29,10 @@ function defaultExecute(onNavigate?: (to: string) => void): Execute {
   return async (action, body) => {
     if (action.kind === "navigate") {
       if (onNavigate) onNavigate(action.to);
-      else if (typeof window !== "undefined") window.location.assign(action.to);
+      // action.to is a screen_id, not a URL. Map it to the real route:
+      // `home` is served at "/", every other screen-def at "/s/<id>".
+      else if (typeof window !== "undefined")
+        window.location.assign(action.to === "home" ? "/" : `/s/${action.to}`);
       return;
     }
     const res = await fetch(apiUrl(action.path), {
