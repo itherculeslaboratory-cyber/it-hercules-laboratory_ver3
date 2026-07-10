@@ -11,6 +11,8 @@ status: draft
 
 ## 今どこ
 
+**Phase C4 完了（sunabar 擬似入金の人間ゲートを除く）**（2026-07-11 — `docs/planning/c4/REPORT-ver3-phase-c4-2026-07-11.md`）。完了条件 (i)(iii) 成立・(ii) は設計どおり「実疎通実測 + 擬似入金実行のみ停止報告」で成立。台帳+カルマ二層（投影で残高/カルマ都度再計算・`GET /me/ledger` 本人スコープ・Fibonacci カルマ判定 V3-KRM-02）+ GMO sunabar 照合（接続層 `sunabar`/`live` 分離・名前照合ポーリング・実 sunabar 疎通 HTTP 200 実測・擬似入金の作成 API 機構を契約確定・振込実行は権限分類器が拒否し停止報告）+ マーケット骨格（`ihl.mkt.listing.v1`・出品/一覧/詳細 route）。批評家 2 観点/1 ラウンドで major（人間ゲート正本表への反映漏れ）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK（codegen 19 files in sync）/ `npm test` = apps/api 1 + tests 199 + apps/web 15 = **215 passed / 0 failed**（C3 183→+32）/ `pytest -q` = **4 passed, 1 skipped**（C3 から変化なし）。
+
 **Phase C3 完了（CL-07 裁定待ちを除く）**（2026-07-11 — `docs/planning/c3/REPORT-ver3-phase-c3-2026-07-11.md`）。完了条件 (i)(ii) 成立・(iii) は設計どおり分母除外（CL-07 は C3 冒頭の人間裁定待ち — 材料 `docs/planning/c3/cl-07-thumbnail-options.md` 提出済み・実装未着手）。類似検索の決定論梯子（whitelist→subset→embedding・`ladder_stage`・768次元遮断）+ CL-06/10 実サンプル TC（ihl-ver2 UAT サインオフ実個体ID + 実QRコードパス）+ collector ingest（Ed25519 署名認証）+ SwitchBot 単発コレクタ + wiki-ingest ruri-v3-70m backend（PyTorch/ONNX cosine=1.0 一致検証済み）。批評家 2 観点/1 ラウンドで major（design-c3.md 未追跡）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK / `npm test` = apps/api 1 + tests 167 + apps/web 15 = **183 passed / 0 failed**（C2 156→+27）/ `pytest -q` = **4 passed, 1 skipped**（skip は torch 依存 parity TC・bare CI の意図的挙動）。SwitchBot 実 API smoke（`--fetch-only`）は成功（実機 13 台検出）。
 
 **Phase C2 完了・納品**（2026-07-11 — `docs/planning/c2/REPORT-ver3-phase-c2-2026-07-10.md`）。受け入れ **(a)(b)(c)(d) 全成立**・批評家 4 観点/3 ラウンド通過（第3パス fix3 で §7 実ブラウザ通貫 E2E を Chromium 実機で実走・green 実測して (c) を解消）。認証（署名付きステートレスセッション）+ 観測コア API 8 route + ScreenDef Renderer（データ束縛ランタイム）+ CL-04 57route 照合 + CL-08 vector_length=384 訂正。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK / `npm test` = apps/api 1 + tests 140 + apps/web 15 = **156 passed / 0 failed** / `npm run e2e -w apps/web` = 実ブラウザ **2 passed / 0 failed**（`docs/planning/c2/e2e-evidence.md`）。要件 ID↔TC = `docs/planning/c2/tc-coverage.md`（自動化可能 16/16 green = 100%・V3-FND-02 のみ否定的アーキ制約で分母除外）。
@@ -24,10 +26,16 @@ status: draft
 
 ## 次（最優先）
 
-**C4: GMO sunabar 本結線**（開発計画 §3.1 C4）+ **CL-07 裁定**（人間ゲート・下記参照）。
+**C5**（開発計画 §3.1 C5 参照して設計契約 `docs/planning/c5/design-c5.md` を起票してから着手）+ **CL-07 裁定**・**C4 完了条件 (ii) クローズ**（人間ゲート・下記参照）。
 
-- CL-07 裁定が下り次第、thumbnail 経路（jSquash on Workers 等）の実装 + frozen `format` const 付与・description 訂正（対応 TC 緑化ゲート必須）。C4 と並行可（依存なし）。
-- C4 本体は GMO sunabar 連携の本結線（詳細は開発計画 §3.1 C4 を参照して設計契約 `docs/planning/c4/design-c4.md` を起票してから着手）。
+- CL-07 裁定が下り次第、thumbnail 経路（jSquash on Workers 等）の実装 + frozen `format` const 付与・description 訂正（対応 TC 緑化ゲート必須）。C5 と並行可（依存なし）。
+- C4 完了条件 (ii) は sunabar ポータルでの擬似入金 1 手（人間）後、`reconcileOnce` 再走で無改修クローズ可能（下記人間ゲート表・`docs/planning/c4/sunabar-e2e-evidence.md` §4/§5）。
+
+### C4 からの持ち越し
+
+- C4 完了条件 (ii) クローズ（sandbox 擬似入金・下記人間ゲート表）。
+- カルマ付与のイベントフック（観測 append 時の自動付与配線）は design-c4 §1 のとおり C5 スコープ（今回は付与関数 + TC まで）。
+- マーケットの取引遷移（match/transition）・決済連動は C4 対象外（design-c4 §3・route-matrix 030-032 = ver3_note）。
 
 ### C3 からの持ち越し
 
