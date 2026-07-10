@@ -11,7 +11,7 @@ status: draft
 
 ## 今どこ
 
-**Phase C4 完了（sunabar 擬似入金の人間ゲートを除く）**（2026-07-11 — `docs/planning/c4/REPORT-ver3-phase-c4-2026-07-11.md`）。完了条件 (i)(iii) 成立・(ii) は設計どおり「実疎通実測 + 擬似入金実行のみ停止報告」で成立。台帳+カルマ二層（投影で残高/カルマ都度再計算・`GET /me/ledger` 本人スコープ・Fibonacci カルマ判定 V3-KRM-02）+ GMO sunabar 照合（接続層 `sunabar`/`live` 分離・名前照合ポーリング・実 sunabar 疎通 HTTP 200 実測・擬似入金の作成 API 機構を契約確定・振込実行は権限分類器が拒否し停止報告）+ マーケット骨格（`ihl.mkt.listing.v1`・出品/一覧/詳細 route）。批評家 2 観点/1 ラウンドで major（人間ゲート正本表への反映漏れ）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK（codegen 19 files in sync）/ `npm test` = apps/api 1 + tests 199 + apps/web 15 = **215 passed / 0 failed**（C3 183→+32）/ `pytest -q` = **4 passed, 1 skipped**（C3 から変化なし）。
+**Phase C4 完了（完了条件 (ii) は第11回裁定で受入クローズ — 残余1点は本番初入金で確定）**（2026-07-11 — `docs/planning/c4/REPORT-ver3-phase-c4-2026-07-11.md`）。完了条件 (i)(iii) 成立・(ii) は設計どおり「実疎通実測 + 擬似入金実行のみ停止報告」で成立。台帳+カルマ二層（投影で残高/カルマ都度再計算・`GET /me/ledger` 本人スコープ・Fibonacci カルマ判定 V3-KRM-02）+ GMO sunabar 照合（接続層 `sunabar`/`live` 分離・名前照合ポーリング・実 sunabar 疎通 HTTP 200 実測・擬似入金の作成 API 機構を契約確定・振込実行は権限分類器が拒否し停止報告）+ マーケット骨格（`ihl.mkt.listing.v1`・出品/一覧/詳細 route）。批評家 2 観点/1 ラウンドで major（人間ゲート正本表への反映漏れ）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK（codegen 19 files in sync）/ `npm test` = apps/api 1 + tests 199 + apps/web 15 = **215 passed / 0 failed**（C3 183→+32）/ `pytest -q` = **4 passed, 1 skipped**（C3 から変化なし）。
 
 **Phase C3 完了（CL-07 裁定待ちを除く）**（2026-07-11 — `docs/planning/c3/REPORT-ver3-phase-c3-2026-07-11.md`）。完了条件 (i)(ii) 成立・(iii) は設計どおり分母除外（CL-07 は C3 冒頭の人間裁定待ち — 材料 `docs/planning/c3/cl-07-thumbnail-options.md` 提出済み・実装未着手）。類似検索の決定論梯子（whitelist→subset→embedding・`ladder_stage`・768次元遮断）+ CL-06/10 実サンプル TC（ihl-ver2 UAT サインオフ実個体ID + 実QRコードパス）+ collector ingest（Ed25519 署名認証）+ SwitchBot 単発コレクタ + wiki-ingest ruri-v3-70m backend（PyTorch/ONNX cosine=1.0 一致検証済み）。批評家 2 観点/1 ラウンドで major（design-c3.md 未追跡）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK / `npm test` = apps/api 1 + tests 167 + apps/web 15 = **183 passed / 0 failed**（C2 156→+27）/ `pytest -q` = **4 passed, 1 skipped**（skip は torch 依存 parity TC・bare CI の意図的挙動）。SwitchBot 実 API smoke（`--fetch-only`）は成功（実機 13 台検出）。
 
@@ -26,14 +26,10 @@ status: draft
 
 ## 次（最優先）
 
-**C5**（開発計画 §3.1 C5 参照して設計契約 `docs/planning/c5/design-c5.md` を起票してから着手）+ **CL-07 裁定**・**C4 完了条件 (ii) クローズ**（人間ゲート・下記参照）。
+**C5**（開発計画 §3.1 C5 参照。着手時に第1波 Tier A 149 件のクラスタ分割表を作成し 3 点見積を改訂 — 開発計画 §4.3 注記 — した上で設計契約 `docs/planning/c5/design-c5.md` を起票してから着手）。
 
-- CL-07 裁定が下り次第、thumbnail 経路（jSquash on Workers 等）の実装 + frozen `format` const 付与・description 訂正（対応 TC 緑化ゲート必須）。C5 と並行可（依存なし）。
-- C4 完了条件 (ii) は sunabar ポータル「他行振込入金シミュレート」1 手（人間・依頼人名 `U-HA6M`）後、`reconcileOnce` 再走で無改修クローズ可能（下記人間ゲート表・`docs/planning/c4/sunabar-e2e-evidence.md` §7）。
-
-### C4 からの持ち越し
-
-- C4 完了条件 (ii) クローズ（sandbox 擬似入金・下記人間ゲート表）。
+- CL-07 は**完了**: 第10回裁定（4点確定）→ 実装済み（`cb5cd8f` — jSquash JPEG 512px + EXIF transpose + frozen const/TC セット）。
+- C4 完了条件 (ii) は**受入クローズ**: 第11回裁定（`docs/planning/rulings/user-ruling-2026-07-11-round-11.md`）。残余 1 点（銀行側 U-code 文字変換の有無）は GMO 本番契約後の本番初入金で確定（evidence §8）。
 - カルマ付与のイベントフック（観測 append 時の自動付与配線）は design-c4 §1 のとおり C5 スコープ（今回は付与関数 + TC まで）。
 - マーケットの取引遷移（match/transition）・決済連動は C4 対象外（design-c4 §3・route-matrix 030-032 = ver3_note）。
 
@@ -49,7 +45,6 @@ status: draft
 | LICENSE 確定 | AI が候補比較を提示 → ユーザー確定。確定まで private | 未 |
 | CL-07 裁定 4 点 | ①形式=JPEG確定 ②実装経路第1手=jSquash on Workers（$0硬制約なら CF Images） ③受け入れ条件をバイト級→契約級互換に読み替え ④EXIF transpose を ver3 の正しい挙動として採用（ver2 実装は未適用）。材料 `docs/planning/c3/cl-07-thumbnail-options.md` | 未 |
 | Resend DNS（CF トークン権限） | DNS 検証完了・`auth@it-hercules.uk` 実送信確認済（2026-07-11）。`RESEND_API_KEY` は D:\env\platform.env に格納済み | 済 |
-| C4 完了条件 (ii) クローズ（sandbox） | **2026-07-11 追実測で前進**（ユーザー承認により擬似振込 `POST /transfer/request` 1件を AI 実行 → 201 受理。ただし sunabar の振込承認 = サービスサイト人間操作・**有効期限 10 分**・API 承認なしで失効 — money 移動ゼロ）。依頼人名の着地フィールドは `remarks`（「振込 <全角名>」形）と実測確定済み・poll の UTC/JST 日付ずれ実バグも発見/修正済み。AI による振込再発行は権限分類器が拒否（承認 1 件消費済み）— ユーザー本人操作が必要。残る 1 手: ポータル**「他行振込入金シミュレート」**で受取 `302010013543` へ入金（依頼人名 `U-HA6M`・承認フローなし = 推奨）→ `reconcileOnce` 再走で無改修成立。詳細 = `docs/planning/c4/sunabar-e2e-evidence.md` §7 | 未（最終セグメントのみ） |
-| GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`） | 未 |
+| GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`）。**本番初入金時に C4 (ii) 残余 1 点（U-code の remarks 文字変換の有無）を確定し evidence §9 を追記**（第11回裁定・sandbox では検証手段なしと実機確定） | 未 |
 | collector ingest 実鍵投入 | `COLLECTOR_PRIVATE_KEY_PEM`（Ed25519 秘密鍵）生成・`COLLECTOR_PUBLIC_KEYS` 登録・本番 `INGEST_URL` 配線 | 未 |
 | 公開の実施 | repo / OSS スナップショットの実際の公開 | 未 |
