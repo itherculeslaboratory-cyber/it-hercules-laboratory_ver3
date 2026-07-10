@@ -6,6 +6,7 @@ import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
 import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
+import { ledgerRoutes } from "./ledger-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -76,6 +77,10 @@ app.route("/api/v1", obsRoutes);
 // Collector ingest (§3 design-c3): POST /api/v1/collector/ingest. Ed25519
 // signature-authenticated (public at session layer, self-gated by signature).
 app.route("/api/v1", collectorRoutes);
+
+// Economy ledger projection (design-c4 §1): GET /api/v1/me/ledger — 本人スコープ
+// karma(value/count 二層)+ platinum の都度再計算投影 (V3-KRM-01/02 / CL-12).
+app.route("/api/v1", ledgerRoutes);
 
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,
