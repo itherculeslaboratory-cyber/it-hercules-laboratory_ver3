@@ -101,19 +101,32 @@ function queryFromResult(result: unknown): Record<string, string> {
   return q;
 }
 
+// Build the fetch init for an api action + body. A body carrying a Blob (the
+// photo File) is sent as multipart/form-data (browser sets the boundary); every
+// other body is JSON. GET carries no body.
+function requestInit(method: string, body?: Record<string, unknown>): RequestInit {
+  const init: RequestInit = { method, credentials: "include" };
+  if (method === "GET" || body === undefined) return init;
+  const hasBlob = Object.values(body).some((v) => v instanceof Blob);
+  if (hasBlob) {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(body)) fd.append(k, v instanceof Blob ? v : String(v));
+    init.body = fd;
+  } else {
+    init.headers = { "content-type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+  return init;
+}
+
 function defaultExecute(onNavigate?: (to: string, query?: Record<string, string>) => void): Execute {
-  return async (action) => {
+  return async (action, body) => {
     if (action.kind === "navigate") {
       if (onNavigate) onNavigate(action.to);
       else if (typeof window !== "undefined") window.location.assign(screenHref(action.to));
       return undefined;
     }
-    const res = await fetch(apiUrl(action.path), {
-      method: action.method,
-      headers: { "content-type": "application/json" },
-      credentials: "include",
-      body: action.method === "GET" ? undefined : JSON.stringify({}),
-    });
+    const res = await fetch(apiUrl(action.path), requestInit(action.method, body));
     if (!res.ok) throw new Error(`api ${res.status}`);
     const ct = res.headers.get("content-type") ?? "";
     return ct.includes("application/json") ? await res.json() : undefined;
@@ -160,7 +173,7 @@ function useRunAction(nodeId: string) {
   const navigate = useContext(NavigateCtx);
   const { setActionResult } = useContext(DataSinkCtx);
   return useCallback(
-    async (action: Action, body?: Record<string, unknown>) => {
+    async (action: Action, body?: Record<string, unknown>, file?: File | null) => {
       const act: Action =
         action.kind === "api"
           ? { ...action, path: interpolate(action.path, scope) }
@@ -170,6 +183,16 @@ function useRunAction(nodeId: string) {
       const result = body === undefined ? await execute(act) : await execute(act, body);
       if (act.kind === "api") {
         if (result && typeof result === "object") setActionResult(result);
+        // Two-stage photo upload (design-c2 §3.2): the capture is created first,
+        // then — if the form carried a photo — the file is POSTed as multipart
+        // against the returned capture_id, BEFORE the transition unmounts us.
+        const captureId = (result as Record<string, unknown> | undefined)?.capture_id;
+        if (file && typeof captureId === "string") {
+          await execute(
+            { kind: "api", method: "POST", path: "/api/v1/observation/upload" },
+            { capture_id: captureId, file },
+          );
+        }
         const t = transitions.find((x) => x.from === nodeId);
         if (t) navigate(t.to_screen_id, queryFromResult(result));
       }
@@ -330,13 +353,20 @@ function FormNode({ node }: { node: ScreenNode }) {
       const body: Record<string, unknown> = {};
       const stat = p.static as Record<string, unknown> | undefined;
       if (stat) for (const [k, v] of Object.entries(stat)) setPath(body, k, v);
+      // Split the form: text fields nest into the JSON body; a non-empty file
+      // field (the photo) rides separately so run() can do the 2-stage upload.
+      // ponytail: one photo per capture (design-c2 §3.1) — first file wins.
+      let file: File | null = null;
       fd.forEach((v, k) => {
-        const s = typeof v === "string" ? v : "";
-        if (s.trim() !== "") setPath(body, k, s);
+        if (typeof v === "string") {
+          if (v.trim() !== "") setPath(body, k, v);
+        } else if (v instanceof File && v.size > 0 && !file) {
+          file = v;
+        }
       });
       setPending(true);
       try {
-        await run(node.action, body);
+        await run(node.action, body, file);
       } catch (err) {
         setFormError((err as Error)?.message ?? String(err));
       } finally {
@@ -375,13 +405,19 @@ function ListNode({ node }: { node: ScreenNode }) {
   // is the interpolation scope for `item_text` (e.g. "{{measurements.0.item}}").
   if (p.bind_items) {
     const items = (getPath(scope, String(p.bind_items)) as unknown[]) ?? [];
-    const tpl = String(p.item_text ?? "");
+    const textTpl = p.item_text ? String(p.item_text) : "";
+    const imgTpl = p.item_image ? String(p.item_image) : "";
+    const altTpl = p.item_alt ? String(p.item_alt) : "";
     return (
       <ul className="civ-list">
         {items.map((it, i) => (
           <li key={i}>
             <article className="civ-card">
-              <p className="civ-text">{interpolate(tpl, it)}</p>
+              {textTpl && <p className="civ-text">{interpolate(textTpl, it)}</p>}
+              {imgTpl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="civ-image" src={interpolate(imgTpl, it)} alt={interpolate(altTpl, it)} />
+              )}
             </article>
           </li>
         ))}
@@ -397,6 +433,19 @@ function ListNode({ node }: { node: ScreenNode }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+// A card may carry props.source_path: it GETs on mount and stores the response
+// at data[node.id], so children can read scalar fields via {{data.<id>.…}}.
+// (Lists bind arrays; cards surface the same fetch for single-object screens
+// like obs-detail's summary and qr-resume's token→individual resolve.)
+function CardNode({ node }: { node: ScreenNode }) {
+  useSource(node);
+  return (
+    <article className="civ-card">
+      <Children nodes={node.children} />
+    </article>
   );
 }
 
@@ -466,11 +515,7 @@ export function NodeView({ node }: { node: ScreenNode }) {
     case "list":
       return <ListNode node={node} />;
     case "card":
-      return (
-        <article className="civ-card">
-          <Children nodes={node.children} />
-        </article>
-      );
+      return <CardNode node={node} />;
     case "image":
       // eslint-disable-next-line @next/next/no-img-element
       return (

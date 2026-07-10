@@ -14,25 +14,37 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "観測の詳細", "level": 1 } },
             {
-              "id": "summary",
+              "id": "detail",
               "type": "card",
+              "props": { "source_path": "/api/v1/observation/{{params.id}}" },
               "children": [
-                { "id": "domain", "type": "text", "props": { "text": "ドメイン: 生き物" } },
-                { "id": "measures", "type": "text", "props": { "text": "計測: 体長 65 mm", "muted": true } }
+                { "id": "domain", "type": "text", "props": { "text": "ドメイン: {{data.detail.capture.domain}}" } },
+                { "id": "species", "type": "text", "props": { "text": "種の候補: {{data.detail.capture.species_candidate}}", "muted": true } }
               ]
             },
+            { "id": "measures-title", "type": "heading", "props": { "text": "計測", "level": 2 } },
+            {
+              "id": "measures",
+              "type": "list",
+              "props": {
+                "bind_items": "data.detail.capture.measurements",
+                "item_text": "{{item}}: {{value}} {{unit}}"
+              }
+            },
+            { "id": "photos-title", "type": "heading", "props": { "text": "写真", "level": 2 } },
             {
               "id": "photos",
               "type": "list",
-              "children": [
-                { "id": "photo-1", "type": "image", "props": { "src": "/api/v1/observation/detail/image/photo-1", "alt": "観測写真 1" } }
-              ]
+              "props": {
+                "bind_items": "data.detail.photos",
+                "item_image": "/api/v1/observation/{{capture_id}}/image/{{photo_id}}",
+                "item_alt": "観測写真 {{photo_id}}"
+              }
             },
             {
               "id": "to-individual",
-              "type": "button",
-              "props": { "label": "個体詳細を開く", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "individual-detail" }
+              "type": "link",
+              "props": { "label": "個体詳細を開く", "href": "/s/individual-detail?id={{data.detail.individual_id}}" }
             }
           ]
         }

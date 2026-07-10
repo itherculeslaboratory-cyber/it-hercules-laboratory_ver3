@@ -161,7 +161,14 @@ obsRoutes.get("/observation/:capture_id", async (c) => {
   if (!capture) return c.json({ error: "NOT_FOUND" }, 404);
   // capture-prefixed photo keys → prefix list, no full-type scan.
   const photos = (await store(c).listEvents(`truth/${PHOTO_TYPE}/${captureId}-`)).map(dataOf);
-  return c.json({ capture: dataOf(capture), photos });
+  const cap = dataOf(capture);
+  // Surface the bare individual id (subject_ref = "individual/<id>") so the UI
+  // can link to /individuals/<id> without carrying the prefix through the query.
+  const subjectRef = typeof cap.subject_ref === "string" ? cap.subject_ref : "";
+  const individual_id = subjectRef.startsWith("individual/")
+    ? subjectRef.slice("individual/".length)
+    : undefined;
+  return c.json({ capture: cap, photos, individual_id });
 });
 
 // GET /observation/{capture_id}/image/{photo_id} — media blob.

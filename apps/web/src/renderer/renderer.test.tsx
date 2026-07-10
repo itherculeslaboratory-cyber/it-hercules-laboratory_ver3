@@ -189,6 +189,43 @@ describe("Renderer runtime — body-shaping, transitions, data-binding", () => {
     });
   });
 
+  // The WITH-photo two-stage upload is verified in the real browser
+  // (e2e/observation.spec.ts): jsdom's FormData(form) can't carry a real file
+  // input, so the photo round-trip is asserted there (photo decodes on
+  // obs-detail + photo Truth key enumerated). Here we only guard the no-file
+  // branch — the upload step must be skipped when no photo is attached.
+  it("submits without a photo (upload step is skipped)", async () => {
+    const onAction = vi.fn(async () => ({ capture_id: "C0" }));
+    render(
+      <Renderer
+        onAction={onAction}
+        onNavigate={vi.fn()}
+        def={{
+          screen_id: "obs-entry",
+          route: "/observe/entry",
+          title: "t",
+          nodes: [
+            {
+              id: "capture-form",
+              type: "form",
+              action: { kind: "api", method: "POST", path: "/api/v1/observation/captures" },
+              children: [
+                { id: "item", type: "field", props: { variant: "text", name: "measurements.0.item", label: "項目", required: true } },
+                { id: "photo", type: "field", props: { variant: "photo", name: "photo", label: "写真" } },
+                { id: "submit", type: "button", props: { label: "記録する", type: "submit" } },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/項目/), { target: { value: "体長" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "記録する" }));
+    });
+    expect(onAction).toHaveBeenCalledTimes(1); // capture only, no upload
+  });
+
   it("consumes transitions[] on a successful api action (carries the response id)", async () => {
     const onAction = vi.fn(async () => ({ capture_id: "C1" }));
     const onNavigate = vi.fn();

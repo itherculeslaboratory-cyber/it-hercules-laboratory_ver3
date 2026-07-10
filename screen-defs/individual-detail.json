@@ -35,8 +35,5 @@
         }
       ]
     }
-  ],
-  "transitions": [
-    { "from": "issue-qr", "to_screen_id": "qr-resume", "label": "QR 発行後に観測再開へ" }
   ]
 }

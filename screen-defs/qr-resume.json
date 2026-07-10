@@ -15,10 +15,11 @@
             { "id": "title", "type": "heading", "props": { "text": "個体が見つかりました", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text": "この個体の文脈で観測を続けます。", "muted": true } },
             {
-              "id": "context",
+              "id": "resolve",
               "type": "card",
+              "props": { "source_path": "/api/v1/qr/{{params.token}}" },
               "children": [
-                { "id": "ind-id", "type": "text", "props": { "text": "個体 ID: individual/sample" } }
+                { "id": "ind-id", "type": "text", "props": { "text": "個体 ID: {{data.resolve.individual_id}}" } }
               ]
             },
             {
