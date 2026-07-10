@@ -27,6 +27,7 @@ export class FakeR2Bucket implements R2BucketLite {
 }
 
 export const DEV_TOKEN = "test-dev-token";
+export const SESSION_SECRET = "test-session-secret";
 
 export const AUTH_HEADERS = {
   Authorization: `Bearer ${DEV_TOKEN}`,
@@ -34,7 +35,7 @@ export const AUTH_HEADERS = {
 };
 
 export function makeEnv(bucket: FakeR2Bucket = new FakeR2Bucket()) {
-  return { DEV_TOKEN, TRUTH: bucket };
+  return { DEV_TOKEN, SESSION_SECRET, TRUTH: bucket };
 }
 
 /** Minimal valid event envelope per schemas/events/envelope.schema.json. */
