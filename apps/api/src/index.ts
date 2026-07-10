@@ -7,6 +7,7 @@ import { authRoutes } from "./auth-routes";
 import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
 import { ledgerRoutes } from "./ledger-routes";
+import { gmoRoutes } from "./gmo-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -81,6 +82,11 @@ app.route("/api/v1", collectorRoutes);
 // Economy ledger projection (design-c4 §1): GET /api/v1/me/ledger — 本人スコープ
 // karma(value/count 二層)+ platinum の都度再計算投影 (V3-KRM-01/02 / CL-12).
 app.route("/api/v1", ledgerRoutes);
+
+// GMO sunabar 照合 (design-c4 §2 / CL-11): GET /gmo/transfer-code・
+// POST /gmo/expected-payment・GET /gmo/reconciliation/meta。全て本人スコープ・保護。
+// 照合ジョブ reconcileOnce はサーバ内関数(Cron 配線は C5)。
+app.route("/api/v1", gmoRoutes);
 
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,

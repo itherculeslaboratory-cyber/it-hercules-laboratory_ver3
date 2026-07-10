@@ -14,6 +14,12 @@ export type Bindings = {
   // of registered collector public keys. The signature IS the credential
   // (design-c3 §3) — an unregistered collector_id is rejected 401.
   COLLECTOR_PUBLIC_KEYS?: string;
+  // GMO sunabar 照合(design-c4 §2). MODE=sunabar(既定・無料 sandbox)|live(人間
+  // ゲートまで throw). TOKEN1/ACCOUNT_ID は READ(入出金明細 poll)用。実値は env のみ。
+  GMO_CONNECTOR_MODE?: string;
+  GMO_SUNABAR_TOKEN1?: string;
+  GMO_SUNABAR_API_BASE?: string;
+  GMO_SUNABAR_ACCOUNT_ID?: string;
 };
 
 export type Variables = { actorId: string };
