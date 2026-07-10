@@ -42,8 +42,8 @@
       "description": "embeddings.bin 内のバイトオフセット。"
     },
     "vector_length": {
-      "type": "integer",
-      "description": "ベクトルのバイト長。384 次元 float32 = 1536。C1 で dim との整合を検証。"
+      "const": 384,
+      "description": "ベクトルの要素数（= embedding_dim = 384）。ver2 実装 embedding_builder/run.py の実書込値が正（2026-07-10 第6回裁定②。旧 description の 1536 バイト長は誤り）。"
     },
     "normalized_flag": {
       "const": true,

@@ -25,9 +25,9 @@ export interface EmbeddingManifest {
    */
   vector_offset: number;
   /**
-   * ベクトルのバイト長。384 次元 float32 = 1536。C1 で dim との整合を検証。
+   * ベクトルの要素数（= embedding_dim = 384）。ver2 実装 embedding_builder/run.py の実書込値が正（2026-07-10 第6回裁定②。旧 description の 1536 バイト長は誤り）。
    */
-  vector_length?: number;
+  vector_length?: 384;
   /**
    * L2 正規化済み（embedding.py は常に norm 除算）。cosine 検索の前提。
    */

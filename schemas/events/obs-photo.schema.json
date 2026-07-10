@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-photo.schema.json",
+  "title": "Observation Photo data (ihl.obs.photo.v1)",
+  "description": "観測写真イベント ihl.obs.photo.v1 の data 部。Truth キー truth/ihl.obs.photo.v1/<capture_id>-<photo_ulid>.json（capture_id 前方一致で R2 prefix list 可能）。バイナリは R2 media/photo/<photo_id> に put-if-absent（envelope は JSON のみ）。",
+  "x_ihl_req": "V3-OBS-43",
+  "x_ihl_source": "docs/planning/c2/design-c2.md §3.1",
+  "type": "object",
+  "required": ["photo_id", "capture_id", "actor_id", "media_key", "content_type", "size_bytes", "sha256"],
+  "properties": {
+    "photo_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "写真の一意キー（<photo_ulid>）。"
+    },
+    "capture_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "所属する観測セッションの capture_id。id 規約 <capture_id>-<photo_ulid> の前方一致キー。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "登録者の actor_id（本人スコープ V3-AUT-17）。"
+    },
+    "media_key": {
+      "type": "string",
+      "pattern": "^media/photo/[^/]+$",
+      "description": "R2 バイナリキー。'media/photo/<photo_id>' 固定。"
+    },
+    "content_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "MIME タイプ（例: image/jpeg・image/png）。"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "バイナリのバイト数。"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "バイナリの SHA-256（16 進小文字 64 桁）。"
+    }
+  },
+  "additionalProperties": false
+}

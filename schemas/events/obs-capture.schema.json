@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-capture.schema.json",
+  "title": "Observation Capture data (ihl.obs.capture.v1)",
+  "description": "観測セッションイベント ihl.obs.capture.v1 の data 部。envelope に載る（Truth キー truth/ihl.obs.capture.v1/<capture_id>.json）。5 ドメイン分岐（V3-OBS-01）・種はユーザー確定のみ（V3-OBS-03）・親個体は FR-MVP-04 セッション任意ポインタ（frozen individual-key と同じ扱い）。",
+  "x_ihl_req": "V3-OBS-22/01/03 / V3-IND-01 / FR-MVP-04",
+  "x_ihl_source": "docs/planning/c2/design-c2.md §3.1",
+  "type": "object",
+  "required": ["capture_id", "actor_id", "domain"],
+  "properties": {
+    "capture_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "観測セッションの一意キー（<capture_ulid>）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "記録者の actor_id（CL-03 導出・本人スコープ V3-AUT-17）。"
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["biology", "mineral", "digital", "place", "custom"],
+      "description": "観測対象ドメイン（V3-OBS-01 の 5 分岐）。"
+    },
+    "subject_ref": {
+      "type": "string",
+      "pattern": "^individual/[^/]+$",
+      "description": "観測対象個体の参照（'individual/<individual_id>' 形式・V3-IND-01）。任意。"
+    },
+    "sire_id": {
+      "type": "string",
+      "description": "父親個体 ID（任意）。FR-MVP-04 セッション任意ポインタ（frozen individual-key.sire_id と同じ位置づけ・Truth コア固定枠ではない）。"
+    },
+    "dam_id": {
+      "type": "string",
+      "description": "母親個体 ID（任意）。sire_id と同じ扱い。"
+    },
+    "species_candidate": {
+      "type": "string",
+      "description": "種の候補。ユーザー入力のみ（AI 候補は入れない・V3-OBS-03）。任意。"
+    },
+    "species_confirmed_by": {
+      "const": "user",
+      "description": "種の確定者。常に user（AI 確定は不可・V3-OBS-03）。任意（species_candidate 記入時に付随）。"
+    },
+    "measurements": {
+      "type": "array",
+      "description": "計測項目の配列。",
+      "items": {
+        "type": "object",
+        "required": ["item", "kind", "value"],
+        "properties": {
+          "item": { "type": "string", "description": "計測項目名。" },
+          "kind": { "type": "string", "description": "計測種別（number/text/select 等・テンプレ item.kind に対応）。" },
+          "value": {
+            "type": ["string", "number"],
+            "description": "計測値。"
+          },
+          "unit": { "type": "string", "description": "単位（任意）。" },
+          "item_hash": { "type": "string", "description": "項目ハッシュ（任意）。" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "template_id": {
+      "type": "string",
+      "description": "使用した観測テンプレの template_id（任意）。"
+    },
+    "note": { "type": "string", "description": "自由記述メモ（任意）。" }
+  },
+  "additionalProperties": false
+}

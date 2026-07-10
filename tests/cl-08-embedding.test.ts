@@ -21,6 +21,17 @@ describe("CL-08 embedding manifest shape", () => {
     expect(validateFrozen("embedding-manifest", bad).valid).toBe(false);
   });
 
+  // 第6回裁定② — vector_length は「要素数=384」であり旧「バイト長=1536」解釈は誤り。
+  it("accepts vector_length = 384 (element count, const)", () => {
+    const ok = { ...sample, vector_length: 384 };
+    expect(validateFrozen("embedding-manifest", ok).valid).toBe(true);
+  });
+
+  it("rejects vector_length = 1536 (old byte-length interpretation)", () => {
+    const bad = { ...sample, vector_length: 1536 };
+    expect(validateFrozen("embedding-manifest", bad).valid).toBe(false);
+  });
+
   it("rejects non-L2 (normalized_flag !== true, const)", () => {
     const bad = { ...sample, normalized_flag: false };
     expect(validateFrozen("embedding-manifest", bad).valid).toBe(false);

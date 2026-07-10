@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/screendef/screendef.schema.json",
+  "title": "ScreenDef (ver3 Renderer 実行可能画面定義)",
+  "description": "ScreenDef Renderer の入力正本（V3-UIX-16/17/18/81）。トップ形状は ver2 63 JSON を継承（screen_id/route/title/layout/nodes/transitions）。node を Renderer 実行可能に拡張（type=カタログ enum §4.2・action=api|navigate）。色/className の直書きは props の semantic 値のみで表現し raw hex/任意色クラスは機械 GATE（check-ui-tokens.mjs）が拒否する。",
+  "x_ihl_req": "V3-UIX-16/17/18/81",
+  "x_ihl_source": "docs/planning/c2/design-c2.md §4.1-4.2 / ihl-ver2/screen-defs/*.json",
+  "type": "object",
+  "required": ["screen_id", "route", "title", "nodes"],
+  "properties": {
+    "screen_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "画面の一意キー。route と 1:1。"
+    },
+    "route": {
+      "type": "string",
+      "pattern": "^/",
+      "description": "画面の URL パス（route matrix と対応）。"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "画面タイトル（日本語可）。"
+    },
+    "layout": {
+      "type": "string",
+      "description": "レイアウト種別（例: 'standard'）。任意。"
+    },
+    "nodes": {
+      "type": "array",
+      "description": "画面を構成するノード木のルート配列。",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "transitions": {
+      "type": "array",
+      "description": "画面遷移（ver2 継承形状）。",
+      "items": { "$ref": "#/$defs/transition" }
+    },
+    "notes": {
+      "type": "string",
+      "description": "設計メモ（任意・ユーザー向け UI には出さない）。"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "ノードの一意キー（screen 内）。"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "app-shell",
+            "page",
+            "heading",
+            "text",
+            "button",
+            "form",
+            "field",
+            "list",
+            "card",
+            "image",
+            "qr-code",
+            "link"
+          ],
+          "description": "コンポーネントカタログ v0（§4.2 の 12 種）。field は props.variant で text|number|select|photo を表現。"
+        },
+        "props": {
+          "type": "object",
+          "description": "semantic props のみ（variant 等）。raw hex/任意色クラスは禁止（check-ui-tokens.mjs が拒否）。",
+          "additionalProperties": true
+        },
+        "children": {
+          "type": "array",
+          "description": "子ノード（再帰）。",
+          "items": { "$ref": "#/$defs/node" }
+        },
+        "action": { "$ref": "#/$defs/action" }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "method", "path"],
+          "properties": {
+            "kind": { "const": "api" },
+            "method": {
+              "type": "string",
+              "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+              "description": "HTTP メソッド。"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^/",
+              "description": "API パス（NEXT_PUBLIC_API_URL 相対）。"
+            },
+            "body_from": {
+              "type": "string",
+              "description": "リクエストボディを組み立てる元（フォーム node id 等・任意）。"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "to"],
+          "properties": {
+            "kind": { "const": "navigate" },
+            "to": {
+              "type": "string",
+              "minLength": 1,
+              "description": "遷移先（screen_id または route）。"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "transition": {
+      "type": "object",
+      "required": ["from", "to_screen_id"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1,
+          "description": "遷移の起点（node id / hotspot 等）。"
+        },
+        "to_screen_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "遷移先 screen_id。"
+        },
+        "label": {
+          "type": "string",
+          "description": "遷移の説明ラベル（任意）。"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

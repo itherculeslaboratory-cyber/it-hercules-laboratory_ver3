@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-template.schema.json",
+  "title": "Observation Template data (ihl.obs.template.v1)",
+  "description": "観測テンプレイベント ihl.obs.template.v1 の data 部。Truth キー truth/ihl.obs.template.v1/<template_id>.json。fork（forked_from）で系譜継承（V3-OBS-18・フォーク文化 不変条項②）。",
+  "x_ihl_req": "V3-OBS-18",
+  "x_ihl_source": "docs/planning/c2/design-c2.md §3.1",
+  "type": "object",
+  "required": ["template_id", "actor_id", "title", "items"],
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "テンプレの一意キー（<template_ulid>）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "作成者の actor_id。"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "テンプレ表示名。"
+    },
+    "items": {
+      "type": "array",
+      "description": "計測項目定義の配列。",
+      "items": {
+        "type": "object",
+        "required": ["label", "kind"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1, "description": "項目ラベル。" },
+          "kind": {
+            "type": "string",
+            "enum": ["number", "text", "select", "image-annotation", "api", "calc"],
+            "description": "入力種別。"
+          },
+          "options": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "kind=select の選択肢（任意）。"
+          },
+          "unit": { "type": "string", "description": "単位（任意）。" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "forked_from": {
+      "type": "string",
+      "description": "fork 元テンプレの template_id（V3-OBS-18・任意）。"
+    }
+  },
+  "additionalProperties": false
+}
