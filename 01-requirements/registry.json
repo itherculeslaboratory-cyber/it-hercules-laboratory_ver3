@@ -54869,5 +54869,402 @@
   "superseded": null,
   "conflict": null,
   "ambiguity": null
+ },
+ {
+  "id": "V3-AIP-101",
+  "group": "g01-AI運用",
+  "category": "AI運用/開発プロセス",
+  "kind": "制約",
+  "statement": "完成報告の実機検証義務(AI完成報告恐怖症対策): AI は「できました」報告の前に実ブラウザ/実画面で起動・操作検証を完了し、モック・未配線・エラーの不在をスクリーンショット等の実測エビデンス付きで確認する。人間の最終画面打鍵チェックは「最終確認」であり初回デバッグにしない。V3-AIP-03/48(批評家ゲート・完成の定義)の画面成果物への具体化。",
+  "scores": {
+   "bv": {
+    "v": 5,
+    "why": "信頼毀損の再発防止 — 本人の恐怖症の直接対策"
+   },
+   "ui": {
+    "v": 5,
+    "why": "人間チェックの体験を「裏切られ」から「最終確認」へ変える"
+   },
+   "dep": {
+    "v": 4,
+    "why": "全 UI 納品フローに横断適用"
+   },
+   "diff": {
+    "v": 2,
+    "why": "E2E 基盤(Playwright+screenshot)は導入済み・運用規約化が主"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「もうＡＩのできましたが怖いんです」「安心できる状態に本当になってから、私に最終画面打鍵チェックさせてください」",
+  "score_v2": 68,
+  "tier_v2": "S",
+  "philosophy": [
+   "批評家ゲート",
+   "誇張ゼロ"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "既納品分の実画面検証が次セッション最優先(第13回確認4=本人「まずシステムが完璧にできることが最優先」)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「私は、もうＡＩのできましたが怖いんです。何回画面を実際に起動してみたときに期待を裏切られたから。実際には動かないや、エラーや、ただのモックなど 怖いんです。調査して、安心できる状態に本当になってから、私に最終画面打鍵チェックさせてください。」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
+ },
+ {
+  "id": "V3-VID-33",
+  "group": "g08-動画その他",
+  "category": "動画/発信",
+  "kind": "機能要件",
+  "statement": "動画作成システムの事前整備: Fable 級モデルが使える間に、手本となる台本(V3-VID-31 規約準拠の完成見本)とオーケストレーション(台本→素材→組立の Workflow 雛形)を整備し、動画量産が最高性能で立ち上がる状態にする。",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "第2波動画量産の立ち上がり品質を規定"
+   },
+   "ui": {
+    "v": 3,
+    "why": "視聴者品質は台本見本の質に連動"
+   },
+   "dep": {
+    "v": 3,
+    "why": "V3-VID-01/17/31 に接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "台本見本+Workflow 雛形の作成"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「Fableが使える間に動画作成システムが最高のパフォーマンスを発揮できるように準備や整備をして」",
+  "score_v2": 55,
+  "tier_v2": "A",
+  "philosophy": [],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "動画パイプライン(V3-VID-01)と同波。準備自体は次セッション余力枠(第13回確認4)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「Fableが使える間に動画作成システムが最高のパフォーマンスを発揮できるように準備や整備をして。手本となる台本や、オーケストレーションを整えて。」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
+ },
+ {
+  "id": "V3-VID-34",
+  "group": "g08-動画その他",
+  "category": "動画/発信",
+  "kind": "機能要件",
+  "statement": "ゆっくり動画方式による多言語展開: 日本語+英語を基本とし、追加言語への翻訳展開も可(合成音声ベースのため言語追加コストが低い)。言語選定は AI 裁量。",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "露出面の多言語拡大"
+   },
+   "ui": {
+    "v": 3,
+    "why": "非日本語話者への到達"
+   },
+   "dep": {
+    "v": 2,
+    "why": "V3-VID 系+I18 系に接続"
+   },
+   "diff": {
+    "v": 2,
+    "why": "翻訳+合成音声差し替え"
+   }
+  },
+  "ds": 4,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「ゆっくり動画にすれば 多言語余裕」「お好きに」(裁量委任)",
+  "score_v2": 40,
+  "tier_v2": "B",
+  "philosophy": [],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "動画量産と同波",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「日本語と英語、さらにほかの言語翻訳したければどうぞ。お好きに。」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
+ },
+ {
+  "id": "V3-MKT-59",
+  "group": "g06-マーケット",
+  "category": "マーケット/経済",
+  "kind": "アイデア",
+  "statement": "IHL 商標マーク使用許諾プログラム: 外部がシステムのデータ登録・信頼性確保を公式に利益化する際、商標権登録済み IHL マークの使用を許諾する。対価方式は未確定 — 候補: 売上3%(売上検証手段が課題)/サブスク/過去売上超過分のプラチナコイン化(過去資料に設計あり — 発掘して比較提示)。方式設計・比較は AI 可、法務(許諾条項)と金銭執行は人間ゲート。",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "外部収益化とブランド信頼の制度化"
+   },
+   "ui": {
+    "v": 2,
+    "why": "エンドユーザー UI への直接露出は小"
+   },
+   "dep": {
+    "v": 3,
+    "why": "プラチナコイン経済(V3-KRM)と接続候補"
+   },
+   "diff": {
+    "v": 4,
+    "why": "売上検証・許諾管理の仕組みが未設計"
+   }
+  },
+  "ds": 4,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「商標権登録済みの IHLマーク使用可能にしたい」「売上伸びろ！って感じで」",
+  "score_v2": 38,
+  "tier_v2": "B",
+  "philosophy": [],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "方式未確定のアイデア枠・法務/金銭は人間ゲート(R1)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「商標権登録済みの IHLマーク使用可能にしたい。対価は売上3%？ どうやって確認するんだろう？ それならサブスクかな〜 でも過去の売り上げ超えたら、プラチナコインとか設計考えてみました。」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
+ },
+ {
+  "id": "V3-AIP-102",
+  "group": "g01-AI運用",
+  "category": "AI運用/開発プロセス",
+  "kind": "機能要件",
+  "statement": "技術記事投稿パック: システム案・思想を複数技術サイトへ投稿できる「コピペ完結」の記事群(サイト別フォーマット済み)を生成する。投稿ボタンの実施=公開は人間ゲート。",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "思想の露出・採用/協力者獲得の入口"
+   },
+   "ui": {
+    "v": 2,
+    "why": "対外コンテンツ"
+   },
+   "dep": {
+    "v": 2,
+    "why": "docs/public(whitepaper 等 C5 K8 産出)を素材に再利用"
+   },
+   "diff": {
+    "v": 2,
+    "why": "記事化+サイト別整形"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「いろんな技術サイトに私のシステム案や思想を投稿したい。コピペでできるように作って」",
+  "score_v2": 40,
+  "tier_v2": "B",
+  "philosophy": [],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "公開実施は人間ゲート・生成は余力枠(第13回確認4)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「いろんな技術サイトに私のシステム案や思想を投稿したい。コピペでできるように作って。」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
+ },
+ {
+  "id": "V3-AIP-103",
+  "group": "g01-AI運用",
+  "category": "AI運用/開発プロセス",
+  "kind": "機能要件",
+  "statement": "マルチ SNS 自動投稿オーケストレーション: 1 コンテンツを Instagram 等複数 SNS へ展開・自動投稿する配信基盤(「一個に投稿 全部に投稿」)。露出機会の最大化が目的。公開ボタン(初期)は人間ゲート・完全自動化はその後の明示 Promote。",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "露出チャネルの多重化"
+   },
+   "ui": {
+    "v": 2,
+    "why": "対外配信基盤"
+   },
+   "dep": {
+    "v": 2,
+    "why": "V3-AIP-102/VID 系の配信面"
+   },
+   "diff": {
+    "v": 3,
+    "why": "各 SNS API 連携+整形"
+   }
+  },
+  "ds": 4,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「インスタとかいろんな奴に自動で投稿して、人の目に触れる機会を増やしたい」",
+  "score_v2": 38,
+  "tier_v2": "B",
+  "philosophy": [],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "公開実施は人間ゲート(R1・動画公開ボタンと同型)",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「一個に投稿 全部に投稿、オーケストレーション。インスタとかいろんな奴に自動で投稿して、人の目に触れる機会を増やしたい。」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
+ },
+ {
+  "id": "V3-OBS-71",
+  "group": "g02-観測",
+  "category": "観測",
+  "kind": "機能要件",
+  "statement": "観測データ印刷: 個体詳細から、欲しいデータ項目(チェックボックス)と期間指定で範囲選択して観測データを印刷可能にする。",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "紙運用・対面共有(即売会等)での実用"
+   },
+   "ui": {
+    "v": 4,
+    "why": "個体詳細からの直接操作"
+   },
+   "dep": {
+    "v": 2,
+    "why": "個体詳細投影(C5 K1 実装済み)の出力面"
+   },
+   "diff": {
+    "v": 2,
+    "why": "選択 UI+印刷用整形(ブラウザ print で足る)"
+   }
+  },
+  "ds": 4,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「個体詳細から観測データ印刷可能。欲しいデータと範囲をチェックBOXと、期間指定で指定してから」(新規アイディアと本人認識)",
+  "score_v2": 40,
+  "tier_v2": "B",
+  "philosophy": [],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "第1波受入(C5)後の増分 UI のため次波",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「個体詳細から観測データ印刷可能。欲しいデータと範囲をチェックBOXと、期間指定で指定してからかな。これ新しいアイディア？のはずです？」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
+ },
+ {
+  "id": "V3-OBS-72",
+  "group": "g02-観測",
+  "category": "観測",
+  "kind": "機能要件",
+  "statement": "研究室環境コンテキストの紐付け: 部屋・棚の配置、エアコン等の空調環境、センサー設置位置といった研究室自体の環境記述を観測データへ紐付け、環境説明可能な観測として「一番信頼性のあるヘラクレス飼育データ」を成立させる。placement/device-binding/occupancy 基盤(C5 K7 実装済み)の拡張 — 研究室レイアウト・空調プロファイルの記述スキーマと投影を追加。",
+  "scores": {
+   "bv": {
+    "v": 5,
+    "why": "「一番信頼性のあるヘラクレス飼育データ」の中核差別化"
+   },
+   "ui": {
+    "v": 3,
+    "why": "研究者/論文読者向けの環境明示"
+   },
+   "dep": {
+    "v": 4,
+    "why": "K7 placement 基盤+SwitchBot 収集(V3-OBS-28)に直結"
+   },
+   "diff": {
+    "v": 3,
+    "why": "レイアウト/空調スキーマ+紐付け投影の追加"
+   }
+  },
+  "ds": 5,
+  "ds_why": "ユーザー直筆 2026-07-11(第13回)「私のデータにはこの研究室のデータすら紐づけたいなって」「一番信頼性のあるヘラクレスの飼育データになりたいです」",
+  "score_v2": 62,
+  "tier_v2": "A",
+  "philosophy": [
+   "実測主義"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未着手",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "K7 実装済み placement 基盤の直接増分・論文最適化(V3-PPR 系)と接続",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-11-round-13.md",
+    "evidence": "「研究所のどこにどうおいてあり、そして、エアコンがどうで、とか環境をしっかりと説明できてないと意味が微妙かと思います。ですので、私のデータにはこの研究室のデータすら紐づけたいなって。」「一番信頼性のあるヘラクレスの飼育データになりたいです。」",
+    "trust": "高",
+    "date": "2026-07-11"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "hold": false
  }
 ]
