@@ -28,6 +28,12 @@ import { socialRoutes } from "./social-routes";
 import { proposalRoutes } from "./proposal-routes";
 import { profileRoutes } from "./profile-routes";
 import { githubWebhookRoutes } from "./github-webhook-routes";
+import { researchContentRoutes } from "./research-content-routes";
+import { paperMatchRoutes } from "./paper-match-routes";
+import { projectRoutes } from "./project-routes";
+import { researchCanonicalRoutes } from "./research-canonical-routes";
+import { researchAgentBatchRoutes, handleResearchScheduled } from "./research-agent-batch";
+import { NEWSPAPER_CRON_UTC } from "./research-constants";
 import { handleScheduled } from "./batch";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -224,6 +230,46 @@ app.route("/api/v1", profileRoutes);
 // contribution_event に delivery_id キーで put-if-absent（重複 delivery=409 べき等）。
 app.route("/api/v1", githubWebhookRoutes);
 
+// Research CMS content (design-k5 §2.1 / V3-WIK-16/13/14/17・PPR-03/30): POST/GET
+// /research/content(+/:id)・/:id/tags(+/suggest)・POST /research/search・POST
+// /research/shared・GET /research/chat-index。論文/記事/ブログ/chat/新聞を単一
+// ihl.research.content.v1 で兼用。「投稿=即検索可能」は prefix scan 投影で満たす（維持型
+// 二次インデックス不要・不変条項①）。3 層タグは frozen tag-event(target_type=cross)再利用・
+// AI 提案は非永続で確認 POST のみ append。全て protected・書込 actor_id はセッション principal。
+app.route("/api/v1", researchContentRoutes);
+
+// Paper Match / Gap / Hypothesis (design-k5 §2.1 / V3-PPR-01/06/30): POST /research/
+// paper-match(条件P×観測の照合 + Data Descriptor 自動充填)・POST /research/gap(全種族横断
+// ギャップ抽出・embedding 既定 OFF)・POST /research/content/:id/hypothesis(仮説を別 content
+// イベントとして append・INSERT ONLY)。判定は paper-match.ts 純関数・LLM OFF 既定は静的ヒント 1 行。
+// researchContentRoutes の後に登録(hypothesis は content-routes に無いので fall-through で拾う)。
+app.route("/api/v1", paperMatchRoutes);
+
+// Project Hub / Ver 分岐 / bestVersion / citation / 再解析マニフェスト / bundle
+// (design-k5 §2.1 / V3-PPR-16/18/09): POST/GET /research/projects(+/:id)・POST /:id/versions
+// (parent_project_id を持つ新 project row で Ver 分岐・別スキーマ不要)・GET /:id/best-version
+// (Ver 別観測集計から決定論選定・同点 version_label 昇順)・POST /research/citations(引用の
+// append-only 記録・status=updated は別イベント・報酬は grantPlatinum(contribution_rebate) 再利用)・
+// GET /research/content/:id/reanalysis-manifest(事実キーのみ・画像バイナリ非含)・GET /:id/bundle。
+// 全て protected・書込 actor_id はセッション principal。GET /:id/... はセグメント数が多く
+// researchContentRoutes の GET /research/content/:id を侵さない(fall-through で本 route が拾う)。
+app.route("/api/v1", projectRoutes);
+
+// Canonical mapping / Category (design-k5 §2.1 / V3-PPR-13): POST/GET /research/canonical/
+// mapping(+/:qid)・POST/GET /research/categories。Wikidata Q番号↔専門 DB 対応を append-only
+// 記録(qid__target_db 合成キー・再 put=409)+ ユーザー追加可能な学術分類階層(domain 必須・親子木)。
+// 外部専門 API の実クエリは §6 人間ゲート—route は DOMAIN_API_MAP オフライン対応表を読むだけ。
+// 全て protected・書込 actor_id はセッション principal。
+app.route("/api/v1", researchCanonicalRoutes);
+
+// Research agent batch (design-k5 §2.1 / V3-PPR-17・WIK-01): POST/GET /research/tasks・POST
+// /research/agent/run(日次蒸留+タスク生成+新聞生成の単発手動トリガ)・GET /research/newspaper・
+// GET /research/wiki/:node_id。全生成物は決定論キー(sha1)で append(同一入力→同一ノード冪等)・
+// board_summary→big_wiki 階層・新聞は content_type=newspaper・LLM 既定 OFF でスキップ。全て
+// protected。Cron 定期配線(wrangler.toml [triggers] crons)は §6 人間ゲート—手動 route + scheduled
+// 実体までを納品。scheduled は下の dispatcher が NEWSPAPER_CRON_UTC で本日次バッチへ振り分ける。
+app.route("/api/v1", researchAgentBatchRoutes);
+
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);
   const actorId = c.get("actorId");
@@ -240,12 +286,25 @@ app.post("/events", async (c) => {
   return c.json({ key: result.key, actor_id: actorId }, 201);
 });
 
-// C5 K3 月次 cron 配線(design-k3 §2.6)。Worker ランタイムは default export の
+// C5 cron 配線(design-k3 §2.6 + design-k5 §2.1)。Worker ランタイムは default export の
 // { fetch, scheduled } を見る。Hono app は既に .fetch を持つので、ここに .scheduled を
-// 付けて export default app のまま両立させる(設計の { fetch: app.fetch, scheduled } と
-// 等価だが、テストが依存する app.request を保持するため app に生やす形にした)。
+// 付けて export default app のまま両立させる(テストが依存する app.request を保持する形)。
+// dispatcher は event.cron で振り分ける: NEWSPAPER_CRON_UTC("0 21 * * *" = JST06:00)は K5 の
+// 日次蒸留/タスク生成/新聞バッチ(handleResearchScheduled)へ、それ以外は既存 K3 月次バッチ
+// (handleScheduled は "0 15 * * *" 日次起動を受け 25 日基準で月次分岐)へ。既存月次を壊さない。
 // cron は wrangler.toml [triggers] 宣言 + config/consented-crons.json 承認まで配線済で、
-// デプロイ(=実行開始 = 常駐トークン消費)は人間ゲート。
-(app as unknown as { scheduled: typeof handleScheduled }).scheduled = handleScheduled;
+// デプロイ(=実行開始 = 常駐トークン消費)は §6 人間ゲート(本クラスタは crons を触らない)。
+async function scheduledDispatch(
+  event: { scheduledTime?: number; cron?: string },
+  env: Bindings,
+  ctx?: unknown,
+): Promise<void> {
+  if (event?.cron === NEWSPAPER_CRON_UTC) {
+    await handleResearchScheduled(event, env);
+    return;
+  }
+  await handleScheduled(event, env, ctx);
+}
+(app as unknown as { scheduled: typeof scheduledDispatch }).scheduled = scheduledDispatch;
 
 export default app;

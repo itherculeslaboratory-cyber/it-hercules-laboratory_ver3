@@ -1,0 +1,38 @@
+{
+  "screen_id": "research-newspaper",
+  "route": "/research/newspaper",
+  "title": "文明研究新聞",
+  "layout": "standard",
+  "notes": "PPR-17 — generateNewspaper 投影(新規 task_node ダイジェスト)。日次蒸留の単発手動トリガは POST /research/agent/run(Cron 定期配線は §6 人間ゲート)。source_path=GET /api/v1/research/newspaper(protected)。論文詳細へ。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "文明研究新聞", "level": 1 } },
+            {
+              "id": "newspaper",
+              "type": "card",
+              "props": { "source_path": "/api/v1/research/newspaper" },
+              "children": [
+                { "id": "issue-title", "type": "heading", "props": { "text": "{{data.newspaper.title}}", "level": 2 } },
+                { "id": "issued-at", "type": "text", "props": { "text": "発行: {{data.newspaper.created_at}}", "muted": true } },
+                { "id": "digest", "type": "list", "props": { "bind_items": "data.newspaper.tasks", "item_text": "[{{difficulty}}] {{question}}", "empty_text": "新しい課題はまだありません" } }
+              ]
+            },
+            {
+              "id": "to-paper",
+              "type": "button",
+              "props": { "label": "関連する論文を開く", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "paper-detail" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

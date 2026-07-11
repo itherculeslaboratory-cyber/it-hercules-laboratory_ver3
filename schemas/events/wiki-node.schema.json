@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/wiki-node.schema.json",
+  "title": "Research wiki node (ihl.research.wiki_node.v1)",
+  "description": "日次蒸留の Wiki ノード（WIK-01）。Truth キー truth/ihl.research.wiki_node.v1/<node_id>.json（node_id=決定論 sha1(level|scope_ref|content_hash)→同一入力で同一ノード append-only。envelope.id は別途 ulid()）。掲示板要約(board_summary) の上に大 Wiki(big_wiki) を積む階層。新聞は content_type=newspaper で content に格納（別スキーマ不要）。",
+  "x_ihl_req": "V3-WIK-01",
+  "x_ihl_source": "docs/planning/c5/design-c5.md (K5) §2.2",
+  "type": "object",
+  "required": ["node_id", "level", "scope_ref", "summary_markdown", "source_event_ids", "created_at", "schema_version"],
+  "properties": {
+    "node_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "決定論キー（storage key と一致・route が算出）。"
+    },
+    "level": {
+      "type": "string",
+      "enum": ["board_summary", "big_wiki"],
+      "description": "階層（board_summary=掲示板要約 / big_wiki=大 Wiki）。"
+    },
+    "scope_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象参照（掲示板ID／論文ID 等）。"
+    },
+    "summary_markdown": {
+      "type": "string",
+      "description": "蒸留された要約 Markdown。"
+    },
+    "source_event_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "蒸留元イベント ID 群。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "生成時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（例: '1'）。"
+    }
+  },
+  "additionalProperties": false
+}

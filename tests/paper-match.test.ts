@@ -1,0 +1,210 @@
+// PPR-01/30/06 paper-match pure functions + thin routes (design-k5 §2.3/§2.1/§4).
+// matchConditions: satisfied/missing/violated classification + match_rate=satisfied/required
+// (required_count=0 -> 1.0). autoFillDescriptor: section fill + claim evidence auto-link,
+// unverified claim stays hypothesis, Stage1 mechanical check reuses matchConditions.
+// gapAnalysis: injected fixed vectors -> neighbour diff axis -> stable missing_perspectives
+// (all-species, no species filter) + data_gap key diff, vector-absent -> data_gap only.
+import { describe, expect, it } from "vitest";
+import { matchConditions, autoFillDescriptor, gapAnalysis } from "../apps/api/src/paper-match";
+import app from "../apps/api/src/index";
+import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
+
+describe("PPR-01 matchConditions classification + match_rate", () => {
+  const conditions = {
+    temp: { min: 25, max: 30, required: true },
+    humidity: { min: 40, required: true },
+    density: { max: 10, required: false }, // not required -> excluded from denominator
+  };
+
+  it("all required satisfied -> match_rate 1.0, no missing/violated", () => {
+    const r = matchConditions(conditions, { temp: 27, humidity: 55, density: 99 });
+    expect(r.satisfied).toEqual(["humidity", "temp"]); // key asc, required only
+    expect(r.missing).toEqual([]);
+    expect(r.violated).toEqual([]);
+    expect(r.required_count).toBe(2); // density excluded (required:false)
+    expect(r.match_rate).toBe(1);
+  });
+
+  it("partial: one required key absent -> missing + match_rate 0.5", () => {
+    const r = matchConditions(conditions, { temp: 27 });
+    expect(r.satisfied).toEqual(["temp"]);
+    expect(r.missing).toEqual(["humidity"]);
+    expect(r.violated).toEqual([]);
+    expect(r.match_rate).toBe(0.5);
+  });
+
+  it("violated: observed value out of range -> violated + match_rate 0.5", () => {
+    const r = matchConditions(conditions, { temp: 99, humidity: 55 });
+    expect(r.satisfied).toEqual(["humidity"]);
+    expect(r.violated).toEqual(["temp"]);
+    expect(r.missing).toEqual([]);
+    expect(r.match_rate).toBe(0.5);
+  });
+
+  it("eq condition matches exactly, non-numeric observation is violated", () => {
+    const c = { ph: { eq: 7, required: true } };
+    expect(matchConditions(c, { ph: 7 }).satisfied).toEqual(["ph"]);
+    expect(matchConditions(c, { ph: 8 }).violated).toEqual(["ph"]);
+    expect(matchConditions(c, { ph: "abc" }).violated).toEqual(["ph"]);
+  });
+
+  it("required_count=0 yields match_rate 1.0 (no required keys)", () => {
+    const r = matchConditions({ a: { required: false } }, {});
+    expect(r.required_count).toBe(0);
+    expect(r.match_rate).toBe(1);
+  });
+});
+
+describe("PPR-30 autoFillDescriptor section fill + claim evidence link", () => {
+  const conditions = { temp: { min: 25, max: 30, required: true }, humidity: { min: 40, required: true } };
+
+  it("satisfied keys -> claim evidenced with evidence_refs; Stage1 reuses matchConditions", () => {
+    const d = autoFillDescriptor(
+      {
+        conditions,
+        claims: [{ claim_id: "cl-1", statement: "growth improves", evidence_keys: ["temp", "humidity"] }],
+      },
+      { temp: 27, humidity: 55 },
+    );
+    // Stage1 mechanical check == matchConditions on same input.
+    expect(d.match).toEqual(matchConditions(conditions, { temp: 27, humidity: 55 }));
+    expect(d.claims[0].status).toBe("evidenced");
+    expect(d.claims[0].evidence_refs).toEqual(["humidity", "temp"]); // sorted
+    // verification section auto-filled when all required met.
+    expect(d.sections.verification.filled).toBe(true);
+    expect(d.sections.verification.text).toContain("humidity");
+  });
+
+  it("unverified claim stays hypothesis (evidence keys not all satisfied)", () => {
+    const d = autoFillDescriptor(
+      { conditions, claims: [{ claim_id: "cl-2", statement: "x", evidence_keys: ["temp", "humidity"] }] },
+      { temp: 27 }, // humidity missing
+    );
+    expect(d.claims[0].status).toBe("hypothesis");
+    expect(d.claims[0].evidence_refs).toEqual([]);
+    expect(d.sections.verification.filled).toBe(false);
+  });
+
+  it("claim with no evidence_keys is a fixed hypothesis (machine never auto-evidences)", () => {
+    const d = autoFillDescriptor(
+      { conditions, claims: [{ claim_id: "cl-3", statement: "speculation" }] },
+      { temp: 27, humidity: 55 },
+    );
+    expect(d.claims[0].status).toBe("hypothesis");
+    expect(d.claims[0].evidence_refs).toEqual([]);
+  });
+});
+
+describe("PPR-06 gapAnalysis all-species neighbour diff + data_gap", () => {
+  const paper = {
+    conditions: { temp: { required: true }, humidity: { required: true } },
+    vector: [1, 0, 0],
+  };
+  // Fixed injected vectors: near neighbour shares direction, far one is orthogonal.
+  // Neighbours are across species (no species field) -> proves no species filter.
+  const neighbors = [
+    { content_id: "near", conditions: { temp: { required: true }, food: { required: true } }, vector: [0.9, 0.1, 0] },
+    { content_id: "far", conditions: { ethics: { required: true } }, vector: [0, 0, 1] },
+  ];
+
+  it("data_gap = required keys minus observed keys (sorted)", () => {
+    const g = gapAnalysis(paper, neighbors, { temp: 27 });
+    expect(g.data_gap).toEqual(["humidity"]); // temp observed, humidity not
+  });
+
+  it("semantic_gap = top-neighbour condition keys minus paper keys; missing_perspectives stable sorted", () => {
+    const g = gapAnalysis(paper, neighbors, { temp: 27, humidity: 55 });
+    // both required observed -> data_gap empty; semantic axis from neighbours.
+    expect(g.data_gap).toEqual([]);
+    // near+far unioned condition keys minus paper keys {temp,humidity} = {food, ethics}.
+    expect(g.semantic_gap).toEqual(["ethics", "food"]);
+    expect(g.missing_perspectives).toEqual(["ethics", "food"]); // union sorted, deterministic
+  });
+
+  it("no vector -> semantic_gap empty, returns data_gap only (embedding OFF still works)", () => {
+    const g = gapAnalysis({ conditions: paper.conditions }, neighbors, {});
+    expect(g.semantic_gap).toEqual([]);
+    expect(g.data_gap).toEqual(["humidity", "temp"]);
+    expect(g.missing_perspectives).toEqual(["humidity", "temp"]);
+  });
+});
+
+// Thin-route wiring: prove the three §2.1 routes are mounted, protected, and append-only.
+describe("paper-match routes wiring (protected, append-only hypothesis)", () => {
+  function post(bucket: FakeR2Bucket, path: string, body: unknown, headers = AUTH_HEADERS): Promise<Response> {
+    return app.request(path, { method: "POST", headers, body: JSON.stringify(body) }, makeEnv(bucket));
+  }
+
+  it("POST /research/paper-match returns match + hint for inline conditions", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/paper-match", {
+      conditions: { temp: { min: 25, max: 30, required: true } },
+      observation: { temp: 99 },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { match: { violated: string[] }; hint: string };
+    expect(body.match.violated).toEqual(["temp"]);
+    expect(typeof body.hint).toBe("string");
+  });
+
+  it("POST /research/gap returns data_gap for a paper without vectors", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/gap", {
+      paper: { conditions: { temp: { required: true }, humidity: { required: true } } },
+      observation: { temp: 27 },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data_gap: string[]; semantic_gap: string[] };
+    expect(body.data_gap).toEqual(["humidity"]);
+    expect(body.semantic_gap).toEqual([]);
+  });
+
+  it("POST /research/content/:id/hypothesis appends a new content event with claim status", async () => {
+    const bucket = new FakeR2Bucket();
+    // Seed a paper with conditions.
+    const paper = await post(bucket, "/api/v1/research/content", {
+      content_id: "PAP-1",
+      content_type: "paper",
+      title: "Growth study",
+      sections: {
+        purpose: { filled: true, text: "p" }, hypothesis: { filled: true, text: "h" },
+        conditions: { filled: true, text: "c" }, verification: { filled: true, text: "v" },
+        phase: { filled: true, text: "ph" }, gap: { filled: true, text: "g" },
+      },
+      completeness_pct: 50,
+      conditions: { temp: { min: 25, max: 30, required: true } },
+    });
+    expect(paper.status).toBe(201);
+
+    // Observation satisfies the required condition -> evidenced.
+    const res = await post(bucket, "/api/v1/research/content/PAP-1/hypothesis", {
+      statement: "warmth helps",
+      evidence_keys: ["temp"],
+      observation: { temp: 27 },
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { content_id: string; paper_id: string; claim: { status: string; evidence_refs: string[] } };
+    expect(body.paper_id).toBe("PAP-1");
+    expect(body.claim.status).toBe("evidenced");
+    expect(body.claim.evidence_refs).toEqual(["temp"]);
+    // Appended as a distinct content event (not an update of the paper).
+    expect(body.content_id).not.toBe("PAP-1");
+
+    // Missing observation -> hypothesis fixed.
+    const res2 = await post(bucket, "/api/v1/research/content/PAP-1/hypothesis", {
+      statement: "guess", evidence_keys: ["temp"], observation: {},
+    });
+    const body2 = (await res2.json()) as { claim: { status: string } };
+    expect(body2.claim.status).toBe("hypothesis");
+  });
+
+  it("hypothesis route is protected (401 without auth)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await app.request(
+      "/api/v1/research/content/PAP-1/hypothesis",
+      { method: "POST", headers: { "content-type": "application/json" }, body: "{}" },
+      makeEnv(bucket),
+    );
+    expect(res.status).toBe(401);
+  });
+});

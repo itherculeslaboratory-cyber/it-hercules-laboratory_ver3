@@ -1,0 +1,52 @@
+{
+  "screen_id": "paper-match",
+  "route": "/research/paper/match",
+  "title": "条件 P と観測の照合",
+  "layout": "standard",
+  "notes": "PPR-01/30 — 条件 P × 観測を matchConditions で照合。route の ?solid=1 / ?auto=1 で確定観測 JSON を流し込むブリッジ。充足/不足/違反/一致率を表示し、不足キーの静的ヒント(1 行・LLM 既定 OFF)を出す。仮説を Project に追記(api POST hypothesis)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "条件 P と観測の照合", "level": 1 } },
+            {
+              "id": "match-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/paper-match" },
+              "children": [
+                { "id": "paper-ref", "type": "field", "props": { "variant": "text", "name": "content_id", "label": "論文 ID", "required": true, "placeholder": "content/..." } },
+                { "id": "observation", "type": "field", "props": { "variant": "text", "name": "observation_json", "label": "観測 JSON(?solid=1 / ?auto=1 で自動流し込み)", "placeholder": "{\"温度\": 25}" } },
+                { "id": "submit", "type": "button", "props": { "label": "照合する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "result",
+              "type": "card",
+              "children": [
+                { "id": "rate", "type": "heading", "props": { "text": "一致率: {{result.match_rate}}", "level": 2 } },
+                { "id": "satisfied-title", "type": "heading", "props": { "text": "充足キー", "level": 3 } },
+                { "id": "satisfied", "type": "list", "props": { "bind_items": "result.satisfied", "item_text": "{{.}}", "empty_text": "充足キーはまだありません" } },
+                { "id": "missing-title", "type": "heading", "props": { "text": "不足キー", "level": 3 } },
+                { "id": "missing", "type": "list", "props": { "bind_items": "result.missing", "item_text": "{{.}}", "empty_text": "不足キーはありません" } },
+                { "id": "violated-title", "type": "heading", "props": { "text": "違反キー", "level": 3 } },
+                { "id": "violated", "type": "list", "props": { "bind_items": "result.violated", "item_text": "{{.}}", "empty_text": "違反キーはありません" } },
+                { "id": "hint", "type": "text", "props": { "text": "不足キーを観測に追加すると一致率が上がります。", "muted": true } }
+              ]
+            },
+            {
+              "id": "to-hypothesis",
+              "type": "button",
+              "props": { "label": "仮説を Project に追記する", "variant": "secondary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/content/{{params.id}}/hypothesis" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/category.schema.json",
+  "title": "Research category (ihl.research.category.v1)",
+  "description": "ユーザー追加可能な学術分類階層（PPR-13）。Truth キー truth/ihl.research.category.v1/<category_id>.json。亜種・重複防止のため domain を必須とし、parent_category_id で木構成。categoryTree は都度再計算投影。",
+  "x_ihl_req": "V3-PPR-13",
+  "x_ihl_source": "docs/planning/c5/design-c5.md (K5) §2.2",
+  "type": "object",
+  "required": ["category_id", "actor_id", "label", "domain", "created_at", "schema_version"],
+  "properties": {
+    "category_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "分類の一意キー（storage key の <category_id>）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "追加者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "分類ラベル。"
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1,
+      "description": "分野（重複防止のため必須・DOMAIN_API_MAP のキー系）。"
+    },
+    "parent_category_id": {
+      "type": "string",
+      "description": "親分類 category_id（木構成・任意＝ルートは無し）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（例: '1'）。"
+    }
+  },
+  "additionalProperties": false
+}

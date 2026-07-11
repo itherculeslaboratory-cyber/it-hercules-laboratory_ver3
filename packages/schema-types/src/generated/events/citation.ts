@@ -1,0 +1,51 @@
+// GENERATED FILE — do not edit by hand.
+// source: schemas/events/citation.schema.json
+// title: Research citation (ihl.research.citation.v1)
+// direction: schemas/ -> generated (one-way; edit the schema, then re-run)
+// regenerate: node scripts/codegen-schemas.mjs
+
+/**
+ * 引用/データ提供の append-only 記録（WIK-16 / PPR-18）。storage key はステータス/スナップショット込みの合成 sha1(content_id|provider_actor_id|source_session_id|status|match_snapshot…)＝同一提供の再 put は 409・status=updated は別 storage key で別イベント append（UPDATE 禁止・不変条項③）。citation_id は canonical sha1(content_id|provider_actor_id|source_session_id) の 3 要素グルーピング識別子（storage key とは別物）。envelope.id は別途 ulid()。貢献ポイントは投影で合算し grantPlatinum(contribution_rebate) で報酬。付与額はサーバ固定（CONTRIBUTION_POINTS_PER_CITATION）・自己引用は拒否。
+ */
+export interface Citation {
+  /**
+   * canonical sha1(content_id|provider_actor_id|source_session_id) の 3 要素グルーピング識別子（任意・route が算出）。storage key は status/match_snapshot 込みの合成キーで、これとは別物（同一グループでも status=updated は別 storage key）。
+   */
+  citation_id?: string;
+  /**
+   * 引用元 content の content_id。
+   */
+  content_id: string;
+  /**
+   * データ提供者の actor_id。
+   */
+  provider_actor_id: string;
+  /**
+   * 提供元セッション ID。
+   */
+  source_session_id: string;
+  /**
+   * 付与貢献ポイント（grantPlatinum の amount）。サーバが CONTRIBUTION_POINTS_PER_CITATION で固定刻印する派生値でありクライアント入力は無視される（無制限鋳造防止・批評家 major）。
+   */
+  contribution_points: number;
+  /**
+   * 匿名提供フラグ。
+   */
+  anonymous: boolean;
+  /**
+   * 充足キー列のスナップショット（任意）。
+   */
+  match_snapshot?: string[];
+  /**
+   * provided=初回付与 / updated=不足キー充足での追記（別イベント）。
+   */
+  status: "provided" | "updated";
+  /**
+   * 発生時刻（RFC3339）。
+   */
+  created_at: string;
+  /**
+   * data スキーマ版（例: '1'）。
+   */
+  schema_version: string;
+}

@@ -1,0 +1,47 @@
+{
+  "screen_id": "data-descriptor",
+  "route": "/research/descriptor",
+  "title": "Data Descriptor の記入",
+  "layout": "standard",
+  "notes": "PPR-03/30 — Data Descriptor 6 節の穴埋め form(field variant=text/number/select)。送信で autoFillDescriptor が観測を節に投影して自動充填し、充足キーは claim を証拠付き(evidenced)に、未検証は仮説(hypothesis)ラベルで表示。LaTeX 禁止(LATEX_FORBIDDEN)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "Data Descriptor の記入", "level": 1 } },
+            {
+              "id": "descriptor-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/content" },
+              "children": [
+                { "id": "content-type", "type": "field", "props": { "variant": "select", "name": "content_type", "label": "種別", "required": true, "options": [ { "value": "paper", "label": "論文" } ] } },
+                { "id": "title-field", "type": "field", "props": { "variant": "text", "name": "title", "label": "タイトル", "required": true, "placeholder": "例: ヘラクレスオオカブトの飼育条件" } },
+                { "id": "purpose", "type": "field", "props": { "variant": "text", "name": "sections.purpose.text", "label": "目的" } },
+                { "id": "hypothesis", "type": "field", "props": { "variant": "text", "name": "sections.hypothesis.text", "label": "仮説" } },
+                { "id": "conditions", "type": "field", "props": { "variant": "text", "name": "sections.conditions.text", "label": "条件" } },
+                { "id": "verification", "type": "field", "props": { "variant": "text", "name": "sections.verification.text", "label": "検証" } },
+                { "id": "phase", "type": "field", "props": { "variant": "text", "name": "sections.phase.text", "label": "現在のフェーズ" } },
+                { "id": "gap", "type": "field", "props": { "variant": "text", "name": "sections.gap.text", "label": "ギャップ" } },
+                { "id": "completeness", "type": "field", "props": { "variant": "number", "name": "completeness_pct", "label": "充足度(0-100)" } },
+                { "id": "submit", "type": "button", "props": { "label": "保存して自動充填する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "preview",
+              "type": "card",
+              "children": [
+                { "id": "preview-title", "type": "heading", "props": { "text": "自動充填プレビュー", "level": 2 } },
+                { "id": "claims", "type": "list", "props": { "bind_items": "result.claims", "item_text": "{{statement}} [{{status}}]", "empty_text": "claim はまだありません" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

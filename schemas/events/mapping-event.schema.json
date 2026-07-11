@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mapping-event.schema.json",
+  "title": "Canonical mapping event (ihl.research.mapping_event.v1)",
+  "description": "Wikidata Q番号 ↔ 分野別専門 DB の対応 append-only 記録（PPR-13）。Truth キー truth/ihl.research.mapping_event.v1/<qid>__<target_db>.json（Q番号+対象DB 合成キー→同一対応の再 put=409・put-if-absent。envelope.id は別途 ulid()）。target_db は research-constants DOMAIN_API_MAP の値。",
+  "x_ihl_req": "V3-PPR-13",
+  "x_ihl_source": "docs/planning/c5/design-c5.md (K5) §2.2",
+  "type": "object",
+  "required": ["mapping_id", "wikidata_qid", "target_db", "target_id", "domain", "created_at", "schema_version"],
+  "properties": {
+    "mapping_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対応の一意キー（storage key と一致・route が算出）。"
+    },
+    "wikidata_qid": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Wikidata Q番号（例: 'Q12345'）。"
+    },
+    "target_db": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対応先 DB（DOMAIN_API_MAP の値・例: 'GBIF'）。"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対応先 DB での ID。"
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1,
+      "description": "分野（DOMAIN_API_MAP のキー・例: 'biology'）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（例: '1'）。"
+    }
+  },
+  "additionalProperties": false
+}

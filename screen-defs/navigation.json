@@ -25,7 +25,13 @@
     "template-market",
     "settings",
     "theme-gallery",
-    "ui-templates"
+    "ui-templates",
+    "paper-detail",
+    "paper-match",
+    "data-descriptor",
+    "project-hub",
+    "research-search",
+    "research-newspaper"
   ],
   "edges": [
     {

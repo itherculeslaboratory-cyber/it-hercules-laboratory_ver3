@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/project.schema.json",
+  "title": "Research project (ihl.research.project.v1)",
+  "description": "研究プロジェクト（PPR-16）。Truth キー truth/ihl.research.project.v1/<project_id>.json。Ver 分岐は parent_project_id を持つ新 project row で表現（別スキーマ不要・fork 文化）。hub/bestVersion は projectId 集約の都度再計算投影（常駐 DB 禁止）。",
+  "x_ihl_req": "V3-PPR-16",
+  "x_ihl_source": "docs/planning/c5/design-c5.md (K5) §2.2",
+  "type": "object",
+  "required": ["project_id", "actor_id", "title", "created_at", "schema_version"],
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "プロジェクトの一意キー（storage key の <project_id>）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "オーナーの actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "プロジェクト名。"
+    },
+    "parent_project_id": {
+      "type": "string",
+      "description": "分岐元 project_id（Ver 分岐・任意）。"
+    },
+    "parent_version_label": {
+      "type": "string",
+      "description": "分岐元のバージョンラベル（任意）。"
+    },
+    "lots": {
+      "type": "array",
+      "description": "ロット（{lot_id, qr_url}）。",
+      "items": {
+        "type": "object",
+        "required": ["lot_id"],
+        "properties": {
+          "lot_id": { "type": "string", "minLength": 1 },
+          "qr_url": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "関連リンク（任意）。"
+    },
+    "contributors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "貢献者 actor_id（任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "作成時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（例: '1'）。"
+    }
+  },
+  "additionalProperties": false
+}

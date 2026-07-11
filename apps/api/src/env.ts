@@ -20,6 +20,9 @@ export type Bindings = {
   GMO_SUNABAR_TOKEN1?: string;
   GMO_SUNABAR_API_BASE?: string;
   GMO_SUNABAR_ACCOUNT_ID?: string;
+  // 研究 LLM 助言モード(design-k5 §2.5). 既定 off=静的ヒントのみ. on は実 API キー
+  // 必須で人間ゲート「実鍵投入」まで throw. 実値は env のみ(コミット禁止)。
+  RESEARCH_LLM_MODE?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

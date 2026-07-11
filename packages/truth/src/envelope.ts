@@ -51,6 +51,14 @@ const VALIDATOR_NAME: Record<string, string> = {
   "theme-pack": "themePack",
   "ui-template": "uiTemplate",
   "ui-vote": "uiVote",
+  // C5 K5 research/wiki events (schemas/events/*, non-frozen, reversible)
+  content: "content",
+  citation: "citation",
+  project: "project",
+  "mapping-event": "mappingEvent",
+  category: "category",
+  "task-node": "taskNode",
+  "wiki-node": "wikiNode",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -114,6 +122,15 @@ const EVENT_NAMES = new Set([
   "theme-pack",
   "ui-template",
   "ui-vote",
+  // C5 K5 — data validation MUST fire or putEvent stores unchecked data at 202
+  // permanently (Truth is INSERT ONLY, unfixable). See design-k5 §2.2 批評家 major#1.
+  "content",
+  "citation",
+  "project",
+  "mapping-event",
+  "category",
+  "task-node",
+  "wiki-node",
 ]);
 
 function validatorFor(name: string): ValidateFn {

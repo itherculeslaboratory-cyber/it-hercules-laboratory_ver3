@@ -1,0 +1,56 @@
+{
+  "screen_id": "paper-detail",
+  "route": "/research/paper/detail",
+  "title": "論文の詳細",
+  "layout": "standard",
+  "notes": "PPR-03/09/18 — content(paper) を 1 レスポンスに集約投影。6 節(PaperSectionsV1)/充足度/計測(value_origin バッジ)/引用/再解析マニフェスト。paper-match と data-descriptor へ id を引き継ぐ。source_path=GET /api/v1/research/content/{id}(protected・deny-by-default)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "論文の詳細", "level": 1 } },
+            { "id": "paper-id", "type": "text", "props": { "text": "論文 ID: {{params.id}}", "muted": true } },
+            {
+              "id": "paper",
+              "type": "card",
+              "props": { "source_path": "/api/v1/research/content/{{params.id}}" },
+              "children": [
+                { "id": "paper-title", "type": "heading", "props": { "text": "{{data.paper.title}}", "level": 2 } },
+                { "id": "completeness", "type": "text", "props": { "text": "充足度: {{data.paper.completeness_pct}}%" } },
+                { "id": "sections-title", "type": "heading", "props": { "text": "6 節", "level": 3 } },
+                { "id": "sections", "type": "list", "props": { "bind_items": "data.paper.section_list", "item_text": "{{label}}: {{text}}", "empty_text": "節はまだ記入されていません" } },
+                { "id": "measure-title", "type": "heading", "props": { "text": "計測", "level": 3 } },
+                { "id": "measurements", "type": "list", "props": { "bind_items": "data.paper.measurements", "item_text": "{{item}} {{value}}{{unit}} [{{value_origin}}]", "empty_text": "計測はまだありません" } },
+                { "id": "cite-title", "type": "heading", "props": { "text": "引用", "level": 3 } },
+                { "id": "citations", "type": "list", "props": { "bind_items": "data.paper.citations", "item_text": "{{source_session_id}} (+{{contribution_points}})", "empty_text": "引用はまだありません" } }
+              ]
+            },
+            {
+              "id": "reanalysis",
+              "type": "button",
+              "props": { "label": "再解析マニフェストを取得する", "variant": "secondary" },
+              "action": { "kind": "api", "method": "GET", "path": "/api/v1/research/content/{{params.id}}/reanalysis-manifest" }
+            },
+            {
+              "id": "to-match",
+              "type": "button",
+              "props": { "label": "条件 P で観測を照合する", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "paper-match" }
+            },
+            {
+              "id": "to-descriptor",
+              "type": "button",
+              "props": { "label": "Data Descriptor を編集する", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "data-descriptor" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

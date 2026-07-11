@@ -1,0 +1,46 @@
+{
+  "screen_id": "project-hub",
+  "route": "/research/project/hub",
+  "title": "プロジェクトハブ",
+  "layout": "standard",
+  "notes": "PPR-16 — projectHub 投影(project + paper/blog/citation/market/observation/task_node 集約)。プロフィール/タイムライン/Ver 分岐/lot QR/bestVersion カード。source_path=GET /api/v1/research/projects/{id}(protected)。論文へ id を引き継ぐ。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "プロジェクトハブ", "level": 1 } },
+            { "id": "project-id", "type": "text", "props": { "text": "プロジェクト ID: {{params.id}}", "muted": true } },
+            {
+              "id": "project",
+              "type": "card",
+              "props": { "source_path": "/api/v1/research/projects/{{params.id}}" },
+              "children": [
+                { "id": "project-title", "type": "heading", "props": { "text": "{{data.project.title}}", "level": 2 } },
+                { "id": "best-title", "type": "heading", "props": { "text": "最良バージョン", "level": 3 } },
+                { "id": "best", "type": "text", "props": { "text": "{{data.project.best_version.version_label}}(スコア {{data.project.best_version.score}})" } },
+                { "id": "timeline-title", "type": "heading", "props": { "text": "タイムライン", "level": 3 } },
+                { "id": "timeline", "type": "list", "props": { "bind_items": "data.project.timeline", "item_text": "{{kind}} {{at}}", "empty_text": "履歴はまだありません" } },
+                { "id": "versions-title", "type": "heading", "props": { "text": "バージョン分岐", "level": 3 } },
+                { "id": "versions", "type": "list", "props": { "bind_items": "data.project.versions", "item_text": "{{version_label}}", "empty_text": "分岐はまだありません" } },
+                { "id": "lots-title", "type": "heading", "props": { "text": "ロット QR", "level": 3 } },
+                { "id": "lots", "type": "list", "props": { "bind_items": "data.project.lots", "item_text": "{{lot_id}}", "empty_text": "ロットはまだありません" } }
+              ]
+            },
+            { "id": "lot-qr", "type": "qr-code", "props": { "value": "{{data.project.lots.0.qr_url}}" } },
+            {
+              "id": "to-paper",
+              "type": "button",
+              "props": { "label": "論文の詳細を見る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "paper-detail" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

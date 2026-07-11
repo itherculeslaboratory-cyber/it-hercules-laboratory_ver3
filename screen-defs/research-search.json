@@ -1,0 +1,54 @@
+{
+  "screen_id": "research-search",
+  "route": "/research/search",
+  "title": "研究の統合検索",
+  "layout": "standard",
+  "notes": "WIK-13/14 — unifiedSearch 4 本柱(fulltext/tag/user/node)を prefix scan で合成投影(常駐 index なし)。type/tags フィルタ。RAG_PRIORITY 順。結果から論文詳細へ。POST /api/v1/research/search(protected)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "研究の統合検索", "level": 1 } },
+            {
+              "id": "search-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/search" },
+              "children": [
+                { "id": "query", "type": "field", "props": { "variant": "text", "name": "query", "label": "キーワード", "placeholder": "例: 温度 飼育" } },
+                { "id": "type-filter", "type": "field", "props": { "variant": "select", "name": "content_type", "label": "種別", "options": [
+                  { "value": "", "label": "すべて" },
+                  { "value": "article", "label": "記事" },
+                  { "value": "blog", "label": "ブログ" },
+                  { "value": "paper", "label": "論文" },
+                  { "value": "chat_log", "label": "チャットログ" },
+                  { "value": "newspaper", "label": "新聞" }
+                ] } },
+                { "id": "tags", "type": "field", "props": { "variant": "text", "name": "tags", "label": "タグ(カンマ区切り)", "placeholder": "例: 温度, 湿度" } },
+                { "id": "submit", "type": "button", "props": { "label": "検索する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "results",
+              "type": "card",
+              "children": [
+                { "id": "results-title", "type": "heading", "props": { "text": "検索結果", "level": 2 } },
+                { "id": "result-list", "type": "list", "props": { "bind_items": "result.results", "item_text": "{{content_type}} {{title}}", "empty_text": "該当する結果はありません" } }
+              ]
+            },
+            {
+              "id": "to-paper",
+              "type": "button",
+              "props": { "label": "論文の詳細を開く", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "paper-detail" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
