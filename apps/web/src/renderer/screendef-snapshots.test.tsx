@@ -23,6 +23,7 @@ const SCREEN_IDS = [
   "knowledge-github",
   "knowledge-hub",
   "knowledge-paper",
+  "knowledge-thread",
   "language-select",
   "login",
   "market-trade",

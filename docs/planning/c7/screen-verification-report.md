@@ -28,7 +28,7 @@ apps/web> npx playwright test observation.spec.ts market.spec.ts ledger.spec.ts 
 
 1. 全画面数 **36**（`screen-defs/*.json`・`navigation.json` 登録全数）を実ブラウザ（dev-login 認証・same-origin cookie・実 wrangler worker + R2 ローカル）で走査。
 2. **PASS 36 / FAIL 0**（判定基準 = 見出し描画 + uncaught 例外ゼロ + console error ゼロ）。本 T1 で発見した **3 画面の白画面クラッシュは真因修正して PASS 化**（§3）。**T2 で economy-status・market-trade のカード値表示制約も根治**（§3・カルマ/プラチナ/取引詳細のカード値が実 API 値を画面に描く）。
-3. **最終打鍵チェック依頼: 可**。全画面がクラッシュせず描画・遷移・データ束縛し、主要カード値・貢献度 3 軸リストも画面テキストに描画する（実測・E2E 41 passed）。本人へ事前告知すべき既知欠落は **知の広場の単一スレ画面（per-thread ビュー）未産出の 1 点のみ**（§4-3・後続 Phase・スレ板 knowledge-board 自体は動作）。economy-status/market-trade のカード表示は T2/T3 で根治済み。
+3. **最終打鍵チェック依頼: 可（既知の画面欠落ゼロ）**。全 37 画面がクラッシュせず描画・遷移・データ束縛し、主要カード値・貢献度 3 軸リスト・知の広場単一スレ画面も画面テキストに描画する（実測・E2E 43 passed）。T1 で洗い出した 5 件(白画面クラッシュ3+カード非表示+per-thread未産出)はすべて T1〜T3 で根治/産出。事前告知が要る画面欠落は無い。
 
 ---
 
@@ -163,16 +163,15 @@ playwright 通貫は本セッションで再実走し全て green。数値は実
 - **根治済み（§3 参照）**。card `bind_text` レンダラ実装 + `source_path` を `{{params.listing_id}}` に統一 + 詳細カード追加で、`listing_id` を渡して開くと詳細（title/price）・状態カードが実 API 値を描画。`market.spec.ts` が可視 assert でガード。
 - 残（データ不足であり表示バグではない）: 送料カードは `to_office` クエリ未指定で 400、ボードは stage<2 で 404。いずれも**追加パラメータ待ち**で、クラッシュせず空描画（honest empty）。取引の中核データフロー（出品→一覧→詳細）は §2 で 201/200/200・値一致を実証済。
 
-### §4-3 知の広場: 真の単一スレ画面（per-thread）は未産出
+### §4-3 知の広場: 単一スレ画面（per-thread） — T3 で産出（残欠落なし）
 
-- 症状: `…/t/{thread_id}` 型の単一スレ screen-def は C5 で未産出（hub/board/paper/github のみ）。
-- 対応: spec-thread テストは最も近い `knowledge-board`（plaza スレ板）へ retarget して green 化（§2）。
-- 影響: スレ一覧・投稿板は動く。個別スレ専用ビューは別 Phase 待ち。打鍵チェックで「個別スレを開く画面」は現時点で存在しない旨を告知。
+- 現況（T3 後）: `screen-defs/knowledge-thread.json` を**新規産出**。GET /plaza/threads/{{params.thread_id}} のスレ投影(頭カード topic・投稿 materialized view)+ GET /plaza/threads/{{params.thread_id}}/consensus の Polis 型合意投影(Agree/Disagree/Pass の決定論集計・LLM 不要)を表示、POST /plaza/stances で賛否投票。knowledge-board から「スレッドを開く」導線・navigation/i18n 登録済み。
+- 実測: `apps/web/e2e/knowledge-thread.spec.ts` で dev-login→スレ作成→per-thread 画面で topic/投稿可視→stance 投票→consensus が「賛成 1 / 反対 0 / 保留 0」に反映、を実ブラウザ green。screen-sweep でも knowledge-thread が PASS。
 
 ---
 
 ## 付録: 打鍵チェック依頼にあたっての誠実注記
 
-- 全 36 画面は**クラッシュせず描画・遷移・データ束縛**する（実測）。オンボーディング〜観測〜個体〜取引〜知の広場の主要導線は通貫 green。
-- T2 で economy-status・market-trade の**カード値表示**は根治済み（§3・カルマ/プラチナ/取引詳細が実 API 値を画面描画・可視 assert でガード）。C2 レンダラの `card bind_text` 実装 + `source_path` の `{{params.listing_id}}` 統一 + 単一波括弧禁止 GATE で解消し、`profile` の 4 カードも副次で埋まった。
-- 打鍵前に本人へ明示すべき**残る既知欠落は 1 点のみ**: 知の広場**単一スレ画面**（per-thread ビュー未産出・§4-3。スレ板 knowledge-board 自体は動作）。economy-status 貢献度リスト（§4-1）は T3 で `axis_list` 追加により根治。「AI が動くと言ったが動かない」（V3-AIP-101 の本人不信の核）を招かないよう、残 1 件も後続 Phase の課題として正直に分離した。
+- 全 37 画面（+knowledge-thread）は**クラッシュせず描画・遷移・データ束縛**する（実測・E2E 43 passed）。オンボーディング〜観測〜個体〜取引〜知の広場の主要導線は通貫 green。
+- T2/T3 で economy-status・market-trade の**カード値表示**、economy-status の**貢献度 3 軸リスト**、知の広場の**単一スレ画面**を全て根治/産出済み（§3・§4）。C2 レンダラの `card bind_text` 実装 + `source_path` の `{{params.listing_id}}` 統一 + 単一波括弧禁止 GATE + `axis_list` 非破壊 API 拡張 + `knowledge-thread` 新規産出。`profile` の 4 カードも副次で埋まった。
+- **打鍵前に本人へ明示すべき既知の画面欠落は無い**（T1 で洗い出した 5 件はすべて根治/産出）。V3-AIP-101 の要求「安心できる状態にしてから最終打鍵チェック」を満たす。実測エビデンス = 本レポート §1 の画面別表 + `docs/planning/c7/screens/*.png` + E2E 43 passed。

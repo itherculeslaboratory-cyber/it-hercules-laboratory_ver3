@@ -1,0 +1,67 @@
+{
+  "screen_id": "knowledge-thread",
+  "route": "/knowledge/thread",
+  "title": "スレッド",
+  "layout": "standard",
+  "notes": "BBS-05/10/36 単一スレ per-thread ビュー(design-c5.md §K6)。GET /plaza/threads/{thread_id} のスレ投影(posts materialized view・ULID昇順・correction畳込・tombstone)+ GET /plaza/threads/{thread_id}/consensus の Polis型合意/対立(Agree/Disagree/Pass の決定論投影・LLM不要)を表示。stance 投票は POST /plaza/stances。thread_id は ?thread_id= で受ける(params.thread_id)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "knowledge-thread.title.text", "text": "スレッド", "level": 1 } },
+            {
+              "id": "head",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/plaza/threads/{{params.thread_id}}",
+                "bind_text": "話題: {{topic}}（チャンネル {{channel}}）"
+              }
+            },
+            { "id": "posts-title", "type": "heading", "props": { "text_key": "knowledge-thread.posts-title.text", "text": "投稿", "level": 2 } },
+            {
+              "id": "posts",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/plaza/threads/{{params.thread_id}}",
+                "bind_items": "data.posts.posts",
+                "item_text": "{{post_id}}: {{body}}",
+                "empty_text": "まだ投稿がありません。"
+              }
+            },
+            { "id": "consensus-title", "type": "heading", "props": { "text_key": "knowledge-thread.consensus-title.text", "text": "合意の可視化", "level": 2 } },
+            {
+              "id": "consensus",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/plaza/threads/{{params.thread_id}}/consensus",
+                "bind_items": "data.consensus.statements",
+                "item_text": "{{statement_id}}: 賛成 {{agree}} / 反対 {{disagree}} / 保留 {{pass}}",
+                "empty_text": "まだ賛否の投票がありません。"
+              }
+            },
+            { "id": "stance-title", "type": "heading", "props": { "text_key": "knowledge-thread.stance-title.text", "text": "賛否を投じる", "level": 2 } },
+            {
+              "id": "stance",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/plaza/stances", "body_from": "stance" },
+              "children": [
+                { "id": "stance-statement", "type": "field", "props": { "name": "statement_id", "label_key": "knowledge-thread.stance-statement.label", "label": "対象の投稿 ID", "variant": "text" } },
+                { "id": "stance-value", "type": "field", "props": { "name": "value", "label_key": "knowledge-thread.stance-value.label", "label": "賛否（agree / disagree / pass）", "variant": "text" } }
+              ]
+            },
+            {
+              "id": "back-board",
+              "type": "link",
+              "props": { "label_key": "knowledge-thread.back-board.label", "label": "掲示板へ戻る", "href": "/s/knowledge-board" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,7 @@
             { "id": "board-guide", "type": "link", "props": { "label_key": "knowledge-board.board-guide.label", "label": "説明の板", "href": "/knowledge/board?board=guide" } },
             { "id": "board-complaint", "type": "link", "props": { "label_key": "knowledge-board.board-complaint.label", "label": "愚痴の板", "href": "/knowledge/board?board=complaint" } },
             { "id": "board-improvement", "type": "link", "props": { "label_key": "knowledge-board.board-improvement.label", "label": "改善の板", "href": "/knowledge/board?board=improvement" } },
+            { "id": "open-thread", "type": "link", "props": { "label_key": "knowledge-board.open-thread.label", "label": "スレッドを開く", "href": "/s/knowledge-thread" } },
             {
               "id": "threads",
               "type": "list",

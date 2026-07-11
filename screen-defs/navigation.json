@@ -36,7 +36,8 @@
     "knowledge-board",
     "knowledge-paper",
     "knowledge-github",
-    "ai-profile-settings"
+    "ai-profile-settings",
+    "knowledge-thread"
   ],
   "edges": [
     {
@@ -233,6 +234,16 @@
       "from": "settings",
       "to": "ai-profile-settings",
       "label": "AI プロファイル設定へ"
+    },
+    {
+      "from": "knowledge-board",
+      "to": "knowledge-thread",
+      "label": "スレッドを開く"
+    },
+    {
+      "from": "knowledge-thread",
+      "to": "knowledge-board",
+      "label": "掲示板へ戻る"
     }
   ]
 }

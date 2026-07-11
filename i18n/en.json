@@ -50,5 +50,13 @@
   "knowledge-paper.open-match.label": "Open paper matching",
   "knowledge-github.title.text": "GitHub board",
   "knowledge-github.lead.text": "Follow improvement history and forks on GitHub.",
-  "knowledge-github.repo-link.label": "Open improvement history on GitHub"
+  "knowledge-github.repo-link.label": "Open improvement history on GitHub",
+  "knowledge-thread.title.text": "Thread",
+  "knowledge-thread.posts-title.text": "Posts",
+  "knowledge-thread.consensus-title.text": "Consensus",
+  "knowledge-thread.stance-title.text": "Cast a stance",
+  "knowledge-thread.stance-statement.label": "Target post ID",
+  "knowledge-thread.stance-value.label": "Stance (agree / disagree / pass)",
+  "knowledge-thread.back-board.label": "Back to board",
+  "knowledge-board.open-thread.label": "Open a thread"
 }

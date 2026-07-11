@@ -109,5 +109,13 @@
   "knowledge-paper.open-match.label": "論文照合を開く",
   "knowledge-github.title.text": "GitHub 掲示板",
   "knowledge-github.lead.text": "改善履歴とフォークを GitHub で追います。",
-  "knowledge-github.repo-link.label": "GitHub で改善履歴を開く"
+  "knowledge-github.repo-link.label": "GitHub で改善履歴を開く",
+  "knowledge-thread.title.text": "スレッド",
+  "knowledge-thread.posts-title.text": "投稿",
+  "knowledge-thread.consensus-title.text": "合意の可視化",
+  "knowledge-thread.stance-title.text": "賛否を投じる",
+  "knowledge-thread.stance-statement.label": "対象の投稿 ID",
+  "knowledge-thread.stance-value.label": "賛否（agree / disagree / pass）",
+  "knowledge-thread.back-board.label": "掲示板へ戻る",
+  "knowledge-board.open-thread.label": "スレッドを開く"
 }
