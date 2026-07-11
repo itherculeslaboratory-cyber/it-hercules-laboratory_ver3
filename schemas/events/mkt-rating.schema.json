@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-rating.schema.json",
+  "title": "Market rating event (ihl.mkt.rating.v1)",
+  "description": "取引評価の append-only イベント（ADR-H-08 件数モデル）。Truth キー truth/ihl.mkt.rating.v1/<rating_id>.json。projectRating が good/normal/bad 件数で集計、低評価フィルタは投影で導出（V3-MKT-27）。grade=bad は reason 必須（if/then で schema 層強制）。",
+  "x_ihl_req": "V3-MKT-27",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
+  "type": "object",
+  "required": ["rating_id", "listing_id", "rater_id", "ratee_id", "grade", "auto", "created_at", "schema_version"],
+  "properties": {
+    "rating_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "評価イベントの一意キー。"
+    },
+    "listing_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象取引 listing の ID。"
+    },
+    "rater_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "評価者の actor_id（V3-AUT-17）。auto=true の自動良評価では系統 actor。"
+    },
+    "ratee_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "被評価者の actor_id。"
+    },
+    "grade": {
+      "type": "string",
+      "enum": ["good", "normal", "bad"],
+      "description": "評価（good / normal / bad）。"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "定型タグ（任意）。"
+    },
+    "comment": {
+      "type": "string",
+      "description": "自由コメント（任意）。"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "低評価理由。grade=bad のとき必須（if/then）。"
+    },
+    "auto": {
+      "type": "boolean",
+      "description": "自動良評価フラグ（配送完了 +30 日無評価で cron が付与）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": { "grade": { "const": "bad" } },
+    "required": ["grade"]
+  },
+  "then": {
+    "required": ["reason"]
+  }
+}

@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { KARMA_VALUE_MIN, KARMA_VALUE_MAX } from "./economy-constants";
+import { KARMA_VALUE_MIN, KARMA_VALUE_MAX, KARMA_BAN_THRESHOLD } from "./economy-constants";
 
 export const KARMA_TYPE = "ihl.economy.karma_event.v1";
 export const COIN_TYPE = "ihl.economy.coin_event.v1";
@@ -78,6 +78,14 @@ export async function projectLedger(
   return { actor_id: actorId, karma_value: clampKarma(value), karma_count: count, platinum_coins: platinum };
 }
 
+// KRM-04: 永久 BAN 判定。カルマ value（クランプ後）が閾値以下で BAN。可逆実装
+// （公開ゲートではない・R2 イベントは削除せず投影で都度判定）。ログイン時のみ判定し
+// 毎リクエスト全 karma 走査を避ける（既発行 session の再チェックは短命前提で後波）。
+export async function isBanned(s: TruthStore, actorId: string): Promise<boolean> {
+  const { karma_value } = await projectLedger(s, actorId);
+  return karma_value <= KARMA_BAN_THRESHOLD;
+}
+
 // ── 付与関数(サーバ内)─────────────────────────────────────────────────
 function envelope(type: string, id: string, actorId: string, data: Record<string, unknown>) {
   return {
@@ -92,13 +100,21 @@ function envelope(type: string, id: string, actorId: string, data: Record<string
   };
 }
 
-async function appendKarma(
+// KRM-06 guard: カルマ value の正増加は月次救済（reason 'monthly_batch'）だけ許す。
+// 貢献付与・免罪符・その他経路が直接カルマ value を押し上げるのを禁ずる（貢献は
+// contribution/coin 台帳へ落ちる・value は救済以外で増えない）。count 層・value 減算は素通し。
+export async function appendKarma(
   s: TruthStore,
   actorId: string,
   layer: "value" | "count",
   delta: number,
   reason_code: string,
 ): Promise<void> {
+  if (layer === "value" && delta > 0 && reason_code !== "monthly_batch") {
+    throw new Error(
+      `karma value increase forbidden for reason '${reason_code}' (only monthly_batch may raise value)`,
+    );
+  }
   const id = ulid();
   const data: Record<string, unknown> = {
     karma_event_id: id,

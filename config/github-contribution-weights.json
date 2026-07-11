@@ -1,0 +1,17 @@
+{
+  "schema_version": "1",
+  "description": "V3-KRM-13 GitHub webhook 行動 -> 貢献 pt + badge 換算表。policy.ts 経由でロードしハードコードしない。axis は economy-contribution-event.axis に対応。",
+  "weights": {
+    "pull_request": { "pt": 50, "axis": "development" },
+    "issue": { "pt": 10, "axis": "development" },
+    "review": { "pt": 20, "axis": "development" },
+    "comment": { "pt": 5, "axis": "development" },
+    "push": { "pt": 15, "axis": "development" },
+    "release": { "pt": 100, "axis": "development" },
+    "star": { "pt": 2, "axis": "capital" }
+  },
+  "badges": {
+    "first_pr": { "trigger": "pull_request", "count": 1 },
+    "centurion_push": { "trigger": "push", "count": 100 }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "screen_id": "platinum-shop",
+  "route": "/shop/platinum",
+  "title": "プラチナコインショップ",
+  "layout": "standard",
+  "notes": "KRM-05 プラチナコインショップ（用語統一）。免罪符購入でカルマカウント -1（カルマ値は不変）。価格は fib(stage) PT（購入で +1 段・暦月経過で -1 段）。GET /shop/indulgence/price で現在価格、POST /shop/indulgence で購入。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "プラチナコインショップ", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "免罪符でカルマカウントを1つ戻します。カルマ値は変わりません。", "muted": true } },
+
+            { "id": "price-title", "type": "heading", "props": { "text": "現在の価格", "level": 2 } },
+            {
+              "id": "price",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/shop/indulgence/price",
+                "bind_text": "免罪符 {{price_pt}} PT（段階 {{stage}}）"
+              }
+            },
+
+            {
+              "id": "buy",
+              "type": "button",
+              "props": { "label": "免罪符を購入する", "variant": "primary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/shop/indulgence" }
+            },
+            {
+              "id": "back-status",
+              "type": "button",
+              "props": { "label": "ステータスへ戻る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "economy-status" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "back-status", "to_screen_id": "economy-status", "label": "ステータスへ戻る" }
+  ]
+}

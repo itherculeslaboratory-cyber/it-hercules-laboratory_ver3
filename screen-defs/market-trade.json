@@ -1,0 +1,77 @@
+{
+  "screen_id": "market-trade",
+  "route": "/market/trade",
+  "title": "取引",
+  "layout": "standard",
+  "notes": "MKT-03/23/25/20 取引画面。stage をクエリで受ける stepper（公開 stage1 → 成立後 private board stage2・当事者2人のみ）。推奨価格（MKT-25・embedding 既定OFF）と推定送料（MKT-20・住所非保持/着払い）を表示。個体ID選択で黄金フロー autofill（MKT-23）。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "取引", "level": 1 } },
+            {
+              "id": "stepper",
+              "type": "text",
+              "props": { "text": "公開 → 非公開ボード（成立で当事者2人のみ）", "muted": true }
+            },
+
+            { "id": "state-title", "type": "heading", "props": { "text": "現在の状態", "level": 2 } },
+            {
+              "id": "state",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/market/listings/{listing_id}/state",
+                "bind_text": "状態 {{state}}（ステージ {{stage}}）"
+              }
+            },
+
+            { "id": "price-title", "type": "heading", "props": { "text": "推奨価格", "level": 2 } },
+            {
+              "id": "price",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/market/listings/{listing_id}/price-recommendation",
+                "bind_text": "推奨 {{anchor}} 円（{{method}}）"
+              }
+            },
+
+            { "id": "shipping-title", "type": "heading", "props": { "text": "推定送料", "level": 2 } },
+            {
+              "id": "shipping",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/market/listings/{listing_id}/shipping-estimate",
+                "bind_text": "サイズ {{size}} / 目安 {{yen}} 円（着払い）"
+              }
+            },
+
+            {
+              "id": "board",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/market/listings/{listing_id}/board",
+                "bind_items": "data.offers",
+                "item_text": "{{from}} {{kind}} {{amount}}"
+              }
+            },
+
+            {
+              "id": "open-templates",
+              "type": "button",
+              "props": { "label": "テンプレート市場へ", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "template-market" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "open-templates", "to_screen_id": "template-market", "label": "テンプレート市場へ" }
+  ]
+}

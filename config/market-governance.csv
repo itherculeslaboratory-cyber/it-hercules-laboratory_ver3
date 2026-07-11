@@ -1,0 +1,9 @@
+policy_key,policy_int,timestamp
+fee.maintenance_tax_bps,800,2026-07-11T00:00:00Z
+fee.commercial_bps,300,2026-07-11T00:00:00Z
+fee.fork_revenue_bps,1000,2026-07-11T00:00:00Z
+rating.low_bad_threshold,5,2026-07-11T00:00:00Z
+rating.low_karma_max,0,2026-07-11T00:00:00Z
+rating.low_star_max,2,2026-07-11T00:00:00Z
+auto_good_rating_days,30,2026-07-11T00:00:00Z
+tax_grace_days,30,2026-07-11T00:00:00Z

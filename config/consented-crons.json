@@ -1,0 +1,16 @@
+{
+  "note": "V3-SEC-52 unconsented-cron consent allowlist (source of truth for scripts/check-cron.mjs). A scheduled trigger declared in apps/api/wrangler.toml [triggers] may exist ONLY after a human consents to it here. `crons` is the machine-checked string allowlist; `consents` records the human-gate provenance. Declaring/consenting the cron here is reversible config; the DEPLOY that actually starts the trigger (resident token consumption) remains a human gate.",
+  "crons": ["0 15 * * *"],
+  "consents": [
+    {
+      "cron": "0 15 * * *",
+      "schedule_utc": "daily 15:00 UTC (= JST 00:00)",
+      "handler": "apps/api/src/batch.ts handleScheduled",
+      "purpose": "C5 K3 monthly economy batch: KRM-03 karma recovery / KRM-11 fork+vote platinum rebate / KRM-12 dry-axis mercy mint / MKT-04 auto-good ratings / MKT-10 fee_unpaid monthly Fibonacci penalty. Daily trigger; real work branches on the 25th (RECOVERY_BASE_DAY).",
+      "requirements": ["V3-KRM-03", "V3-KRM-11", "V3-KRM-12", "V3-MKT-04", "V3-MKT-10"],
+      "deploy_is_human_gate": true,
+      "consented_by": "pending-human-gate",
+      "consented_at": null
+    }
+  ]
+}

@@ -15,9 +15,9 @@ function screenDef(nodes: ScreenDef["nodes"]): ScreenDef {
 }
 
 describe("Renderer — screen-defs", () => {
-  it("renders every one of the 17 screen-defs (navigation.json excluded)", () => {
+  it("renders every one of the 22 screen-defs (navigation.json excluded)", () => {
     const defs = allScreenDefs();
-    expect(defs.length).toBe(17);
+    expect(defs.length).toBe(22);
     for (const def of defs) {
       const { unmount } = render(<Renderer def={def} onAction={vi.fn()} />);
       // each screen has an h1 heading node -> title text is on screen

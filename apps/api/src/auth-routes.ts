@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { deriveActorId } from "@ihl/truth";
+import { TruthStore, deriveActorId } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { isBanned } from "./ledger-routes";
 import { sendMagicLink } from "./mail";
 import {
   SESSION_TTL,
@@ -46,6 +47,10 @@ authRoutes.post("/verify", async (c) => {
   const payload = await verifyMagicToken(body.token, c.env.SESSION_SECRET);
   if (!payload) return c.json({ error: "INVALID_TOKEN" }, 401);
   const actorId = await deriveActorId(payload.email); // email already normalized at magic-link entry
+  // KRM-04: 永久 BAN は session 発行前に弾く（ログイン時のみ判定＝毎リクエスト走査回避）。
+  if (await isBanned(new TruthStore(c.env.TRUTH), actorId)) {
+    return c.json({ error: "BANNED" }, 403);
+  }
   const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
   setCookie(c, "ihl_session", session, {
     httpOnly: true,
@@ -73,6 +78,10 @@ authRoutes.get("/session", async (c) => {
 authRoutes.post("/dev-login", async (c) => {
   if (!c.env.DEV_TOKEN) return c.json({ error: "NOT_FOUND" }, 404);
   const actorId = await deriveActorId("dev@ihl.local");
+  // KRM-04: dev 1-click login も session 発行前に BAN 判定（§2.6 と同契約）。
+  if (await isBanned(new TruthStore(c.env.TRUTH), actorId)) {
+    return c.json({ error: "BANNED" }, 403);
+  }
   const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
   setCookie(c, "ihl_session", session, {
     httpOnly: true,

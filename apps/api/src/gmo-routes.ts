@@ -14,6 +14,7 @@ import {
 
 export const EXPECTED_TYPE = "ihl.gmo.expected_payment.v1";
 export const RECON_TYPE = "ihl.gmo.reconciliation.v1";
+export const OBLIGATION_TYPE = "ihl.gmo.obligation.v1"; // V3-MKT-12 義務台帳
 const SCHEMA_VERSION = 1;
 
 export const gmoRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -64,8 +65,40 @@ export interface ReconcileResult {
   unmatched: number; // 依頼人名にコードなし or 未登録コード
 }
 
-// 期待入金の code→actor 表を作り、poll した各入金の依頼人名から U-XXXX を抽出して
-// 突合。一致は itemKey キーで append(同一明細の二重 append は storage 層 409)。
+// 義務台帳の1件(FIFO 消込の対象。同一 code 同額の複数 pending を due_date 昇順に消す)。
+interface ObligationRec {
+  obligation_id: string;
+  actor_id: string;
+  transfer_code: string;
+  amount: number;
+  obligation_kind: string;
+  due_date: string; // RFC3339(消込は date 部で入金日と比較)
+}
+
+function toObligation(d: Record<string, unknown>): ObligationRec | null {
+  if (
+    typeof d.obligation_id === "string" &&
+    typeof d.actor_id === "string" &&
+    typeof d.transfer_code === "string" &&
+    typeof d.amount === "number" &&
+    typeof d.due_date === "string"
+  ) {
+    return {
+      obligation_id: d.obligation_id,
+      actor_id: d.actor_id,
+      transfer_code: d.transfer_code,
+      amount: d.amount,
+      obligation_kind: typeof d.obligation_kind === "string" ? d.obligation_kind : "fee_tax",
+      due_date: d.due_date,
+    };
+  }
+  return null;
+}
+
+// 期待入金 + 義務台帳の code→actor 表を作り、poll した各入金の依頼人名から U-XXXX を
+// 抽出して突合。1 安定コードを 8% 税/PT/P2P で共用(MKT-12)。義務がある入金は義務発生日
+// 以降で最古の未払いへ FIFO 消込し reconciliation に obligation_ref を刻む。一致は itemKey
+// キーで append(同一明細の二重 append は storage 層 409=obligation の二重消込も防ぐ)。
 export async function reconcileOnce(
   s: TruthStore,
   connector: GmoConnector,
@@ -78,7 +111,32 @@ export async function reconcileOnce(
     }
   }
 
-  const deposits = await connector.listDepositTransactions();
+  // 義務台帳を code 別に due_date 昇順で整列(FIFO 消込順)。義務由来 code も actor 解決へ。
+  const obligations = (await s.listEvents(`truth/${OBLIGATION_TYPE}/`))
+    .map(dataOf)
+    .map(toObligation)
+    .filter((o): o is ObligationRec => o !== null);
+  const oblByCode = new Map<string, ObligationRec[]>();
+  for (const o of obligations) {
+    codeToActor.set(o.transfer_code, o.actor_id);
+    const list = oblByCode.get(o.transfer_code) ?? [];
+    list.push(o);
+    oblByCode.set(o.transfer_code, list);
+  }
+  for (const list of oblByCode.values()) {
+    list.sort((a, b) => a.due_date.localeCompare(b.due_date) || a.obligation_id.localeCompare(b.obligation_id));
+  }
+
+  // 既照合が消し込んだ義務(reconciliation.obligation_ref)。同一ラン内の消込も追記する。
+  const consumed = new Set<string>();
+  for (const d of (await s.listEvents(`truth/${RECON_TYPE}/`)).map(dataOf)) {
+    if (typeof d.obligation_ref === "string") consumed.add(d.obligation_ref);
+  }
+
+  // 入金は振込日時(transactionDate)昇順で処理し、多入金でも FIFO を決定論に保つ。
+  const deposits = [...(await connector.listDepositTransactions())].sort(
+    (a, b) => a.transactionDate.localeCompare(b.transactionDate) || a.itemKey.localeCompare(b.itemKey),
+  );
   const result: ReconcileResult = {
     scanned: deposits.length,
     matched: 0,
@@ -92,8 +150,12 @@ export async function reconcileOnce(
       result.unmatched++;
       continue;
     }
+    // 義務発生日(date 部)以降で最古の未払いへ FIFO 消込(振込日 = transactionDate)。
+    const oldest = (oblByCode.get(code) ?? []).find(
+      (o) => !consumed.has(o.obligation_id) && o.due_date.slice(0, 10) <= dep.transactionDate,
+    );
     const id = ulid();
-    const data = {
+    const data: Record<string, unknown> = {
       reconciliation_id: id,
       item_key: dep.itemKey,
       actor_id: actorId,
@@ -103,13 +165,44 @@ export async function reconcileOnce(
       matched_at: new Date().toISOString(),
       schema_version: SCHEMA_VERSION,
     };
+    if (oldest) data.obligation_ref = oldest.obligation_id;
     const key = `truth/${RECON_TYPE}/${safeKeyPart(dep.itemKey)}.json`;
     const res = await s.putEventAt(key, agentEnvelope(RECON_TYPE, id, data));
-    if (res.status === "inserted") result.matched++;
-    else if (res.status === "conflict") result.duplicates++;
+    if (res.status === "inserted") {
+      result.matched++;
+      if (oldest) consumed.add(oldest.obligation_id); // 二重消込防止(同一ラン内)
+    } else if (res.status === "conflict") result.duplicates++;
     else throw new Error(`reconciliation append invalid: ${res.errors.join("; ")}`);
   }
   return result;
+}
+
+// 義務台帳の消込状態を投影(MKT-12)。code 別に due_date 昇順で paid/pending を返す
+// (paid = reconciliation.obligation_ref に一致・都度再計算=常駐 DB 禁止)。
+export interface ObligationStatus {
+  obligation_id: string;
+  actor_id: string;
+  transfer_code: string;
+  amount: number;
+  obligation_kind: string;
+  due_date: string;
+  paid: boolean;
+}
+
+export async function projectObligations(
+  s: TruthStore,
+  transferCode: string,
+): Promise<ObligationStatus[]> {
+  const consumed = new Set<string>();
+  for (const d of (await s.listEvents(`truth/${RECON_TYPE}/`)).map(dataOf)) {
+    if (typeof d.obligation_ref === "string") consumed.add(d.obligation_ref);
+  }
+  return (await s.listEvents(`truth/${OBLIGATION_TYPE}/`))
+    .map(dataOf)
+    .map(toObligation)
+    .filter((o): o is ObligationRec => o !== null && o.transfer_code === transferCode)
+    .sort((a, b) => a.due_date.localeCompare(b.due_date) || a.obligation_id.localeCompare(b.obligation_id))
+    .map((o) => ({ ...o, paid: consumed.has(o.obligation_id) }));
 }
 
 // ── 照合台帳の投影(本人スコープ + 最終照合時刻)──────────────────────────

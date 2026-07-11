@@ -35,6 +35,17 @@ const VALIDATOR_NAME: Record<string, string> = {
   "obs-annotation": "obsAnnotation",
   "obs-analysis": "obsAnalysis",
   "cusb-ingest": "cusbIngest",
+  // C5 K3 economy/market events (schemas/events/*, non-frozen, reversible)
+  "economy-pt-event": "economyPtEvent",
+  "economy-contribution-event": "economyContributionEvent",
+  "mkt-transaction-event": "mktTransactionEvent",
+  "mkt-rating": "mktRating",
+  "mkt-template": "mktTemplate",
+  "mkt-post-office": "mktPostOffice",
+  "social-eval": "socialEval",
+  "social-platinum-vote": "socialPlatinumVote",
+  "research-proposal": "researchProposal",
+  "gmo-obligation": "gmoObligation",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -80,6 +91,18 @@ const EVENT_NAMES = new Set([
   "obs-annotation",
   "obs-analysis",
   "cusb-ingest",
+  // C5 K3 — data validation MUST fire or putEvent stores unchecked data at 202
+  // permanently (Truth is INSERT ONLY, unfixable). See design-k3 §2.1 批評家#1.
+  "economy-pt-event",
+  "economy-contribution-event",
+  "mkt-transaction-event",
+  "mkt-rating",
+  "mkt-template",
+  "mkt-post-office",
+  "social-eval",
+  "social-platinum-vote",
+  "research-proposal",
+  "gmo-obligation",
 ]);
 
 function validatorFor(name: string): ValidateFn {

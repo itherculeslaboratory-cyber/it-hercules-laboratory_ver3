@@ -1,0 +1,72 @@
+{
+  "screen_id": "economy-status",
+  "route": "/economy/status",
+  "title": "ステータス",
+  "layout": "standard",
+  "notes": "KRM-16 統合ステータス。プラチナ/カルマ二層/3軸貢献度/称号 + append-only 履歴の読取投影。GET /me/status・/me/ledger・/me/contribution を都度再計算で表示。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "ステータス", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "プラチナ・カルマ・貢献度・称号を一画面で確認します。", "muted": true } },
+
+            { "id": "karma-title", "type": "heading", "props": { "text": "カルマ", "level": 2 } },
+            {
+              "id": "karma",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/me/ledger",
+                "bind_text": "値 {{karma_value}} / 累積カウント {{karma_count}} / プラチナ {{platinum_coins}}"
+              }
+            },
+
+            { "id": "contribution-title", "type": "heading", "props": { "text": "貢献度（3軸）", "level": 2 } },
+            {
+              "id": "contribution",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/me/contribution",
+                "bind_items": "data.axes",
+                "item_text": "{{axis}}: {{score}}（鋳造 {{minted}} / 次閾値 {{next_threshold}}）"
+              }
+            },
+
+            { "id": "history-title", "type": "heading", "props": { "text": "履歴", "level": 2 } },
+            {
+              "id": "history",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/me/status",
+                "bind_items": "data.history",
+                "item_text": "{{created_at}} {{label}}"
+              }
+            },
+
+            {
+              "id": "open-shop",
+              "type": "button",
+              "props": { "label": "プラチナコインショップへ", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "platinum-shop" }
+            },
+            {
+              "id": "open-profile",
+              "type": "button",
+              "props": { "label": "プロフィールを見る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "profile" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "open-shop", "to_screen_id": "platinum-shop", "label": "プラチナコインショップへ" },
+    { "from": "open-profile", "to_screen_id": "profile", "label": "プロフィールへ" }
+  ]
+}

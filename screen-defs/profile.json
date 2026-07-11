@@ -1,0 +1,62 @@
+{
+  "screen_id": "profile",
+  "route": "/me/profile",
+  "title": "プロフィール",
+  "layout": "standard",
+  "notes": "KRM-21/04 プロフィール。カルマ/貢献度/取引評価の3指標を個別表示（研究スコアは貢献度配下）。BAN は公開表示。国/言語/文化タグ/自己紹介は公開設定可、取引実績/カルマ/悪レビュー等の public_safety は常に公開。GET /me/profile。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "プロフィール", "level": 1 } },
+
+            {
+              "id": "identity",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/me/profile",
+                "bind_text": "{{country}} / {{language}}　信頼度 {{intl_trust}}"
+              }
+            },
+
+            { "id": "karma-title", "type": "heading", "props": { "text": "カルマ", "level": 2 } },
+            {
+              "id": "karma",
+              "type": "card",
+              "props": { "source_path": "/api/v1/me/profile", "bind_text": "値 {{karma.value}} / カウント {{karma.count}}　BAN: {{karma.ban}}" }
+            },
+
+            { "id": "contribution-title", "type": "heading", "props": { "text": "貢献度", "level": 2 } },
+            {
+              "id": "contribution",
+              "type": "card",
+              "props": { "source_path": "/api/v1/me/profile", "bind_text": "研究 {{contribution.research_score}}" }
+            },
+
+            { "id": "market-title", "type": "heading", "props": { "text": "取引評価", "level": 2 } },
+            {
+              "id": "market",
+              "type": "card",
+              "props": { "source_path": "/api/v1/me/profile", "bind_text": "良 {{market.rating.good}} / 普 {{market.rating.normal}} / 悪 {{market.rating.bad}}" }
+            },
+
+            {
+              "id": "open-status",
+              "type": "button",
+              "props": { "label": "ステータスへ", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "economy-status" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "open-status", "to_screen_id": "economy-status", "label": "ステータスへ" }
+  ]
+}

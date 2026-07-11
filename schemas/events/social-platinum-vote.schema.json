@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/social-platinum-vote.schema.json",
+  "title": "Platinum coin vote event (ihl.social.platinum_vote.v1)",
+  "description": "プラチナコイン投票の append-only イベント（1票=1coin・任意枚数）。Truth キー truth/ihl.social.platinum_vote.v1/<vote_id>.json。projectPlatinumVoteTally が対象別に合計＋投票者内訳を全公開で投影、閾値到達で公式昇格候補化（実昇格=人間ゲート・V3-KRM-25）。",
+  "x_ihl_req": "V3-KRM-25",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
+  "type": "object",
+  "required": ["vote_id", "target_id", "voter_id", "coins", "created_at", "schema_version"],
+  "properties": {
+    "vote_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票イベントの一意キー。"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票対象（論文/UI/イベント/プロンプト等）の ID。"
+    },
+    "voter_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票者の actor_id（V3-AUT-17・内訳全公開）。"
+    },
+    "coins": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "投じたコイン枚数（1票=1coin・任意枚数）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

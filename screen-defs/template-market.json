@@ -1,0 +1,50 @@
+{
+  "screen_id": "template-market",
+  "route": "/market/templates",
+  "title": "テンプレート市場",
+  "layout": "standard",
+  "notes": "MKT-22 テンプレート市場。論文/UIスキン/グラフ/重み/AIパック/プロンプトの出品・フォーク・ランキング表示（重み usage40/retention20/rating20/forks10/improvements10）。GET /market/templates 一覧、POST /market/templates 出品、POST /market/templates/{id}/fork。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "テンプレート市場", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "テンプレートを出品・フォークし、ランキングで探します。", "muted": true } },
+
+            { "id": "ranking-title", "type": "heading", "props": { "text": "ランキング", "level": 2 } },
+            {
+              "id": "templates",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/market/templates",
+                "bind_items": "data.templates",
+                "item_text": "{{title}}（{{kind}}）スコア {{score}}"
+              }
+            },
+
+            {
+              "id": "publish",
+              "type": "button",
+              "props": { "label": "テンプレートを出品する", "variant": "primary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/templates", "body_from": "templates" }
+            },
+            {
+              "id": "back-trade",
+              "type": "button",
+              "props": { "label": "取引へ戻る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "market-trade" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "back-trade", "to_screen_id": "market-trade", "label": "取引へ戻る" }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-transaction-event.schema.json",
+  "title": "Market transaction event (ihl.mkt.transaction_event.v1)",
+  "description": "マーケット取引の append-only 状態機械イベント。Truth キー truth/ihl.mkt.transaction_event.v1/<transaction_event_id>.json。reduceMarket が listing 単位で kind 列を畳んで末尾状態を投影（非エスクロー＝資金非預り・V3-MKT-01/02）。",
+  "x_ihl_req": "V3-MKT-02",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
+  "type": "object",
+  "required": ["transaction_event_id", "listing_id", "actor_id", "kind", "created_at", "schema_version"],
+  "properties": {
+    "transaction_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "取引イベントの一意キー。"
+    },
+    "listing_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象 listing の ID（状態機械の集約キー）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベント発行者の actor_id（V3-AUT-17）。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "list_fixed", "list_auction", "list_lottery", "list_platinum",
+        "offer", "love_letter", "bid", "match", "ship", "receive",
+        "rate", "settle", "delist", "transfer", "tax_debt", "tax_pay", "fee_unpaid"
+      ],
+      "description": "取引アクション種別（許可辺 MARKET_EDGES 外の遷移は route が 409）。"
+    },
+    "counterparty": {
+      "type": "string",
+      "description": "相手方 actor_id（offer/match/transfer 等・任意）。"
+    },
+    "amount": {
+      "type": "number",
+      "description": "金額（円・fixed 価格 / bid / 税額等・任意）。"
+    },
+    "individual_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "取引対象の個体 ID 列（所有権系譜の対象・任意）。"
+    },
+    "payload": {
+      "type": "object",
+      "description": "アクション固有の追加データ（任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

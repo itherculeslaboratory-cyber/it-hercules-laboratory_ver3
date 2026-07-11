@@ -11,3 +11,10 @@ compatibility_date = "2026-07-01"
 [[r2_buckets]]
 binding = "TRUTH"
 bucket_name = "ihl-ver3-truth-dev"
+
+# C5 K3 月次経済 cron（design-k3 §2.6 / V3-KRM-03/11/12・V3-MKT-04/10）。日次起動
+# "0 15 * * *"（UTC15:00 = JST0:00）を handleScheduled が受け、毎月 25 日基準で月次処理。
+# V3-SEC-52 unconsented-cron GATE の承認は config/consented-crons.json（human consent
+# artifact）。デプロイ = 実行開始 = 常駐トークン消費 = 人間ゲート（本波は配線 + GATE 緑まで）。
+[triggers]
+crons = ["0 15 * * *"]

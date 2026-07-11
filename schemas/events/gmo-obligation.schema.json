@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/gmo-obligation.schema.json",
+  "title": "GMO payment obligation event (ihl.gmo.obligation.v1)",
+  "description": "GMO 振込義務台帳の append-only イベント（8% 税 / PT チャージ / P2P を 1 安定コードで共用）。Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json。reconcileOnce が due_date 昇順で FIFO 消込（義務発生日以降の最古未払いへ・V3-MKT-12）。",
+  "x_ihl_req": "V3-MKT-12",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
+  "type": "object",
+  "required": ["obligation_id", "actor_id", "transfer_code", "amount", "obligation_kind", "due_date", "created_at", "schema_version"],
+  "properties": {
+    "obligation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "義務イベントの一意キー。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "義務者の actor_id（V3-AUT-17）。"
+    },
+    "transfer_code": {
+      "type": "string",
+      "minLength": 1,
+      "description": "安定振込コード（deriveTransferCode 由来・8%税/PT/P2P で共用）。"
+    },
+    "amount": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "義務金額（円・整数 > 0）。"
+    },
+    "obligation_kind": {
+      "type": "string",
+      "enum": ["fee_tax", "pt_topup", "p2p"],
+      "description": "義務種別（維持費税 / PT チャージ / P2P）。"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "義務発生日（RFC3339・FIFO 消込の起算・昇順整列キー）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

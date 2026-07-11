@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/research-proposal.schema.json",
+  "title": "Research proposal event (ihl.research.proposal.v1)",
+  "description": "改善案/仮説の append-only 状態機械イベント。Truth キー truth/ihl.research.proposal.v1/<proposal_event_id>.json。reduceProposal が rank 遷移（minor→beginner→popular→recommended→official）と hypothesis 状態機械（draft→hypothesis→supported/rejected）を投影、trust=支持/(支持+否定)。fork は rank=beginner 自動（V3-KRM-24）。",
+  "x_ihl_req": "V3-KRM-24",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
+  "type": "object",
+  "required": ["proposal_event_id", "proposal_id", "actor_id", "kind", "created_at", "schema_version"],
+  "properties": {
+    "proposal_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "提案イベントの一意キー。"
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "提案の集約 ID（状態機械のキー）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "発行者の actor_id（V3-AUT-17）。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["create", "fork", "rank_change", "hypothesis_transition", "support", "reject"],
+      "description": "提案アクション種別。"
+    },
+    "rank": {
+      "type": "string",
+      "enum": ["official", "recommended", "popular", "beginner", "minor"],
+      "description": "ランク（rank_change 時・任意。fork は beginner 自動）。"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["draft", "hypothesis", "supported", "rejected"],
+      "description": "仮説状態（hypothesis_transition 時・任意）。"
+    },
+    "forked_from": {
+      "type": "string",
+      "description": "フォーク元提案 ID（fork 時・任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

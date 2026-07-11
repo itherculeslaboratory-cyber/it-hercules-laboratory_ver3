@@ -7,8 +7,13 @@ import { authRoutes } from "./auth-routes";
 import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
 import { ledgerRoutes } from "./ledger-routes";
+import { contributionRoutes } from "./contribution-routes";
+import { shopRoutes } from "./shop-routes";
 import { gmoRoutes } from "./gmo-routes";
 import { marketRoutes } from "./market-routes";
+import { marketRatingRoutes } from "./market-rating-routes";
+import { marketTemplateRoutes } from "./market-template-routes";
+import { marketPricingRoutes } from "./market-pricing-routes";
 import { piiRoutes } from "./pii-routes";
 import { individualRoutes } from "./individual-routes";
 import { taxonRoutes } from "./taxon-routes";
@@ -17,6 +22,11 @@ import { matchRoutes } from "./match-routes";
 import { deviceRoutes } from "./device-routes";
 import { homeRoutes } from "./home-routes";
 import { cusbRoutes } from "./cusb-routes";
+import { socialRoutes } from "./social-routes";
+import { proposalRoutes } from "./proposal-routes";
+import { profileRoutes } from "./profile-routes";
+import { githubWebhookRoutes } from "./github-webhook-routes";
+import { handleScheduled } from "./batch";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -36,6 +46,10 @@ const PUBLIC_ROUTES = [
   // Ed25519 signature — the signature IS the credential (CL-09). Unsigned/forged
   // → 401 inside the route, so no session surface is exposed.
   "/api/v1/collector/ingest",
+  // GitHub webhook (design-k3 §2.5 / V3-KRM-13): public at the session layer,
+  // self-gated by X-Hub-Signature-256 HMAC — the signature IS the credential.
+  // Forged/missing signature → 401 inside the route, so no session surface leaks.
+  "/api/v1/github/webhook",
 ];
 
 // Auth middleware (§1.5). Order: PUBLIC → Cookie → Bearer session → Bearer DEV_TOKEN → 401.
@@ -113,6 +127,16 @@ app.route("/api/v1", collectorRoutes);
 // karma(value/count 二層)+ platinum の都度再計算投影 (V3-KRM-01/02 / CL-12).
 app.route("/api/v1", ledgerRoutes);
 
+// Contribution 3-axis + PT projection (design-k3 §2.2 / V3-KRM-10/12): GET
+// /api/v1/me/contribution・GET /api/v1/me/pt。本人スコープ・非公開（他人の actor を
+// 渡す経路なし）。score→minted/next_threshold は投影で都度導出（常駐 DB 禁止）。
+app.route("/api/v1", contributionRoutes);
+
+// Platinum coin shop / indulgence (design-k3 §2.2 / V3-KRM-05): POST /api/v1/shop/
+// indulgence・GET /api/v1/shop/indulgence/price。免罪符購入＝カルマカウント -1（value 不変）・
+// 価格 fib(stage)・PT 消費。全て保護・本人スコープ。
+app.route("/api/v1", shopRoutes);
+
 // GMO sunabar 照合 (design-c4 §2 / CL-11): GET /gmo/transfer-code・
 // POST /gmo/expected-payment・GET /gmo/reconciliation/meta。全て本人スコープ・保護。
 // 照合ジョブ reconcileOnce はサーバ内関数(Cron 配線は C5)。
@@ -122,6 +146,19 @@ app.route("/api/v1", gmoRoutes);
 // GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
 // 取引遷移(match/transition)・決済連動は C4 対象外。
 app.route("/api/v1", marketRoutes);
+
+// Market rating (design-k3 §2.2 / V3-MKT-27): POST /market/ratings(bad は reason 必須)・
+// GET /market/users/{actor}/ratings(公開集計 + 低評価フィルタ)。件数モデルは投影で都度再計算。
+app.route("/api/v1", marketRatingRoutes);
+
+// Template market (design-k3 §2.2 / V3-MKT-22): POST/GET /market/templates・
+// POST /market/templates/{id}/fork。ranking は RANKING_WEIGHTS・fork は forked_from 連結。
+app.route("/api/v1", marketTemplateRoutes);
+
+// Pricing / golden-flow / shipping (design-k3 §2.2 / V3-MKT-23/25/20): POST /market/
+// listings/draft・GET price-recommendation(embedding 既定 OFF)・GET shipping-estimate
+// (住所非保持・着払い)・POST /me/post-offices。純関数 + 薄い route。
+app.route("/api/v1", marketPricingRoutes);
 
 // PII セッション (design-c5 K2 §1.1 / V3-SEC-07 / route 045): POST /api/v1/settings/
 // pii-session。保護・非永続(maskPii を返すのみ・Truth へ生 PII を append しない)。
@@ -154,6 +191,26 @@ app.route("/api/v1", deviceRoutes);
 // V3-AUT-17 (本人スコープ): the STORED envelope's provenance.actor_id is
 // force-stamped to the session principal — a client-forged provenance.actor_id
 // is overwritten before persistence, never trusted. Response echoes the same.
+// Social eval + platinum vote (design-k3 §2.2 / V3-KRM-20/25): POST /social/eval・
+// GET /components/{node_id}/eval（統計のみ・公式ランキング非生成）・POST /social/
+// platinum-votes・GET /proposals/{id}/votes（公開合計 + 内訳・閾値到達で昇格候補化）。
+app.route("/api/v1", socialRoutes);
+
+// Research proposals (design-k3 §2.2 / V3-KRM-24): POST /proposals・/proposals/{id}/
+// fork（rank=beginner 自動）・/proposals/{id}/transition（rank/hypothesis 状態機械・
+// trust=支持/(支持+否定) 収束）。reduceProposal 投影で都度再計算。
+app.route("/api/v1", proposalRoutes);
+
+// Profile + integrated status (design-k3 §2.2 / V3-KRM-21/04/16): GET /me/profile・
+// /users/{actor}/profile（3 指標個別・研究スコアは Contribution 配下・BAN 公開表示）・
+// GET /me/status（統合ステータス + append-only 履歴の読取投影・GUI 編集は後波）。
+app.route("/api/v1", profileRoutes);
+
+// GitHub webhook (design-k3 §2.5 / V3-KRM-13): POST /github/webhook。session 層 public
+// （PUBLIC_ROUTES）+ HMAC self-gate。行動→pt+axis 換算（config weights・policy 経由）を
+// contribution_event に delivery_id キーで put-if-absent（重複 delivery=409 べき等）。
+app.route("/api/v1", githubWebhookRoutes);
+
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);
   const actorId = c.get("actorId");
@@ -169,5 +226,13 @@ app.post("/events", async (c) => {
   }
   return c.json({ key: result.key, actor_id: actorId }, 201);
 });
+
+// C5 K3 月次 cron 配線(design-k3 §2.6)。Worker ランタイムは default export の
+// { fetch, scheduled } を見る。Hono app は既に .fetch を持つので、ここに .scheduled を
+// 付けて export default app のまま両立させる(設計の { fetch: app.fetch, scheduled } と
+// 等価だが、テストが依存する app.request を保持するため app に生やす形にした)。
+// cron は wrangler.toml [triggers] 宣言 + config/consented-crons.json 承認まで配線済で、
+// デプロイ(=実行開始 = 常駐トークン消費)は人間ゲート。
+(app as unknown as { scheduled: typeof handleScheduled }).scheduled = handleScheduled;
 
 export default app;

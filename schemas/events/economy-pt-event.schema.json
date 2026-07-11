@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/economy-pt-event.schema.json",
+  "title": "Platinum PT ledger event (ihl.economy.pt_event.v1)",
+  "description": "プラチナ PT の append-only 増減イベント。Truth キー truth/ihl.economy.pt_event.v1/<pt_event_id>.json。projectPt が delta 合計で残高を都度再計算（非公開＝本人のみ・V3-KRM-10）。delta は整数（+mint / -spend）。",
+  "x_ihl_req": "V3-KRM-05",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
+  "type": "object",
+  "required": ["pt_event_id", "actor_id", "delta", "reason_code", "created_at", "schema_version"],
+  "properties": {
+    "pt_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "PT イベントの一意キー。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "残高主体の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "delta": {
+      "type": "integer",
+      "description": "PT 増減（+mint / -spend）。合計が残高。"
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": ["mint", "indulgence_spend", "vote_spend", "manual"],
+      "description": "増減理由（mint=鋳造 / indulgence_spend=免罪符購入 / vote_spend=投票消費 / manual=手動）。"
+    },
+    "ref": {
+      "type": "string",
+      "description": "関連イベント／対象の参照（任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（例: '1'）。"
+    }
+  },
+  "additionalProperties": false
+}

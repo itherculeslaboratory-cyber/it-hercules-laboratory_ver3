@@ -1,0 +1,8 @@
+policy_key,policy_int,domain,timestamp
+contribution.title_threshold,10000,titles,2026-07-11T00:00:00Z
+contribution.per_platinum,100,contribution,2026-07-11T00:00:00Z
+platinum_vote.official_threshold,100,platinum,2026-07-11T00:00:00Z
+indulgence.initial_price_pt,1,platinum,2026-07-11T00:00:00Z
+karma.monthly_recovery,10,karma,2026-07-11T00:00:00Z
+karma.value_max,100,karma,2026-07-11T00:00:00Z
+karma.ban_threshold,-100,karma,2026-07-11T00:00:00Z

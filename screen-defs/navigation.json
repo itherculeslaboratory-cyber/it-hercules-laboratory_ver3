@@ -1,6 +1,6 @@
 {
   "entry": "login",
-  "screens": ["login","country-select","language-select","terms","home","obs-domain-select","obs-entry","obs-navigator","obs-confirm","obs-detail","individual-detail","cross","bio-card","match","species","device","qr-resume"],
+  "screens": ["login","country-select","language-select","terms","home","obs-domain-select","obs-entry","obs-navigator","obs-confirm","obs-detail","individual-detail","cross","bio-card","match","species","device","qr-resume","economy-status","profile","platinum-shop","market-trade","template-market"],
   "edges": [
     {"from":"login","to":"country-select","label":"オンボーディング開始"},
     {"from":"country-select","to":"language-select","label":"国選択後"},
@@ -12,6 +12,9 @@
     {"from":"home","to":"match","label":"マッチングへ"},
     {"from":"home","to":"species","label":"種の管理へ"},
     {"from":"home","to":"device","label":"機器の管理へ"},
+    {"from":"home","to":"economy-status","label":"ステータスへ"},
+    {"from":"home","to":"profile","label":"プロフィールへ"},
+    {"from":"home","to":"market-trade","label":"取引へ"},
     {"from":"obs-domain-select","to":"obs-entry","label":"ドメイン選択後に観測入力へ"},
     {"from":"obs-entry","to":"obs-navigator","label":"対象特定へ"},
     {"from":"obs-entry","to":"obs-confirm","label":"確認画面へ"},
@@ -20,6 +23,12 @@
     {"from":"obs-detail","to":"individual-detail","label":"個体詳細へ"},
     {"from":"individual-detail","to":"cross","label":"累代分析へ"},
     {"from":"individual-detail","to":"bio-card","label":"バイオカードへ"},
-    {"from":"qr-resume","to":"obs-entry","label":"個体文脈付きで観測入力へ"}
+    {"from":"qr-resume","to":"obs-entry","label":"個体文脈付きで観測入力へ"},
+    {"from":"economy-status","to":"platinum-shop","label":"プラチナコインショップへ"},
+    {"from":"economy-status","to":"profile","label":"プロフィールへ"},
+    {"from":"profile","to":"economy-status","label":"ステータスへ"},
+    {"from":"platinum-shop","to":"economy-status","label":"ステータスへ戻る"},
+    {"from":"market-trade","to":"template-market","label":"テンプレート市場へ"},
+    {"from":"template-market","to":"market-trade","label":"取引へ戻る"}
   ]
 }

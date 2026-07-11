@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-template.schema.json",
+  "title": "Template market listing event (ihl.mkt.template.v1)",
+  "description": "テンプレ（論文/UIスキン/グラフ/重み/AIパック/プロンプト）出品・フォークの append-only イベント。Truth キー truth/ihl.mkt.template.v1/<template_id>.json。ranking は RANKING_WEIGHTS で投影算出、forked_from で系譜連結（V3-MKT-22）。",
+  "x_ihl_req": "V3-MKT-22",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
+  "type": "object",
+  "required": ["template_id", "actor_id", "kind", "title", "created_at", "schema_version"],
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "テンプレの一意キー。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "出品者の actor_id（V3-AUT-17）。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["paper", "ui_skin", "graph", "weights", "ai_pack", "prompt"],
+      "description": "テンプレ種別。"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "表示タイトル。"
+    },
+    "forked_from": {
+      "type": "string",
+      "description": "フォーク元テンプレ ID（任意・系譜連結）。"
+    },
+    "body_ref": {
+      "type": "string",
+      "description": "本体データの参照（blob key 等・任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}
