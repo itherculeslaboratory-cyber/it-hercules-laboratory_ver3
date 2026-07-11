@@ -1,0 +1,18 @@
+# GENERATED FILE — do not edit by hand.
+# source: 04-traceability/rtm.json
+# regenerate: node scripts/gen-rtm-views.mjs
+# mode: warn
+"id","title","req","det","test","trn_ui","retrofit"
+"V3-AIP-05","V-model 5点ゲート + テスト設計免除不可 + RTM100% 機械チェック","01-requirements/srs.md#V3-AIP-05","docs/planning/c5/design-c5.md#k8","tests/guards.test.ts","04-traceability/rtm.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-22","CI パイプライン(pytest/build/tsc/design-gate)機械実行","01-requirements/srs.md#V3-AIP-22","docs/planning/c5/design-c5.md#k8",".github/workflows/ci.yml","docs/planning/c5/e2e-design.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-32","凍結要件本文変更は裁定参照必須(check-req-freeze)","01-requirements/srs.md#V3-AIP-32","docs/planning/c5/design-c5.md#k8","tests/guards.test.ts","docs/planning/c5/e2e-design.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-34","知の広場スレッド spec(Spec-Driven 契約)","01-requirements/srs.md#V3-AIP-34","docs/planning/c5/design-c5.md#k8","tests/spec-thread.test.ts","screen-defs/knowledge-hub.json","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-35","意図台帳(intent)append-only・二重 intent_id 409","01-requirements/srs.md#V3-AIP-35","docs/planning/c5/design-c5.md#k8","tests/intent.test.ts","docs/planning/c5/e2e-design.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-36","コミットメッセージ意図メタ + [post_id] 形式(check-commit-msg)","01-requirements/srs.md#V3-AIP-36","docs/planning/c5/design-c5.md#k8","tests/guards.test.ts","docs/planning/c5/e2e-design.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-40","AI 機能ごとの差替可能プロファイル(BYOK・LLM OFF)","01-requirements/srs.md#V3-AIP-40","docs/planning/c5/design-c5.md#k8","tests/ai-profile.test.ts","screen-defs/ai-profile-settings.json","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-45","二層ビュー(human/machine)+ 参照カウンタ都度再計算","01-requirements/srs.md#V3-AIP-45","docs/planning/c5/design-c5.md#k8","tests/ai-view.test.ts","docs/planning/c5/e2e-design.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-49","機能別 E2E(入力→実行→保存)通貫","01-requirements/srs.md#V3-AIP-49","docs/planning/c5/design-c5.md#k8","apps/web/e2e/market.spec.ts; apps/web/e2e/ledger.spec.ts","docs/planning/c5/e2e-design.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-50","ScreenDef スナップショット TC 自動生成器","01-requirements/srs.md#V3-AIP-50","docs/planning/c5/design-c5.md#k8","apps/web/src/renderer/screendef-snapshots.test.tsx","apps/web/src/renderer/screendef-snapshots.test.tsx","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-68","危険コード物理ゲート(staging 昇格・check-danger-code)","01-requirements/srs.md#V3-AIP-68","docs/planning/c5/design-c5.md#k8","tests/guards.test.ts","docs/planning/c5/e2e-design.md","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-76","文化テンプレ fork/diff/restore + 評価軸3層","01-requirements/srs.md#V3-AIP-76","docs/planning/c5/design-c5.md#k8","tests/culture-template.test.ts","screen-defs/template-market.json","docs/planning/c5/c5-cluster-table.md#k8"
+"V3-AIP-80","外側(思想/宣言/Whitepaper/プロトコル)の段階制 OSS 公開","01-requirements/srs.md#V3-AIP-80","docs/planning/c5/design-c5.md#k8","tests/check-public-docs.test.ts","docs/public/protocol.md","docs/planning/c5/c5-cluster-table.md#k8"

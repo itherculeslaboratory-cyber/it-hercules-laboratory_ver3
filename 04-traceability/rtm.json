@@ -1,0 +1,124 @@
+{
+  "$comment": "RTM 正本 (hand-authored). K8 traceability closure — every C5 K8 implementation-target requirement (13) closes on the five V-model gates (req/det/test/trn_ui/retrofit). The TEST gate is load-bearing (テスト設計免除不可・V3-AIP-05). rtm.csv/rtm.md are GENERATED from this file by scripts/gen-rtm-views.mjs (--check gates drift); never hand-edit those two. check-rtm.mjs reads `mode`: warn = print unclosed gates but exit 0 (C5 in flight); enforce = exit 1. The warn→enforce flip and check-commit-msg BASELINE_REF are set by the coordinator once ALL clusters' TC are green (§1.8/§5).",
+  "mode": "warn",
+  "requirements": [
+    {
+      "id": "V3-AIP-05",
+      "title": "V-model 5点ゲート + テスト設計免除不可 + RTM100% 機械チェック",
+      "req": ["01-requirements/srs.md#V3-AIP-05"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/guards.test.ts"],
+      "trn_ui": ["04-traceability/rtm.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-22",
+      "title": "CI パイプライン(pytest/build/tsc/design-gate)機械実行",
+      "req": ["01-requirements/srs.md#V3-AIP-22"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": [".github/workflows/ci.yml"],
+      "trn_ui": ["docs/planning/c5/e2e-design.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-32",
+      "title": "凍結要件本文変更は裁定参照必須(check-req-freeze)",
+      "req": ["01-requirements/srs.md#V3-AIP-32"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/guards.test.ts"],
+      "trn_ui": ["docs/planning/c5/e2e-design.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-34",
+      "title": "知の広場スレッド spec(Spec-Driven 契約)",
+      "req": ["01-requirements/srs.md#V3-AIP-34"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/spec-thread.test.ts"],
+      "trn_ui": ["screen-defs/knowledge-hub.json"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-35",
+      "title": "意図台帳(intent)append-only・二重 intent_id 409",
+      "req": ["01-requirements/srs.md#V3-AIP-35"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/intent.test.ts"],
+      "trn_ui": ["docs/planning/c5/e2e-design.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-36",
+      "title": "コミットメッセージ意図メタ + [post_id] 形式(check-commit-msg)",
+      "req": ["01-requirements/srs.md#V3-AIP-36"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/guards.test.ts"],
+      "trn_ui": ["docs/planning/c5/e2e-design.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-40",
+      "title": "AI 機能ごとの差替可能プロファイル(BYOK・LLM OFF)",
+      "req": ["01-requirements/srs.md#V3-AIP-40"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/ai-profile.test.ts"],
+      "trn_ui": ["screen-defs/ai-profile-settings.json"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-45",
+      "title": "二層ビュー(human/machine)+ 参照カウンタ都度再計算",
+      "req": ["01-requirements/srs.md#V3-AIP-45"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/ai-view.test.ts"],
+      "trn_ui": ["docs/planning/c5/e2e-design.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-49",
+      "title": "機能別 E2E(入力→実行→保存)通貫",
+      "req": ["01-requirements/srs.md#V3-AIP-49"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["apps/web/e2e/market.spec.ts", "apps/web/e2e/ledger.spec.ts"],
+      "trn_ui": ["docs/planning/c5/e2e-design.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-50",
+      "title": "ScreenDef スナップショット TC 自動生成器",
+      "req": ["01-requirements/srs.md#V3-AIP-50"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["apps/web/src/renderer/screendef-snapshots.test.tsx"],
+      "trn_ui": ["apps/web/src/renderer/screendef-snapshots.test.tsx"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-68",
+      "title": "危険コード物理ゲート(staging 昇格・check-danger-code)",
+      "req": ["01-requirements/srs.md#V3-AIP-68"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/guards.test.ts"],
+      "trn_ui": ["docs/planning/c5/e2e-design.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-76",
+      "title": "文化テンプレ fork/diff/restore + 評価軸3層",
+      "req": ["01-requirements/srs.md#V3-AIP-76"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/culture-template.test.ts"],
+      "trn_ui": ["screen-defs/template-market.json"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-80",
+      "title": "外側(思想/宣言/Whitepaper/プロトコル)の段階制 OSS 公開",
+      "note": "公開の実施そのものは人間ゲート(§5)。機械 GATE は公開文書の存在チェックまで。",
+      "req": ["01-requirements/srs.md#V3-AIP-80"],
+      "det": ["docs/planning/c5/design-c5.md#k8"],
+      "test": ["tests/check-public-docs.test.ts"],
+      "trn_ui": ["docs/public/protocol.md"],
+      "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    }
+  ]
+}

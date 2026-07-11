@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/culture-template.schema.json",
+  "title": "Culture template version event (ihl.culture.template.v1)",
+  "description": "文化テンプレの版イベント（append-only）。Truth キー truth/ihl.culture.template.v1/<version_id>.json（envelope.id === version_id 規約）。fork=forked_from、diff/restore は版イベント列の投影で導出（V3-AIP-76）。kind=eval_axis の body は evaluation-axis.schema.json 構造に一致させる。",
+  "x_ihl_req": "V3-AIP-76",
+  "x_ihl_source": "docs/planning/c5/design-k8.md §1.2",
+  "type": "object",
+  "required": [
+    "template_id",
+    "version_id",
+    "kind",
+    "body",
+    "author_actor_id",
+    "created_at",
+    "schema_version"
+  ],
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "テンプレ系列の識別子（版をまたいで安定）。"
+    },
+    "version_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "版イベントの一意キー（ULID）。envelope.id と一致させる。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["ui_theme", "board_structure", "eval_axis"],
+      "description": "テンプレ種別。eval_axis の body は evaluation-axis 構造。"
+    },
+    "body": {
+      "type": "object",
+      "description": "テンプレ本体。kind 別の構造（eval_axis は evaluation-axis.schema.json 契約）。"
+    },
+    "author_actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "版を打った actor_id。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    },
+    "forked_from": {
+      "type": ["string", "null"],
+      "description": "親版の version_id（fork 元・任意 nullable）。"
+    },
+    "note": {
+      "type": "string",
+      "description": "版に付す注記（任意）。"
+    }
+  },
+  "additionalProperties": false
+}

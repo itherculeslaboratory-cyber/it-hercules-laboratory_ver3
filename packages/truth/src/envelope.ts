@@ -90,6 +90,10 @@ const VALIDATOR_NAME: Record<string, string> = {
   "tag-event": "tagEvent",
   thumbnail: "thumbnail",
   "transfer-code": "transferCode",
+  // C5 K8 process/culture events (schemas/events/*, non-frozen, reversible).
+  // append-only via POST /events with envelope.id === domain_id (design-k8 §1.2).
+  intent: "intent",
+  "culture-template": "cultureTemplate",
 };
 
 const FROZEN_NAMES = new Set([
@@ -174,6 +178,10 @@ const EVENT_NAMES = new Set([
   "device-binding",
   "occupancy",
   "telemetry-ingest",
+  // C5 K8 — data validation MUST fire or putEvent stores unchecked data at 202
+  // permanently (Truth is INSERT ONLY, unfixable). See design-k8 §1.2 批評家F2.
+  "intent",
+  "culture-template",
 ]);
 
 function validatorFor(name: string): ValidateFn {

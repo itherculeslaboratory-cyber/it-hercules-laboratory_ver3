@@ -1,0 +1,10 @@
+{
+  "feature_id": "image-analysis",
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "compute_tier": "medium",
+  "byok": true,
+  "capabilities": ["vision", "caption", "exif-aware"],
+  "latency": "数秒",
+  "prompt": "画像を観測データとして客観的に記述する。個体の特徴・状態・撮影条件を簡潔に列挙する。"
+}

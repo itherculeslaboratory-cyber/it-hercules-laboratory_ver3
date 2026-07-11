@@ -1,0 +1,10 @@
+{
+  "feature_id": "newspaper",
+  "provider": "anthropic",
+  "model": "claude-3-5-haiku",
+  "compute_tier": "medium",
+  "byok": true,
+  "capabilities": ["summarize", "headline", "translate"],
+  "latency": "数秒",
+  "prompt": "観測・研究の更新をニュース記事の体裁で要約する。事実と出典を保ち、誇張しない。"
+}

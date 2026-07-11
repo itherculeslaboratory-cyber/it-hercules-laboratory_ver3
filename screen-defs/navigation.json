@@ -35,7 +35,8 @@
     "knowledge-hub",
     "knowledge-board",
     "knowledge-paper",
-    "knowledge-github"
+    "knowledge-github",
+    "ai-profile-settings"
   ],
   "edges": [
     {
@@ -227,6 +228,11 @@
       "from": "knowledge-paper",
       "to": "paper-match",
       "label": "論文照合へ"
+    },
+    {
+      "from": "settings",
+      "to": "ai-profile-settings",
+      "label": "AI プロファイル設定へ"
     }
   ]
 }

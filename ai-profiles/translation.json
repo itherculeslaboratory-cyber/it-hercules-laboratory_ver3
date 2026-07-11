@@ -1,0 +1,10 @@
+{
+  "feature_id": "translation",
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "compute_tier": "low",
+  "byok": true,
+  "capabilities": ["translate", "localize"],
+  "latency": "1 秒未満",
+  "prompt": "原文の意味と語調を保って訳す。固有名詞と単位は改変しない。"
+}

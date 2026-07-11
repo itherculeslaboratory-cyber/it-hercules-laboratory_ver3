@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/evaluation-axis.schema.json",
+  "title": "Evaluation axis (3-layer)",
+  "description": "評価軸 3 層。common（満足度/再利用などの既定軸）・purpose（用途別）・custom（野生の天才定義）の 3 配列。culture-template kind=eval_axis の body 契約でもある（V3-AIP-76）。",
+  "x_ihl_req": "V3-AIP-76",
+  "x_ihl_source": "docs/planning/c5/design-k8.md §1.3",
+  "type": "object",
+  "required": ["common", "purpose", "custom"],
+  "properties": {
+    "common": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "既定軸（満足度/再利用など）。"
+    },
+    "purpose": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "用途別軸。"
+    },
+    "custom": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "自由定義軸（野生の天才定義）。"
+    }
+  },
+  "additionalProperties": false
+}

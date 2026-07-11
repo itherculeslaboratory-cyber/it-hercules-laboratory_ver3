@@ -98,6 +98,9 @@ const SCHEMAS = [
   ["deviceBinding", "events/device-binding.schema.json"],
   ["occupancy", "events/occupancy.schema.json"],
   ["telemetryIngest", "events/telemetry-ingest.schema.json"],
+  // C5 K8 process/culture events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
+  ["intent", "events/intent.schema.json"],
+  ["cultureTemplate", "events/culture-template.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

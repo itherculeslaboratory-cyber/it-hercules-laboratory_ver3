@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/intent.schema.json",
+  "title": "Intent ledger event (ihl.process.intent.v1)",
+  "description": "設計意図の append-only 台帳イベント。Truth キー truth/ihl.process.intent.v1/<intent_id>.json（envelope.id === intent_id 規約）。同一 intent_id の二重 append は put-if-absent で 409、UPDATE/DELETE 不能＝追記のみ（V3-AIP-35/36）。commit_id/post_id は intent 後に確定するため nullable。",
+  "x_ihl_req": "V3-AIP-35",
+  "x_ihl_source": "docs/planning/c5/design-k8.md §1.2",
+  "type": "object",
+  "required": [
+    "intent_id",
+    "spec_version",
+    "intent_summary",
+    "problem_statement",
+    "expected_effect",
+    "created_at",
+    "schema_version"
+  ],
+  "properties": {
+    "intent_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "意図イベントの一意キー（ULID）。envelope.id と一致させる。"
+    },
+    "spec_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象仕様の版（最終要件定義書 version など）。"
+    },
+    "intent_summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "意図の要約。"
+    },
+    "problem_statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "解決したい問題の記述。"
+    },
+    "expected_effect": {
+      "type": "string",
+      "minLength": 1,
+      "description": "期待する効果。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    },
+    "rejected_alternatives": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "棄却した代替案（任意）。"
+    },
+    "decision_source": {
+      "type": "string",
+      "description": "決定の出所（裁定記録 ID など・任意）。"
+    },
+    "commit_id": {
+      "type": ["string", "null"],
+      "description": "紐づくコミット ID。commit は intent 後に打たれるため nullable。"
+    },
+    "post_id": {
+      "type": ["string", "null"],
+      "description": "知の広場の post_id。K6 BBS 依存のため nullable。"
+    }
+  },
+  "additionalProperties": false
+}

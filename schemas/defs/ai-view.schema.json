@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/defs/ai-view.schema.json",
+  "title": "AI two-layer view (human_view + machine_view + tags)",
+  "description": "二層ビュー再利用 def。他クラスタの要約/知識スキーマが $ref する。human_view は人間向け要約 1 本、machine_view は AI 向け構造化ビュー、tags は system/ai/user の 3 層（V3-AIP-45）。",
+  "x_ihl_req": "V3-AIP-45",
+  "x_ihl_source": "docs/planning/c5/design-k8.md §1.3.1",
+  "type": "object",
+  "required": ["human_view", "machine_view", "tags"],
+  "properties": {
+    "human_view": {
+      "type": "string",
+      "description": "人間向け要約 1 本。"
+    },
+    "machine_view": {
+      "type": "object",
+      "required": ["sections", "keypoints"],
+      "properties": {
+        "sections": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "H2 見出し単位のチャンク。"
+        },
+        "keypoints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "要点リスト。"
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "description": "エンティティ名。" },
+              "type": { "type": "string", "description": "エンティティ種別（任意）。" }
+            },
+            "additionalProperties": false
+          },
+          "description": "抽出エンティティ（任意）。"
+        },
+        "topics": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "トピック（任意）。"
+        },
+        "rag_chunk": {
+          "type": "string",
+          "description": "RAG 投入用の連結本文（任意）。"
+        },
+        "importance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "重要度スコア（0〜1・任意）。"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "object",
+      "required": ["system", "ai", "user"],
+      "properties": {
+        "system": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "システム付与タグ。"
+        },
+        "ai": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "AI 付与タグ。"
+        },
+        "user": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "ユーザー付与タグ。"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

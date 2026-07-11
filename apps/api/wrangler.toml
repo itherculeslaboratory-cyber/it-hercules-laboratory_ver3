@@ -18,3 +18,17 @@ bucket_name = "ihl-ver3-truth-dev"
 # artifact）。デプロイ = 実行開始 = 常駐トークン消費 = 人間ゲート（本波は配線 + GATE 緑まで）。
 [triggers]
 crons = ["0 15 * * *"]
+
+# ── [env.staging]（V3-AIP-68 staging 昇格先）─────────────────────────────
+# 10 人規模レビュー・約 1 ヶ月試験運用の受け皿。workers.dev の dev サブドメインのみ
+# 露出し、本番 route/カスタムドメインはここに書かない（公開 = 人間ゲート）。dev バケットを
+# 共有（本番 Truth に触れない）。cron は継承しない（staging で常駐トークンを焼かない）。
+# 実 deploy（wrangler deploy --env staging）と dev worker への secret 投入は対外操作 —
+# 配線のみ本波・実行はコーディネータ/人間ゲート（設計 §5 / 危険操作の扱い）。
+[env.staging]
+name = "ihl-api-ver3-staging"
+workers_dev = true
+
+[[env.staging.r2_buckets]]
+binding = "TRUTH"
+bucket_name = "ihl-ver3-truth-dev"

@@ -1,0 +1,10 @@
+{
+  "feature_id": "market",
+  "provider": "anthropic",
+  "model": "claude-3-5-sonnet",
+  "compute_tier": "high",
+  "byok": true,
+  "capabilities": ["price-suggest", "matching"],
+  "latency": "数秒",
+  "prompt": "取引データから推奨価格と適合相手を提案する。断定せず参考値として提示する。"
+}

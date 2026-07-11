@@ -2,13 +2,17 @@
 // source: schemas/**/*.schema.json
 // direction: schemas/ -> generated (one-way; edit the schema, then re-run)
 // regenerate: node scripts/codegen-schemas.mjs
+export * from "./ai-profile";
 export * from "./api/health";
 export * from "./api/observation-search";
 export * from "./common/lineage-meta";
+export * from "./defs/ai-view";
+export * from "./evaluation-axis";
 export * from "./events/category";
 export * from "./events/citation";
 export * from "./events/cite-ref";
 export * from "./events/content";
+export * from "./events/culture-template";
 export * from "./events/cusb-ingest";
 export * from "./events/device-binding";
 export * from "./events/economy-contribution-event";
@@ -25,6 +29,7 @@ export * from "./events/ind-life-event";
 export * from "./events/ind-master";
 export * from "./events/ind-name-event";
 export * from "./events/ind-qr";
+export * from "./events/intent";
 export * from "./events/mapping-event";
 export * from "./events/match-preference";
 export * from "./events/mkt-listing";

@@ -1,0 +1,15 @@
+{
+  "feature_id": "rag",
+  "provider": "openai",
+  "model": "text-embedding-3-small",
+  "compute_tier": "low",
+  "byok": true,
+  "capabilities": ["embedding", "retrieval"],
+  "latency": "1 秒未満",
+  "rag": {
+    "chunk_size": 800,
+    "chunk_overlap": 120,
+    "top_k": 5
+  },
+  "prompt": "検索文脈に忠実に答える。根拠チャンクに無い内容は推測しない。"
+}
