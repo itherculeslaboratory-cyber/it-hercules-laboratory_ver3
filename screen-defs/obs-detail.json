@@ -12,17 +12,17 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "観測の詳細", "level": 1 } },
+            { "id": "title", "type": "heading", "props": { "text_key": "obs-detail.title.text", "text": "観測の詳細", "level": 1 } },
             {
               "id": "detail",
               "type": "card",
               "props": { "source_path": "/api/v1/observation/{{params.id}}" },
               "children": [
-                { "id": "domain", "type": "text", "props": { "text": "ドメイン: {{data.detail.capture.domain}}" } },
-                { "id": "species", "type": "text", "props": { "text": "種の候補: {{data.detail.capture.species_candidate}}", "muted": true } }
+                { "id": "domain", "type": "text", "props": { "text_key": "obs-detail.domain.text", "text": "ドメイン: {{data.detail.capture.domain}}" } },
+                { "id": "species", "type": "text", "props": { "text_key": "obs-detail.species.text", "text": "種の候補: {{data.detail.capture.species_candidate}}", "muted": true } }
               ]
             },
-            { "id": "measures-title", "type": "heading", "props": { "text": "計測", "level": 2 } },
+            { "id": "measures-title", "type": "heading", "props": { "text_key": "obs-detail.measures-title.text", "text": "計測", "level": 2 } },
             {
               "id": "measures",
               "type": "list",
@@ -31,7 +31,7 @@
                 "item_text": "{{item}}: {{value}} {{unit}}"
               }
             },
-            { "id": "photos-title", "type": "heading", "props": { "text": "写真", "level": 2 } },
+            { "id": "photos-title", "type": "heading", "props": { "text_key": "obs-detail.photos-title.text", "text": "写真", "level": 2 } },
             {
               "id": "photos",
               "type": "list",
@@ -44,7 +44,7 @@
             {
               "id": "to-individual",
               "type": "link",
-              "props": { "label": "個体詳細を開く", "href": "/s/individual-detail?id={{data.detail.individual_id}}" }
+              "props": { "label_key": "obs-detail.to-individual.label", "label": "個体詳細を開く", "href": "/s/individual-detail?id={{data.detail.individual_id}}" }
             }
           ]
         }

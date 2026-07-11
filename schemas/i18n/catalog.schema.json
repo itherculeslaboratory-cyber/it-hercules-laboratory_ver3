@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/i18n/catalog.schema.json",
+  "title": "i18n message catalog",
+  "$comment": "i18n/{locale}.json のメッセージカタログ（Truth event ではなく config data・envelope 検証対象外）。キー形式 {screen}.{component}.{field} を強制。構造 GATE は scripts/check-i18n-keys.mjs。",
+  "x_ihl_req": "V3-I18-08",
+  "x_ihl_source": "docs/planning/c5/design-k4.md §1.2",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z0-9-]+\\.[a-z0-9-]+\\.[a-z0-9-]+$": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

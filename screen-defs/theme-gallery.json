@@ -1,0 +1,44 @@
+{
+  "screen_id": "theme-gallery",
+  "route": "/s/theme-gallery",
+  "title": "テーマギャラリー",
+  "layout": "standard",
+  "notes": "テーマパック一覧(GET /api/v1/theme-packs)を閲覧。適用は設定画面の theme_pack 選好(PATCH)経由。V3-UIX-14/16/45。fork の実行(tokens 生成 = raw hex)は screen-def に置けない(check-ui-tokens が hex を拒否)ため lib/theme.ts(別クラスタ)のクライアント処理。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "theme-gallery.title.text", "text": "テーマギャラリー", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "theme-gallery.lead.text", "text": "テーマパックを選び、設定画面で適用します。", "muted": true } },
+            {
+              "id": "packs",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/theme-packs",
+                "bind_items": "data.packs.theme_packs",
+                "item_text": "{{name}}（{{mode}}）",
+                "empty_text": "テーマパックはまだありません。"
+              }
+            },
+            {
+              "id": "apply",
+              "type": "link",
+              "props": { "label_key": "theme-gallery.apply.label", "label": "設定でテーマを適用する", "href": "/s/settings" }
+            },
+            {
+              "id": "next-step",
+              "type": "link",
+              "props": { "label_key": "theme-gallery.next.label", "label": "ホームに戻る", "href": "/", "next_step": "ホームに戻る" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

@@ -1,0 +1,60 @@
+{
+  "screen_id": "settings",
+  "route": "/s/settings",
+  "title": "設定",
+  "layout": "standard",
+  "notes": "選好(locale/theme_pack_id/reduced_motion_override)を PATCH /api/v1/me/preferences で追記(append-only・LWW 投影)。現在値は GET /api/v1/me/preferences。V3-I18-08/UIX-16。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "settings.title.text", "text": "設定", "level": 1 } },
+            {
+              "id": "current",
+              "type": "card",
+              "props": { "source_path": "/api/v1/me/preferences" },
+              "children": [
+                { "id": "current-title", "type": "heading", "props": { "text_key": "settings.current-title.text", "text": "現在の設定", "level": 2 } },
+                { "id": "current-locale", "type": "text", "props": { "text_key": "settings.current-locale.text", "text": "言語: {{data.current.locale}}" } },
+                { "id": "current-theme", "type": "text", "props": { "text_key": "settings.current-theme.text", "text": "テーマ: {{data.current.theme_pack_id}}", "muted": true } },
+                { "id": "current-motion", "type": "text", "props": { "text_key": "settings.current-motion.text", "text": "モーション設定: {{data.current.reduced_motion_override}}", "muted": true } }
+              ]
+            },
+            {
+              "id": "pref-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "PATCH", "path": "/api/v1/me/preferences", "body_from": "pref-form" },
+              "children": [
+                { "id": "locale", "type": "field", "props": { "variant": "select", "name": "locale", "label_key": "settings.locale.label", "label": "言語", "placeholder": "言語を選ぶ", "options": [
+                  { "value": "ja", "label": "日本語" },
+                  { "value": "en", "label": "English" }
+                ] } },
+                { "id": "theme", "type": "field", "props": { "variant": "select", "name": "theme_pack_id", "label_key": "settings.theme.label", "label": "テーマ", "placeholder": "テーマを選ぶ", "options": [
+                  { "value": "minimal-light", "label": "ライト" },
+                  { "value": "minimal-dark", "label": "ダーク" }
+                ] } },
+                { "id": "motion", "type": "field", "props": { "variant": "select", "name": "reduced_motion_override", "label_key": "settings.motion.label", "label": "モーションを減らす", "placeholder": "モーション設定を選ぶ", "options": [
+                  { "value": "system", "label": "端末の設定に従う" },
+                  { "value": "reduce", "label": "減らす" },
+                  { "value": "no-preference", "label": "制限しない" }
+                ] } },
+                { "id": "save", "type": "button", "props": { "label_key": "settings.save.label", "label": "設定を保存する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "next-step",
+              "type": "link",
+              "props": { "label_key": "settings.next.label", "label": "ホームに戻る", "href": "/", "next_step": "ホームに戻る" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

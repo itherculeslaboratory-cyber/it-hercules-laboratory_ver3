@@ -1,0 +1,49 @@
+{
+  "$comment": "Color SSOT for the two built-in ThemePacks (minimal-light / minimal-dark) plus the pack-invariant tokens shared by every screen. This file is HAND-EDITED (it is the source, not a generated view). Requirement wording says design_token.yaml; ver3 stays JSON to avoid a YAML parser dep (design-k4 §1.2, 不変条項①). After editing, run `node scripts/codegen-theme-css.mjs` to regenerate apps/web/src/app/tokens.generated.css and theme-packs/*.json. V3-UIX-16.",
+  "invariant": {
+    "radius": "12px",
+    "tap": "44px",
+    "motion": "220ms",
+    "font": "Inter, \"Noto Sans JP\", system-ui, -apple-system, sans-serif",
+    "fs-1": "0.875rem",
+    "fs-2": "1rem",
+    "fs-3": "1.25rem",
+    "fs-4": "1.75rem"
+  },
+  "packs": {
+    "minimal-light": {
+      "name": "Minimal Light",
+      "mode": "light",
+      "tokens": {
+        "bg": "#fbfbf9",
+        "surface": "#ffffff",
+        "surface-2": "#f2f2ef",
+        "text": "#141410",
+        "text-muted": "#5a5a52",
+        "border": "#dad9d2",
+        "primary": "#0b7a55",
+        "primary-text": "#ffffff",
+        "focus": "#0b7a55",
+        "danger": "#b3261e",
+        "danger-bg": "#fbeae8"
+      }
+    },
+    "minimal-dark": {
+      "name": "Minimal Dark",
+      "mode": "dark",
+      "tokens": {
+        "bg": "#0d0d0d",
+        "surface": "#1a1a1a",
+        "surface-2": "#242424",
+        "text": "#f2f2f0",
+        "text-muted": "#a8a8a2",
+        "border": "#2e2e2e",
+        "primary": "#2dd4a7",
+        "primary-text": "#06231a",
+        "focus": "#2dd4a7",
+        "danger": "#ff6b5e",
+        "danger-bg": "#2a1512"
+      }
+    }
+  }
+}

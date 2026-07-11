@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ui-vote.schema.json",
+  "title": "UI vote event (ihl.ui.vote.v1)",
+  "description": "テンプレ/パックへの like・platinum 投票の append-only イベント。POST /events 経由（新 route を作らない・matrix 57 行凍結）。Truth キー truth/ihl.ui.vote.v1/<vote_id>.json。1 actor / 1 target / 1 kind の冪等は投影 projectTemplateVotes の distinct (actor,target,kind) dedup で担保（storage 409 に依存しない・批評家修正2）。",
+  "x_ihl_req": "V3-UIX-45",
+  "x_ihl_source": "docs/planning/c5/design-k4.md §1.2 / §1.3",
+  "type": "object",
+  "required": ["vote_id", "actor_id", "target_kind", "target_id", "vote_kind", "created_at", "schema_version"],
+  "properties": {
+    "vote_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票イベントの一意キー（envelope.id=ULID 由来・冪等キーではない）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票者の actor_id（本人スコープ V3-AUT-17）。"
+    },
+    "target_kind": {
+      "type": "string",
+      "enum": ["template", "pack"],
+      "description": "投票対象の種別。"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票対象（template_id または pack_id）。"
+    },
+    "vote_kind": {
+      "type": "string",
+      "enum": ["like", "platinum"],
+      "description": "投票種別。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

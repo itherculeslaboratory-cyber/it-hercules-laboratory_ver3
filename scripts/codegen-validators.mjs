@@ -65,6 +65,11 @@ const SCHEMAS = [
   ["socialPlatinumVote", "events/social-platinum-vote.schema.json"],
   ["researchProposal", "events/research-proposal.schema.json"],
   ["gmoObligation", "events/gmo-obligation.schema.json"],
+  // C5 K4 UI/UX+設定+i18n events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
+  ["prefSet", "events/pref-set.schema.json"],
+  ["themePack", "events/theme-pack.schema.json"],
+  ["uiTemplate", "events/ui-template.schema.json"],
+  ["uiVote", "events/ui-vote.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

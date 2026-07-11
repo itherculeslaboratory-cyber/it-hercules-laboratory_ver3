@@ -1,0 +1,46 @@
+{
+  "screen_id": "ui-templates",
+  "route": "/s/ui-templates",
+  "title": "UI テンプレート",
+  "layout": "standard",
+  "notes": "UI をノードとして保存/fork(POST /api/v1/builder/canvas = ihl.ui.template.v1・V3-UIX-45/17)。テンプレ一覧/投票/採用候補バッジは ihl.ui.template.v1 の GET 一覧 route が設計 route 表(046-049)に無く(未採番)、投票は client が target を持つ必要があるため lib(別クラスタ)側で配線。公開/公開解除は人間ゲート(design-k4 §5)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "ui-templates.title.text", "text": "UI テンプレート", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "ui-templates.lead.text", "text": "今の画面構成をテンプレートとして保存し、他の人と共有できます。", "muted": true } },
+            {
+              "id": "save-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/builder/canvas", "body_from": "save-form" },
+              "props": { "static": { "level": "default" } },
+              "children": [
+                { "id": "save-title", "type": "heading", "props": { "text_key": "ui-templates.save-title.text", "text": "この UI を保存", "level": 2 } },
+                { "id": "tpl-name", "type": "field", "props": { "variant": "text", "name": "name", "label_key": "ui-templates.tpl-name.label", "label": "テンプレート名", "placeholder": "例: 観測ダッシュボード", "required": true } },
+                { "id": "tpl-level", "type": "field", "props": { "variant": "select", "name": "level", "label_key": "ui-templates.tpl-level.label", "label": "推奨度", "placeholder": "推奨度を選ぶ", "options": [
+                  { "value": "default", "label": "標準" },
+                  { "value": "recommended", "label": "おすすめ" },
+                  { "value": "custom", "label": "カスタム" }
+                ] } },
+                { "id": "tpl-author", "type": "field", "props": { "variant": "text", "name": "social.author_name", "label_key": "ui-templates.tpl-author.label", "label": "作者名（任意）", "placeholder": "表示名" } },
+                { "id": "save", "type": "button", "props": { "label_key": "ui-templates.save.label", "label": "テンプレートとして保存する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "next-step",
+              "type": "link",
+              "props": { "label_key": "ui-templates.next.label", "label": "ホームに戻る", "href": "/", "next_step": "ホームに戻る" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

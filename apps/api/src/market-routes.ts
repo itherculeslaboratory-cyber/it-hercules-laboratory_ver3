@@ -15,6 +15,7 @@ import {
   type MarketState,
   type TxnEvent,
 } from "./market-settlement";
+import { projectPreferences } from "./settings-routes";
 
 const LISTING_TYPE = "ihl.mkt.listing.v1";
 const LISTING_SCHEMA = "schemas/events/mkt-listing.schema.json";
@@ -75,6 +76,11 @@ marketRoutes.post("/market/listings", async (c) => {
   if (typeof body?.description === "string") data.description = body.description;
   const price = Number(body?.price);
   if (Number.isInteger(price) && price >= 0) data.price = price;
+
+  // I18-06 part1: UGC 原文の作者言語タグを actor の locale から刻印(翻訳はしない・
+  // 常駐サーバ翻訳を持たない＝不変条項①)。未設定は projectPreferences が DEFAULT_LOCALE=ja。
+  // ponytail: 出品ごとに pref 投影 O(n) 走査。MVP 量なら十分・投影 index は別波。
+  data.lang = (await projectPreferences(store(c), actorId)).locale;
 
   const res = await store(c).putEvent(envelope(listingId, actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_LISTING", details: res.errors }, 400);

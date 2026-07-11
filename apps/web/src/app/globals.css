@@ -1,84 +1,15 @@
 @import "tailwindcss";
+@import "./tokens.generated.css";
 
 /* =============================================================================
- * ThemePack (V3-UIX-16) — the ONE token-definition file.
- * Raw hex is permitted HERE ONLY; every other file references var(--civ-*).
- * scripts/check-ui-tokens.mjs excludes this file and rejects raw color elsewhere.
+ * ThemePack tokens (V3-UIX-16) now live in tokens.generated.css — the codegen
+ * output of config/design-tokens.json (the token SSOT). This file no longer
+ * hand-authors any raw colour; it consumes var(--civ-*) only. applyThemePack()
+ * (lib/theme.ts) sets --civ-* inline on :root for instant, reload-free pack
+ * switching (V3-UIX-45).
  * Upper-bound rules (design-c2 §4.3): type scale <=4, weight 300/400 only,
- * spacing 4/8/12/16/24/32 (Tailwind p-1/2/3/4/6/8), radius 12px single,
- * shadow forbidden, motion 150-300ms.
+ * spacing 4/8/12/16/24/32, radius 12px single, shadow forbidden, motion 150-300ms.
  * ========================================================================== */
-
-/* --- Light pack (prefers-color-scheme default) --- */
-:root {
-  --civ-bg: #fbfbf9;
-  --civ-surface: #ffffff;
-  --civ-surface-2: #f2f2ef;
-  --civ-text: #141410;
-  --civ-text-muted: #5a5a52;
-  --civ-border: #dad9d2;
-  --civ-primary: #0b7a55;        /* green CTA — white-on 5.34:1 / on-bg 5.16:1 = WCAG AA (scripts/check-contrast.mjs) */
-  --civ-primary-text: #ffffff;
-  --civ-focus: #0b7a55;
-  --civ-danger: #b3261e;         /* AA on danger-bg */
-  --civ-danger-bg: #fbeae8;
-
-  --civ-radius: 12px;
-  --civ-tap: 44px;               /* min tap target (V3-UIX-81) */
-  --civ-motion: 220ms;           /* 150-300ms band */
-  --civ-font: Inter, "Noto Sans JP", system-ui, -apple-system, sans-serif;
-
-  /* type scale (<=4 sizes) */
-  --civ-fs-1: 0.875rem;
-  --civ-fs-2: 1rem;
-  --civ-fs-3: 1.25rem;
-  --civ-fs-4: 1.75rem;
-}
-
-/* --- Dark pack (brand base #0D0D0D / #1A1A1A) --- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --civ-bg: #0d0d0d;
-    --civ-surface: #1a1a1a;
-    --civ-surface-2: #242424;
-    --civ-text: #f2f2f0;
-    --civ-text-muted: #a8a8a2;
-    --civ-border: #2e2e2e;
-    --civ-primary: #2dd4a7;      /* mint CTA on dark */
-    --civ-primary-text: #06231a;
-    --civ-focus: #2dd4a7;
-    --civ-danger: #ff6b5e;
-    --civ-danger-bg: #2a1512;
-  }
-}
-
-/* --- data-theme hard overrides (win in both directions) --- */
-:root[data-theme="light"] {
-  --civ-bg: #fbfbf9;
-  --civ-surface: #ffffff;
-  --civ-surface-2: #f2f2ef;
-  --civ-text: #141410;
-  --civ-text-muted: #5a5a52;
-  --civ-border: #dad9d2;
-  --civ-primary: #0b7a55;
-  --civ-primary-text: #ffffff;
-  --civ-focus: #0b7a55;
-  --civ-danger: #b3261e;
-  --civ-danger-bg: #fbeae8;
-}
-:root[data-theme="dark"] {
-  --civ-bg: #0d0d0d;
-  --civ-surface: #1a1a1a;
-  --civ-surface-2: #242424;
-  --civ-text: #f2f2f0;
-  --civ-text-muted: #a8a8a2;
-  --civ-border: #2e2e2e;
-  --civ-primary: #2dd4a7;
-  --civ-primary-text: #06231a;
-  --civ-focus: #2dd4a7;
-  --civ-danger: #ff6b5e;
-  --civ-danger-bg: #2a1512;
-}
 
 html,
 body {
@@ -239,6 +170,30 @@ body {
 .civ-qr svg {
   width: 100%;
   height: 100%;
+}
+
+/* draft badge (V3-UIX-45) — marks an unpublished template/pack. Text-only so
+ * screen readers announce "草案"; no interactive role. */
+.civ-draft-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 0 8px;
+  min-height: 20px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface-2);
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+  font-weight: 400;
+}
+
+/* empty state (V3-UIX-03) — an honest "nothing here" instead of a blank list. */
+.civ-empty {
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+  padding: 16px;
+  text-align: center;
 }
 
 /* button variants */

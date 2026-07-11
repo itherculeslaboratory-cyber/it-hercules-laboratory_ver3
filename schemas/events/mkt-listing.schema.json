@@ -32,6 +32,10 @@
       "minimum": 0,
       "description": "希望価格（円・任意）。決済連動は C4 対象外。"
     },
+    "lang": {
+      "type": "string",
+      "description": "UGC 原文の作者言語タグ（BCP-47・actor locale 由来）。翻訳はしない＝I18-06。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

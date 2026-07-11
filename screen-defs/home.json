@@ -12,9 +12,19 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "観測ホーム", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text": "新しい観測を始めるか、個体を開きます。", "muted": true } },
-            { "id": "today-title", "type": "heading", "props": { "text": "今日の要約", "level": 2 } },
+            { "id": "title", "type": "heading", "props": { "text_key": "home.title.text", "text": "観測ホーム", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "home.lead.text", "text": "新しい観測を始めるか、個体を開きます。", "muted": true } },
+            {
+              "id": "ledger",
+              "type": "card",
+              "props": { "source_path": "/api/v1/me/ledger" },
+              "children": [
+                { "id": "here-title", "type": "heading", "props": { "text_key": "home.here-title.text", "text": "今日の状態", "level": 2 } },
+                { "id": "karma", "type": "text", "props": { "text_key": "home.karma.text", "text": "カルマ: {{data.ledger.karma_value}}" } },
+                { "id": "platinum", "type": "text", "props": { "text_key": "home.platinum.text", "text": "プラチナコイン: {{data.ledger.platinum_coins}}", "muted": true } }
+              ]
+            },
+            { "id": "today-title", "type": "heading", "props": { "text_key": "home.today-title.text", "text": "今日の要約", "level": 2 } },
             {
               "id": "today",
               "type": "list",
@@ -27,32 +37,63 @@
             {
               "id": "start-observe",
               "type": "button",
-              "props": { "label": "観測を始める", "variant": "primary" },
-              "action": { "kind": "navigate", "to": "obs-domain-select" }
+              "props": { "label_key": "home.start-observe.label", "label": "観測を始める", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "obs-entry" }
+            },
+            {
+              "id": "guide-select",
+              "type": "link",
+              "props": { "label_key": "home.guide-select.label", "label": "ドメインから選んで始める", "href": "/s/obs-domain-select" }
             },
             {
               "id": "open-individual",
               "type": "button",
-              "props": { "label": "個体を開く", "variant": "secondary" },
+              "props": { "label_key": "home.open-individual.label", "label": "個体を開く", "variant": "secondary" },
               "action": { "kind": "navigate", "to": "individual-detail" }
             },
             {
               "id": "open-match",
               "type": "button",
-              "props": { "label": "マッチングを見る", "variant": "secondary" },
+              "props": { "label_key": "home.open-match.label", "label": "マッチングを見る", "variant": "secondary" },
               "action": { "kind": "navigate", "to": "match" }
             },
             {
               "id": "open-species",
               "type": "button",
-              "props": { "label": "種を管理する", "variant": "secondary" },
+              "props": { "label_key": "home.open-species.label", "label": "種を管理する", "variant": "secondary" },
               "action": { "kind": "navigate", "to": "species" }
             },
             {
               "id": "open-device",
               "type": "button",
-              "props": { "label": "機器を管理する", "variant": "secondary" },
+              "props": { "label_key": "home.open-device.label", "label": "機器を管理する", "variant": "secondary" },
               "action": { "kind": "navigate", "to": "device" }
+            },
+            { "id": "feature-title", "type": "heading", "props": { "text_key": "home.feature-title.text", "text": "設定とテーマ", "level": 2 } },
+            {
+              "id": "open-theme",
+              "type": "link",
+              "props": { "label_key": "home.open-theme.label", "label": "テーマを選ぶ", "href": "/s/theme-gallery" }
+            },
+            {
+              "id": "open-ui-templates",
+              "type": "link",
+              "props": { "label_key": "home.open-ui-templates.label", "label": "UI テンプレートを選ぶ", "href": "/s/ui-templates" }
+            },
+            {
+              "id": "open-settings",
+              "type": "link",
+              "props": { "label_key": "home.open-settings.label", "label": "設定を開く", "href": "/s/settings" }
+            },
+            {
+              "id": "chip-status",
+              "type": "link",
+              "props": { "label_key": "home.chip-status.label", "label": "ステータス", "href": "/s/economy-status", "variant": "chip" }
+            },
+            {
+              "id": "chip-market",
+              "type": "link",
+              "props": { "label_key": "home.chip-market.label", "label": "取引", "href": "/s/market-trade", "variant": "chip" }
             }
           ]
         }
@@ -60,7 +101,8 @@
     }
   ],
   "transitions": [
-    { "from": "start-observe", "to_screen_id": "obs-domain-select", "label": "観測ドメイン選択へ" },
+    { "from": "start-observe", "to_screen_id": "obs-entry", "label": "観測入力へ(V3-UIX-02 3クリック導線・domain は obs-entry が自前収集)" },
+    { "from": "guide-select", "to_screen_id": "obs-domain-select", "label": "ガイド付きドメイン選択へ" },
     { "from": "open-individual", "to_screen_id": "individual-detail", "label": "個体詳細へ" },
     { "from": "open-match", "to_screen_id": "match", "label": "マッチングへ" },
     { "from": "open-species", "to_screen_id": "species", "label": "種の管理へ" },

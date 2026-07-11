@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // check-contrast.mjs — WCAG AA GATE for the ThemePack (design-c2 §4.3 / V3-UIX-81
 // "コントラスト AA（トークン値で担保）"). Parses the two authoritative token
-// blocks in globals.css (:root[data-theme="light"|"dark"]) and asserts every
-// text/background pair the catalog actually paints meets 4.5:1 (normal text).
-// Fails the lint chain if a token edit drops a pair below AA. No deps.
+// blocks in tokens.generated.css (:root[data-theme="light"|"dark"]), the codegen
+// output of config/design-tokens.json (V3-UIX-16), and asserts every text/background
+// pair the catalog actually paints meets 4.5:1 (normal text). Fails the lint chain
+// if a token edit drops a pair below AA. No deps.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const css = readFileSync(resolve(root, "apps/web/src/app/globals.css"), "utf8");
+const css = readFileSync(resolve(root, "apps/web/src/app/tokens.generated.css"), "utf8");
 
 // --- WCAG relative luminance + contrast ratio ---
 function luminance(hex) {

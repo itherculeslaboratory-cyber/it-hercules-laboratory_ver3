@@ -12,16 +12,16 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "何を観測しますか？", "level": 1 } },
+            { "id": "title", "type": "heading", "props": { "text_key": "obs-domain-select.title.text", "text": "何を観測しますか？", "level": 1 } },
             {
               "id": "domains",
               "type": "list",
               "children": [
-                { "id": "d-biology", "type": "button", "props": { "label": "生物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=biology" } },
-                { "id": "d-mineral", "type": "button", "props": { "label": "器物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=mineral" } },
-                { "id": "d-digital", "type": "button", "props": { "label": "デジタル", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=digital" } },
-                { "id": "d-place", "type": "button", "props": { "label": "環境", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=place" } },
-                { "id": "d-custom", "type": "button", "props": { "label": "カスタム", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=custom" } }
+                { "id": "d-biology", "type": "button", "props": { "label_key": "obs-domain-select.d-biology.label", "label": "生物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=biology" } },
+                { "id": "d-mineral", "type": "button", "props": { "label_key": "obs-domain-select.d-mineral.label", "label": "器物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=mineral" } },
+                { "id": "d-digital", "type": "button", "props": { "label_key": "obs-domain-select.d-digital.label", "label": "デジタル", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=digital" } },
+                { "id": "d-place", "type": "button", "props": { "label_key": "obs-domain-select.d-place.label", "label": "環境", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=place" } },
+                { "id": "d-custom", "type": "button", "props": { "label_key": "obs-domain-select.d-custom.label", "label": "カスタム", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=custom" } }
               ]
             }
           ]

@@ -29,6 +29,10 @@ export interface MktListing {
    */
   price?: number;
   /**
+   * UGC 原文の作者言語タグ（BCP-47・actor locale 由来）。翻訳はしない＝I18-06。
+   */
+  lang?: string;
+  /**
    * 出品時刻。
    */
   created_at?: string;

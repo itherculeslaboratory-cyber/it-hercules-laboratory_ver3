@@ -1,0 +1,20 @@
+{
+  "$comment": "GENERATED FILE — do not edit by hand. source: config/design-tokens.json. regenerate: node scripts/codegen-theme-css.mjs",
+  "pack_id": "minimal-light",
+  "name": "Minimal Light",
+  "mode": "light",
+  "builtin": true,
+  "tokens": {
+    "bg": "#fbfbf9",
+    "surface": "#ffffff",
+    "surface-2": "#f2f2ef",
+    "text": "#141410",
+    "text-muted": "#5a5a52",
+    "border": "#dad9d2",
+    "primary": "#0b7a55",
+    "primary-text": "#ffffff",
+    "focus": "#0b7a55",
+    "danger": "#b3261e",
+    "danger-bg": "#fbeae8"
+  }
+}

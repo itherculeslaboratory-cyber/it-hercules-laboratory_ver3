@@ -21,6 +21,28 @@ export type NodeType =
 // controls; the Renderer reads props.variant untyped, schema is the SSOT.
 export type FieldVariant = "text" | "number" | "select" | "photo" | "checkbox";
 
+// Documented props the Renderer understands (props stays an open Record so the
+// schema — additionalProperties:true — remains the SSOT). C5/K4 adds:
+//  - text_key/label_key: i18n catalog keys resolved via MessagesCtx (I18-08);
+//    the literal text/label is the fallback when a key does not resolve.
+//  - empty_text: honest empty-state copy for list/card (V3-UIX-03).
+//  - draft: render a "草案" badge on the heading/card (V3-UIX-45).
+//  - ugc + lang: mark viewer-generated text; enables the on-device translate
+//    affordance when the viewer locale differs from `lang` (V3-I18-06).
+//  - next_step: trailing "次にやること" navigation hint (V3-UIX-05).
+export interface KnownNodeProps {
+  text?: string;
+  text_key?: string;
+  label?: string;
+  label_key?: string;
+  empty_text?: string;
+  draft?: boolean;
+  ugc?: boolean;
+  lang?: string;
+  next_step?: string;
+  [key: string]: unknown;
+}
+
 export type Action =
   | {
       kind: "api";

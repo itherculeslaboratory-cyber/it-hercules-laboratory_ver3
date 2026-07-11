@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen, cleanup, fireEvent, act, waitFor } from "@testing-library/react";
 import { Renderer } from "./renderer";
+import { ApiError } from "@/lib/error-messages";
 import type { Action, ScreenDef } from "./types";
 import { allScreenDefs, loadScreenDef } from "@/lib/screendefs";
 // GATE logic under test (color discipline). Imported for the negative case.
@@ -15,9 +16,25 @@ function screenDef(nodes: ScreenDef["nodes"]): ScreenDef {
 }
 
 describe("Renderer — screen-defs", () => {
-  it("renders every one of the 22 screen-defs (navigation.json excluded)", () => {
+  // The single Renderer must draw EVERY screen-def (design-c5 §3, UIX-17). The
+  // count is derived from the on-disk set (all *.json minus navigation) rather
+  // than a frozen literal, so it neither goes red when a cluster adds a def
+  // (K4 adds settings/theme-gallery/ui-templates via P5) nor silently drops
+  // one — deviation from the "hardcode 25" note, which would be red until P5's
+  // three defs land. The completeness guard is preserved two ways below.
+  it("renders every screen-def on disk (navigation.json excluded), matching the loader", () => {
+    const dir = join(process.cwd(), "..", "..", "screen-defs");
+    const onDisk = readdirSync(dir).filter(
+      (f) => f.endsWith(".json") && f !== "navigation.json",
+    ).length;
     const defs = allScreenDefs();
-    expect(defs.length).toBe(22);
+    // loader neither drops nor duplicates relative to the on-disk set…
+    expect(defs.length).toBe(onDisk);
+    // …and the core screens are never silently excluded.
+    const ids = defs.map((d) => d.screen_id);
+    for (const req of ["home", "login", "obs-detail", "individual-detail", "qr-resume"]) {
+      expect(ids).toContain(req);
+    }
     for (const def of defs) {
       const { unmount } = render(<Renderer def={def} onAction={vi.fn()} />);
       // each screen has an h1 heading node -> title text is on screen
@@ -347,6 +364,147 @@ describe("Renderer runtime — body-shaping, transitions, data-binding", () => {
     await waitFor(() =>
       expect(screen.getByRole("img")).toHaveAttribute("aria-label", "QRコード: TK123"),
     );
+  });
+});
+
+describe("Renderer — text_key i18n resolution (V3-I18-08)", () => {
+  it("resolves text_key/label_key via the injected resolver, falling back to literal", () => {
+    const catalog: Record<string, string> = {
+      "t.head.title": "設定",
+      "t.save.label": "保存する",
+    };
+    render(
+      <Renderer
+        resolveMessage={(k) => catalog[k]}
+        onAction={vi.fn()}
+        def={screenDef([
+          { id: "h", type: "heading", props: { text_key: "t.head.title", text: "FALLBACK" } },
+          { id: "b", type: "button", props: { label_key: "t.save.label", label: "FALLBACK" } },
+          // unknown key -> literal fallback (never renders the raw key)
+          { id: "t2", type: "text", props: { text_key: "t.missing.x", text: "そのまま" } },
+        ])}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "設定" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存する" })).toBeInTheDocument();
+    expect(screen.getByText("そのまま")).toBeInTheDocument();
+    expect(screen.queryByText("t.missing.x")).not.toBeInTheDocument();
+    expect(screen.queryByText("FALLBACK")).not.toBeInTheDocument();
+  });
+});
+
+describe("Renderer — empty state (V3-UIX-03)", () => {
+  it("renders empty_text for a data-bound list that resolves to zero items", async () => {
+    const onAction = vi.fn(async () => ({ observations: [] }));
+    render(
+      <Renderer
+        onAction={onAction}
+        params={{ id: "ind-1" }}
+        def={{
+          screen_id: "individual-detail",
+          route: "/individuals/detail",
+          title: "t",
+          nodes: [
+            {
+              id: "history",
+              type: "list",
+              props: {
+                source_path: "/api/v1/individuals/{{params.id}}/observations",
+                bind_items: "data.history.observations",
+                item_text: "{{measurements.0.item}}",
+                empty_text: "まだ写真はありません",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(await screen.findByText("まだ写真はありません")).toBeInTheDocument();
+    expect(screen.getByText("まだ写真はありません")).toHaveClass("civ-empty");
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+});
+
+describe("Renderer — draft badge (V3-UIX-45)", () => {
+  it("renders a 草案 badge on a draft heading without disturbing the heading role", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          { id: "h", type: "heading", props: { text: "私のテンプレ", draft: true } },
+        ])}
+      />,
+    );
+    const heading = screen.getByRole("heading", { name: /私のテンプレ/ });
+    expect(heading).toBeInTheDocument();
+    const badge = screen.getByText("草案");
+    expect(badge).toHaveClass("civ-draft-badge");
+  });
+});
+
+describe("Renderer — API error copy (V3-UIX-03)", () => {
+  it.each([
+    ["401", "ログイン"],
+    ["403", "権限"],
+    ["409", "競合"],
+  ])("shows Japanese copy for %s (never the raw 'api <n>')", async (code, needle) => {
+    const onAction = vi.fn(async () => {
+      throw new ApiError(code);
+    });
+    render(
+      <Renderer
+        onAction={onAction}
+        def={screenDef([
+          {
+            id: "b",
+            type: "button",
+            props: { label: "実行" },
+            action: { kind: "api", method: "POST", path: "/api/v1/x" },
+          },
+        ])}
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "実行" }));
+    });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(needle);
+    expect(alert.textContent ?? "").not.toMatch(/api\s*\d/i);
+  });
+});
+
+describe("Renderer — UGC on-device translate affordance (V3-I18-06)", () => {
+  it("offers 翻訳 only when the viewer locale differs from the content lang", () => {
+    const ugc = (): ScreenDef =>
+      screenDef([
+        { id: "u", type: "text", props: { text: "こんにちは", ugc: true, lang: "ja" } },
+      ]);
+    // same language (ja viewer, ja content): original text, no affordance
+    const same = render(<Renderer def={ugc()} onAction={vi.fn()} viewerLocale="ja" />);
+    expect(screen.getByText("こんにちは")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "翻訳" })).not.toBeInTheDocument();
+    same.unmount();
+    // different language (en viewer, ja content): original shown + 翻訳 offered
+    render(<Renderer def={ugc()} onAction={vi.fn()} viewerLocale="en" />);
+    expect(screen.getByText(/こんにちは/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "翻訳" })).toBeInTheDocument();
+  });
+
+  it("keeps the original text after pressing 翻訳 (no server translation runs)", async () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        viewerLocale="en"
+        def={screenDef([
+          { id: "u", type: "text", props: { text: "原文のまま", ugc: true, lang: "ja" } },
+        ])}
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "翻訳" }));
+    });
+    // on-device hook returns the original until a device translator exists (I18-06)
+    expect(screen.getByText(/原文のまま/)).toBeInTheDocument();
   });
 });
 

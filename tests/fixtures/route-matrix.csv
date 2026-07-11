@@ -42,17 +42,17 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/dispute/{thread_id},VPS,Workers,W2,infra-route-038,protected,planned,
 —,POST,/api/v1/dispute/{thread_id}/messages,VPS,Workers,W2,infra-route-039,protected,planned,
 —,POST,/api/v1/dispute/{thread_id}/open-market,VPS,Workers,W2,infra-route-040,protected,planned,
-—,GET,/api/v1/me/preferences,VPS,Workers,W2,infra-route-041,protected,planned,
-—,GET,/api/v1/me/settings,VPS,Workers,W2,infra-route-042,protected,planned,
-—,GET,/api/v1/settings,VPS,Workers,W2,infra-route-043,protected,planned,
-—,PATCH,/api/v1/me/preferences,VPS,Workers,W2,infra-route-044,protected,planned,
-—,POST,/api/v1/settings/pii-session,VPS,Workers,W2,infra-route-045,protected,implemented,
-—,GET,/api/v1/theme-packs,VPS,Workers,W2,infra-route-046,protected,planned,
-—,GET,/api/v1/theme-packs/{pack_id},VPS,Workers,W2,infra-route-047,protected,planned,
-—,POST,/api/v1/builder/canvas,VPS,Workers,W2,infra-route-048,protected,planned,
-—,POST,/api/v1/theme-packs,VPS,Workers,W2,infra-route-049,protected,planned,
-—,GET,/api/v1/settings,VPS,Workers,W2,infra-route-050,protected,planned,
-—,PATCH,/api/v1/me/preferences,VPS,Workers,W2,infra-route-051,protected,planned,
+—,GET,/api/v1/me/preferences,VPS,Workers,W2,infra-route-041,protected,implemented,選好投影 projectPreferences(LWW・ihl.pref.set.v1 追記)・C5 K4・design-k4 §1.1
+—,GET,/api/v1/me/settings,VPS,Workers,W2,infra-route-042,protected,implemented,preferences + account_meta 集約・C5 K4・design-k4 §1.1
+—,GET,/api/v1/settings,VPS,Workers,W2,infra-route-043,protected,implemented,利用可能 locale/theme-pack/flags を都度算出・C5 K4・design-k4 §1.1
+—,PATCH,/api/v1/me/preferences,VPS,Workers,W2,infra-route-044,protected,implemented,ihl.pref.set.v1 append(UPDATE でなく追記・不変条項③)・C5 K4・design-k4 §1.1
+—,POST,/api/v1/settings/pii-session,VPS,Workers,W2,infra-route-045,protected,planned,PII セッション限定保持=V3-SEC-07 別クラスタ・deny-by-default 401 据置・design-k4 §1.1
+—,GET,/api/v1/theme-packs,VPS,Workers,W2,infra-route-046,protected,implemented,built-in 2 パック + ユーザー fork 投影・C5 K4・design-k4 §1.1
+—,GET,/api/v1/theme-packs/{pack_id},VPS,Workers,W2,infra-route-047,protected,implemented,tokens + 継承 lineage[]・C5 K4・design-k4 §1.1
+—,POST,/api/v1/builder/canvas,VPS,Workers,W2,infra-route-048,protected,implemented,UI をノードとして保存/fork=ihl.ui.template.v1・C5 K4・design-k4 §1.1
+—,POST,/api/v1/theme-packs,VPS,Workers,W2,infra-route-049,protected,implemented,ihl.theme.pack.v1 append(fork=parent_pack_id)・C5 K4・design-k4 §1.1
+—,GET,/api/v1/settings,VPS,Workers,W2,infra-route-050,protected,implemented,043 と同一 handler(重複行)・C5 K4・design-k4 §1.1
+—,PATCH,/api/v1/me/preferences,VPS,Workers,W2,infra-route-051,protected,implemented,044 と同一 handler(重複行)・C5 K4・design-k4 §1.1
 —,GET,/api/v1/gmo/reconciliation/meta,VPS,Workers,W2,infra-route-052,protected,planned,
 —,GET,/api/v1/gmo/transfer-code,VPS,Workers,W2,infra-route-053,protected,planned,
 —,GET,/api/v1/gmo/va-deposit/unsent,VPS,Workers,W2,infra-route-054,protected,planned,

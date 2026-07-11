@@ -11,6 +11,8 @@ import React, {
 import QRCode from "qrcode";
 import { cn } from "@/lib/cn";
 import { apiUrl } from "@/lib/api";
+import { ApiError, mapError } from "@/lib/error-messages";
+import { shouldOfferTranslation, translateOnDemand } from "@/lib/ugc-translate";
 import type { Action, ScreenDef, ScreenNode, Transition } from "./types";
 
 /* -------------------------------------------------------------------------- *
@@ -55,6 +57,37 @@ const DataSinkCtx = createContext<DataSink>({
 // V3-AUT-06: reactive submit gate. A submit button reads this; outside a gated
 // form it defaults to true (no reactive disable), so only consent forms gate.
 const FormValidityCtx = createContext<boolean>(true);
+
+// I18-08: text_key -> string resolver. The catalog + fallback chain live in
+// lib/i18n (P5); the Renderer only calls resolve(key). Default is a no-op so
+// screens using literal text render unchanged and tests can inject a resolver.
+export type ResolveMessage = (key: string) => string | undefined;
+export const MessagesCtx = createContext<ResolveMessage>(() => undefined);
+// I18-06: viewer locale for the on-device UGC translate affordance. authored
+// language is ja, so that is the default when i18n has not set one.
+export const LocaleCtx = createContext<string>("ja");
+
+// Resolve a node's display string: prefer the i18n catalog value for `keyVal`,
+// else the literal, else `fallback`. Empty catalog hits fall through to literal.
+function displayText(
+  resolve: ResolveMessage,
+  keyVal: unknown,
+  literal: unknown,
+  fallback: string,
+): string {
+  if (keyVal != null) {
+    const m = resolve(String(keyVal));
+    if (m != null && m !== "") return m;
+  }
+  return literal != null ? String(literal) : fallback;
+}
+
+// V3-UIX-03: turn a thrown error into calm Japanese copy. An ApiError maps by
+// status code (never the raw "api <n>" line); anything else uses its message.
+function errorText(e: unknown): string {
+  if (e instanceof ApiError) return mapError(e.code);
+  return (e as Error)?.message ?? String(e);
+}
 
 /** Any node in the tree matching `pred` (recursive, depth-first). */
 function anyField(nodes: ScreenNode[] | undefined, pred: (n: ScreenNode) => boolean): boolean {
@@ -152,7 +185,7 @@ function defaultExecute(onNavigate?: (to: string, query?: Record<string, string>
       return undefined;
     }
     const res = await fetch(apiUrl(action.path), requestInit(action.method, body));
-    if (!res.ok) throw new Error(`api ${res.status}`);
+    if (!res.ok) throw new ApiError(res.status);
     const ct = res.headers.get("content-type") ?? "";
     return ct.includes("application/json") ? await res.json() : undefined;
   };
@@ -239,6 +272,7 @@ function Children({ nodes }: { nodes?: ScreenNode[] }) {
 function ButtonNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const run = useRunAction(node.id);
+  const resolve = useContext(MessagesCtx);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(p.error ? String(p.error) : null);
   const formValid = useContext(FormValidityCtx);
@@ -255,7 +289,7 @@ function ButtonNode({ node }: { node: ScreenNode }) {
     try {
       await run(node.action);
     } catch (e) {
-      setError((e as Error)?.message ?? String(e));
+      setError(errorText(e));
     } finally {
       setPending(false);
     }
@@ -275,7 +309,7 @@ function ButtonNode({ node }: { node: ScreenNode }) {
         aria-invalid={error ? true : undefined}
         onClick={node.action ? onClick : undefined}
       >
-        {String(p.label ?? node.id)}
+        {displayText(resolve, p.label_key, p.label, node.id)}
       </button>
       {error && (
         <span role="alert" className="civ-field-error">
@@ -289,6 +323,7 @@ function ButtonNode({ node }: { node: ScreenNode }) {
 function FieldNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const invalidCtx = useContext(InvalidCtx);
+  const resolve = useContext(MessagesCtx);
   const variant = String(p.variant ?? "text");
   const name = String(p.name ?? node.id);
   const required = p.required === true;
@@ -343,7 +378,7 @@ function FieldNode({ node }: { node: ScreenNode }) {
   return (
     <div className="civ-field">
       <label className="civ-label" htmlFor={id}>
-        {String(p.label ?? name)}
+        {displayText(resolve, p.label_key, p.label, name)}
         {required ? " *" : ""}
       </label>
       {control}
@@ -416,7 +451,7 @@ function FormNode({ node }: { node: ScreenNode }) {
       try {
         await run(node.action, body, file);
       } catch (err) {
-        setFormError((err as Error)?.message ?? String(err));
+        setFormError(errorText(err));
       } finally {
         setPending(false);
       }
@@ -456,6 +491,10 @@ function ListNode({ node }: { node: ScreenNode }) {
   // is the interpolation scope for `item_text` (e.g. "{{measurements.0.item}}").
   if (p.bind_items) {
     const items = (getPath(scope, String(p.bind_items)) as unknown[]) ?? [];
+    // V3-UIX-03: an honest empty state instead of a blank list.
+    if (items.length === 0 && p.empty_text) {
+      return <p className="civ-empty">{String(p.empty_text)}</p>;
+    }
     const textTpl = p.item_text ? String(p.item_text) : "";
     const imgTpl = p.item_image ? String(p.item_image) : "";
     const altTpl = p.item_alt ? String(p.item_alt) : "";
@@ -476,9 +515,13 @@ function ListNode({ node }: { node: ScreenNode }) {
     );
   }
 
+  const children = node.children ?? [];
+  if (children.length === 0 && p.empty_text) {
+    return <p className="civ-empty">{String(p.empty_text)}</p>;
+  }
   return (
     <ul className="civ-list">
-      {(node.children ?? []).map((c) => (
+      {children.map((c) => (
         <li key={c.id}>
           <NodeView node={c} />
         </li>
@@ -492,9 +535,15 @@ function ListNode({ node }: { node: ScreenNode }) {
 // (Lists bind arrays; cards surface the same fetch for single-object screens
 // like obs-detail's summary and qr-resume's token→individual resolve.)
 function CardNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
   useSource(node);
+  const children = node.children ?? [];
+  if (children.length === 0 && p.empty_text) {
+    return <p className="civ-empty">{String(p.empty_text)}</p>;
+  }
   return (
     <article className="civ-card">
+      {p.draft ? <span className="civ-draft-badge">草案</span> : null}
       <Children nodes={node.children} />
     </article>
   );
@@ -526,9 +575,48 @@ function QrNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// V3-I18-06: user-generated text shown in its ORIGINAL language, with an
+// on-device "翻訳" affordance offered only when the viewer's locale differs from
+// the content's `lang`. Translation runs on-device on demand — never a server
+// call (see lib/ugc-translate). Original text is shown until the viewer opts in.
+function UgcText({ node, text }: { node: ScreenNode; text: string }) {
+  const p = props(node);
+  const viewerLocale = useContext(LocaleCtx);
+  const lang = p.lang ? String(p.lang) : undefined;
+  const [shown, setShown] = useState(text);
+  const [busy, setBusy] = useState(false);
+  const offer = shouldOfferTranslation(lang, viewerLocale);
+  const onTranslate = useCallback(async () => {
+    setBusy(true);
+    try {
+      const r = await translateOnDemand({ text, sourceLang: lang, viewerLocale });
+      setShown(r.text);
+    } finally {
+      setBusy(false);
+    }
+  }, [text, lang, viewerLocale]);
+  return (
+    <p className="civ-text" data-muted={p.muted === true || undefined} lang={lang}>
+      {shown}
+      {offer && (
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="ghost"
+          aria-busy={busy || undefined}
+          onClick={onTranslate}
+        >
+          翻訳
+        </button>
+      )}
+    </p>
+  );
+}
+
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
+  const resolve = useContext(MessagesCtx);
   switch (node.type) {
     case "app-shell":
       return (
@@ -547,16 +635,20 @@ export function NodeView({ node }: { node: ScreenNode }) {
       const Tag = (level >= 2 ? "h2" : "h1") as "h1" | "h2";
       return (
         <Tag className="civ-heading" data-level={String(level)}>
-          {interpolate(String(p.text ?? node.id), scope)}
+          {interpolate(displayText(resolve, p.text_key, p.text, node.id), scope)}
+          {p.draft ? <span className="civ-draft-badge">草案</span> : null}
         </Tag>
       );
     }
-    case "text":
+    case "text": {
+      const content = interpolate(displayText(resolve, p.text_key, p.text, ""), scope);
+      if (p.ugc) return <UgcText node={node} text={content} />;
       return (
         <p className="civ-text" data-muted={p.muted === true || undefined}>
-          {interpolate(String(p.text ?? ""), scope)}
+          {content}
         </p>
       );
+    }
     case "button":
       return <ButtonNode node={node} />;
     case "form":
@@ -582,7 +674,7 @@ export function NodeView({ node }: { node: ScreenNode }) {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (
         <a className="civ-link" href={href}>
-          {String(p.label ?? p.text ?? href)}
+          {displayText(resolve, p.label_key, p.label ?? p.text, href)}
         </a>
       );
     }
@@ -597,9 +689,20 @@ export interface RendererProps {
   onNavigate?: (to: string, query?: Record<string, string>) => void;
   /** URL query scope (?id=…). Defaults to window.location.search in the browser. */
   params?: Record<string, string>;
+  /** I18-08 text_key resolver (lib/i18n supplies the catalog + fallback chain). */
+  resolveMessage?: ResolveMessage;
+  /** I18-06 viewer locale for the on-device UGC translate affordance. */
+  viewerLocale?: string;
 }
 
-export function Renderer({ def, onAction, onNavigate, params }: RendererProps) {
+export function Renderer({
+  def,
+  onAction,
+  onNavigate,
+  params,
+  resolveMessage,
+  viewerLocale,
+}: RendererProps) {
   const [data, setData] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<Record<string, unknown>>({});
   const execute = onAction ?? defaultExecute(onNavigate);
@@ -624,18 +727,22 @@ export function Renderer({ def, onAction, onNavigate, params }: RendererProps) {
   const scope: Scope = { params: params ?? readQuery(), data, result };
 
   return (
-    <ExecuteCtx.Provider value={execute}>
-      <ScopeCtx.Provider value={scope}>
-        <TransitionsCtx.Provider value={def.transitions ?? []}>
-          <NavigateCtx.Provider value={navigate}>
-            <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
-              {def.nodes.map((n) => (
-                <NodeView key={n.id} node={n} />
-              ))}
-            </DataSinkCtx.Provider>
-          </NavigateCtx.Provider>
-        </TransitionsCtx.Provider>
-      </ScopeCtx.Provider>
-    </ExecuteCtx.Provider>
+    <MessagesCtx.Provider value={resolveMessage ?? (() => undefined)}>
+      <LocaleCtx.Provider value={viewerLocale ?? "ja"}>
+        <ExecuteCtx.Provider value={execute}>
+          <ScopeCtx.Provider value={scope}>
+            <TransitionsCtx.Provider value={def.transitions ?? []}>
+              <NavigateCtx.Provider value={navigate}>
+                <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
+                  {def.nodes.map((n) => (
+                    <NodeView key={n.id} node={n} />
+                  ))}
+                </DataSinkCtx.Provider>
+              </NavigateCtx.Provider>
+            </TransitionsCtx.Provider>
+          </ScopeCtx.Provider>
+        </ExecuteCtx.Provider>
+      </LocaleCtx.Provider>
+    </MessagesCtx.Provider>
   );
 }

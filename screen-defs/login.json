@@ -12,22 +12,22 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "IHL にログイン", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text": "メールアドレスにログインリンクを送ります。", "muted": true } },
+            { "id": "title", "type": "heading", "props": { "text_key": "login.title.text", "text": "IHL にログイン", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "login.lead.text", "text": "メールアドレスにログインリンクを送ります。", "muted": true } },
             {
               "id": "magic-form",
               "type": "form",
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/auth/magic-link", "body_from": "magic-form" },
               "children": [
-                { "id": "email", "type": "field", "props": { "variant": "text", "name": "email", "label": "メールアドレス", "placeholder": "you@example.com", "required": true } },
-                { "id": "terms", "type": "field", "props": { "variant": "checkbox", "name": "terms", "label": "利用規約に同意する", "required": true } },
-                { "id": "send", "type": "button", "props": { "label": "ログインリンクを送る", "variant": "primary", "type": "submit" } }
+                { "id": "email", "type": "field", "props": { "variant": "text", "name": "email", "label_key": "login.email.label", "label": "メールアドレス", "placeholder": "you@example.com", "required": true } },
+                { "id": "terms", "type": "field", "props": { "variant": "checkbox", "name": "terms", "label_key": "login.terms.label", "label": "利用規約に同意する", "required": true } },
+                { "id": "send", "type": "button", "props": { "label_key": "login.send.label", "label": "ログインリンクを送る", "variant": "primary", "type": "submit" } }
               ]
             },
             {
               "id": "dev-login",
               "type": "button",
-              "props": { "label": "開発トークンでログイン", "variant": "secondary" },
+              "props": { "label_key": "login.dev-login.label", "label": "開発トークンでログイン", "variant": "secondary" },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/auth/dev-login" }
             }
           ]

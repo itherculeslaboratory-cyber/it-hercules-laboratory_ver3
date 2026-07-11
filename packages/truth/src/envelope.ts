@@ -46,6 +46,11 @@ const VALIDATOR_NAME: Record<string, string> = {
   "social-platinum-vote": "socialPlatinumVote",
   "research-proposal": "researchProposal",
   "gmo-obligation": "gmoObligation",
+  // C5 K4 UI/UX+設定+i18n events (schemas/events/*, non-frozen, reversible)
+  "pref-set": "prefSet",
+  "theme-pack": "themePack",
+  "ui-template": "uiTemplate",
+  "ui-vote": "uiVote",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -103,6 +108,12 @@ const EVENT_NAMES = new Set([
   "social-platinum-vote",
   "research-proposal",
   "gmo-obligation",
+  // C5 K4 — data validation MUST fire or putEvent stores unchecked data at 202
+  // permanently (Truth is INSERT ONLY, unfixable). See design-k4 §1.2 批評家#3.
+  "pref-set",
+  "theme-pack",
+  "ui-template",
+  "ui-vote",
 ]);
 
 function validatorFor(name: string): ValidateFn {

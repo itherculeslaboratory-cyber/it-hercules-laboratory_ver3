@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ui-template.schema.json",
+  "title": "UI template event (ihl.ui.template.v1)",
+  "description": "UI/OS テンプレ（UI をノードとして保存/fork）の append-only イベント。Truth キー truth/ihl.ui.template.v1/<template_id>.json。fork は parent_template_id 付き追記で系譜連結、projectTemplateVotes が like/platinum 集計と採用候補判定（V3-UIX-45/17）。",
+  "x_ihl_req": "V3-UIX-45",
+  "x_ihl_source": "docs/planning/c5/design-k4.md §1.2",
+  "type": "object",
+  "required": ["template_id", "actor_id", "name", "level", "social", "created_at", "schema_version"],
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "テンプレの一意キー（envelope.id=ULID 由来）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "作成者の actor_id（本人スコープ V3-AUT-17）。"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "表示名。"
+    },
+    "level": {
+      "type": "string",
+      "enum": ["default", "recommended", "custom"],
+      "description": "テンプレ推奨度。"
+    },
+    "parent_template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "fork 元テンプレ ID（任意・系譜連結）。"
+    },
+    "theme_pack_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "紐づく theme-pack ID（任意）。"
+    },
+    "screen_overrides": {
+      "type": "object",
+      "description": "screen_id → ScreenDef 部分の上書き（任意）。"
+    },
+    "social": {
+      "type": "object",
+      "properties": {
+        "author_name": {
+          "type": "string",
+          "description": "表示著者名（任意）。"
+        }
+      },
+      "additionalProperties": false,
+      "description": "共有メタ（著者名等）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

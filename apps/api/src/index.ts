@@ -11,6 +11,8 @@ import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
 import { gmoRoutes } from "./gmo-routes";
 import { marketRoutes } from "./market-routes";
+import { settingsRoutes } from "./settings-routes";
+import { themeRoutes } from "./theme-routes";
 import { marketRatingRoutes } from "./market-rating-routes";
 import { marketTemplateRoutes } from "./market-template-routes";
 import { marketPricingRoutes } from "./market-pricing-routes";
@@ -146,6 +148,17 @@ app.route("/api/v1", gmoRoutes);
 // GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
 // 取引遷移(match/transition)・決済連動は C4 対象外。
 app.route("/api/v1", marketRoutes);
+
+// Settings/preferences (design-k4 §1.1 routes 041-044,050,051 / V3-UIX-16): GET
+// /me/preferences・GET /me/settings・GET /settings・PATCH /me/preferences。選好は
+// append-only ihl.pref.set.v1、GET は投影で LWW 都度再計算。全て保護・本人スコープ。
+app.route("/api/v1", settingsRoutes);
+
+// Theme packs / UI templates (design-k4 §1.1 routes 046-049 / V3-UIX-14/16/45): GET
+// /theme-packs・GET /theme-packs/{id}(lineage)・POST /theme-packs(fork)・POST
+// /builder/canvas(UI-as-node)。投票は POST /events(ihl.ui.vote.v1)再利用・冪等は投影
+// dedup。全て保護・本人スコープ。
+app.route("/api/v1", themeRoutes);
 
 // Market rating (design-k3 §2.2 / V3-MKT-27): POST /market/ratings(bad は reason 必須)・
 // GET /market/users/{actor}/ratings(公開集計 + 低評価フィルタ)。件数モデルは投影で都度再計算。

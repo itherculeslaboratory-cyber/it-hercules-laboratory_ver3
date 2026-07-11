@@ -16,7 +16,15 @@ const ROOT = process.cwd();
 const require = createRequire(join(ROOT, "package.json"));
 
 // Files where raw color is the source of truth (exempt from the scan).
-const TOKEN_FILES = new Set(["apps/web/src/app/globals.css"]);
+//  - globals.css: legacy hand-authored token block (being replaced by the @import).
+//  - tokens.generated.css: codegen output of config/design-tokens.json (V3-UIX-16).
+// theme-packs/** (built-in ThemePack JSON) are also token-definition data; they live
+// at repo root outside the scan roots but are exempted explicitly for future-proofing.
+const TOKEN_FILES = new Set([
+  "apps/web/src/app/globals.css",
+  "apps/web/src/app/tokens.generated.css",
+]);
+const TOKEN_DIRS = ["theme-packs/"];
 
 // Flow maps under screen-defs/ that are not ScreenDefs (exempt from schema check).
 const NON_SCREENDEF = new Set(["screen-defs/navigation.json"]);
@@ -62,7 +70,7 @@ function runGate() {
   ];
   for (const file of files) {
     const rel = relative(ROOT, file).replace(/\\/g, "/");
-    if (TOKEN_FILES.has(rel)) continue;
+    if (TOKEN_FILES.has(rel) || TOKEN_DIRS.some((d) => rel.startsWith(d))) continue;
     for (const v of scanColors(readFileSync(file, "utf8"))) {
       violations.push(`${rel}: ${v}`);
     }

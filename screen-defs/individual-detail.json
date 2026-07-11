@@ -13,50 +13,50 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "個体の詳細", "level": 1 } },
-            { "id": "ind-id", "type": "text", "props": { "text": "個体 ID: {{params.id}}", "muted": true } },
+            { "id": "title", "type": "heading", "props": { "text_key": "individual-detail.title.text", "text": "個体の詳細", "level": 1 } },
+            { "id": "ind-id", "type": "text", "props": { "text_key": "individual-detail.ind-id.text", "text": "個体 ID: {{params.id}}", "muted": true } },
             {
               "id": "ind",
               "type": "card",
               "props": { "source_path": "/api/v1/individuals/{{params.id}}" },
               "children": [
-                { "id": "timeline-title", "type": "heading", "props": { "text": "タイムライン", "level": 2 } },
+                { "id": "timeline-title", "type": "heading", "props": { "text_key": "individual-detail.timeline-title.text", "text": "タイムライン", "level": 2 } },
                 {
                   "id": "timeline",
                   "type": "list",
                   "props": { "bind_items": "data.ind.timeline", "item_text": "{{kind}} {{at}}" }
                 },
-                { "id": "obs-title", "type": "heading", "props": { "text": "観測履歴", "level": 2 } },
+                { "id": "obs-title", "type": "heading", "props": { "text_key": "individual-detail.obs-title.text", "text": "観測履歴", "level": 2 } },
                 {
                   "id": "observations",
                   "type": "list",
                   "props": { "bind_items": "data.ind.observations", "item_text": "{{species_candidate}} {{measurements.0.item}} {{measurements.0.value}}{{measurements.0.unit}}" }
                 },
-                { "id": "schedule-title", "type": "heading", "props": { "text": "スケジュール", "level": 2 } },
+                { "id": "schedule-title", "type": "heading", "props": { "text_key": "individual-detail.schedule-title.text", "text": "スケジュール", "level": 2 } },
                 {
                   "id": "schedules",
                   "type": "list",
                   "props": { "bind_items": "data.ind.schedules", "item_text": "次回 {{next_observation_at}}" }
                 },
-                { "id": "source-title", "type": "heading", "props": { "text": "データソース（機器）", "level": 2 } },
+                { "id": "source-title", "type": "heading", "props": { "text_key": "individual-detail.source-title.text", "text": "データソース（機器）", "level": 2 } },
                 {
                   "id": "data-sources",
                   "type": "list",
                   "props": { "bind_items": "data.ind.data_sources", "item_text": "{{display_name}}" }
                 },
-                { "id": "template-title", "type": "heading", "props": { "text": "テンプレート", "level": 2 } },
+                { "id": "template-title", "type": "heading", "props": { "text_key": "individual-detail.template-title.text", "text": "テンプレート", "level": 2 } },
                 {
                   "id": "templates",
                   "type": "list",
                   "props": { "bind_items": "data.ind.templates", "item_text": "{{template_id}}" }
                 },
-                { "id": "market-title", "type": "heading", "props": { "text": "市場オファー", "level": 2 } },
+                { "id": "market-title", "type": "heading", "props": { "text_key": "individual-detail.market-title.text", "text": "市場オファー", "level": 2 } },
                 {
                   "id": "market-offers",
                   "type": "list",
                   "props": { "bind_items": "data.ind.market_offers", "item_text": "{{listing_id}}" }
                 },
-                { "id": "improve-title", "type": "heading", "props": { "text": "改善（fork）", "level": 2 } },
+                { "id": "improve-title", "type": "heading", "props": { "text_key": "individual-detail.improve-title.text", "text": "改善（fork）", "level": 2 } },
                 {
                   "id": "improvements",
                   "type": "list",
@@ -67,17 +67,17 @@
             {
               "id": "to-cross",
               "type": "link",
-              "props": { "label": "累代分析を見る", "href": "/s/cross?id={{params.id}}" }
+              "props": { "label_key": "individual-detail.to-cross.label", "label": "累代分析を見る", "href": "/s/cross?id={{params.id}}" }
             },
             {
               "id": "to-bio-card",
               "type": "link",
-              "props": { "label": "バイオカードを見る", "href": "/s/bio-card?id={{params.id}}" }
+              "props": { "label_key": "individual-detail.to-bio-card.label", "label": "バイオカードを見る", "href": "/s/bio-card?id={{params.id}}" }
             },
             {
               "id": "issue-qr",
               "type": "button",
-              "props": { "label": "QR ラベルを発行する", "variant": "primary" },
+              "props": { "label_key": "individual-detail.issue-qr.label", "label": "QR ラベルを発行する", "variant": "primary" },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/{{params.id}}/qr" }
             },
             { "id": "qr", "type": "qr-code", "props": { "value": "{{result.token}}" } }

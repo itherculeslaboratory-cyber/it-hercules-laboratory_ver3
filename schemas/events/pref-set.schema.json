@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/pref-set.schema.json",
+  "title": "User preference set event (ihl.pref.set.v1)",
+  "description": "利用者の設定（locale / theme-pack / UI template / reduced-motion 上書き）の append-only イベント。Truth キー truth/ihl.pref.set.v1/<pref_set_id>.json。projectPreferences が actor 一致を created_at/ULID で last-write-wins に畳み込み（UPDATE でなく追記＝不変条項③）。",
+  "x_ihl_req": "V3-UIX-16",
+  "x_ihl_source": "docs/planning/c5/design-k4.md §1.2",
+  "type": "object",
+  "required": ["pref_set_id", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "pref_set_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "設定イベントの一意キー（envelope.id=ULID 由来・冪等キーではない）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "設定した本人の actor_id（本人スコープ V3-AUT-17）。"
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 1,
+      "description": "選択 locale（BCP-47・任意・未設定は DEFAULT_LOCALE=ja）。"
+    },
+    "theme_pack_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "選択 theme-pack ID（built-in slug または fork ULID・任意）。"
+    },
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "選択 UI template ID（任意）。"
+    },
+    "reduced_motion_override": {
+      "type": "string",
+      "enum": ["system", "reduce", "no-preference"],
+      "description": "モーション低減の明示上書き（任意・system=OS 追従）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

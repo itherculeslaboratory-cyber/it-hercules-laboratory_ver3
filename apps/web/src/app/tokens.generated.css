@@ -1,0 +1,75 @@
+/* GENERATED FILE — do not edit by hand.
+ * source: config/design-tokens.json
+ * direction: config/design-tokens.json -> tokens.generated.css (one-way; edit the SSOT, then re-run)
+ * regenerate: node scripts/codegen-theme-css.mjs
+ * ThemePack colour tokens (V3-UIX-16). Raw hex lives here because this is a token-definition
+ * view; check-ui-tokens.mjs exempts it and check-contrast.mjs reads its data-theme blocks. */
+
+/* --- Light pack (prefers-color-scheme default) + pack-invariant tokens --- */
+:root {
+  --civ-bg: #fbfbf9;
+  --civ-surface: #ffffff;
+  --civ-surface-2: #f2f2ef;
+  --civ-text: #141410;
+  --civ-text-muted: #5a5a52;
+  --civ-border: #dad9d2;
+  --civ-primary: #0b7a55;
+  --civ-primary-text: #ffffff;
+  --civ-focus: #0b7a55;
+  --civ-danger: #b3261e;
+  --civ-danger-bg: #fbeae8;
+
+  --civ-radius: 12px;
+  --civ-tap: 44px;
+  --civ-motion: 220ms;
+  --civ-font: Inter, "Noto Sans JP", system-ui, -apple-system, sans-serif;
+  --civ-fs-1: 0.875rem;
+  --civ-fs-2: 1rem;
+  --civ-fs-3: 1.25rem;
+  --civ-fs-4: 1.75rem;
+}
+
+/* --- Dark pack (prefers-color-scheme: dark) --- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --civ-bg: #0d0d0d;
+    --civ-surface: #1a1a1a;
+    --civ-surface-2: #242424;
+    --civ-text: #f2f2f0;
+    --civ-text-muted: #a8a8a2;
+    --civ-border: #2e2e2e;
+    --civ-primary: #2dd4a7;
+    --civ-primary-text: #06231a;
+    --civ-focus: #2dd4a7;
+    --civ-danger: #ff6b5e;
+    --civ-danger-bg: #2a1512;
+  }
+}
+
+/* --- data-theme hard overrides (win in both directions) --- */
+:root[data-theme="light"] {
+  --civ-bg: #fbfbf9;
+  --civ-surface: #ffffff;
+  --civ-surface-2: #f2f2ef;
+  --civ-text: #141410;
+  --civ-text-muted: #5a5a52;
+  --civ-border: #dad9d2;
+  --civ-primary: #0b7a55;
+  --civ-primary-text: #ffffff;
+  --civ-focus: #0b7a55;
+  --civ-danger: #b3261e;
+  --civ-danger-bg: #fbeae8;
+}
+:root[data-theme="dark"] {
+  --civ-bg: #0d0d0d;
+  --civ-surface: #1a1a1a;
+  --civ-surface-2: #242424;
+  --civ-text: #f2f2f0;
+  --civ-text-muted: #a8a8a2;
+  --civ-border: #2e2e2e;
+  --civ-primary: #2dd4a7;
+  --civ-primary-text: #06231a;
+  --civ-focus: #2dd4a7;
+  --civ-danger: #ff6b5e;
+  --civ-danger-bg: #2a1512;
+}
