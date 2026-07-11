@@ -31,7 +31,11 @@
     "data-descriptor",
     "project-hub",
     "research-search",
-    "research-newspaper"
+    "research-newspaper",
+    "knowledge-hub",
+    "knowledge-board",
+    "knowledge-paper",
+    "knowledge-github"
   ],
   "edges": [
     {
@@ -198,6 +202,31 @@
       "from": "home",
       "to": "obs-entry",
       "label": "観測入力へ(3クリック導線)"
+    },
+    {
+      "from": "home",
+      "to": "knowledge-hub",
+      "label": "知の広場へ"
+    },
+    {
+      "from": "knowledge-hub",
+      "to": "knowledge-board",
+      "label": "公式掲示板へ"
+    },
+    {
+      "from": "knowledge-hub",
+      "to": "knowledge-paper",
+      "label": "論文へ"
+    },
+    {
+      "from": "knowledge-hub",
+      "to": "knowledge-github",
+      "label": "GitHub 掲示板へ"
+    },
+    {
+      "from": "knowledge-paper",
+      "to": "paper-match",
+      "label": "論文照合へ"
     }
   ]
 }

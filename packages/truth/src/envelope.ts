@@ -59,6 +59,19 @@ const VALIDATOR_NAME: Record<string, string> = {
   category: "category",
   "task-node": "taskNode",
   "wiki-node": "wikiNode",
+  // C5 K6 plaza/governance events (schemas/events/*, non-frozen, reversible).
+  // cite-ref is a shared component type (not an envelope-data target) but is
+  // registered so plaza-post's relative $ref resolves in the same ajv instance.
+  "cite-ref": "citeRef",
+  "plaza-post": "plazaPost",
+  "plaza-stance": "plazaStance",
+  "plaza-fork": "plazaFork",
+  "plaza-signal": "plazaSignal",
+  "plaza-summary": "plazaSummary",
+  "gov-vote": "govVote",
+  "gov-dispute": "govDispute",
+  "gov-precedent": "govPrecedent",
+  "gov-flag": "govFlag",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -131,6 +144,19 @@ const EVENT_NAMES = new Set([
   "category",
   "task-node",
   "wiki-node",
+  // C5 K6 — data validation MUST fire or putEvent stores unchecked data at 202
+  // permanently (Truth is INSERT ONLY, unfixable). See design-c5.md §K6 §2.2 批評家#1.
+  // cite-ref is intentionally NOT here: it is a component type referenced by
+  // plaza-post/gov-dispute, never a dataschema target itself.
+  "plaza-post",
+  "plaza-stance",
+  "plaza-fork",
+  "plaza-signal",
+  "plaza-summary",
+  "gov-vote",
+  "gov-dispute",
+  "gov-precedent",
+  "gov-flag",
 ]);
 
 function validatorFor(name: string): ValidateFn {

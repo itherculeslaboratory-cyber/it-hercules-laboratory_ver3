@@ -1,0 +1,41 @@
+{
+  "screen_id": "knowledge-paper",
+  "route": "/knowledge/paper",
+  "title": "論文",
+  "layout": "standard",
+  "notes": "BBS-01 柱2（design-c5.md §K6 §2.4・HG-KN-04=A/HG-KN-05=A 仮置き）。論文の照合（K5 paper-match）へ navigate。記事/ブログもこの柱に統合。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "knowledge-paper.title.text", "text": "論文", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "knowledge-paper.lead.text", "text": "論文を照合して観測に結びつけます。", "muted": true } },
+            {
+              "id": "papers",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/observation/search",
+                "bind_items": "data.papers",
+                "item_text": "{{title}}"
+              }
+            },
+            {
+              "id": "open-match",
+              "type": "button",
+              "props": { "label_key": "knowledge-paper.open-match.label", "label": "論文照合を開く", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "paper-match" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "open-match", "to_screen_id": "paper-match", "label": "論文照合へ" }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "screen_id": "knowledge-hub",
+  "route": "/knowledge",
+  "title": "知の広場",
+  "layout": "standard",
+  "notes": "BBS-01/36 知の広場ハブ（design-c5.md §K6 §2.4・HG-KN-08=B 仮置き）。3柱カードのみ・ナビ1層・タブノード不在（タブとカードの重複禁止=BBS-01）。各カード action=navigate。裁定確定後は JSON 差替でコード不変。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "knowledge-hub.title.text", "text": "知の広場", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "knowledge-hub.lead.text", "text": "3つの柱から選びます。", "muted": true } },
+            {
+              "id": "pillar-board",
+              "type": "card",
+              "action": { "kind": "navigate", "to": "knowledge-board" },
+              "children": [
+                { "id": "pillar-board-title", "type": "heading", "props": { "text_key": "knowledge-hub.board.text", "text": "公式掲示板", "level": 2 } },
+                { "id": "pillar-board-desc", "type": "text", "props": { "text_key": "knowledge-hub.board-desc.text", "text": "説明・愚痴・改善の3板でチャネルごとに集約します。", "muted": true } }
+              ]
+            },
+            {
+              "id": "pillar-paper",
+              "type": "card",
+              "action": { "kind": "navigate", "to": "knowledge-paper" },
+              "children": [
+                { "id": "pillar-paper-title", "type": "heading", "props": { "text_key": "knowledge-hub.paper.text", "text": "論文", "level": 2 } },
+                { "id": "pillar-paper-desc", "type": "text", "props": { "text_key": "knowledge-hub.paper-desc.text", "text": "論文の照合と引用の正本です。", "muted": true } }
+              ]
+            },
+            {
+              "id": "pillar-github",
+              "type": "card",
+              "action": { "kind": "navigate", "to": "knowledge-github" },
+              "children": [
+                { "id": "pillar-github-title", "type": "heading", "props": { "text_key": "knowledge-hub.github.text", "text": "GitHub 掲示板", "level": 2 } },
+                { "id": "pillar-github-desc", "type": "text", "props": { "text_key": "knowledge-hub.github-desc.text", "text": "改善履歴とフォークを追います。", "muted": true } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "pillar-board", "to_screen_id": "knowledge-board", "label": "公式掲示板へ" },
+    { "from": "pillar-paper", "to_screen_id": "knowledge-paper", "label": "論文へ" },
+    { "from": "pillar-github", "to_screen_id": "knowledge-github", "label": "GitHub 掲示板へ" }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/gov-dispute.schema.json",
+  "title": "Governance dispute data (ihl.gov.dispute.v1)",
+  "description": "二人部屋の紛争イベント ihl.gov.dispute.v1 の data 部（GOV-01）。action=open/message/close の追記列。Truth キー truth/ihl.gov.dispute.v1/<dispute_id>/<event_id>.json に append-only。projectDispute が participants={opener,respondent} を確定し状態遷移を都度投影。close なしで now>opened_at+DISPUTE_TTL_DAYS なら expired。subject_ref は CiteRef 単一正本を相対 $ref で参照。不服申立 route は無い。",
+  "x_ihl_req": "V3-GOV-01",
+  "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
+  "type": "object",
+  "required": ["dispute_id", "actor_id", "action", "created_at", "schema_version"],
+  "properties": {
+    "dispute_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "紛争の一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "この event を起こした actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["open", "message", "close"],
+      "description": "アクション種別（開始 / 発言 / 決着）。"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["market", "board", "bugfix"],
+      "description": "紛争カテゴリ（open 時必須・route 側で検証・任意）。"
+    },
+    "respondent_id": {
+      "type": "string",
+      "description": "相手方 actor_id（open 時必須・route 側で検証・任意）。"
+    },
+    "subject_ref": {
+      "$ref": "cite-ref.schema.json"
+    },
+    "body": {
+      "type": "string",
+      "description": "発言本文（message 時・任意）。"
+    },
+    "resolution": {
+      "type": "string",
+      "enum": ["resolved", "force_closed"],
+      "description": "決着種別（close 時・resolved=合意 / force_closed=期限切れ強制・任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "event 時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/gov-vote.schema.json",
+  "title": "Governance vote data (ihl.gov.vote.v1)",
+  "description": "ガバナンス投票イベント ihl.gov.vote.v1 の data 部（GOV-19/23）。Truth キー truth/ihl.gov.vote.v1/<proposal_target>/<vote_id>.json に append-only。projectThreshold（threshold_adjust）・projectForkRanks（fork_rank）・projectOsPromotion（os_merge）が approve 多数決を都度投影。ルールも fork 対象。",
+  "x_ihl_req": "V3-GOV-19",
+  "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
+  "type": "object",
+  "required": ["vote_id", "actor_id", "kind", "proposal_target", "value", "created_at", "schema_version"],
+  "properties": {
+    "vote_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票の一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["os_merge", "threshold_adjust", "fork_rank"],
+      "description": "投票種別（OS 昇格 / 閾値調整 / fork ランク昇降）。"
+    },
+    "proposal_target": {
+      "type": "string",
+      "minLength": 1,
+      "description": "提案対象（rule_id / fork_id / os ref）。"
+    },
+    "value": {
+      "type": "string",
+      "enum": ["approve", "reject"],
+      "description": "賛否。"
+    },
+    "adjust_to": {
+      "type": "number",
+      "description": "threshold_adjust 時の提案閾値（任意）。"
+    },
+    "rank_to": {
+      "type": "string",
+      "description": "fork_rank 時の提案ランク（任意・FORK_RANKS のいずれか）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "投票時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

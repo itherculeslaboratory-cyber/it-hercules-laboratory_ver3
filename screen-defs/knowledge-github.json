@@ -1,0 +1,33 @@
+{
+  "screen_id": "knowledge-github",
+  "route": "/knowledge/github",
+  "title": "GitHub 掲示板",
+  "layout": "standard",
+  "notes": "BBS-01 柱3（design-c5.md §K6 §2.4・HG-KN-07=A 仮置き）。GitHub 改善履歴への link-out（新タブ）。正本 repo は単一 clone 公開。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "knowledge-github.title.text", "text": "GitHub 掲示板", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "knowledge-github.lead.text", "text": "改善履歴とフォークを GitHub で追います。", "muted": true } },
+            {
+              "id": "repo-link",
+              "type": "link",
+              "props": {
+                "label_key": "knowledge-github.repo-link.label",
+                "label": "GitHub で改善履歴を開く",
+                "href": "https://github.com/itherculeslaboratory-cyber/it-hercules-laboratory_ver3",
+                "external": true
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

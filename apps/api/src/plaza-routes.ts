@@ -1,0 +1,554 @@
+// 知の広場書込 route + 決定論投影(design-c5.md §K6 §2.1 slot033-036 / §2.3)。post/stance/
+// fork/signal/summary を Truth へ append(多セグメントキーは putEventAt=put-if-absent・
+// INSERT ONLY)。スレ表示・consensus・fork ランク・ランキング・要約は全て listEvents の
+// prefix scan で都度再計算(常駐 DB 禁止・不変条項①)。LLM 呼び出しゼロ(要約本文/embedding
+// は空スロット=手動/後日バッチが append)。全 route PROTECTED(index.ts の auth middleware が
+// gate・actorId を set)。書込 data.actor_id はセッション principal で強制刻印(V3-AUT-17)。
+// 定数は plaza-constants.ts 単一正本(散在ハードコード禁止)。
+import { Hono } from "hono";
+import { TruthStore, ulid } from "@ihl/truth";
+import type { Bindings, Variables } from "./env";
+import {
+  BOARD_KINDS,
+  FORK_RANKS,
+  CONSENSUS_MIN_VOTES,
+  CONSENSUS_AGREE_RATIO,
+  DIVISIVE_MIN_SIDE_RATIO,
+  SUMMARY_BLOCK_SIZE,
+  RANKING_WEIGHTS,
+} from "./plaza-constants";
+
+const POST_TYPE = "ihl.plaza.post.v1";
+const POST_SCHEMA = "schemas/events/plaza-post.schema.json";
+const STANCE_TYPE = "ihl.plaza.stance.v1";
+const STANCE_SCHEMA = "schemas/events/plaza-stance.schema.json";
+const FORK_TYPE = "ihl.plaza.fork.v1";
+const FORK_SCHEMA = "schemas/events/plaza-fork.schema.json";
+const SIGNAL_TYPE = "ihl.plaza.signal.v1";
+const SIGNAL_SCHEMA = "schemas/events/plaza-signal.schema.json";
+const SUMMARY_TYPE = "ihl.plaza.summary.v1";
+const SUMMARY_SCHEMA = "schemas/events/plaza-summary.schema.json";
+// gov.vote は K6-gov 側が書き込む。投影は読み取りだけ参照(fork ランク昇降/ランキング)。
+const VOTE_TYPE = "ihl.gov.vote.v1";
+const SCHEMA_VERSION = "1";
+// CL-08 embedding-manifest(既存基盤・384 次元 L2 正規化)。要約 4 層の第 1/2 層は
+// この manifest を参照する空スロット(ベクトル本体は後日バッチが埋める・LLM 直呼びなし)。
+const EMBEDDING_REF = { manifest: "schemas/frozen/embedding-manifest.schema.json", dim: 384 } as const;
+
+export const plazaRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+function store(c: { env: Bindings }): TruthStore {
+  return new TruthStore(c.env.TRUTH);
+}
+function dataOf(e: Record<string, unknown>): Record<string, unknown> {
+  return (e.data ?? {}) as Record<string, unknown>;
+}
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+function envelope(type: string, schema: string, id: string, actorId: string, data: Record<string, unknown>) {
+  return {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type,
+    time: new Date().toISOString(),
+    dataschema: schema,
+    provenance: { generator_kind: "human", actor_id: actorId },
+    data,
+  };
+}
+
+// ── CiteRef 補助(BBS-20)────────────────────────────────────────────────
+export type CiteRef = { type: string; id: string; label?: string; post_id?: string };
+
+// [ihl:cite type=X id=Y] トークンを抽出。cite_refs[] が正本・トークンは従属。
+export function parseCiteTokens(body: string): CiteRef[] {
+  const out: CiteRef[] = [];
+  const re = /\[ihl:cite\s+type=([a-z]+)\s+id=([^\]\s]+)\]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(body)) !== null) out.push({ type: m[1], id: m[2] });
+  return out;
+}
+
+// 明示 cite_refs(正本)を優先し、本文トークン由来を「未収録の (type,id) だけ」補う。
+export function mergeCiteRefs(explicit: unknown, tokens: CiteRef[]): CiteRef[] {
+  const refs: CiteRef[] = Array.isArray(explicit)
+    ? (explicit.filter((r) => r && typeof r === "object" && typeof (r as CiteRef).type === "string" && typeof (r as CiteRef).id === "string") as CiteRef[])
+    : [];
+  const seen = new Set(refs.map((r) => `${r.type}:${r.id}`));
+  for (const t of tokens) {
+    const k = `${t.type}:${t.id}`;
+    if (!seen.has(k)) {
+      seen.add(k);
+      refs.push(t);
+    }
+  }
+  return refs;
+}
+
+// type→安定 URL(permalink・BBS-20)。全 CiteRef type を網羅し空文字を返さない。
+export function citeUrl(ref: CiteRef): string {
+  const id = encodeURIComponent(ref.id);
+  switch (ref.type) {
+    case "observation": return `/observations/${id}`;
+    case "individual": return `/individuals/${id}`;
+    case "paper": return `/knowledge/paper/${id}`;
+    case "thread": return `/knowledge/board/t/${id}`;
+    case "post": return `/knowledge/board/p/${id}`;
+    case "user": return `/u/${id}`;
+    case "tag": return `/knowledge/board/tag/${id}`;
+    case "listing": return `/market/listings/${id}`;
+    case "precedent": return `/gov/precedents/${id}`;
+    case "fork": return `/knowledge/forks/${id}`;
+    default: return `/knowledge/cite/${encodeURIComponent(ref.type)}/${id}`;
+  }
+}
+
+// content_hash 用(GOV-23 改変検知)。Web Crypto subtle・SHA-256 hex。
+export async function sha256Hex(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// cite target の実在解決。scan 可能な post/fork のみ検証(欠落→tombstone)。外部型
+// (observation/paper/user/tag/listing/precedent/individual/thread)はここでは検証せず存置。
+async function citeTargetExists(s: TruthStore, ref: CiteRef): Promise<boolean> {
+  if (ref.type === "post") {
+    const posts = await s.listEvents(`truth/${POST_TYPE}/`);
+    return posts.some((e) => dataOf(e).post_id === ref.id);
+  }
+  if (ref.type === "fork") {
+    const forks = await s.listEvents(`truth/${FORK_TYPE}/`);
+    return forks.some((e) => dataOf(e).fork_id === ref.id);
+  }
+  return true;
+}
+
+// ── 投稿(BBS-01/03/05/20/36)──────────────────────────────────────────
+// POST /plaza/posts — 投稿を append。多セグメントキー
+// truth/ihl.plaza.post.v1/<channel>/<thread_id>/<post_id>.json に putEventAt。
+// topic/board_kind/body の必須・enum は envelope schema 検証が gate(欠落→400)。
+// cite_refs[] を正本に、本文の [ihl:cite] トークンを統合(BBS-20)。actor_id 強制刻印。
+plazaRoutes.post("/plaza/posts", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const channel = str(body?.channel);
+  if (!channel) return c.json({ error: "INVALID_POST", details: ["channel required"] }, 400);
+
+  const actorId = c.get("actorId");
+  const postId = str(body?.post_id) || ulid();
+  const threadId = str(body?.thread_id) || postId;
+
+  const data: Record<string, unknown> = {
+    post_id: postId,
+    actor_id: actorId,
+    channel,
+    thread_id: threadId,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  // topic/board_kind/body は present なら通す(欠落は required 違反で 400・enum も schema gate)。
+  if (body?.topic !== undefined) data.topic = body.topic;
+  if (body?.board_kind !== undefined) data.board_kind = body.board_kind;
+  if (body?.body !== undefined) data.body = body.body;
+  if (typeof body?.reply_to === "string") data.reply_to = body.reply_to;
+  if (typeof body?.correction_of === "string") data.correction_of = body.correction_of;
+  if (Array.isArray(body?.mentions)) data.mentions = body.mentions;
+  if (Array.isArray(body?.tags)) data.tags = body.tags;
+  const refs = mergeCiteRefs(body?.cite_refs, parseCiteTokens(str(body?.body)));
+  if (refs.length) data.cite_refs = refs;
+
+  const key = `truth/${POST_TYPE}/${channel}/${threadId}/${postId}.json`;
+  const res = await store(c).putEventAt(key, envelope(POST_TYPE, POST_SCHEMA, postId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_POST", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_POST", key: res.key }, 409);
+  return c.json({ post_id: postId, thread_id: threadId }, 201);
+});
+
+// projectThread — thread の materialized view(ULID 昇順・correction_of は原投稿に
+// 追記畳込で両方保持・cite 欠落は tombstone に積むが cite_ref 自体は消さない・BBS-05)。
+// route は channel を持たないので post 全走査を thread_id で絞る(都度再計算)。
+export async function projectThread(s: TruthStore, threadId: string) {
+  const posts = (await s.listEvents(`truth/${POST_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.thread_id === threadId)
+    .sort((a, b) => (str(a.post_id) < str(b.post_id) ? -1 : 1));
+  if (!posts.length) return null;
+
+  const byId = new Map(posts.map((p) => [str(p.post_id), p]));
+  for (const p of posts) {
+    const target = p.correction_of ? byId.get(str(p.correction_of)) : undefined;
+    if (target) ((target.corrections ??= []) as string[]).push(str(p.post_id));
+  }
+  const tombstones: { ref: CiteRef; reason: string }[] = [];
+  for (const p of posts) {
+    for (const ref of (p.cite_refs as CiteRef[] | undefined) ?? []) {
+      if (!(await citeTargetExists(s, ref))) tombstones.push({ ref, reason: "target_missing" });
+    }
+  }
+  return { thread_id: threadId, channel: str(posts[0].channel), topic: str(posts[0].topic), posts, tombstones };
+}
+
+// GET /plaza/threads/:thread_id — スレ投影(404 or view)。
+plazaRoutes.get("/plaza/threads/:thread_id", async (c) => {
+  const view = await projectThread(store(c), c.req.param("thread_id"));
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json(view);
+});
+
+// projectChannelThreads — channel 内スレ一覧(thread ごと集約 + board_kind グルーピング・
+// BBS-03 の3板)。channel prefix scan。
+export async function projectChannelThreads(s: TruthStore, channel: string) {
+  const posts = (await s.listEvents(`truth/${POST_TYPE}/${channel}/`)).map(dataOf);
+  const threads = new Map<string, { thread_id: string; topic: string; board_kind: string; post_count: number; latest_at: string }>();
+  for (const p of posts) {
+    const tid = str(p.thread_id);
+    const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), board_kind: str(p.board_kind), post_count: 0, latest_at: "" };
+    t.post_count += 1;
+    if (str(p.created_at) > t.latest_at) t.latest_at = str(p.created_at);
+    // root(thread_id===post_id)の topic/board_kind を代表値に採る。
+    if (str(p.post_id) === tid) {
+      t.topic = str(p.topic);
+      t.board_kind = str(p.board_kind);
+    }
+    threads.set(tid, t);
+  }
+  const list = [...threads.values()].sort((a, b) => (a.thread_id < b.thread_id ? -1 : 1));
+  const boards: Record<string, typeof list> = {};
+  for (const k of BOARD_KINDS) boards[k] = [];
+  for (const t of list) (boards[t.board_kind] ??= []).push(t);
+  return { channel, threads: list, boards };
+}
+
+// GET /plaza/channels/:channel/threads — channel 別スレ一覧 + 3板。
+plazaRoutes.get("/plaza/channels/:channel/threads", async (c) => {
+  return c.json(await projectChannelThreads(store(c), c.req.param("channel")));
+});
+
+// GET /plaza/posts/:post_id — 単一投稿(permalink 不変・全走査で post_id 一致)。
+plazaRoutes.get("/plaza/posts/:post_id", async (c) => {
+  const postId = c.req.param("post_id");
+  const post = (await store(c).listEvents(`truth/${POST_TYPE}/`)).map(dataOf).find((d) => d.post_id === postId);
+  if (!post) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json({ post });
+});
+
+// ── Stance / Consensus(BBS-36)─────────────────────────────────────────
+// POST /plaza/stances — 賛否表明を append。キー
+// truth/ihl.plaza.stance.v1/<statement_id>/<stance_id>.json。value enum は schema gate。
+plazaRoutes.post("/plaza/stances", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const statementId = str(body?.statement_id);
+  if (!statementId) return c.json({ error: "INVALID_STANCE", details: ["statement_id required"] }, 400);
+  const actorId = c.get("actorId");
+  const stanceId = str(body?.stance_id) || ulid();
+  const data: Record<string, unknown> = {
+    stance_id: stanceId,
+    actor_id: actorId,
+    statement_id: statementId,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (body?.value !== undefined) data.value = body.value;
+  const key = `truth/${STANCE_TYPE}/${statementId}/${stanceId}.json`;
+  const res = await store(c).putEventAt(key, envelope(STANCE_TYPE, STANCE_SCHEMA, stanceId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_STANCE", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_STANCE", key: res.key }, 409);
+  return c.json({ stance_id: stanceId }, 201);
+});
+
+// projectConsensus — statement ごとに stance を scan → actor ごと最新 ULID を latest として
+// 採用(append-only 上書き)→ agree/disagree/pass 計数。consensus/divisive は純算術閾値
+// (§2.5・クラスタリング/LLM なし=同入力同出力)。per-statement 配列を返す(批評家#2)。
+export async function projectConsensus(s: TruthStore, statementIds: string[]) {
+  const out: { statement_id: string; agree: number; disagree: number; pass: number; consensus: boolean; divisive: boolean }[] = [];
+  for (const sid of statementIds) {
+    const stances = (await s.listEvents(`truth/${STANCE_TYPE}/${sid}/`)).map(dataOf);
+    const latest = new Map<string, Record<string, unknown>>();
+    for (const st of stances) {
+      const prev = latest.get(str(st.actor_id));
+      if (!prev || str(st.stance_id) > str(prev.stance_id)) latest.set(str(st.actor_id), st);
+    }
+    let agree = 0, disagree = 0, pass = 0;
+    for (const st of latest.values()) {
+      if (st.value === "agree") agree += 1;
+      else if (st.value === "disagree") disagree += 1;
+      else if (st.value === "pass") pass += 1;
+    }
+    const decisive = agree + disagree;
+    const consensus = decisive >= CONSENSUS_MIN_VOTES && agree / decisive >= CONSENSUS_AGREE_RATIO;
+    const divisive = decisive >= CONSENSUS_MIN_VOTES && Math.min(agree, disagree) / decisive >= DIVISIVE_MIN_SIDE_RATIO;
+    out.push({ statement_id: sid, agree, disagree, pass, consensus, divisive });
+  }
+  return out;
+}
+
+// GET /plaza/threads/:thread_id/consensus — スレ内 post_id を statement_ids として収集し
+// per-statement consensus を返す(批評家#2)。
+plazaRoutes.get("/plaza/threads/:thread_id/consensus", async (c) => {
+  const threadId = c.req.param("thread_id");
+  const posts = (await store(c).listEvents(`truth/${POST_TYPE}/`)).map(dataOf).filter((d) => d.thread_id === threadId);
+  const statementIds = posts.map((p) => str(p.post_id));
+  const statements = await projectConsensus(store(c), statementIds);
+  return c.json({ thread_id: threadId, statements });
+});
+
+// ── Fork / Rank(BBS-29/GOV-19/23)──────────────────────────────────────
+// POST /plaza/forks — fork 公開を append。キー truth/ihl.plaza.fork.v1/<target_type>/<fork_id>.json。
+// 全 fork 非削除で共存(DELETE 無し)。visibility/target_type enum は schema gate。
+plazaRoutes.post("/plaza/forks", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const targetType = str(body?.target_type);
+  if (!targetType) return c.json({ error: "INVALID_FORK", details: ["target_type required"] }, 400);
+  const actorId = c.get("actorId");
+  const forkId = str(body?.fork_id) || ulid();
+  const data: Record<string, unknown> = {
+    fork_id: forkId,
+    actor_id: actorId,
+    target_type: targetType,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (body?.forked_from !== undefined) data.forked_from = body.forked_from;
+  if (body?.visibility !== undefined) data.visibility = body.visibility;
+  if (body?.title !== undefined) data.title = body.title;
+  if (typeof body?.content_hash === "string") data.content_hash = body.content_hash;
+  const key = `truth/${FORK_TYPE}/${targetType}/${forkId}.json`;
+  const res = await store(c).putEventAt(key, envelope(FORK_TYPE, FORK_SCHEMA, forkId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_FORK", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_FORK", key: res.key }, 409);
+  return c.json({ fork_id: forkId }, 201);
+});
+
+// reduceForkRank — 初期 rank(public→beginner / private→非掲載=null)に gov.vote(kind=
+// fork_rank)の最新 approve(rank_to ∈ FORK_RANKS)を畳んで effective rank を算出。
+export function reduceForkRank(fork: Record<string, unknown>, votes: Record<string, unknown>[]): string | null {
+  let rank: string | null = fork.visibility === "public" ? "beginner" : null;
+  const approves = votes
+    .filter((v) => v.value === "approve" && FORK_RANKS.includes(str(v.rank_to) as (typeof FORK_RANKS)[number]))
+    .sort((a, b) => (str(a.vote_id) < str(b.vote_id) ? -1 : 1));
+  if (approves.length) rank = str(approves[approves.length - 1].rank_to);
+  return rank;
+}
+
+// projectForkRanks — fork を scan → effective rank を畳み FORK_RANKS 昇順で整列。private
+// (rank=null)は非掲載。search=false のとき minor は除外(検索専用・BBS-29)。全 fork 共存。
+export async function projectForkRanks(
+  s: TruthStore,
+  targetType?: string,
+  forkedFrom?: string,
+  search = false,
+) {
+  let forks = (await s.listEvents(`truth/${FORK_TYPE}/`)).map(dataOf);
+  if (targetType) forks = forks.filter((f) => f.target_type === targetType);
+  if (forkedFrom) forks = forks.filter((f) => f.forked_from === forkedFrom);
+  const votes = (await s.listEvents(`truth/${VOTE_TYPE}/`)).map(dataOf).filter((v) => v.kind === "fork_rank");
+  const votesByFork = new Map<string, Record<string, unknown>[]>();
+  for (const v of votes) {
+    const t = str(v.proposal_target);
+    (votesByFork.get(t) ?? votesByFork.set(t, []).get(t)!).push(v);
+  }
+  return forks
+    .map((f) => ({
+      fork_id: str(f.fork_id),
+      target_type: str(f.target_type),
+      title: str(f.title),
+      visibility: str(f.visibility),
+      forked_from: str(f.forked_from),
+      content_hash: typeof f.content_hash === "string" ? f.content_hash : undefined,
+      rank: reduceForkRank(f, votesByFork.get(str(f.fork_id)) ?? []),
+    }))
+    .filter((f): f is typeof f & { rank: string } => f.rank !== null)
+    .filter((f) => search || f.rank !== "minor")
+    .sort((a, b) => FORK_RANKS.indexOf(a.rank as (typeof FORK_RANKS)[number]) - FORK_RANKS.indexOf(b.rank as (typeof FORK_RANKS)[number]));
+}
+
+// GET /plaza/forks — ランク投影(query: target_type, forked_from, search)。
+plazaRoutes.get("/plaza/forks", async (c) => {
+  const targetType = c.req.query("target_type") || undefined;
+  const forkedFrom = c.req.query("forked_from") || undefined;
+  const search = c.req.query("search") === "true";
+  const forks = await projectForkRanks(store(c), targetType, forkedFrom, search);
+  return c.json({ forks });
+});
+
+// GET /plaza/forks/:fork_id — 単一 fork(全走査で fork_id 一致)。content_hash 同梱。
+plazaRoutes.get("/plaza/forks/:fork_id", async (c) => {
+  const forkId = c.req.param("fork_id");
+  const fork = (await store(c).listEvents(`truth/${FORK_TYPE}/`)).map(dataOf).find((d) => d.fork_id === forkId);
+  if (!fork) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json({ fork });
+});
+
+// ── Signal / Ranking(BBS-03/GOV-23)────────────────────────────────────
+// POST /plaza/signals — like/use/retain を append。キー
+// truth/ihl.plaza.signal.v1/<target_type>/<target_id>/<signal_id>.json。signal enum は schema gate。
+plazaRoutes.post("/plaza/signals", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const targetType = str(body?.target_type);
+  const targetId = str(body?.target_id);
+  if (!targetType || !targetId) return c.json({ error: "INVALID_SIGNAL", details: ["target_type and target_id required"] }, 400);
+  const actorId = c.get("actorId");
+  const signalId = str(body?.signal_id) || ulid();
+  const data: Record<string, unknown> = {
+    signal_id: signalId,
+    actor_id: actorId,
+    target_type: targetType,
+    target_id: targetId,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (body?.signal !== undefined) data.signal = body.signal;
+  const key = `truth/${SIGNAL_TYPE}/${targetType}/${targetId}/${signalId}.json`;
+  const res = await store(c).putEventAt(key, envelope(SIGNAL_TYPE, SIGNAL_SCHEMA, signalId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_SIGNAL", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_SIGNAL", key: res.key }, 409);
+  return c.json({ signal_id: signalId }, 201);
+});
+
+// 1 actor 1 票へ畳む(投票水増し防止=批評家 major)。(actor_id, proposal_target, kind) ごとに
+// 最新 vote_id(ULID)の 1 件のみ採用。actor は偽装不能な provenance.actor_id を data.actor_id
+// より優先(theme-routes projectTemplateVotes と同方式)。full envelope[] を受け deduped data[]
+// を返す。threshold/os_promotion/ranking の集計はすべてこの畳込みを通す。
+export function dedupVotes(events: Record<string, unknown>[]): Record<string, unknown>[] {
+  const latest = new Map<string, Record<string, unknown>>();
+  for (const e of events) {
+    const d = dataOf(e);
+    const prov = (e.provenance ?? {}) as Record<string, unknown>;
+    const actor = typeof prov.actor_id === "string" ? prov.actor_id : str(d.actor_id);
+    const key = `${actor} ${str(d.proposal_target)} ${str(d.kind)}`;
+    const prev = latest.get(key);
+    if (!prev || str(d.vote_id) > str(prev.vote_id)) latest.set(key, d);
+  }
+  return [...latest.values()];
+}
+
+// projectRanking — signal(like/use/retain)+ gov.vote approve + fork 数を RANKING_WEIGHTS で
+// 加重合算し降順(利用率→ランキング・GOV-23 自然淘汰)。targetType 指定時は signal/fork を絞る。
+// vote は dedupVotes で 1 actor 1 票に畳んでから加重(単一 actor の連投で score を水増し不能)。
+export async function projectRanking(s: TruthStore, targetType?: string) {
+  type Row = { target_id: string; target_type: string; score: number; breakdown: Record<string, number> };
+  const rows = new Map<string, Row>();
+  const row = (id: string, tt: string): Row => {
+    let r = rows.get(id);
+    if (!r) {
+      r = { target_id: id, target_type: tt, score: 0, breakdown: { like: 0, use: 0, retain: 0, vote: 0, fork: 0 } };
+      rows.set(id, r);
+    }
+    return r;
+  };
+
+  let signals = (await s.listEvents(`truth/${SIGNAL_TYPE}/`)).map(dataOf);
+  if (targetType) signals = signals.filter((sg) => sg.target_type === targetType);
+  for (const sg of signals) {
+    const kind = str(sg.signal) as keyof typeof RANKING_WEIGHTS;
+    const w = RANKING_WEIGHTS[kind];
+    if (!w) continue;
+    const r = row(str(sg.target_id), str(sg.target_type));
+    r.score += w;
+    r.breakdown[kind] += 1;
+  }
+
+  const votes = dedupVotes(await s.listEvents(`truth/${VOTE_TYPE}/`)).filter((v) => v.value === "approve");
+  for (const v of votes) {
+    const r = row(str(v.proposal_target), "");
+    r.score += RANKING_WEIGHTS.vote;
+    r.breakdown.vote += 1;
+  }
+
+  let forks = (await s.listEvents(`truth/${FORK_TYPE}/`)).map(dataOf);
+  if (targetType) forks = forks.filter((f) => f.target_type === targetType);
+  for (const f of forks) {
+    const parent = str(f.forked_from);
+    if (!parent) continue;
+    const r = row(parent, "");
+    r.score += RANKING_WEIGHTS.fork;
+    r.breakdown.fork += 1;
+  }
+
+  return [...rows.values()].sort((a, b) => (b.score - a.score) || (a.target_id < b.target_id ? -1 : 1));
+}
+
+// GET /plaza/ranking — ランキング投影(query: target_type)。
+plazaRoutes.get("/plaza/ranking", async (c) => {
+  const targetType = c.req.query("target_type") || undefined;
+  const ranking = await projectRanking(store(c), targetType);
+  return c.json({ ranking });
+});
+
+// ── Summary(BBS-10・4層)───────────────────────────────────────────────
+// POST /plaza/summaries — 要約を append。キー
+// truth/ihl.plaza.summary.v1/<thread_id>/<block_index>-<summary_id>.json。current_summary は
+// 空文字許容(空スロット=手動/バッチが後日埋める・LLM 直呼びなし)。block_index 省略時は
+// 現スレ post 数から floor((n-1)/SUMMARY_BLOCK_SIZE) を算出。generator enum は schema gate。
+plazaRoutes.post("/plaza/summaries", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const threadId = str(body?.thread_id);
+  if (!threadId) return c.json({ error: "INVALID_SUMMARY", details: ["thread_id required"] }, 400);
+  const actorId = c.get("actorId");
+  const summaryId = str(body?.summary_id) || ulid();
+
+  let blockIndex: number;
+  if (Number.isInteger(body?.block_index)) {
+    blockIndex = body!.block_index as number;
+  } else {
+    const n = (await store(c).listEvents(`truth/${POST_TYPE}/`)).map(dataOf).filter((d) => d.thread_id === threadId).length;
+    blockIndex = Math.floor((n === 0 ? 0 : n - 1) / SUMMARY_BLOCK_SIZE);
+  }
+
+  const data: Record<string, unknown> = {
+    summary_id: summaryId,
+    thread_id: threadId,
+    block_index: blockIndex,
+    current_summary: typeof body?.current_summary === "string" ? body.current_summary : "",
+    generator: body?.generator !== undefined ? body.generator : "manual",
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (Array.isArray(body?.open_questions)) data.open_questions = body.open_questions;
+  if (typeof body?.diff === "string") data.diff = body.diff;
+
+  const key = `truth/${SUMMARY_TYPE}/${threadId}/${blockIndex}-${summaryId}.json`;
+  const res = await store(c).putEventAt(key, envelope(SUMMARY_TYPE, SUMMARY_SCHEMA, summaryId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_SUMMARY", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_SUMMARY", key: res.key }, 409);
+  return c.json({ summary_id: summaryId, block_index: blockIndex }, 201);
+});
+
+// projectSummary — 4層(§2.3): (1)post embedding 参照(CL-08 manifest・空スロット)、
+// (2)block 要約 embedding 参照、(3)current_summary+open_questions=最新 summary、
+// (4)diff 履歴=全 summary の diff 列。block_index=floor(post 通番/SUMMARY_BLOCK_SIZE)。
+// 要約本文空許容・LLM 呼び出しゼロ。
+export async function projectSummary(s: TruthStore, threadId: string) {
+  const postCount = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf).filter((d) => d.thread_id === threadId).length;
+  const summaries = (await s.listEvents(`truth/${SUMMARY_TYPE}/${threadId}/`))
+    .map(dataOf)
+    .sort((a, b) => {
+      const ba = Number(a.block_index ?? 0);
+      const bb = Number(b.block_index ?? 0);
+      if (ba !== bb) return ba - bb;
+      return str(a.summary_id) < str(b.summary_id) ? -1 : 1;
+    });
+  const latest = summaries[summaries.length - 1];
+  return {
+    thread_id: threadId,
+    block_size: SUMMARY_BLOCK_SIZE,
+    post_count: postCount,
+    current_block_index: Math.floor((postCount === 0 ? 0 : postCount - 1) / SUMMARY_BLOCK_SIZE),
+    // layer 1/2: embedding は空スロット参照(ベクトル本体は後日バッチ・LLM 直呼びなし)。
+    post_embedding: EMBEDDING_REF,
+    block_embedding: EMBEDDING_REF,
+    // layer 3: 最新 summary の本文 + 未解決論点(空スロット許容)。
+    current_summary: latest ? str(latest.current_summary) : "",
+    open_questions: (latest?.open_questions as string[] | undefined) ?? [],
+    // layer 4: diff 履歴。
+    diff_history: summaries
+      .filter((sm) => typeof sm.diff === "string")
+      .map((sm) => ({ block_index: Number(sm.block_index ?? 0), diff: str(sm.diff), at: str(sm.created_at) })),
+  };
+}
+
+// GET /plaza/threads/:thread_id/summary — 4層要約投影。
+plazaRoutes.get("/plaza/threads/:thread_id/summary", async (c) => {
+  return c.json(await projectSummary(store(c), c.req.param("thread_id")));
+});

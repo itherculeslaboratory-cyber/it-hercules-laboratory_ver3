@@ -78,6 +78,19 @@ const SCHEMAS = [
   ["category", "events/category.schema.json"],
   ["taskNode", "events/task-node.schema.json"],
   ["wikiNode", "events/wiki-node.schema.json"],
+  // C5 K6 plaza/governance events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES).
+  // citeRef is registered first so plaza-post's relative $ref (cite-ref.schema.json)
+  // resolves against its $id in the same ajv instance.
+  ["citeRef", "events/cite-ref.schema.json"],
+  ["plazaPost", "events/plaza-post.schema.json"],
+  ["plazaStance", "events/plaza-stance.schema.json"],
+  ["plazaFork", "events/plaza-fork.schema.json"],
+  ["plazaSignal", "events/plaza-signal.schema.json"],
+  ["plazaSummary", "events/plaza-summary.schema.json"],
+  ["govVote", "events/gov-vote.schema.json"],
+  ["govDispute", "events/gov-dispute.schema.json"],
+  ["govPrecedent", "events/gov-precedent.schema.json"],
+  ["govFlag", "events/gov-flag.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

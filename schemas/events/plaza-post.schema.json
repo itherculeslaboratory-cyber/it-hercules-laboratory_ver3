@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/plaza-post.schema.json",
+  "title": "Plaza post data (ihl.plaza.post.v1)",
+  "description": "知の広場の投稿イベント ihl.plaza.post.v1 の data 部。Truth キー truth/ihl.plaza.post.v1/<channel>/<thread_id>/<post_id>.json に append-only（BBS-05）。スレ表示・permalink・tombstone は projectThread が都度再計算（常駐 DB 禁止）。correction_of は原投稿を上書きせず追記で共存。cite_refs は CiteRef 単一正本を相対 $ref で参照（BBS-20）。",
+  "x_ihl_req": "V3-BBS-05",
+  "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
+  "type": "object",
+  "required": [
+    "post_id",
+    "actor_id",
+    "channel",
+    "topic",
+    "board_kind",
+    "thread_id",
+    "body",
+    "created_at",
+    "schema_version"
+  ],
+  "properties": {
+    "post_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投稿の一意キー（ULID・permalink 不変）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投稿者の actor_id（セッション principal で強制刻印・V3-AUT-17）。"
+    },
+    "channel": {
+      "type": "string",
+      "minLength": 1,
+      "description": "チャネル（=screen_id/feature キー・板は channel に紐付く・BBS-03）。"
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1,
+      "description": "必須トピック（Zulip 型 channel+topic・BBS-36）。"
+    },
+    "board_kind": {
+      "type": "string",
+      "enum": ["guide", "complaint", "improvement"],
+      "description": "3板の別（説明/愚痴/改善・BBS-03）。"
+    },
+    "thread_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "スレッドキー（root 投稿は post_id 自身）。"
+    },
+    "body": {
+      "type": "string",
+      "description": "本文（UGC 原文まま・翻訳しない・空文字は許容しない場合 minLength は route 側で検証）。"
+    },
+    "reply_to": {
+      "type": "string",
+      "description": "返信元 post_id（>> アンカー・任意）。"
+    },
+    "correction_of": {
+      "type": "string",
+      "description": "追記訂正の対象 post_id（原投稿は上書きせず共存・任意）。"
+    },
+    "cite_refs": {
+      "type": "array",
+      "items": { "$ref": "cite-ref.schema.json" },
+      "description": "構造化引用の正本（CiteRef[]・BBS-20・[ihl:cite] トークンは従属）。"
+    },
+    "mentions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "@ 通知先 actor_id 群（通知チャネル・任意）。"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "# 検索タグ群（検索チャネル・任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "投稿時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

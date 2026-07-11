@@ -30,6 +30,7 @@ status: draft
 
 - V3-FND-13 / V3-AIP-61(hold=True・裁定待ち)
 - HG-KN-01〜08(知の広場 人間裁定 8 件 — 帰宅後裁定)
+- ~~GOV-09 admin ゲート~~ **クローズ(コーディネータ即日修正)**: K2 実装済みの `requireRole("operator","admin")` を `POST /api/v1/gov/flags` に配線(fail-closed)し、非 operator→403+副作用ゼロの negative TC 3 本を緑化(`tests/gov-flag.test.ts`)。統一ロール taxonomy の裁定は残るが GOV-09 の griefing 経路は封鎖済み。
 - そのほか実行中に判明したものを追記
 
 ## 3. 実測ログ(進行中に追記)

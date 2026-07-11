@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/plaza-signal.schema.json",
+  "title": "Plaza signal data (ihl.plaza.signal.v1)",
+  "description": "自然淘汰シグナルイベント ihl.plaza.signal.v1 の data 部（BBS-03/GOV-23）。Truth キー truth/ihl.plaza.signal.v1/<target_type>/<target_id>/<signal_id>.json に append-only。projectRanking が RANKING_WEIGHTS で like/use/retain を加重合算し都度ランキング投影（利用率→ランキング・GOV-23 自然淘汰）。",
+  "x_ihl_req": "V3-BBS-03",
+  "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
+  "type": "object",
+  "required": [
+    "signal_id",
+    "actor_id",
+    "target_type",
+    "target_id",
+    "signal",
+    "created_at",
+    "schema_version"
+  ],
+  "properties": {
+    "signal_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "シグナルの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "シグナル発信者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "target_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象種別（fork/screen/component 等）。"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象の一意キー。"
+    },
+    "signal": {
+      "type": "string",
+      "enum": ["like", "use", "retain"],
+      "description": "シグナル種別（いいね/利用/継続・RANKING_WEIGHTS で加重）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "シグナル時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

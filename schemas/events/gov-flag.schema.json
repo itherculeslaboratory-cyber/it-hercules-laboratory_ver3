@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/gov-flag.schema.json",
+  "title": "Governance flag data (ihl.gov.flag.v1)",
+  "description": "不使用フラグイベント ihl.gov.flag.v1 の data 部（GOV-09）。Truth キー truth/ihl.gov.flag.v1/<target_id>/<flag_id>.json に append-only（R2 DELETE なし＝論理無効化）。付与時に target_owner へ grantKarmaCountIncrease(steps=GOV_FLAG_COUNT_STEPS=10) を課す。操作は operator の明示操作時のみ append（自動 poll しない・行政命令服従判断は人間ゲート V3-AIP-31）。",
+  "x_ihl_req": "V3-GOV-09",
+  "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
+  "type": "object",
+  "required": ["flag_id", "actor_id", "target_type", "target_id", "target_owner", "created_at", "schema_version"],
+  "properties": {
+    "flag_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "フラグの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "行政指摘を記録した operator の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "target_type": {
+      "type": "string",
+      "enum": ["listing", "data", "image"],
+      "description": "不使用対象の種別。"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "不使用対象の一意キー。"
+    },
+    "target_owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Δcount+10 を課される actor_id（対象の所有者）。"
+    },
+    "reason": {
+      "type": "string",
+      "description": "理由（任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "フラグ時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

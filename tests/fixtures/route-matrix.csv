@@ -34,14 +34,14 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/market/transfer/{listing_id},VPS,Workers,W2,infra-route-030,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)
 —,POST,/api/v1/market/listings/{listing_id}/match,VPS,Workers,W2,infra-route-031,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)
 —,POST,/api/v1/market/listings/{listing_id}/transition,VPS,Workers,W2,infra-route-032,protected,implemented,取引状態機械の許可辺遷移(C5 K3・design-k3 §2.2・V3-MKT-02 reduceMarket・不正遷移 409)
-—,GET,/api/v1/board/{category}/threads,VPS,Workers,W2,infra-route-033,protected,planned,
-—,GET,/api/v1/board/categories,VPS,Workers,W2,infra-route-034,protected,planned,
-—,GET,/api/v1/component-board,VPS,Workers,W2,infra-route-035,protected,planned,
-—,POST,/api/v1/board/{category}/threads,VPS,Workers,W2,infra-route-036,protected,planned,
-—,POST,/api/v1/board/{category}/threads/{thread_id}/posts,VPS,Workers,W2,infra-route-037,protected,planned,
-—,GET,/api/v1/dispute/{thread_id},VPS,Workers,W2,infra-route-038,protected,planned,
-—,POST,/api/v1/dispute/{thread_id}/messages,VPS,Workers,W2,infra-route-039,protected,planned,
-—,POST,/api/v1/dispute/{thread_id}/open-market,VPS,Workers,W2,infra-route-040,protected,planned,
+—,GET,/api/v1/board/{category}/threads,VPS,Workers,W2,infra-route-033,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・ver3 実体 GET /api/v1/plaza/channels/{channel}/threads(board/{category}→/plaza/channels)・旧パスは deny-by-default 401 据置
+—,GET,/api/v1/board/categories,VPS,Workers,W2,infra-route-034,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・板は board_kind enum(guide/complaint/improvement)で投影・旧パスは deny-by-default 401 据置
+—,GET,/api/v1/component-board,VPS,Workers,W2,infra-route-035,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・ver3 実体 GET /api/v1/plaza/forks(component-board→/plaza/forks・5段ランク投影)・旧パスは deny-by-default 401 据置
+—,POST,/api/v1/board/{category}/threads,VPS,Workers,W2,infra-route-036,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・ver3 実体 POST /api/v1/plaza/posts(root post=thread)・旧パスは deny-by-default 401 据置
+—,POST,/api/v1/board/{category}/threads/{thread_id}/posts,VPS,Workers,W2,infra-route-037,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・ver3 実体 POST /api/v1/plaza/posts(reply_to で thread へ追記)・旧パスは deny-by-default 401 据置
+—,GET,/api/v1/dispute/{thread_id},VPS,Workers,W2,infra-route-038,protected,implemented,ガバナンス 統合(C5 K6・design-k6 §2.1)・ver3 実体 GET /api/v1/gov/disputes/{dispute_id}(dispute→/gov/disputes)・旧パスは deny-by-default 401 据置
+—,POST,/api/v1/dispute/{thread_id}/messages,VPS,Workers,W2,infra-route-039,protected,implemented,ガバナンス 統合(C5 K6・design-k6 §2.1)・ver3 実体 POST /api/v1/gov/disputes/{dispute_id}/messages・旧パスは deny-by-default 401 据置
+—,POST,/api/v1/dispute/{thread_id}/open-market,VPS,Workers,W2,infra-route-040,protected,implemented,ガバナンス 統合(C5 K6・design-k6 §2.1)・ver3 実体 POST /api/v1/gov/disputes/{dispute_id}/close(→ precedent append)・旧パスは deny-by-default 401 据置
 —,GET,/api/v1/me/preferences,VPS,Workers,W2,infra-route-041,protected,implemented,選好投影 projectPreferences(LWW・ihl.pref.set.v1 追記)・C5 K4・design-k4 §1.1
 —,GET,/api/v1/me/settings,VPS,Workers,W2,infra-route-042,protected,implemented,preferences + account_meta 集約・C5 K4・design-k4 §1.1
 —,GET,/api/v1/settings,VPS,Workers,W2,infra-route-043,protected,implemented,利用可能 locale/theme-pack/flags を都度算出・C5 K4・design-k4 §1.1

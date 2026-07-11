@@ -34,10 +34,28 @@ function pascal(kebab) {
     .map((w) => w[0].toUpperCase() + w.slice(1)).join("");
 }
 
+// A cross-file $ref (plaza-post/gov-dispute -> cite-ref.schema.json) makes
+// json-schema-to-typescript inline the referenced interface into EACH referrer
+// under the same generated name, so `export *`-ing both into the barrel
+// re-exports that name twice -> TS2308. Emit `export *` normally; for a file
+// whose exported names were already exported by an earlier module, re-export
+// only its NEW names (as `export type`, required by verbatimModuleSyntax).
+function barrelLine(relOut, ts, seenExports) {
+  const mod = `./${relOut.replace(/\.ts$/, "")}`;
+  const names = [...ts.matchAll(/^export (?:interface|type) (\w+)/gm)].map((m) => m[1]);
+  const fresh = names.filter((n) => !seenExports.has(n));
+  const collides = fresh.length !== names.length;
+  for (const n of names) seenExports.add(n);
+  return collides
+    ? `export type { ${fresh.join(", ")} } from "${mod}";`
+    : `export * from "${mod}";`;
+}
+
 async function generate(outDir) {
   const files = walkSchemas(SCHEMAS_DIR); // sorted walk -> stable order
   const emitted = new Map(); // rel out path -> content
   const indexLines = [];
+  const seenExports = new Set(); // top-level type names already re-exported (dedup)
   for (const file of files) {
     const relSchema = relative(ROOT, file).replace(/\\/g, "/");
     const schema = JSON.parse(readFileSync(file, "utf8"));
@@ -59,7 +77,7 @@ async function generate(outDir) {
     });
     const relOut = relative(SCHEMAS_DIR, file).replace(/\\/g, "/").replace(/\.schema\.json$/, ".ts");
     emitted.set(relOut, ts.replace(/\r\n/g, "\n"));
-    indexLines.push(`export * from "./${relOut.replace(/\.ts$/, "")}";`);
+    indexLines.push(barrelLine(relOut, ts, seenExports));
   }
   emitted.set("index.ts", [
     "// GENERATED FILE — do not edit by hand.",

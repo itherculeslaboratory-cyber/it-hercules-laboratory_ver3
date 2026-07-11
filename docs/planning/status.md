@@ -47,4 +47,5 @@ status: draft
 | Resend DNS（CF トークン権限） | DNS 検証完了・`auth@it-hercules.uk` 実送信確認済（2026-07-11）。`RESEND_API_KEY` は D:\env\platform.env に格納済み | 済 |
 | GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`）。**本番初入金時に C4 (ii) 残余 1 点（U-code の remarks 文字変換の有無）を確定し evidence §9 を追記**（第11回裁定・sandbox では検証手段なしと実機確定） | 未 |
 | collector ingest 実鍵投入 | `COLLECTOR_PRIVATE_KEY_PEM`（Ed25519 秘密鍵）生成・`COLLECTOR_PUBLIC_KEYS` 登録・本番 `INGEST_URL` 配線 | 未 |
+| GOV-09 admin ゲート | **クローズ(2026-07-11)**: K2 実装済みの `requireRole("operator","admin")` を `POST /api/v1/gov/flags` に配線(fail-closed)。非 operator(DEV_TOKEN roles=[]/member セッション)→403+副作用ゼロの negative TC 3 本緑化(`tests/gov-flag.test.ts`)。統一ロール taxonomy の人間裁定は別途(この 2 role 名は運用者ゲートとして据置可能) | 済 |
 | 公開の実施 | repo / OSS スナップショットの実際の公開 | 未 |

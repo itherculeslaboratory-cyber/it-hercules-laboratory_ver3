@@ -11,6 +11,8 @@ import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
 import { gmoRoutes } from "./gmo-routes";
 import { marketRoutes } from "./market-routes";
+import { plazaRoutes } from "./plaza-routes";
+import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
 import { marketRatingRoutes } from "./market-rating-routes";
@@ -154,6 +156,17 @@ app.route("/api/v1", gmoRoutes);
 // GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
 // 取引遷移(match/transition)・決済連動は C4 対象外。
 app.route("/api/v1", marketRoutes);
+
+// Plaza / 知の広場書込 (design-c5.md §K6 §2.1 slot033-036 / V3-BBS-01/03/05/10/20/29/36):
+// POST posts/stances/forks/signals/summaries + 決定論投影(thread/consensus/fork-rank/
+// ranking/summary)。全て保護・append-only・投影は都度再計算・LLM 呼び出しゼロ。
+app.route("/api/v1", plazaRoutes);
+
+// Governance / ガバナンス (design-c5.md §K6 §2.1 slot037-040 / V3-GOV-01/09/12/19/23): POST
+// votes/disputes(+messages/close)/flags + 決定論投影(threshold/os-promotion/dispute/
+// precedents)。全て保護・append-only・投影は都度再計算・LLM 呼び出しゼロ。自動モデレーション
+// endpoint / NG ワード表は不採用(GOV-13・gov-no-automod.test.ts が不在を回帰ガード)。
+app.route("/api/v1", govRoutes);
 
 // Settings/preferences (design-k4 §1.1 routes 041-044,050,051 / V3-UIX-16): GET
 // /me/preferences・GET /me/settings・GET /settings・PATCH /me/preferences。選好は

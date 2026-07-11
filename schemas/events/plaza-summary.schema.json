@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/plaza-summary.schema.json",
+  "title": "Plaza summary data (ihl.plaza.summary.v1)",
+  "description": "スレッド要約イベント ihl.plaza.summary.v1 の data 部（BBS-10・4層要約の第3/4層）。Truth キー truth/ihl.plaza.summary.v1/<thread_id>/<block_index>-<summary_id>.json に append-only。block_index=floor(post 通番/SUMMARY_BLOCK_SIZE)。要約本文は空スロット許容＝手動/後日バッチが append（LLM 呼び出しはコードに入れない・既定 OFF）。",
+  "x_ihl_req": "V3-BBS-10",
+  "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
+  "type": "object",
+  "required": [
+    "summary_id",
+    "thread_id",
+    "block_index",
+    "current_summary",
+    "generator",
+    "created_at",
+    "schema_version"
+  ],
+  "properties": {
+    "summary_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "要約イベントの一意キー（ULID）。"
+    },
+    "thread_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象スレッドキー。"
+    },
+    "block_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "ブロック番号（floor(post 通番/SUMMARY_BLOCK_SIZE)・100 投稿ごと）。"
+    },
+    "current_summary": {
+      "type": "string",
+      "description": "現在の要約本文（空文字許容＝空スロット・手動/バッチが後日埋める）。"
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "未解決の論点（任意）。"
+    },
+    "diff": {
+      "type": "string",
+      "description": "前 summary からの差分（任意・diff 履歴として projectSummary が積む）。"
+    },
+    "generator": {
+      "type": "string",
+      "enum": ["manual", "batch"],
+      "description": "生成主体（manual=人手 / batch=後日バッチ・LLM 直呼びはしない）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "要約時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

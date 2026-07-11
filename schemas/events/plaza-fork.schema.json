@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/plaza-fork.schema.json",
+  "title": "Plaza fork data (ihl.plaza.fork.v1)",
+  "description": "フォーク公開イベント ihl.plaza.fork.v1 の data 部（BBS-29/GOV-19/23）。Truth キー truth/ihl.plaza.fork.v1/<target_type>/<fork_id>.json に append-only。全 fork は非削除で共存。effective rank は projectForkRanks が gov.vote(kind=fork_rank) の最新 approve を畳んで都度投影（初期=public→beginner / private→非掲載）。content_hash で改変検知（GOV-23）。",
+  "x_ihl_req": "V3-BBS-29",
+  "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
+  "type": "object",
+  "required": [
+    "fork_id",
+    "actor_id",
+    "target_type",
+    "forked_from",
+    "visibility",
+    "title",
+    "created_at",
+    "schema_version"
+  ],
+  "properties": {
+    "fork_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "フォークの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "フォーク作成者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "target_type": {
+      "type": "string",
+      "enum": ["component", "screen", "rule", "os", "template"],
+      "description": "フォーク対象の種別（GOV-23 の os/screen/component ほか）。"
+    },
+    "forked_from": {
+      "type": "string",
+      "minLength": 1,
+      "description": "親 ref 文字列（lineage・fork ツリーの親）。"
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "private"],
+      "description": "公開範囲（public→rank=beginner 掲載 / private→非掲載・BBS-29）。"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "フォークのタイトル。"
+    },
+    "content_hash": {
+      "type": "string",
+      "description": "内容の sha256 hex（改変検知・GOV-23・任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "フォーク時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

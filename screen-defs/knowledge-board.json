@@ -1,0 +1,50 @@
+{
+  "screen_id": "knowledge-board",
+  "route": "/knowledge/board",
+  "title": "公式掲示板",
+  "layout": "standard",
+  "notes": "BBS-01/03/05 柱1（design-c5.md §K6 §2.4）。channel=screen_id をキーに GET /plaza/channels/{channel}/threads でスレを引く。3板（説明/愚痴/改善）は board_kind データフィルタ（ponytail: 現状は同一画面のフィルタ導線。チップ化は Renderer 拡張の別波）。投稿 form は POST /plaza/posts、引用は柱2の論文選択へ導線。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "knowledge-board.title.text", "text": "公式掲示板", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "knowledge-board.lead.text", "text": "説明・愚痴・改善の3板でスレを追います。", "muted": true } },
+            { "id": "board-guide", "type": "link", "props": { "label_key": "knowledge-board.board-guide.label", "label": "説明の板", "href": "/knowledge/board?board=guide" } },
+            { "id": "board-complaint", "type": "link", "props": { "label_key": "knowledge-board.board-complaint.label", "label": "愚痴の板", "href": "/knowledge/board?board=complaint" } },
+            { "id": "board-improvement", "type": "link", "props": { "label_key": "knowledge-board.board-improvement.label", "label": "改善の板", "href": "/knowledge/board?board=improvement" } },
+            {
+              "id": "threads",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/plaza/channels/knowledge-board/threads",
+                "bind_items": "data.threads",
+                "item_text": "{{topic}}（{{board_kind}} / {{post_count}}）"
+              }
+            },
+            { "id": "post-title", "type": "heading", "props": { "text_key": "knowledge-board.post-title.text", "text": "投稿する", "level": 2 } },
+            {
+              "id": "post",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/plaza/posts", "body_from": "post" },
+              "children": [
+                { "id": "post-topic", "type": "field", "props": { "label_key": "knowledge-board.post-topic.label", "label": "話題", "variant": "text" } },
+                { "id": "post-body", "type": "field", "props": { "label_key": "knowledge-board.post-body.label", "label": "本文", "variant": "text" } }
+              ]
+            },
+            {
+              "id": "cite",
+              "type": "link",
+              "props": { "label_key": "knowledge-board.cite.label", "label": "論文から引用する", "href": "/knowledge/paper" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
