@@ -41,10 +41,28 @@
             "items": { "type": "string" },
             "description": "kind=select の選択肢（任意）。"
           },
-          "unit": { "type": "string", "description": "単位（任意）。" }
+          "unit": { "type": "string", "description": "単位（任意）。" },
+          "item_hash": {
+            "type": "string",
+            "description": "項目ハッシュ（辞書登録キー・未登録検出用・任意 ADDITIVE V3-OBS-18）。"
+          }
         },
         "additionalProperties": false
       }
+    },
+    "scope": {
+      "type": "object",
+      "description": "テンプレ適用範囲（雌雄別／令齢別／置き場所別・任意 ADDITIVE V3-OBS-18）。",
+      "properties": {
+        "sex": { "type": "string", "description": "雌雄（任意）。" },
+        "instar": {
+          "type": "string",
+          "enum": ["first", "second", "third_early", "third_late"],
+          "description": "令齢（初／二／三令初期／三令後期・任意）。"
+        },
+        "placement": { "type": "string", "description": "置き場所（任意）。" }
+      },
+      "additionalProperties": false
     },
     "forked_from": {
       "type": "string",

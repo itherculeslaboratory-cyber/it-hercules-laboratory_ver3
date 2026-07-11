@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/taxon-species.schema.json",
+  "title": "Taxon Species data (ihl.taxon.species.v1)",
+  "description": "種マスタの append-only イベントの data 部。Truth キー truth/ihl.taxon.species.v1/<species_id>.json（put-if-absent 409）。fork（forked_from）で系譜継承（フォーク文化 不変条項②）。平均サイズ／体重／市場平均価格は listing・capture からの投影で都度再計算（常駐 DB 禁止・不変条項①）。",
+  "x_ihl_req": "V3-IND-19",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["species_id", "name", "actor_id"],
+  "properties": {
+    "species_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "種の一意キー。"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "種名（学名または通称）。"
+    },
+    "lineage": {
+      "type": "string",
+      "description": "系統（分類上位・任意）。"
+    },
+    "forked_from": {
+      "type": "string",
+      "description": "fork 元の species_id（フォーク系譜・任意）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "作成者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "作成時刻（RFC3339・任意）。"
+    }
+  },
+  "additionalProperties": false
+}

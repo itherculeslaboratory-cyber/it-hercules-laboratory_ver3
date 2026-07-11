@@ -58,7 +58,22 @@
             "description": "計測値。"
           },
           "unit": { "type": "string", "description": "単位（任意）。" },
-          "item_hash": { "type": "string", "description": "項目ハッシュ（任意）。" }
+          "item_hash": { "type": "string", "description": "項目ハッシュ（任意）。" },
+          "value_origin": {
+            "type": "string",
+            "enum": [
+              "direct_observed",
+              "image_derived",
+              "environment_derived",
+              "lineage_derived",
+              "estimated",
+              "imputed",
+              "aggregate",
+              "model_inference",
+              "unknown"
+            ],
+            "description": "計測値の出所（frozen provenance value_origin 9 値・任意=ADDITIVE。必須ゲートは appendMeasurement route 側で担保 V3-OBS-06）。"
+          }
         },
         "additionalProperties": false
       }
@@ -66,6 +81,34 @@
     "template_id": {
       "type": "string",
       "description": "使用した観測テンプレの template_id（任意）。"
+    },
+    "entry_mode": {
+      "type": "string",
+      "enum": ["manual", "qr"],
+      "description": "入力経路（manual=手入力 / qr=QR 再開・任意 V3-OBS-20）。"
+    },
+    "subspecies_candidate": {
+      "type": "string",
+      "description": "亜種の候補（ユーザー入力のみ・任意 V3-OBS-62）。"
+    },
+    "subspecies_confirmed_by": {
+      "const": "user",
+      "description": "亜種の確定者。常に user（AI 確定は不可・任意 V3-OBS-62）。"
+    },
+    "photo_conditions": {
+      "type": "object",
+      "description": "撮影時の環境条件（自動埋込・任意 V3-OBS-28）。",
+      "required": ["captured_at"],
+      "properties": {
+        "temp_c": { "type": "number", "description": "気温（℃・任意）。" },
+        "humidity_pct": { "type": "number", "description": "湿度（%・任意）。" },
+        "captured_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "撮影時刻（RFC3339）。"
+        }
+      },
+      "additionalProperties": false
     },
     "note": { "type": "string", "description": "自由記述メモ（任意）。" }
   },

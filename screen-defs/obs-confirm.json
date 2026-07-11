@@ -1,0 +1,40 @@
+{
+  "screen_id": "obs-confirm",
+  "route": "/observe/confirm",
+  "title": "観測を確認する",
+  "layout": "standard",
+  "notes": "OBS-25/62 3画面確認の最終。保存は『登録する』1つ=POST /solid-observation/commit のみ(save-and-done 廃止)。亜種はユーザー確定必須(AI 自動確定禁止)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "観測を確認する", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "内容を確認して登録します。登録した観測は履歴として残ります。", "muted": true } },
+            {
+              "id": "summary",
+              "type": "card",
+              "children": [
+                { "id": "s-species", "type": "text", "props": { "text": "種の候補: {{params.species_candidate}}" } },
+                { "id": "s-subspecies", "type": "text", "props": { "text": "亜種の確定はあなたが行います。未確定のままでは登録できません。", "muted": true } }
+              ]
+            },
+            {
+              "id": "commit",
+              "type": "button",
+              "props": { "label": "登録する", "variant": "primary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/solid-observation/commit" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "commit", "to_screen_id": "obs-detail", "label": "登録後に観測詳細へ" }
+  ]
+}

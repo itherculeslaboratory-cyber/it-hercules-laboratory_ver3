@@ -14,10 +14,15 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "観測を記録する", "level": 1 } },
             {
+              "id": "find-target",
+              "type": "button",
+              "props": { "label": "対象を特定する", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "obs-navigator" }
+            },
+            {
               "id": "capture-form",
               "type": "form",
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/captures", "body_from": "capture-form" },
-              "props": { "static": { "measurements.0.kind": "number", "species_confirmed_by": "user" } },
+              "action": { "kind": "navigate", "to": "obs-confirm" },
               "children": [
                 { "id": "domain", "type": "field", "props": { "variant": "select", "name": "domain", "label": "観測ドメイン", "required": true, "placeholder": "ドメインを選ぶ", "options": [
                   { "value": "biology", "label": "生き物" },
@@ -33,7 +38,7 @@
                 { "id": "sire", "type": "field", "props": { "variant": "text", "name": "sire_id", "label": "父個体 ID（任意）", "placeholder": "individual/..." } },
                 { "id": "dam", "type": "field", "props": { "variant": "text", "name": "dam_id", "label": "母個体 ID（任意）", "placeholder": "individual/..." } },
                 { "id": "photo", "type": "field", "props": { "variant": "photo", "name": "photo", "label": "写真" } },
-                { "id": "submit", "type": "button", "props": { "label": "記録する", "variant": "primary", "type": "submit" } }
+                { "id": "submit", "type": "button", "props": { "label": "確認へ進む", "variant": "primary", "type": "submit" } }
               ]
             }
           ]
@@ -42,6 +47,7 @@
     }
   ],
   "transitions": [
-    { "from": "capture-form", "to_screen_id": "obs-detail", "label": "記録後に詳細ビューへ" }
+    { "from": "find-target", "to_screen_id": "obs-navigator", "label": "対象特定へ" },
+    { "from": "capture-form", "to_screen_id": "obs-confirm", "label": "確認画面へ（保存は確認画面の登録で）" }
   ]
 }

@@ -10,6 +10,13 @@ import { ledgerRoutes } from "./ledger-routes";
 import { gmoRoutes } from "./gmo-routes";
 import { marketRoutes } from "./market-routes";
 import { piiRoutes } from "./pii-routes";
+import { individualRoutes } from "./individual-routes";
+import { taxonRoutes } from "./taxon-routes";
+import { tagRoutes } from "./tag-routes";
+import { matchRoutes } from "./match-routes";
+import { deviceRoutes } from "./device-routes";
+import { homeRoutes } from "./home-routes";
+import { cusbRoutes } from "./cusb-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -80,6 +87,20 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Auth routes (§1.3): magic-link / verify / session / logout.
 app.route("/api/v1/auth", authRoutes);
 
+// Home / insight / observation schedule (design-k1 §1.1/§1.4 / V3-OBS-21/43):
+// POST /api/v1/observation/schedule · GET /api/v1/home/summary · GET /api/v1/
+// observation/insights. Protected (session, NOT signature-public); schedules are
+// append-only obs.schedule.v1 and summaries recompute from Truth each call. Cron
+// polling (OBS-28) is a human gate — events only here, no resident scheduler.
+// Mounted BEFORE obsRoutes so the static /observation/insights wins over obsRoutes'
+// param route GET /observation/:capture_id (cross-app first-registered precedence).
+app.route("/api/v1", homeRoutes);
+
+// C-USB ingest (design-k1 §1.1 / V3-OBS-44): POST /api/v1/cusb. Session-protected
+// (NOT in PUBLIC_ROUTES — unlike collector's signature-public ingest). Flow:
+// validate → payload_hash tamper check → lineage/semantic stamp → put-if-absent.
+app.route("/api/v1", cusbRoutes);
+
 // Observation core (§3.2): captures / upload / detail / image / templates /
 // individuals observations + qr / qr resolve. All protected (not in PUBLIC_ROUTES).
 app.route("/api/v1", obsRoutes);
@@ -105,6 +126,27 @@ app.route("/api/v1", marketRoutes);
 // PII セッション (design-c5 K2 §1.1 / V3-SEC-07 / route 045): POST /api/v1/settings/
 // pii-session。保護・非永続(maskPii を返すのみ・Truth へ生 PII を append しない)。
 app.route("/api/v1", piiRoutes);
+
+// Individual system (design-k1 §1.1 / V3-IND-01/02/04/12/13/15/21): individuals
+// master / parents(血統) / pedigree / cross / name / brand-templates / bio-card /
+// qr-batch / authenticity / life-events. All protected (not in PUBLIC_ROUTES).
+app.route("/api/v1", individualRoutes);
+
+// Taxon system (design-k1 §1.1 / V3-IND-19): species / morphs / aliases +
+// alias-candidates(決定論類似度提案). put-if-absent 409. All protected.
+app.route("/api/v1", taxonRoutes);
+
+// Tag two-layer (design-k1 §1.1 / V3-OBS-63/07/52): POST/GET /api/v1/tags. Frozen
+// tag-event append; ai/user layers derived at aggregate read. All protected.
+app.route("/api/v1", tagRoutes);
+
+// Match preference learning (design-k1 §1.1 / V3-IND-07): POST /api/v1/match/
+// preference · GET /api/v1/match/ranking. w←w+α·y·x; score non-exposed. Protected.
+app.route("/api/v1", matchRoutes);
+
+// Observation devices (design-k1 §1.1 / V3-OBS-31): POST/GET /api/v1/devices +
+// /devices/{id}/test. Placement-bound (individual → 400); api key AES-GCM encrypted.
+app.route("/api/v1", deviceRoutes);
 
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,

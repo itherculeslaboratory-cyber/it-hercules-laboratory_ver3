@@ -40,7 +40,28 @@ export interface ObsTemplate {
      * 単位（任意）。
      */
     unit?: string;
+    /**
+     * 項目ハッシュ（辞書登録キー・未登録検出用・任意 ADDITIVE V3-OBS-18）。
+     */
+    item_hash?: string;
   }[];
+  /**
+   * テンプレ適用範囲（雌雄別／令齢別／置き場所別・任意 ADDITIVE V3-OBS-18）。
+   */
+  scope?: {
+    /**
+     * 雌雄（任意）。
+     */
+    sex?: string;
+    /**
+     * 令齢（初／二／三令初期／三令後期・任意）。
+     */
+    instar?: "first" | "second" | "third_early" | "third_late";
+    /**
+     * 置き場所（任意）。
+     */
+    placement?: string;
+  };
   /**
    * fork 元テンプレの template_id（V3-OBS-18・任意）。
    */

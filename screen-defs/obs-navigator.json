@@ -1,0 +1,54 @@
+{
+  "screen_id": "obs-navigator",
+  "route": "/observe/navigator",
+  "title": "観測対象を特定する",
+  "layout": "standard",
+  "notes": "OBS-02/03 対象特定の3経路(学名 substring / はい・いいえ二分探索 / 分類ツリー)。候補提示と確定は分離し、AI は species_confirmed を書かない。テキストのみ(ライブ Wikidata 照会は後波)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "観測対象を特定する", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "3つの経路から対象を絞り込みます。候補が出たらあなたが確定します。", "muted": true } },
+            { "id": "path-name-title", "type": "heading", "props": { "text": "学名で探す", "level": 2 } },
+            {
+              "id": "name-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/targets/search" },
+              "children": [
+                { "id": "q", "type": "field", "props": { "variant": "text", "name": "query", "label": "学名の一部", "placeholder": "例: Dynastes" } },
+                { "id": "name-submit", "type": "button", "props": { "label": "候補を探す", "variant": "secondary", "type": "submit" } }
+              ]
+            },
+            { "id": "path-yesno-title", "type": "heading", "props": { "text": "はい・いいえで絞る", "level": 2 } },
+            { "id": "yesno-lead", "type": "text", "props": { "text": "7〜12問のはい・いいえで対象を二分探索します。", "muted": true } },
+            { "id": "path-tree-title", "type": "heading", "props": { "text": "分類ツリーから選ぶ", "level": 2 } },
+            {
+              "id": "tree",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/observation/targets/catalog",
+                "bind_items": "data.tree.nodes",
+                "item_text": "{{name}} ({{qid}})"
+              }
+            },
+            {
+              "id": "confirm",
+              "type": "button",
+              "props": { "label": "この対象で観測を続ける", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "obs-entry" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "confirm", "to_screen_id": "obs-entry", "label": "対象確定後に観測入力へ" }
+  ]
+}

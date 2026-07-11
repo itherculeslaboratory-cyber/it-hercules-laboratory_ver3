@@ -20,6 +20,21 @@ const VALIDATOR_NAME: Record<string, string> = {
   "obs-template": "obsTemplate",
   "ind-qr": "indQr",
   "mkt-listing": "mktListing",
+  // C5 K1 events (schemas/events/*, non-frozen, reversible)
+  "ind-master": "indMaster",
+  "ind-cross-parent": "indCrossParent",
+  "ind-name-event": "indNameEvent",
+  "ind-brand-template": "indBrandTemplate",
+  "ind-life-event": "indLifeEvent",
+  "taxon-species": "taxonSpecies",
+  "taxon-morph": "taxonMorph",
+  "taxon-alias": "taxonAlias",
+  "match-preference": "matchPreference",
+  "obs-schedule": "obsSchedule",
+  "obs-device": "obsDevice",
+  "obs-annotation": "obsAnnotation",
+  "obs-analysis": "obsAnalysis",
+  "cusb-ingest": "cusbIngest",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -43,7 +58,29 @@ const FROZEN_NAMES = new Set([
   "transfer-code",
 ]);
 
-const EVENT_NAMES = new Set(["obs-capture", "obs-photo", "obs-template", "ind-qr", "mkt-listing"]);
+const EVENT_NAMES = new Set([
+  "obs-capture",
+  "obs-photo",
+  "obs-template",
+  "ind-qr",
+  "mkt-listing",
+  // C5 K1 — data validation MUST fire for these or putEvent stores unchecked
+  // data at 202 permanently (Truth is INSERT ONLY, unfixable). See design-k1 §1.2.
+  "ind-master",
+  "ind-cross-parent",
+  "ind-name-event",
+  "ind-brand-template",
+  "ind-life-event",
+  "taxon-species",
+  "taxon-morph",
+  "taxon-alias",
+  "match-preference",
+  "obs-schedule",
+  "obs-device",
+  "obs-annotation",
+  "obs-analysis",
+  "cusb-ingest",
+]);
 
 function validatorFor(name: string): ValidateFn {
   const exportName = VALIDATOR_NAME[name];

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-analysis.schema.json",
+  "title": "Observation Analysis data (ihl.obs.analysis.v1)",
+  "description": "再解析結果の append-only イベントの data 部。Truth キー truth/ihl.obs.analysis.v1/<capture_id>-<ulid>.json。再解析は既存 analysis を上書きせず新 analysis_id で append し、delta と correction_semver を記録（元画像は非削除・不変条項③）。is_manual_edit で手動編集と自動解析を区別。",
+  "x_ihl_req": "V3-OBS-47 / V3-OBS-48",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["analysis_id", "capture_id", "results", "correction_semver", "is_manual_edit", "actor_id"],
+  "properties": {
+    "analysis_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "解析結果の一意キー（再解析ごとに新規）。"
+    },
+    "capture_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象観測セッションの capture_id。"
+    },
+    "results": {
+      "type": "object",
+      "description": "解析結果本体（項目→値）。",
+      "additionalProperties": true
+    },
+    "delta": {
+      "type": "object",
+      "description": "前回解析との差分（任意）。",
+      "additionalProperties": true
+    },
+    "correction_semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "補正ロジックの semver（再解析の版・delta の意味づけキー）。"
+    },
+    "is_manual_edit": {
+      "type": "boolean",
+      "description": "手動編集なら true、自動再解析なら false。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "実行者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "実行時刻（RFC3339・任意）。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/cusb-ingest.schema.json",
+  "title": "C-USB Ingest data (ihl.cusb.ingest.v1)",
+  "description": "統合入力バス（C-USB）取り込みの append-only イベントの data 部。Truth キー truth/ihl.cusb.ingest.v1/<payload_hash>.json。validate→lineage/semantic 付与→保存の順で通し、payload_hash で改ざん検知（put-if-absent 409）。input_kind で入力種別を分岐。",
+  "x_ihl_req": "V3-OBS-44",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["input_kind", "payload_hash", "lineage", "semantic", "actor_id"],
+  "properties": {
+    "input_kind": {
+      "type": "string",
+      "enum": ["screen", "api", "sensor", "file", "human", "network"],
+      "description": "入力の種別（画面／API／センサ／ファイル／人手／ネットワーク）。"
+    },
+    "payload_hash": {
+      "type": "string",
+      "minLength": 1,
+      "description": "取り込みペイロードのハッシュ。改ざん検知・冪等キー。"
+    },
+    "lineage": {
+      "type": "object",
+      "description": "系譜メタ（入力元・変換過程）。取り込み時に付与。",
+      "additionalProperties": true
+    },
+    "semantic": {
+      "type": "object",
+      "description": "意味付けメタ（分類・タグ等）。取り込み時に付与。",
+      "additionalProperties": true
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "取り込み者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "取り込み時刻（RFC3339・任意）。"
+    }
+  },
+  "additionalProperties": false
+}

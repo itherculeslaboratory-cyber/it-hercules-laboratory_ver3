@@ -1,0 +1,50 @@
+{
+  "screen_id": "match",
+  "route": "/match",
+  "title": "マッチング",
+  "layout": "standard",
+  "notes": "IND-07 2枚を並べ左右どちらか1タップ、またはどちらも×。preference は単一 preference_event(kind 分岐)。ランキングは内積降順で score は露出しない。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "マッチング", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "好みに近い方を1タップ。どちらも違えば見送れます。", "muted": true } },
+            {
+              "id": "pair",
+              "type": "card",
+              "props": { "source_path": "/api/v1/match/ranking" },
+              "children": [
+                { "id": "left", "type": "text", "props": { "text": "左: {{data.pair.ranking.0.item_id}}" } },
+                { "id": "right", "type": "text", "props": { "text": "右: {{data.pair.ranking.1.item_id}}" } }
+              ]
+            },
+            {
+              "id": "pick-left",
+              "type": "button",
+              "props": { "label": "左を選ぶ", "variant": "primary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/match/preference" }
+            },
+            {
+              "id": "pick-right",
+              "type": "button",
+              "props": { "label": "右を選ぶ", "variant": "primary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/match/preference" }
+            },
+            {
+              "id": "pass",
+              "type": "button",
+              "props": { "label": "どちらも違う", "variant": "secondary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/match/preference" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

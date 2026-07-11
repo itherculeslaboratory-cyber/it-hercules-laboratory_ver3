@@ -1,0 +1,38 @@
+{
+  "screen_id": "bio-card",
+  "route": "/individuals/bio-card",
+  "title": "バイオカード",
+  "layout": "standard",
+  "notes": "IND-15 名刺型バイオカード。種/最新サイズ/特徴/QR(=個体 URL)。qr-batch は {100,500,1000} のみ。等倍印刷の物理ズレは人間ゲート。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "バイオカード", "level": 1 } },
+            {
+              "id": "card",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.id}}/bio-card" },
+              "children": [
+                { "id": "species", "type": "text", "props": { "text": "種: {{data.card.species}}" } },
+                { "id": "size", "type": "text", "props": { "text": "最新サイズ: {{data.card.latest_size}}", "muted": true } },
+                { "id": "qr", "type": "qr-code", "props": { "value": "{{data.card.qr_url}}" } }
+              ]
+            },
+            {
+              "id": "issue-batch",
+              "type": "button",
+              "props": { "label": "QR ラベルを一括発行する", "variant": "secondary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/qr-batch" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

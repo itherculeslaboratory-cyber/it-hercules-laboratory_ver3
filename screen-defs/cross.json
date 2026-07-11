@@ -1,0 +1,50 @@
+{
+  "screen_id": "cross",
+  "route": "/individuals/cross",
+  "title": "累代分析",
+  "layout": "standard",
+  "notes": "IND-12 率カード。共通カードノードを source_path の ?metric= で差し替える(決定論投影・個体経由のみ・ホーム直接不可)。色再現性は色解析後波のため未表示。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "累代分析", "level": 1 } },
+            { "id": "ind-id", "type": "text", "props": { "text": "個体 ID: {{params.id}}", "muted": true } },
+            {
+              "id": "mortality",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.id}}/cross?metric=mortality" },
+              "children": [
+                { "id": "mortality-label", "type": "heading", "props": { "text": "死亡率", "level": 2 } },
+                { "id": "mortality-value", "type": "text", "props": { "text": "{{data.mortality.value}}" } }
+              ]
+            },
+            {
+              "id": "completion",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.id}}/cross?metric=completion" },
+              "children": [
+                { "id": "completion-label", "type": "heading", "props": { "text": "完品率", "level": 2 } },
+                { "id": "completion-value", "type": "text", "props": { "text": "{{data.completion.value}}" } }
+              ]
+            },
+            {
+              "id": "eclosion",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.id}}/cross?metric=eclosion_failure" },
+              "children": [
+                { "id": "eclosion-label", "type": "heading", "props": { "text": "羽化不全率", "level": 2 } },
+                { "id": "eclosion-value", "type": "text", "props": { "text": "{{data.eclosion.value}}" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

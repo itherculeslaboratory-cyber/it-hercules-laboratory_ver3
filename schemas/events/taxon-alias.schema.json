@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/taxon-alias.schema.json",
+  "title": "Taxon Alias data (ihl.taxon.alias.v1)",
+  "description": "種の別名（エイリアス）統合の append-only イベントの data 部。人間承認済みのもののみ append（AI が自動統合しない・人間ゲート文化 不変条項④）。Truth キー truth/ihl.taxon.alias.v1/<alias_id>.json。候補提示（aliasCandidates）は Levenshtein/Jaro-Winkler の決定論投影で別レイヤ。",
+  "x_ihl_req": "V3-IND-19",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["alias_id", "canonical_species_id", "alias_text", "approved_by", "actor_id"],
+  "properties": {
+    "alias_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "エイリアスの一意キー。"
+    },
+    "canonical_species_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "統合先の正規種 species_id。"
+    },
+    "alias_text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "別名文字列（表記ゆれ・通称）。"
+    },
+    "approved_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "承認した人間の actor_id（人間承認済みの証跡）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "記録者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "承認時刻（RFC3339・任意）。"
+    }
+  },
+  "additionalProperties": false
+}

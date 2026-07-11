@@ -17,11 +17,11 @@
               "id": "domains",
               "type": "list",
               "children": [
-                { "id": "d-biology", "type": "button", "props": { "label": "生き物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
-                { "id": "d-mineral", "type": "button", "props": { "label": "鉱物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
-                { "id": "d-digital", "type": "button", "props": { "label": "デジタル", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
-                { "id": "d-place", "type": "button", "props": { "label": "場所", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } },
-                { "id": "d-custom", "type": "button", "props": { "label": "カスタム", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry" } }
+                { "id": "d-biology", "type": "button", "props": { "label": "生物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=biology" } },
+                { "id": "d-mineral", "type": "button", "props": { "label": "器物", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=mineral" } },
+                { "id": "d-digital", "type": "button", "props": { "label": "デジタル", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=digital" } },
+                { "id": "d-place", "type": "button", "props": { "label": "環境", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=place" } },
+                { "id": "d-custom", "type": "button", "props": { "label": "カスタム", "variant": "primary" }, "action": { "kind": "navigate", "to": "obs-entry?domain=custom" } }
               ]
             }
           ]

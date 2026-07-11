@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ind-name-event.schema.json",
+  "title": "Individual Name Event data (ihl.ind.name_event.v1)",
+  "description": "個体改名 append-only イベントの data 部。Truth キー truth/ihl.ind.name_event.v1/<individual_id>-<ulid>.json。projectName が created_at 昇順 reduce で最新名／at 指定で当時名を再現。brand_template active=false 後も過去の name_event は保持され再現可能（不変条項③）。",
+  "x_ihl_req": "V3-IND-04",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["individual_id", "name", "actor_id", "created_at"],
+  "properties": {
+    "individual_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象個体の individual_id。"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "この時点で付与された表示名。"
+    },
+    "brand_template_id": {
+      "type": "string",
+      "description": "命名に用いたブランドテンプレの brand_template_id（任意）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "改名者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "改名時刻（RFC3339）。当時名再現の時系列キー。"
+    }
+  },
+  "additionalProperties": false
+}

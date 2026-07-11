@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/match-preference.schema.json",
+  "title": "Match Preference data (ihl.match.preference.v1)",
+  "description": "マチアプ嗜好 append-only イベントの data 部（単一 preference_event に swipe/pass/valuecheck を kind で分岐）。Truth キー truth/ihl.match.preference.v1/<actor_id>-<ulid>.json。projectPreferenceWeights が w←w+α·y·x で reduce（α=LEARNING_RATE）、rankByPreference は内積降順。score はレスポンス非露出。",
+  "x_ihl_req": "V3-IND-07",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["pref_id", "actor_id", "item_id", "kind", "y", "features", "created_at"],
+  "properties": {
+    "pref_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "嗜好イベントの一意キー。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "評価者の actor_id（V3-AUT-17・嗜好ベクトルの学習主体）。"
+    },
+    "item_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "評価対象アイテムの ID。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["swipe", "pass", "valuecheck"],
+      "description": "評価種別（swipe=採用 / pass=見送り / valuecheck=価値確認）。"
+    },
+    "y": {
+      "type": "integer",
+      "enum": [1, -1],
+      "description": "教師信号（+1=正 / -1=負）。w←w+α·y·x の y。"
+    },
+    "features": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "アイテムの特徴ベクトル x（内積 w·x の入力）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "評価時刻（RFC3339）。"
+    }
+  },
+  "additionalProperties": false
+}

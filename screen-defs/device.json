@@ -1,0 +1,47 @@
+{
+  "screen_id": "device",
+  "route": "/devices",
+  "title": "観測機器",
+  "layout": "standard",
+  "notes": "OBS-31 機器は置き場所に紐付け(個体紐付けは 400)。API キーは暗号化保存で平文非表示・表示は display_name のみ。実鍵投入と cron 常駐は人間ゲート。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "観測機器", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "機器は置き場所に紐付けます。表示は表示名のみで、鍵は暗号化して保存します。", "muted": true } },
+            { "id": "list-title", "type": "heading", "props": { "text": "登録済みの機器", "level": 2 } },
+            {
+              "id": "device-list",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/devices",
+                "bind_items": "data.device-list.devices",
+                "item_text": "{{display_name}}"
+              }
+            },
+            { "id": "create-title", "type": "heading", "props": { "text": "機器を登録する", "level": 2 } },
+            {
+              "id": "create-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/devices" },
+              "children": [
+                { "id": "display-name", "type": "field", "props": { "variant": "text", "name": "display_name", "label": "表示名", "placeholder": "例: 温室のセンサー", "required": true } },
+                { "id": "provider", "type": "field", "props": { "variant": "text", "name": "provider", "label": "プロバイダ", "placeholder": "例: switchbot", "required": true } },
+                { "id": "placement", "type": "field", "props": { "variant": "text", "name": "placement_ref", "label": "設置場所（棚など・個体は不可）", "placeholder": "placement/...", "required": true } },
+                { "id": "started-on", "type": "field", "props": { "variant": "text", "name": "started_on", "label": "開始日", "placeholder": "2026-07-11" } },
+                { "id": "api-key", "type": "field", "props": { "variant": "text", "name": "api_key", "label": "API キー（暗号化して保存）", "placeholder": "貼り付け" } },
+                { "id": "submit", "type": "button", "props": { "label": "登録する", "variant": "primary", "type": "submit" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

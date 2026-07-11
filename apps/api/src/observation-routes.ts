@@ -5,9 +5,22 @@
 import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import { generateThumbnail } from "./thumbnail";
+import {
+  RERANK_WEIGHTS,
+  RERANK_MISSING,
+  NAVIGATOR_TARGET_QUESTIONS,
+  CONFIDENCE_ORDER,
+} from "./observation-constants";
 import type { Bindings, Variables } from "./env";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+const ANNOTATION_TYPE = "ihl.obs.annotation.v1";
+const ANALYSIS_TYPE = "ihl.obs.analysis.v1";
+
+// The 9 frozen provenance value_origin values (CONFIDENCE_ORDER is keyed by
+// exactly this enum — reuse it so the gate can never drift from the schema).
+const VALUE_ORIGINS = new Set(Object.keys(CONFIDENCE_ORDER));
 
 // CL-08 / design-c3 §1: embeddings are frozen at 384 dims. A manifest whose
 // embedding_dim differs is blocked from search (ver2 scoring.py:44 guard).
@@ -106,8 +119,120 @@ const CAPTURE_FIELDS = [
   "species_confirmed_by",
   "measurements",
   "template_id",
+  "entry_mode",
+  "subspecies_candidate",
+  "subspecies_confirmed_by",
+  "photo_conditions",
   "note",
 ] as const;
+
+// ── OBS-11 rerank math (pure, deterministic; weights/defaults from constants) ──
+
+/** compositeScore blend (OBS-11 / ADR-H-12): 0.50·e + 0.20·color + 0.20·size +
+ *  0.10·lineage. Absent color/size default 0.5, absent lineage 0.0 (欠測既定). */
+export function compositeScore(p: {
+  embedding: number;
+  color?: number;
+  size?: number;
+  lineage?: number;
+}): number {
+  const w = RERANK_WEIGHTS;
+  return (
+    w.embedding * p.embedding +
+    w.color * (p.color ?? RERANK_MISSING.color) +
+    w.size * (p.size ?? RERANK_MISSING.size) +
+    w.lineage * (p.lineage ?? RERANK_MISSING.lineage)
+  );
+}
+
+/** Collapse an individual's per-observation scores to one (OBS-11). scores are
+ *  in chronological order (newest last) for weighted_latest. */
+export function aggregateIndividual(
+  scores: number[],
+  method: "max" | "mean_top3" | "weighted_latest",
+): number {
+  if (scores.length === 0) return 0;
+  if (method === "max") return Math.max(...scores);
+  if (method === "mean_top3") {
+    const top = [...scores].sort((a, b) => b - a).slice(0, 3);
+    return top.reduce((s, x) => s + x, 0) / top.length;
+  }
+  // weighted_latest: later observation weighs more (weight = 1-based position).
+  let num = 0;
+  let den = 0;
+  scores.forEach((s, i) => {
+    num += (i + 1) * s;
+    den += i + 1;
+  });
+  return num / den;
+}
+
+// ── OBS-02 target catalog + deterministic navigator (Wikidata-free slice) ──
+// ponytail: a generated local classification tree (4 families × 8 genera × 8
+// species = 256 leaves). Live Wikidata enrichment is a later wave (design §5
+// 費用 defer); QIDs/taxonomy here are a deterministic local stand-in so the
+// yes-no binary search converges in ceil(log2(256))=8 questions — inside the
+// [7,12] bound (NAVIGATOR_TARGET_QUESTIONS) without hard-coding 256 rows.
+const CATALOG_FAMILIES = 4;
+const CATALOG_GENERA = 8;
+const CATALOG_SPECIES = 8;
+const CATALOG_SIZE = CATALOG_FAMILIES * CATALOG_GENERA * CATALOG_SPECIES; // 256
+
+type CatalogLeaf = {
+  qid: string;
+  scientific_name: string;
+  taxonomy: { family: string; genus: string; species: string };
+};
+
+function catalogLeaf(i: number): CatalogLeaf {
+  const f = i >> 6; // 0..3
+  const g = (i >> 3) & 7; // 0..7
+  const s = i & 7; // 0..7
+  const family = `Family${f}`;
+  const genus = `Genus${f}${g}`;
+  const scientific_name = `${genus} species${s}`;
+  return { qid: `Q${9000000 + i}`, scientific_name, taxonomy: { family, genus, species: scientific_name } };
+}
+
+function catalogAll(): CatalogLeaf[] {
+  return Array.from({ length: CATALOG_SIZE }, (_, i) => catalogLeaf(i));
+}
+
+// ── OBS-28 photo_conditions validation (spoof reject + threshold alert) ──
+// ponytail: physical-plausibility bounds + placeholder sentinels are the
+// calibration knobs; real sensor ingestion is a later wave.
+const CONDITION_LIMITS = {
+  temp_c: { min: -90, max: 60, alertHigh: 35, alertLow: 5 },
+  humidity_pct: { min: 0, max: 100, alertHigh: 85, alertLow: 20 },
+} as const;
+
+function validatePhotoConditions(
+  pc: Record<string, unknown>,
+): { ok: true; normalized: Record<string, unknown>; alerts: string[] } | { ok: false; reason: string } {
+  const out: Record<string, unknown> = {};
+  const alerts: string[] = [];
+  for (const key of ["temp_c", "humidity_pct"] as const) {
+    if (pc[key] === undefined) continue;
+    const v = pc[key];
+    if (typeof v !== "number" || !Number.isFinite(v)) return { ok: false, reason: `${key}_not_number` };
+    const lim = CONDITION_LIMITS[key];
+    // 偽装拒否: a physically impossible reading is a spoofed placeholder.
+    if (v < lim.min || v > lim.max) return { ok: false, reason: `${key}_placeholder` };
+    if (v > lim.alertHigh) alerts.push(`${key}_high`);
+    if (v < lim.alertLow) alerts.push(`${key}_low`);
+    out[key] = v;
+  }
+  // captured_at: auto-fill now if absent; reject an epoch-0 placeholder.
+  const at = pc.captured_at;
+  if (at === undefined) {
+    out.captured_at = new Date().toISOString();
+  } else if (typeof at !== "string" || Number.isNaN(Date.parse(at)) || Date.parse(at) <= 0) {
+    return { ok: false, reason: "captured_at_placeholder" };
+  } else {
+    out.captured_at = at;
+  }
+  return { ok: true, normalized: out, alerts };
+}
 
 // POST /observation/captures — append a capture event (202/400/409).
 // capture_id: client MAY supply a ULID (idempotency key → 409 on replay);
@@ -140,6 +265,29 @@ obsRoutes.post("/observation/upload", async (c) => {
     return c.json({ error: "INVALID_UPLOAD" }, 400);
   }
   const actorId = c.get("actorId");
+
+  // OBS-28: photo_conditions captured at shot time. Multipart carries it as a
+  // JSON string field. Auto-fill captured_at, reject spoofed placeholder values
+  // (400), and surface a threshold alert. The normalized conditions ride the
+  // response so the confirm/commit step embeds them on the capture record (the
+  // obs-capture schema owns photo_conditions; the immutable photo event does not).
+  let conditions: { normalized: Record<string, unknown>; alerts: string[] } | null = null;
+  const pcRaw = form?.get("photo_conditions");
+  if (typeof pcRaw === "string" && pcRaw) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(pcRaw);
+    } catch {
+      return c.json({ error: "INVALID_PHOTO_CONDITIONS" }, 400);
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      return c.json({ error: "INVALID_PHOTO_CONDITIONS" }, 400);
+    }
+    const v = validatePhotoConditions(parsed as Record<string, unknown>);
+    if (!v.ok) return c.json({ error: "PHOTO_CONDITIONS_SPOOFED", reason: v.reason }, 400);
+    conditions = { normalized: v.normalized, alerts: v.alerts };
+  }
+
   const bytes = new Uint8Array(await file.arrayBuffer());
   const contentType = file.type || "application/octet-stream";
   const photoId = ulid();
@@ -209,7 +357,12 @@ obsRoutes.post("/observation/upload", async (c) => {
     // non-image / codec failure → skip thumbnail; the upload already succeeded.
   }
 
-  return c.json({ photo_id: photoId, sha256: data.sha256 }, 202);
+  return c.json({
+    photo_id: photoId,
+    sha256: data.sha256,
+    photo_conditions: conditions?.normalized ?? null,
+    condition_alerts: conditions?.alerts ?? [],
+  }, 202);
 });
 
 // GET /observation/templates — list projection (all templates).
@@ -231,6 +384,7 @@ obsRoutes.post("/observation/templates", async (c) => {
     items: body.items,
   };
   if (body.forked_from !== undefined) data.forked_from = body.forked_from;
+  if (body.scope !== undefined) data.scope = body.scope; // OBS-18 雌雄別/令齢別/置き場所別
 
   const res = await store(c).putEvent(
     envelope(TEMPLATE_TYPE, templateId, "schemas/events/obs-template.schema.json", actorId, data),
@@ -257,6 +411,15 @@ obsRoutes.post("/observation/search", async (c) => {
   let candidates = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`)).map(dataOf);
   candidates.sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id)));
 
+  // OBS-10 query 自身除外: never rank the query capture(s) against themselves.
+  const prototypeIds = Array.isArray(body.prototype_capture_ids)
+    ? (body.prototype_capture_ids as unknown[]).filter((x): x is string => typeof x === "string")
+    : [];
+  const excludeSet = new Set(
+    [typeof body.query_capture_id === "string" ? body.query_capture_id : "", ...prototypeIds].filter(Boolean),
+  );
+  if (excludeSet.size) candidates = candidates.filter((x) => !excludeSet.has(String(x.capture_id)));
+
   // ① whitelist — exact-match filters (only those the request supplied).
   if (typeof body.domain === "string") candidates = candidates.filter((x) => x.domain === body.domain);
   if (typeof body.species === "string") candidates = candidates.filter((x) => x.species_candidate === body.species);
@@ -280,32 +443,352 @@ obsRoutes.post("/observation/search", async (c) => {
 
   // ③ embedding — cosine rank against a 384-dim query vector.
   let queryVec: Float32Array | null = null;
+  let querySubjectRef = "";
   if (Array.isArray(body.query_vector)) {
     queryVec = Float32Array.from(body.query_vector as number[]);
+  } else if (prototypeIds.length) {
+    // OBS-10 prototype 平均ベクトル: mean of the prototype set's vectors.
+    const vecs: Float32Array[] = [];
+    for (const id of prototypeIds) {
+      const v = await loadVector(c.env.TRUTH, id);
+      if (v && v.length === EMBEDDING_DIM) vecs.push(v);
+    }
+    if (!vecs.length) return c.json({ error: "QUERY_EMBEDDING_NOT_FOUND" }, 400);
+    const mean = new Float32Array(EMBEDDING_DIM);
+    for (const v of vecs) for (let i = 0; i < EMBEDDING_DIM; i++) mean[i] += v[i] / vecs.length;
+    queryVec = mean;
   } else if (typeof body.query_capture_id === "string") {
     queryVec = await loadVector(c.env.TRUTH, body.query_capture_id);
     if (!queryVec) return c.json({ error: "QUERY_EMBEDDING_NOT_FOUND" }, 400);
+    const q = await store(c).readEvent(`truth/${CAPTURE_TYPE}/${body.query_capture_id}.json`);
+    querySubjectRef = q ? String(dataOf(q).subject_ref ?? "") : "";
   }
 
   if (queryVec) {
     if (queryVec.length !== EMBEDDING_DIM) return c.json({ error: "QUERY_DIM_MISMATCH", dim: queryVec.length }, 400);
     stage = "embedding";
-    const scored: { capture_id: string; score: number }[] = [];
+    const rerank = body.rerank === true;
+    const scored: { capture_id: string; score: number; subject_ref: string }[] = [];
     for (const cap of candidates) {
       const capId = String(cap.capture_id);
       const vec = await loadVector(c.env.TRUTH, capId);
       if (!vec) continue; // no embedding for this capture
       if (vec.length !== EMBEDDING_DIM) continue; // 遮断: manifest embedding_dim ≠ 384 (CL-08)
-      scored.push({ capture_id: capId, score: cosineSimilarity(queryVec, vec) });
+      const cos = cosineSimilarity(queryVec, vec);
+      const subjectRef = String(cap.subject_ref ?? "");
+      // OBS-11 合成 rerank: blend embedding with lineage (shared individual);
+      // color/size stay 欠測既定 until the client-side analysis wave lands.
+      const score = rerank
+        ? compositeScore({ embedding: cos, lineage: querySubjectRef && subjectRef === querySubjectRef ? 1 : undefined })
+        : cos;
+      scored.push({ capture_id: capId, score, subject_ref: subjectRef });
     }
     scored.sort((a, b) => b.score - a.score || a.capture_id.localeCompare(b.capture_id));
-    return c.json({ ladder_stage: stage, results: scored.slice(0, topK) });
+
+    // OBS-11 aggregateIndividual: collapse to one score per individual.
+    const aggMethod = body.aggregate;
+    if (aggMethod === "max" || aggMethod === "mean_top3" || aggMethod === "weighted_latest") {
+      const byInd = new Map<string, number[]>();
+      // chronological (capture_id ULID asc ⇒ time asc) for weighted_latest.
+      for (const s of [...scored].sort((a, b) => a.capture_id.localeCompare(b.capture_id))) {
+        if (!s.subject_ref) continue;
+        (byInd.get(s.subject_ref) ?? byInd.set(s.subject_ref, []).get(s.subject_ref)!).push(s.score);
+      }
+      const individuals = [...byInd.entries()]
+        .map(([subject_ref, scores]) => ({ subject_ref, score: aggregateIndividual(scores, aggMethod) }))
+        .sort((a, b) => b.score - a.score || a.subject_ref.localeCompare(b.subject_ref));
+      return c.json({ ladder_stage: stage, aggregate: aggMethod, individuals: individuals.slice(0, topK) });
+    }
+
+    return c.json({ ladder_stage: stage, results: scored.map((s) => ({ capture_id: s.capture_id, score: s.score })).slice(0, topK) });
   }
 
   return c.json({
     ladder_stage: stage,
     results: candidates.slice(0, topK).map((x) => ({ capture_id: String(x.capture_id) })),
   });
+});
+
+// GET /observation/measurement-dictionary — item_hash 登録辞書 (OBS-18). Derived
+// from every template item that carries an item_hash (no dedicated dictionary
+// event; templates ARE the registry).
+obsRoutes.get("/observation/measurement-dictionary", async (c) => {
+  const templates = (await store(c).listEvents(`truth/${TEMPLATE_TYPE}/`)).map(dataOf);
+  const byHash = new Map<string, Record<string, unknown>>();
+  for (const t of templates) {
+    const items = Array.isArray(t.items) ? (t.items as Record<string, unknown>[]) : [];
+    for (const it of items) {
+      if (typeof it.item_hash === "string" && it.item_hash && !byHash.has(it.item_hash)) {
+        byHash.set(it.item_hash, { item_hash: it.item_hash, label: it.label, kind: it.kind, unit: it.unit });
+      }
+    }
+  }
+  return c.json({ dictionary: [...byHash.values()] });
+});
+
+// POST /observation/dictionary-extensions — register an unregistered item
+// (OBS-18: はい/今回だけ/常に). mode=always persists (append a single-item
+// template so the item_hash joins the dictionary); mode=once acknowledges only.
+obsRoutes.post("/observation/dictionary-extensions", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body.label !== "string" || typeof body.kind !== "string") {
+    return c.json({ error: "INVALID_BODY" }, 400);
+  }
+  if (body.mode !== "once" && body.mode !== "always") return c.json({ error: "INVALID_MODE" }, 400);
+  const unit = typeof body.unit === "string" ? body.unit : undefined;
+  const itemHash =
+    typeof body.item_hash === "string" && body.item_hash
+      ? body.item_hash
+      : await sha256Hex(new TextEncoder().encode(`${body.label}|${body.kind}|${unit ?? ""}`));
+  if (body.mode === "once") return c.json({ item_hash: itemHash, registered: false });
+
+  const actorId = c.get("actorId");
+  const templateId = ulid();
+  const item: Record<string, unknown> = { label: body.label, kind: body.kind, item_hash: itemHash };
+  if (unit) item.unit = unit;
+  const res = await store(c).putEvent(
+    envelope(TEMPLATE_TYPE, templateId, "schemas/events/obs-template.schema.json", actorId, {
+      template_id: templateId,
+      actor_id: actorId,
+      title: `dict:${body.label}`,
+      items: [item],
+    }),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_TEMPLATE", details: res.errors }, 400);
+  return c.json({ item_hash: itemHash, registered: true, template_id: templateId }, 202);
+});
+
+// POST /observation/measurements — appendMeasurement (OBS-06/18). value_origin is
+// mandatory here (the obs-capture schema keeps it optional=ADDITIVE; the required
+// gate lives in-route). Two measurements for one item with different origins
+// (imputed vs estimated) are BOTH kept — the array has no per-item collapse.
+obsRoutes.post("/observation/measurements", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
+  const measurements = Array.isArray(body.measurements) ? (body.measurements as Record<string, unknown>[]) : null;
+  if (!measurements || measurements.length === 0) return c.json({ error: "NO_MEASUREMENTS" }, 400);
+  for (const m of measurements) {
+    if (m.value_origin === undefined) return c.json({ error: "MEASUREMENT_VALUE_ORIGIN_REQUIRED" }, 400);
+    if (typeof m.value_origin !== "string" || !VALUE_ORIGINS.has(m.value_origin)) {
+      return c.json({ error: "INVALID_VALUE_ORIGIN" }, 400);
+    }
+  }
+  // OBS-18 item_hash 未登録検出 against the measurement dictionary.
+  const dict = new Set<string>();
+  for (const t of (await store(c).listEvents(`truth/${TEMPLATE_TYPE}/`)).map(dataOf)) {
+    for (const it of (Array.isArray(t.items) ? t.items : []) as Record<string, unknown>[]) {
+      if (typeof it.item_hash === "string") dict.add(it.item_hash);
+    }
+  }
+  const unregistered = [
+    ...new Set(
+      measurements
+        .map((m) => (typeof m.item_hash === "string" ? m.item_hash : ""))
+        .filter((h) => h && !dict.has(h)),
+    ),
+  ];
+
+  const actorId = c.get("actorId");
+  const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
+  const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId, domain: body.domain, measurements };
+  for (const k of ["subject_ref", "template_id", "entry_mode"] as const) if (body[k] !== undefined) data[k] = body[k];
+
+  const res = await store(c).putEvent(
+    envelope(CAPTURE_TYPE, captureId, "schemas/events/obs-capture.schema.json", actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_CAPTURE", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_CAPTURE", key: res.key }, 409);
+  return c.json({ capture_id: captureId, unregistered_item_hashes: unregistered }, 202);
+});
+
+// GET /observation/targets/catalog — local classification tree + QIDs (OBS-02).
+obsRoutes.get("/observation/targets/catalog", (c) => {
+  const families: Record<string, Record<string, CatalogLeaf[]>> = {};
+  for (const leaf of catalogAll()) {
+    const { family, genus } = leaf.taxonomy;
+    ((families[family] ??= {})[genus] ??= []).push(leaf);
+  }
+  const tree = Object.entries(families).map(([family, genera]) => ({
+    family,
+    genera: Object.entries(genera).map(([genus, species]) => ({
+      genus,
+      species: species.map((l) => ({ qid: l.qid, scientific_name: l.scientific_name })),
+    })),
+  }));
+  return c.json({ size: CATALOG_SIZE, question_bounds: NAVIGATOR_TARGET_QUESTIONS, families: tree });
+});
+
+// POST /observation/targets/search — 3 paths to a QID (OBS-02/03): name substring
+// / yes-no deterministic binary search (7〜12 問収束) / tree navigation. Returns
+// CANDIDATES/resolved QID only — never sets species_confirmed (確定は commit の
+// user ゲート、AI は書けない).
+obsRoutes.post("/observation/targets/search", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
+  const all = catalogAll();
+
+  if (body.mode === "name") {
+    const q = typeof body.query === "string" ? body.query.toLowerCase() : "";
+    if (!q) return c.json({ error: "MISSING_QUERY" }, 400);
+    const candidates = all
+      .filter((l) => l.scientific_name.toLowerCase().includes(q))
+      .slice(0, 20)
+      .map((l) => ({ qid: l.qid, scientific_name: l.scientific_name, taxonomy: l.taxonomy }));
+    return c.json({ mode: "name", candidates });
+  }
+
+  if (body.mode === "tree") {
+    const path = Array.isArray(body.path)
+      ? (body.path as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
+    let pool = all;
+    if (path[0]) pool = pool.filter((l) => l.taxonomy.family === path[0]);
+    if (path[1]) pool = pool.filter((l) => l.taxonomy.genus === path[1]);
+    if (path[2]) pool = pool.filter((l) => l.taxonomy.species === path[2]);
+    if (path.length >= 3) {
+      const leaf = pool[0];
+      if (!leaf) return c.json({ error: "NOT_FOUND" }, 404);
+      return c.json({ mode: "tree", resolved: { qid: leaf.qid, taxonomy: leaf.taxonomy } });
+    }
+    const rank = (["family", "genus", "species"] as const)[path.length];
+    const children = [...new Set(pool.map((l) => l.taxonomy[rank]))];
+    return c.json({ mode: "tree", children });
+  }
+
+  if (body.mode === "yesno") {
+    // Stateless binary search: client replays its yes/no answers; each halves the
+    // candidate range. 256 leaves ⇒ ceil(log2)=8 questions to isolate one QID.
+    const answers = Array.isArray(body.answers) ? (body.answers as unknown[]).map(Boolean) : [];
+    let lo = 0;
+    let hi = all.length;
+    let asked = 0;
+    for (const a of answers) {
+      if (hi - lo <= 1) break;
+      const mid = (lo + hi) >> 1;
+      if (a) lo = mid;
+      else hi = mid;
+      asked++;
+    }
+    if (hi - lo <= 1) {
+      const leaf = all[lo];
+      return c.json({ mode: "yesno", resolved: { qid: leaf.qid, taxonomy: leaf.taxonomy }, questions_asked: asked });
+    }
+    const mid = (lo + hi) >> 1;
+    return c.json({ mode: "yesno", resolved: null, question: { index: asked, pivot: all[mid].scientific_name, remaining: hi - lo } });
+  }
+
+  return c.json({ error: "INVALID_MODE" }, 400);
+});
+
+// GET /observation/templates/{template_id} — one template with scope (OBS-18).
+obsRoutes.get("/observation/templates/:template_id", async (c) => {
+  const id = c.req.param("template_id");
+  const t = await store(c).readEvent(`truth/${TEMPLATE_TYPE}/${id}.json`);
+  if (!t) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json({ template: dataOf(t) });
+});
+
+// POST /observation/annotations — append a LabelMe AST annotation (OBS-46/47).
+// Append-only: there is deliberately NO edit route — an auto-measured value can
+// never be mutated (不変条項③). Manual annotations carry a value_origin tag.
+obsRoutes.post("/observation/annotations", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body.capture_id !== "string" || !body.capture_id) return c.json({ error: "INVALID_BODY" }, 400);
+  if (typeof body.ast !== "object" || body.ast === null) return c.json({ error: "INVALID_AST" }, 400);
+  const actorId = c.get("actorId");
+  const annotationId = ulid();
+  const data: Record<string, unknown> = {
+    annotation_id: annotationId,
+    capture_id: body.capture_id,
+    ast: body.ast,
+    actor_id: actorId,
+    created_at: new Date().toISOString(),
+  };
+  if (body.value_origin !== undefined) {
+    if (typeof body.value_origin !== "string" || !VALUE_ORIGINS.has(body.value_origin)) {
+      return c.json({ error: "INVALID_VALUE_ORIGIN" }, 400);
+    }
+    data.value_origin = body.value_origin;
+  }
+  const key = `truth/${ANNOTATION_TYPE}/${body.capture_id}-${annotationId}.json`;
+  const res = await store(c).putEventAt(
+    key,
+    envelope(ANNOTATION_TYPE, annotationId, "schemas/events/obs-annotation.schema.json", actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_ANNOTATION", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_ANNOTATION", key: res.key }, 409);
+  return c.json({ annotation_id: annotationId }, 202);
+});
+
+// POST /observation/{capture_id}/reanalyze — append a NEW analysis (OBS-48). Never
+// overwrites a prior analysis; records delta + correction_semver; the original
+// image is untouched.
+obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
+  if (typeof body.results !== "object" || body.results === null) return c.json({ error: "MISSING_RESULTS" }, 400);
+  if (typeof body.correction_semver !== "string") return c.json({ error: "MISSING_SEMVER" }, 400);
+  const actorId = c.get("actorId");
+  const analysisId = ulid();
+  const data: Record<string, unknown> = {
+    analysis_id: analysisId,
+    capture_id: captureId,
+    results: body.results,
+    correction_semver: body.correction_semver,
+    is_manual_edit: body.is_manual_edit === true,
+    actor_id: actorId,
+    created_at: new Date().toISOString(),
+  };
+  if (body.delta !== undefined) data.delta = body.delta;
+  const key = `truth/${ANALYSIS_TYPE}/${captureId}-${analysisId}.json`;
+  const res = await store(c).putEventAt(
+    key,
+    envelope(ANALYSIS_TYPE, analysisId, "schemas/events/obs-analysis.schema.json", actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_ANALYSIS", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_ANALYSIS", key: res.key }, 409);
+  return c.json({ analysis_id: analysisId }, 202);
+});
+
+// GET /observation/{capture_id}/reanalysis-manifest — every analysis for a capture
+// (OBS-48), append order preserved.
+obsRoutes.get("/observation/:capture_id/reanalysis-manifest", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const analyses = (await store(c).listEvents(`truth/${ANALYSIS_TYPE}/${captureId}-`)).map(dataOf);
+  analyses.sort((a, b) => String(a.analysis_id).localeCompare(String(b.analysis_id)));
+  return c.json({ capture_id: captureId, count: analyses.length, analyses });
+});
+
+// GET /observation/{capture_id}/thumbnail/{photo_id} — 512px JPEG only (OBS-23).
+// There is deliberately NO raw bulk-download route; thumbnails are the only
+// image-listing surface beyond the single-photo /image/{photo_id}.
+obsRoutes.get("/observation/:capture_id/thumbnail/:photo_id", async (c) => {
+  const photoId = c.req.param("photo_id");
+  const obj = await c.env.TRUTH.get(`media/thumbnail/${photoId}`);
+  if (!obj) return c.json({ error: "NOT_FOUND" }, 404);
+  return new Response(await obj.arrayBuffer(), { headers: { "content-type": "image/jpeg" } });
+});
+
+// POST /solid-observation/commit — the ONLY save path after the 3-screen confirm
+// (OBS-25). Enforces the OBS-62/03 gate: a subspecies candidate must be
+// user-confirmed (AI 自動確定禁止) before anything is written.
+obsRoutes.post("/solid-observation/commit", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
+  if (body.subspecies_candidate !== undefined && body.subspecies_confirmed_by !== "user") {
+    return c.json({ error: "SUBSPECIES_NOT_CONFIRMED" }, 400);
+  }
+  const actorId = c.get("actorId");
+  const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
+  const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId };
+  for (const k of CAPTURE_FIELDS) if (body[k] !== undefined) data[k] = body[k];
+  const res = await store(c).putEvent(
+    envelope(CAPTURE_TYPE, captureId, "schemas/events/obs-capture.schema.json", actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_CAPTURE", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_CAPTURE", key: res.key }, 409);
+  return c.json({ capture_id: captureId, committed: true }, 202);
 });
 
 // GET /observation/{capture_id} — detail projection: capture + photos[].
@@ -373,6 +856,9 @@ obsRoutes.post("/individuals/:individual_id/qr", async (c) => {
 });
 
 // GET /qr/{token} — resolve token → { individual_id } (observation re-entry).
+// With ?prefill=1 (OBS-20): also returns entry_mode=qr + last-observation prefill
+// (棚→個体→種→テンプレ連鎖) so the QR-resume form starts pre-filled. The bare
+// call keeps its original { individual_id } shape (existing contract).
 obsRoutes.get("/qr/:token", async (c) => {
   const token = c.req.param("token");
   const ev = await store(c).readEvent(`truth/${QR_TYPE}/${token}.json`);
@@ -381,5 +867,20 @@ obsRoutes.get("/qr/:token", async (c) => {
   if (typeof d.expires_at === "string" && Date.parse(d.expires_at) < Date.now()) {
     return c.json({ error: "QR_EXPIRED" }, 410);
   }
-  return c.json({ individual_id: d.individual_id });
+  if (!c.req.query("prefill")) return c.json({ individual_id: d.individual_id });
+
+  const ref = `individual/${d.individual_id}`;
+  const caps = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .filter((x) => x.subject_ref === ref)
+    .sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id)));
+  const last = caps[caps.length - 1];
+  const prefill = last
+    ? {
+        template_id: last.template_id ?? null,
+        species_candidate: last.species_candidate ?? null,
+        measurements: last.measurements ?? [],
+      }
+    : null;
+  return c.json({ individual_id: d.individual_id, entry_mode: "qr", prefill });
 });

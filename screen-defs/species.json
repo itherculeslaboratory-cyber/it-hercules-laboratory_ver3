@@ -1,0 +1,43 @@
+{
+  "screen_id": "species",
+  "route": "/species",
+  "title": "種の管理",
+  "layout": "standard",
+  "notes": "IND-19 種/形態。put-if-absent(重複は 409)・fork(forked_from)系譜・統計は自動計算投影(平均サイズ/体重/市場平均価格)。alias は人間承認後のみ統合。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "種の管理", "level": 1 } },
+            { "id": "list-title", "type": "heading", "props": { "text": "登録済みの種", "level": 2 } },
+            {
+              "id": "species-list",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/species",
+                "bind_items": "data.species-list.species",
+                "item_text": "{{name}}"
+              }
+            },
+            { "id": "create-title", "type": "heading", "props": { "text": "種を追加する", "level": 2 } },
+            {
+              "id": "create-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/species" },
+              "children": [
+                { "id": "name", "type": "field", "props": { "variant": "text", "name": "name", "label": "種名", "placeholder": "例: Dynastes hercules", "required": true } },
+                { "id": "forked-from", "type": "field", "props": { "variant": "text", "name": "forked_from", "label": "fork 元の種 ID（任意）", "placeholder": "species/..." } },
+                { "id": "submit", "type": "button", "props": { "label": "追加する", "variant": "primary", "type": "submit" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

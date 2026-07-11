@@ -12,23 +12,23 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/auth/register,VPS,Workers,W2,infra-route-008,protected,merged,magic-link に統合（第6回裁定・独立 route なし）
 —,POST,/api/v1/auth/verify,VPS,Workers,W2,infra-route-009,public,implemented,
 —,POST,/api/v1/onboarding/complete,VPS,Workers,W2,infra-route-010,protected,planned,
-—,GET,/api/v1/home/summary,VPS,Workers,W2,infra-route-011,protected,planned,
-—,GET,/api/v1/observation/{capture_id},VPS,Workers,W2,infra-route-012,protected,planned,
-—,GET,/api/v1/observation/{capture_id}/image,VPS,Workers,W2,infra-route-013,protected,planned,
-—,GET,/api/v1/observation/{capture_id}/reanalysis-manifest,VPS,Workers,W2,infra-route-014,protected,planned,
-—,GET,/api/v1/observation/measurement-dictionary,VPS,Workers,W2,infra-route-015,protected,planned,
-—,GET,/api/v1/observation/targets/catalog,VPS,Workers,W2,infra-route-016,protected,planned,
-—,GET,/api/v1/observation/templates,VPS,Workers,W2,infra-route-017,protected,planned,
-—,GET,/api/v1/observation/templates/{template_id},VPS,Workers,W2,infra-route-018,protected,planned,
+—,GET,/api/v1/home/summary,VPS,Workers,W2,infra-route-011,protected,implemented,今日の要約 近接/超過/観測中 投影(C5 K1・design-k1 §1.1)
+—,GET,/api/v1/observation/{capture_id},VPS,Workers,W2,infra-route-012,protected,implemented,観測詳細投影(既存 reuse・design-k1 §1.1)
+—,GET,/api/v1/observation/{capture_id}/image,VPS,Workers,W2,infra-route-013,protected,implemented,画像は /image/{photo_id} で配信・512px サムネ /thumbnail/{photo_id} 追加(OBS-23)
+—,GET,/api/v1/observation/{capture_id}/reanalysis-manifest,VPS,Workers,W2,infra-route-014,protected,implemented,再解析マニフェスト(OBS-48・新 analysis_id append 非上書き)
+—,GET,/api/v1/observation/measurement-dictionary,VPS,Workers,W2,infra-route-015,protected,implemented,item_hash 登録辞書(OBS-18)
+—,GET,/api/v1/observation/targets/catalog,VPS,Workers,W2,infra-route-016,protected,implemented,ローカル分類ツリー+QID(OBS-02)
+—,GET,/api/v1/observation/templates,VPS,Workers,W2,infra-route-017,protected,implemented,テンプレ一覧投影(既存 reuse・OBS-18)
+—,GET,/api/v1/observation/templates/{template_id},VPS,Workers,W2,infra-route-018,protected,implemented,雌雄別/令齢別/置き場所別 scope 込みテンプレ(OBS-18)
 —,POST,/api/captures,VPS,Workers,W2,infra-route-019,protected,merged,ver3 で /api/v1/observation/captures に統合
-—,POST,/api/measurements,VPS,Workers,W2,infra-route-020,protected,planned,
-—,POST,/api/solid-observation/commit,VPS,Workers,W2,infra-route-021,protected,planned,
-—,POST,/api/v1/observation/dictionary-extensions,VPS,Workers,W2,infra-route-022,protected,planned,
-—,POST,/api/v1/observation/measurements,VPS,Workers,W2,infra-route-023,protected,planned,
-—,POST,/api/v1/observation/search,VPS,Workers,W2,infra-route-024,protected,implemented,決定論梯子 whitelist→subset→embedding(C3・design-c3 §1)
-—,POST,/api/v1/observation/targets/search,VPS,Workers,W2,infra-route-025,protected,planned,
-—,POST,/api/v1/observation/templates,VPS,Workers,W2,infra-route-026,protected,planned,
-—,POST,/api/v1/observation/upload,VPS,Workers,W2,infra-route-027,protected,planned,
+—,POST,/api/measurements,VPS,Workers,W2,infra-route-020,protected,merged,ver3 で /api/v1/observation/measurements に統合(infra-route-023)
+—,POST,/api/solid-observation/commit,VPS,Workers,W2,infra-route-021,protected,implemented,3画面確認後の唯一の保存(OBS-25・ver3 実体 /api/v1/solid-observation/commit)
+—,POST,/api/v1/observation/dictionary-extensions,VPS,Workers,W2,infra-route-022,protected,implemented,未登録項目 はい/今回だけ/常に(OBS-18)
+—,POST,/api/v1/observation/measurements,VPS,Workers,W2,infra-route-023,protected,implemented,value_origin 必須・item_hash 未登録検出(OBS-06/18)
+—,POST,/api/v1/observation/search,VPS,Workers,W2,infra-route-024,protected,implemented,決定論梯子 whitelist→subset→embedding(C3・design-c3 §1)+ query自身除外/prototype平均/合成rerank(C5 OBS-10/11)
+—,POST,/api/v1/observation/targets/search,VPS,Workers,W2,infra-route-025,protected,implemented,学名 substring / yes-no二分探索 / ツリー → QID+taxonomy(OBS-02/03)
+—,POST,/api/v1/observation/templates,VPS,Workers,W2,infra-route-026,protected,implemented,テンプレ append(既存 reuse・fork via forked_from・OBS-18)
+—,POST,/api/v1/observation/upload,VPS,Workers,W2,infra-route-027,protected,implemented,撮影時 photo_conditions 自動埋込(既存 reuse・OBS-28)
 —,GET,/api/v1/market/listings,VPS,Workers,W2,infra-route-028,protected,implemented,一覧投影(design-c4 §3・V3-MKT-01 出品/閲覧まで)
 —,GET,/api/v1/market/listings/{listing_id},VPS,Workers,W2,infra-route-029,protected,implemented,詳細投影(design-c4 §3・POST /market/listings 出品も同波・ver2 matrix 未登録の ver3 新規 route)
 —,GET,/api/v1/market/transfer/{listing_id},VPS,Workers,W2,infra-route-030,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)

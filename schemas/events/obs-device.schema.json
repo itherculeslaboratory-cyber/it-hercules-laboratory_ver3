@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-device.schema.json",
+  "title": "Observation Device data (ihl.obs.device.v1)",
+  "description": "観測機器（センサ/カメラ等）登録の append-only イベントの data 部。Truth キー truth/ihl.obs.device.v1/<device_id>.json。機器は placement（置き場所）に紐付ける。個体への直接紐付けは route が 400 で拒否（本スキーマは個体参照フィールドを持たない）。API キーは暗号化保存（api_key_ciphertext・平文非保持）、実鍵投入は人間ゲート（後波）。",
+  "x_ihl_req": "V3-OBS-31",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["device_id", "provider", "display_name", "actor_id"],
+  "properties": {
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "機器の一意キー。"
+    },
+    "placement_ref": {
+      "type": "string",
+      "description": "紐付け先の置き場所参照（任意・個体ではなく placement のみ）。"
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1,
+      "description": "機器プロバイダ（SwitchBot 等）。"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "表示名（raw device ID は非表示・display_name のみ露出）。"
+    },
+    "api_key_ciphertext": {
+      "type": "string",
+      "description": "API キーの暗号文（平文は保持しない・任意）。"
+    },
+    "started_on": {
+      "type": "string",
+      "format": "date",
+      "description": "運用開始日（日付のみ・任意）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "登録者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "登録時刻（RFC3339・任意）。"
+    }
+  },
+  "additionalProperties": false
+}

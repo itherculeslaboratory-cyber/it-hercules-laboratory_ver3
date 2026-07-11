@@ -64,11 +64,53 @@ export interface ObsCapture {
      * 項目ハッシュ（任意）。
      */
     item_hash?: string;
+    /**
+     * 計測値の出所（frozen provenance value_origin 9 値・任意=ADDITIVE。必須ゲートは appendMeasurement route 側で担保 V3-OBS-06）。
+     */
+    value_origin?:
+      | "direct_observed"
+      | "image_derived"
+      | "environment_derived"
+      | "lineage_derived"
+      | "estimated"
+      | "imputed"
+      | "aggregate"
+      | "model_inference"
+      | "unknown";
   }[];
   /**
    * 使用した観測テンプレの template_id（任意）。
    */
   template_id?: string;
+  /**
+   * 入力経路（manual=手入力 / qr=QR 再開・任意 V3-OBS-20）。
+   */
+  entry_mode?: "manual" | "qr";
+  /**
+   * 亜種の候補（ユーザー入力のみ・任意 V3-OBS-62）。
+   */
+  subspecies_candidate?: string;
+  /**
+   * 亜種の確定者。常に user（AI 確定は不可・任意 V3-OBS-62）。
+   */
+  subspecies_confirmed_by?: "user";
+  /**
+   * 撮影時の環境条件（自動埋込・任意 V3-OBS-28）。
+   */
+  photo_conditions?: {
+    /**
+     * 気温（℃・任意）。
+     */
+    temp_c?: number;
+    /**
+     * 湿度（%・任意）。
+     */
+    humidity_pct?: number;
+    /**
+     * 撮影時刻（RFC3339）。
+     */
+    captured_at: string;
+  };
   /**
    * 自由記述メモ（任意）。
    */

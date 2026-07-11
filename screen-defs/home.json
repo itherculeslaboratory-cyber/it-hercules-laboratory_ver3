@@ -14,6 +14,16 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "観測ホーム", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text": "新しい観測を始めるか、個体を開きます。", "muted": true } },
+            { "id": "today-title", "type": "heading", "props": { "text": "今日の要約", "level": 2 } },
+            {
+              "id": "today",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/home/summary",
+                "bind_items": "data.today.overdue",
+                "item_text": "{{individual_id}} 次回 {{next_observation_at}}"
+              }
+            },
             {
               "id": "start-observe",
               "type": "button",
@@ -25,6 +35,24 @@
               "type": "button",
               "props": { "label": "個体を開く", "variant": "secondary" },
               "action": { "kind": "navigate", "to": "individual-detail" }
+            },
+            {
+              "id": "open-match",
+              "type": "button",
+              "props": { "label": "マッチングを見る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "match" }
+            },
+            {
+              "id": "open-species",
+              "type": "button",
+              "props": { "label": "種を管理する", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "species" }
+            },
+            {
+              "id": "open-device",
+              "type": "button",
+              "props": { "label": "機器を管理する", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "device" }
             }
           ]
         }
@@ -33,6 +61,9 @@
   ],
   "transitions": [
     { "from": "start-observe", "to_screen_id": "obs-domain-select", "label": "観測ドメイン選択へ" },
-    { "from": "open-individual", "to_screen_id": "individual-detail", "label": "個体詳細へ" }
+    { "from": "open-individual", "to_screen_id": "individual-detail", "label": "個体詳細へ" },
+    { "from": "open-match", "to_screen_id": "match", "label": "マッチングへ" },
+    { "from": "open-species", "to_screen_id": "species", "label": "種の管理へ" },
+    { "from": "open-device", "to_screen_id": "device", "label": "機器の管理へ" }
   ]
 }

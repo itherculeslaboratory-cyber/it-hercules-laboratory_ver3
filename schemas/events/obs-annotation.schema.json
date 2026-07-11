@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-annotation.schema.json",
+  "title": "Observation Annotation data (ihl.obs.annotation.v1)",
+  "description": "画像アノテーション（LabelMe AST）の append-only イベントの data 部。Truth キー truth/ihl.obs.annotation.v1/<capture_id>-<ulid>.json。ast は点／線／polygon／label を持つ開いた構造（LabelMe 由来・postMessage 契約で受領）。手入力値は value_origin を付与、自動計測値は上書き不可（append-only・不変条項③）。iframe/CV 実体は後波。",
+  "x_ihl_req": "V3-OBS-46 / V3-OBS-47",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["annotation_id", "capture_id", "ast", "actor_id"],
+  "properties": {
+    "annotation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "アノテーションの一意キー。"
+    },
+    "capture_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象観測セッションの capture_id。"
+    },
+    "ast": {
+      "type": "object",
+      "description": "LabelMe アノテーション AST（点／線／polygon／label 等・開いた構造）。",
+      "additionalProperties": true
+    },
+    "value_origin": {
+      "type": "string",
+      "enum": [
+        "direct_observed",
+        "image_derived",
+        "environment_derived",
+        "lineage_derived",
+        "estimated",
+        "imputed",
+        "aggregate",
+        "model_inference",
+        "unknown"
+      ],
+      "description": "計測値の出所（frozen provenance value_origin 9 値・任意。手入力タグ付与時に付す）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "記録者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "記録時刻（RFC3339・任意）。"
+    }
+  },
+  "additionalProperties": false
+}

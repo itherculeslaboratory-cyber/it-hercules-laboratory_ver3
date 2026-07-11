@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/taxon-morph.schema.json",
+  "title": "Taxon Morph data (ihl.taxon.morph.v1)",
+  "description": "形態（モルフ）マスタの append-only イベントの data 部。Truth キー truth/ihl.taxon.morph.v1/<morph_id>.json（put-if-absent 409）。fork（forked_from）で系譜継承（フォーク文化 不変条項②）。",
+  "x_ihl_req": "V3-IND-19",
+  "x_ihl_source": "docs/planning/c5/design-k1.md §1.2",
+  "type": "object",
+  "required": ["morph_id", "species_id", "name", "actor_id"],
+  "properties": {
+    "morph_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "形態の一意キー。"
+    },
+    "species_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "所属する種の species_id。"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "形態名。"
+    },
+    "forked_from": {
+      "type": "string",
+      "description": "fork 元の morph_id（フォーク系譜・任意）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "作成者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "作成時刻（RFC3339・任意）。"
+    }
+  },
+  "additionalProperties": false
+}
