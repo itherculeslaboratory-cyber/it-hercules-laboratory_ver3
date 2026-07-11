@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// GATE: required public documents must exist (V3-SEC-31). LICENSE is excluded
-// until the human gate "LICENSE 確定" rules on it (status.md 人間ゲート一覧).
-// The repo is published
+// GATE: required public documents must exist (V3-SEC-31). The repo is published
 // as a single public clone (不変条項②), so the governance/legal front matter must
 // be present before publish. Issuing the files is reversible; Apache 2.0 の最終確定
 // と公開の実施そのものは人間ゲート — this GATE only enforces existence, not content.
@@ -15,8 +13,8 @@ export const REQUIRED_PUBLIC_DOCS = [
   "README.md",
   "CONTRIBUTING.md",
   "CODE_OF_CONDUCT.md",
-  // "LICENSE" は人間ゲート「LICENSE 確定」の裁定後にここへ追加する。
-  // 候補本文(Apache 2.0)は docs/planning/c5/license-material-apache-2.0.txt に材料として提示済み。
+  // LICENSE = Apache 2.0 は第12回裁定(2026-07-11)で人間確定済み。
+  "LICENSE",
 ];
 
 /** Return the required public docs missing from `root` ([] = all present). */

@@ -1,10 +1,8 @@
 # MANIFESTO — it-hercules-laboratory
 
-> **status: draft（起票は可逆）。** ライセンスを Apache License 2.0 とすること、および
-> この repo を公開すること（公開日の実施）は**人間ゲート**であり、本ファイルの起票では確定しない。
-> ライセンス候補本文（Apache 2.0 全文）は `docs/planning/c5/license-material-apache-2.0.txt` に
-> 判断材料として提示済み。裁定後に repo 直下 `LICENSE` へ昇格する。本宣言も公開判断の材料として
-> 先行して置くもので、最終確定・公開の実施は人間の裁定を待つ。
+> **status: active。** ライセンスは **Apache License 2.0 に確定**（第12回ユーザー裁定
+> 2026-07-11・`docs/planning/rulings/user-ruling-2026-07-11-round-12.md`・repo 直下 `LICENSE`）。
+> この repo を**公開すること（公開日の実施）は引き続き人間ゲート**であり未裁定。
 
 これは it-hercules-laboratory の思想・構造・優先順位の宣言である。実装が本宣言と
 矛盾したとき、正すのは実装のほうだ。

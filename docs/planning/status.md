@@ -42,7 +42,7 @@ status: draft
 
 | ゲート | 内容 | 状態 |
 |--------|------|------|
-| LICENSE 確定 | AI が候補比較を提示 → ユーザー確定。確定まで private | 未 |
+| LICENSE 確定 | **Apache 2.0 に確定**(第12回裁定 2026-07-11・`rulings/user-ruling-2026-07-11-round-12.md`)。公開の実施は別ゲートのまま未 | 済 |
 | CL-07 裁定 4 点 | ①形式=JPEG確定 ②実装経路第1手=jSquash on Workers（$0硬制約なら CF Images） ③受け入れ条件をバイト級→契約級互換に読み替え ④EXIF transpose を ver3 の正しい挙動として採用（ver2 実装は未適用）。材料 `docs/planning/c3/cl-07-thumbnail-options.md` | 未 |
 | Resend DNS（CF トークン権限） | DNS 検証完了・`auth@it-hercules.uk` 実送信確認済（2026-07-11）。`RESEND_API_KEY` は D:\env\platform.env に格納済み | 済 |
 | GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`）。**本番初入金時に C4 (ii) 残余 1 点（U-code の remarks 文字変換の有無）を確定し evidence §9 を追記**（第11回裁定・sandbox では検証手段なしと実機確定） | 未 |

@@ -1,6 +1,6 @@
 // V3-SEC-31 — public-docs existence GATE. checkPublicDocs fails when any of the
 // required docs is missing and passes for the real repo root where all exist.
-// (LICENSE joins REQUIRED_PUBLIC_DOCS only after the human gate "LICENSE 確定".)
+// (LICENSE = Apache 2.0 は第12回裁定 2026-07-11 で確定済み・REQUIRED に復帰。)
 import { describe, expect, it } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
