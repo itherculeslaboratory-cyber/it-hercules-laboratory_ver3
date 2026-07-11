@@ -22,4 +22,4 @@ export type Bindings = {
   GMO_SUNABAR_ACCOUNT_ID?: string;
 };
 
-export type Variables = { actorId: string };
+export type Variables = { actorId: string; roles: string[] };

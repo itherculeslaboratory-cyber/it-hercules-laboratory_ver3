@@ -14,8 +14,9 @@ export function loadScreenDef(id: string): ScreenDef {
 }
 
 export function allScreenDefIds(): string[] {
+  // navigation.json is a flow map (entry/screens/edges), not a ScreenDef — exclude it.
   return readdirSync(SCREENDEFS_DIR)
-    .filter((f) => f.endsWith(".json"))
+    .filter((f) => f.endsWith(".json") && f !== "navigation.json")
     .map((f) => f.replace(/\.json$/, ""));
 }
 

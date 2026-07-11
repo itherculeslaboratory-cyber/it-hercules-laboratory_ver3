@@ -20,6 +20,7 @@
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/auth/magic-link", "body_from": "magic-form" },
               "children": [
                 { "id": "email", "type": "field", "props": { "variant": "text", "name": "email", "label": "メールアドレス", "placeholder": "you@example.com", "required": true } },
+                { "id": "terms", "type": "field", "props": { "variant": "checkbox", "name": "terms", "label": "利用規約に同意する", "required": true } },
                 { "id": "send", "type": "button", "props": { "label": "ログインリンクを送る", "variant": "primary", "type": "submit" } }
               ]
             },

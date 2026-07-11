@@ -18,6 +18,9 @@ const require = createRequire(join(ROOT, "package.json"));
 // Files where raw color is the source of truth (exempt from the scan).
 const TOKEN_FILES = new Set(["apps/web/src/app/globals.css"]);
 
+// Flow maps under screen-defs/ that are not ScreenDefs (exempt from schema check).
+const NON_SCREENDEF = new Set(["screen-defs/navigation.json"]);
+
 const RAW_HEX = /#[0-9a-fA-F]{3,8}\b/;
 // Tailwind color-scale utility (bg-blue-500) or arbitrary color value (bg-[#abc]).
 const COLOR_SCALE =
@@ -74,6 +77,7 @@ function runGate() {
     const validate = ajv.compile(JSON.parse(readFileSync(schemaPath, "utf8")));
     for (const file of walk(screenDir, [".json"])) {
       const rel = relative(ROOT, file).replace(/\\/g, "/");
+      if (NON_SCREENDEF.has(rel)) continue;
       const doc = JSON.parse(readFileSync(file, "utf8"));
       if (!validate(doc)) {
         for (const e of validate.errors ?? []) {

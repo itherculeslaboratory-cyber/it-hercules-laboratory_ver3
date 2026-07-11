@@ -1,0 +1,31 @@
+{
+  "screen_id": "terms",
+  "route": "/onboarding/terms",
+  "title": "利用規約",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "利用規約", "level": 1 } },
+            { "id": "body", "type": "text", "props": { "text": "本サービスの利用にあたり、観測データの取り扱いとコミュニティ行動規範に同意いただきます。同意すると観測を始められます。" } },
+            {
+              "id": "agree",
+              "type": "button",
+              "props": { "label": "同意して始める", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "home" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "agree", "to_screen_id": "home", "label": "規約同意後" }
+  ]
+}

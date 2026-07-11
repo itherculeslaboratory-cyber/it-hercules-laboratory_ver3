@@ -12,6 +12,10 @@ export const KARMA_VALUE_INITIAL = 0;
 export const MONTHLY_RECOVERY = 10;
 export const RECOVERY_BASE_DAY = 25;
 
+// V3-SEC-06: 決済 8% 積立。accrued_total = round(confirmed_total * rate)。
+// 純関数・都度再計算(常駐 DB 禁止)。較正は V3-GOV-17 管理 GUI(後波)。
+export const SETTLEMENT_ACCRUAL_RATE = 0.08;
+
 // V3-KRM-02 検算アンカー(確定): カルマカウント 0→5 で -12、5→10 で -131。
 // = Σ Fib(n)(n=1..5)=1+1+2+3+5=12 / Σ Fib(n)(n=6..10)=8+13+21+34+55=131。
 // Fib(1)=Fib(2)=1 の標準フィボナッチ。この 2 値がテストベクタの正本。

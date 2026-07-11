@@ -17,6 +17,10 @@ export type NodeType =
   | "qr-code"
   | "link";
 
+// field node props.variant (V3-AUT-06 adds "checkbox"). Documents the supported
+// controls; the Renderer reads props.variant untyped, schema is the SSOT.
+export type FieldVariant = "text" | "number" | "select" | "photo" | "checkbox";
+
 export type Action =
   | {
       kind: "api";

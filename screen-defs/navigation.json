@@ -1,0 +1,17 @@
+{
+  "entry": "login",
+  "screens": ["login","country-select","language-select","terms","home","obs-domain-select","obs-entry","obs-detail","individual-detail","qr-resume"],
+  "edges": [
+    {"from":"login","to":"country-select","label":"オンボーディング開始"},
+    {"from":"country-select","to":"language-select","label":"国選択後"},
+    {"from":"language-select","to":"terms","label":"言語選択後"},
+    {"from":"terms","to":"home","label":"規約同意後"},
+    {"from":"login","to":"home","label":"dev-login"},
+    {"from":"home","to":"obs-domain-select","label":"観測ドメイン選択へ"},
+    {"from":"home","to":"individual-detail","label":"個体詳細へ"},
+    {"from":"obs-domain-select","to":"obs-entry","label":"生き物ドメインで観測入力へ"},
+    {"from":"obs-entry","to":"obs-detail","label":"記録後に詳細ビューへ"},
+    {"from":"obs-detail","to":"individual-detail","label":"個体詳細へ"},
+    {"from":"qr-resume","to":"obs-entry","label":"個体文脈付きで観測入力へ"}
+  ]
+}

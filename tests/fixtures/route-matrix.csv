@@ -46,7 +46,7 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/me/settings,VPS,Workers,W2,infra-route-042,protected,planned,
 —,GET,/api/v1/settings,VPS,Workers,W2,infra-route-043,protected,planned,
 —,PATCH,/api/v1/me/preferences,VPS,Workers,W2,infra-route-044,protected,planned,
-—,POST,/api/v1/settings/pii-session,VPS,Workers,W2,infra-route-045,protected,planned,
+—,POST,/api/v1/settings/pii-session,VPS,Workers,W2,infra-route-045,protected,implemented,
 —,GET,/api/v1/theme-packs,VPS,Workers,W2,infra-route-046,protected,planned,
 —,GET,/api/v1/theme-packs/{pack_id},VPS,Workers,W2,infra-route-047,protected,planned,
 —,POST,/api/v1/builder/canvas,VPS,Workers,W2,infra-route-048,protected,planned,

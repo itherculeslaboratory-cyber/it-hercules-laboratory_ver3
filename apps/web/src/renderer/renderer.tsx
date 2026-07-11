@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import QRCode from "qrcode";
@@ -51,6 +52,30 @@ const DataSinkCtx = createContext<DataSink>({
   setNodeData: () => {},
   setActionResult: () => {},
 });
+// V3-AUT-06: reactive submit gate. A submit button reads this; outside a gated
+// form it defaults to true (no reactive disable), so only consent forms gate.
+const FormValidityCtx = createContext<boolean>(true);
+
+/** Any node in the tree matching `pred` (recursive, depth-first). */
+function anyField(nodes: ScreenNode[] | undefined, pred: (n: ScreenNode) => boolean): boolean {
+  for (const n of nodes ?? []) {
+    if (pred(n)) return true;
+    if (anyField(n.children, pred)) return true;
+  }
+  return false;
+}
+const isRequiredField = (n: ScreenNode) => n.type === "field" && n.props?.required === true;
+const isRequiredCheckbox = (n: ScreenNode) =>
+  isRequiredField(n) && n.props?.variant === "checkbox";
+
+/** Live validity of a mounted form: every required control is filled/checked. */
+function scanFormValidity(form: HTMLFormElement): boolean {
+  return Array.from(form.querySelectorAll("[data-required='true']")).every((el) => {
+    if (el instanceof HTMLInputElement && el.type === "checkbox") return el.checked;
+    const v = (el as HTMLInputElement | HTMLSelectElement).value;
+    return String(v ?? "").trim() !== "";
+  });
+}
 
 /** Resolve a dotted path (`measurements.0.value`) against a value. */
 export function getPath(obj: unknown, path: string): unknown {
@@ -216,8 +241,12 @@ function ButtonNode({ node }: { node: ScreenNode }) {
   const run = useRunAction(node.id);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(p.error ? String(p.error) : null);
+  const formValid = useContext(FormValidityCtx);
   const loading = pending || p.loading === true;
-  const disabled = p.disabled === true || loading;
+  const isSubmit = (p.type ?? "button") === "submit";
+  // V3-AUT-06: a submit inside a gated (consent) form is disabled from first
+  // paint until the form is valid — before any input event fires.
+  const disabled = p.disabled === true || loading || (isSubmit && !formValid);
 
   const onClick = useCallback(async () => {
     if (!node.action || disabled) return;
@@ -297,6 +326,10 @@ function FieldNode({ node }: { node: ScreenNode }) {
     );
   } else if (variant === "photo") {
     control = <input {...shared} type="file" accept="image/*" />;
+  } else if (variant === "checkbox") {
+    // data-required='true' means "must be checked"; scanFormValidity + the
+    // submit-time missing scan (unchecked => fd.get null) both cover it.
+    control = <input {...shared} type="checkbox" />;
   } else {
     control = (
       <input
@@ -329,6 +362,21 @@ function FormNode({ node }: { node: ScreenNode }) {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(p.error ? String(p.error) : null);
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
+  // V3-AUT-06: a form carrying a required consent checkbox gates its submit
+  // reactively (disabled from first paint until valid). Text-only forms are not
+  // gated, so their submit-time field-error path (below) is unchanged.
+  // ponytail: gate trigger is "has a required checkbox"; extend if more consent
+  // shapes appear. Initial validity is false while any required field is unset
+  // (no field carries a default value/checked today).
+  const gated = useMemo(() => anyField(node.children, isRequiredCheckbox), [node]);
+  const [reactiveValid, setReactiveValid] = useState(
+    () => !anyField(node.children, isRequiredField),
+  );
+  const formValid = gated ? reactiveValid : true;
+  const onFormChange = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => setReactiveValid(scanFormValidity(e.currentTarget)),
+    [],
+  );
 
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -382,11 +430,14 @@ function FormNode({ node }: { node: ScreenNode }) {
       aria-busy={pending || undefined}
       data-loading={pending || undefined}
       onSubmit={onSubmit}
+      onChange={gated ? onFormChange : undefined}
       noValidate
     >
-      <InvalidCtx.Provider value={invalidFields}>
-        <Children nodes={node.children} />
-      </InvalidCtx.Provider>
+      <FormValidityCtx.Provider value={formValid}>
+        <InvalidCtx.Provider value={invalidFields}>
+          <Children nodes={node.children} />
+        </InvalidCtx.Provider>
+      </FormValidityCtx.Provider>
       {formError && (
         <p role="alert" className="civ-form-error">
           {formError}

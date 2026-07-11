@@ -1,0 +1,47 @@
+{
+  "screen_id": "country-select",
+  "route": "/onboarding/country",
+  "title": "国を選ぶ",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "お住まいの国を選んでください", "level": 1 } },
+            {
+              "id": "country",
+              "type": "field",
+              "props": {
+                "variant": "select",
+                "name": "country",
+                "label": "国",
+                "placeholder": "国を選択",
+                "options": [
+                  { "value": "JP", "label": "日本" },
+                  { "value": "US", "label": "アメリカ合衆国" },
+                  { "value": "GB", "label": "イギリス" },
+                  { "value": "DE", "label": "ドイツ" },
+                  { "value": "FR", "label": "フランス" }
+                ]
+              }
+            },
+            {
+              "id": "continue",
+              "type": "button",
+              "props": { "label": "続ける", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "language-select" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "continue", "to_screen_id": "language-select", "label": "国選択後" }
+  ]
+}

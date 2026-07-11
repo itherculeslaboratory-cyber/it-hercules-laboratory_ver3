@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid, deriveTransferCode } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { SETTLEMENT_ACCRUAL_RATE } from "./economy-constants";
 import {
   extractTransferCode,
   makeGmoConnector,
@@ -117,6 +118,7 @@ export interface ReconciliationMeta {
   last_reconciled_at: string | null; // 系の最終照合成立時刻(スカラー)
   matched_count: number; // 本人の照合済 件数
   confirmed_total: number; // 本人の確認入金 合計(円)
+  accrued_total: number; // V3-SEC-06 8% 積立(round(confirmed_total*rate)・都度再計算)
   confirmed_deposits: {
     item_key: string;
     amount: number;
@@ -137,14 +139,16 @@ export async function projectReconciliation(
     if (t > last) last = t;
   }
   const mine = all.filter((d) => d.actor_id === actorId); // 本人スコープ(V3-AUT-17)
+  const confirmed_total = mine.reduce(
+    (a, d) => a + (typeof d.amount === "number" ? d.amount : 0),
+    0,
+  );
   return {
     actor_id: actorId,
     last_reconciled_at: last || null,
     matched_count: mine.length,
-    confirmed_total: mine.reduce(
-      (a, d) => a + (typeof d.amount === "number" ? d.amount : 0),
-      0,
-    ),
+    confirmed_total,
+    accrued_total: Math.round(confirmed_total * SETTLEMENT_ACCRUAL_RATE),
     confirmed_deposits: mine.map((d) => ({
       item_key: String(d.item_key),
       amount: typeof d.amount === "number" ? d.amount : 0,

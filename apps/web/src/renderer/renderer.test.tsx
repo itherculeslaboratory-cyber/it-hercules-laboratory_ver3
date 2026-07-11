@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { render, screen, cleanup, fireEvent, act, waitFor } from "@testing-library/react";
 import { Renderer } from "./renderer";
 import type { Action, ScreenDef } from "./types";
-import { allScreenDefs } from "@/lib/screendefs";
+import { allScreenDefs, loadScreenDef } from "@/lib/screendefs";
 // GATE logic under test (color discipline). Imported for the negative case.
 import { scanColors } from "../../../../scripts/check-ui-tokens.mjs";
 
@@ -15,9 +15,9 @@ function screenDef(nodes: ScreenDef["nodes"]): ScreenDef {
 }
 
 describe("Renderer — screen-defs", () => {
-  it("renders every one of the 7 MVP screen-defs", () => {
+  it("renders every one of the 10 screen-defs (navigation.json excluded)", () => {
     const defs = allScreenDefs();
-    expect(defs.length).toBe(7);
+    expect(defs.length).toBe(10);
     for (const def of defs) {
       const { unmount } = render(<Renderer def={def} onAction={vi.fn()} />);
       // each screen has an h1 heading node -> title text is on screen
@@ -145,6 +145,24 @@ describe("Renderer — form aria-invalid (field regime)", () => {
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.getByLabelText(/項目/)).toHaveAttribute("aria-invalid", "true");
     expect(onAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("Renderer — terms consent checkbox reactive submit (V3-AUT-06)", () => {
+  it("keeps the login submit disabled from first paint until email + terms agreed", () => {
+    render(<Renderer def={loadScreenDef("login")} onAction={vi.fn()} onNavigate={vi.fn()} />);
+    const submit = screen.getByRole("button", { name: "ログインリンクを送る" });
+    // initial paint: no input has fired, terms unchecked -> disabled synchronously
+    expect(submit).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/メールアドレス/), {
+      target: { value: "you@example.com" },
+    });
+    expect(submit).toBeDisabled(); // terms still unchecked
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(submit).toBeEnabled();
+    // unchecking terms re-disables the submit
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(submit).toBeDisabled();
   });
 });
 

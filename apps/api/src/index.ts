@@ -9,6 +9,7 @@ import { collectorRoutes } from "./collector-routes";
 import { ledgerRoutes } from "./ledger-routes";
 import { gmoRoutes } from "./gmo-routes";
 import { marketRoutes } from "./market-routes";
+import { piiRoutes } from "./pii-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -36,12 +37,17 @@ app.use("*", async (c, next) => {
 
   const secret = c.env?.SESSION_SECRET;
 
+  // roles claim(V3-AUT-22)を安全に取り出す(非配列/非文字列要素は捨てる)。
+  const rolesOf = (p: { roles?: unknown }): string[] =>
+    Array.isArray(p.roles) ? p.roles.filter((x): x is string => typeof x === "string") : [];
+
   // ② HttpOnly Cookie ihl_session
   const cookieTok = getCookie(c, "ihl_session");
   if (cookieTok && secret) {
     const p = await verifySessionToken(cookieTok, secret);
     if (p) {
       c.set("actorId", p.sub);
+      c.set("roles", rolesOf(p));
       return next();
     }
   }
@@ -54,11 +60,13 @@ app.use("*", async (c, next) => {
       const p = await verifySessionToken(bearer, secret);
       if (p) {
         c.set("actorId", p.sub);
+        c.set("roles", rolesOf(p));
         return next();
       }
     }
     if (c.env?.DEV_TOKEN && bearer === c.env.DEV_TOKEN) {
       c.set("actorId", await deriveActorId("dev@ihl.local"));
+      c.set("roles", []); // DEV_TOKEN 経路はロール無し
       return next();
     }
   }
@@ -93,6 +101,10 @@ app.route("/api/v1", gmoRoutes);
 // GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
 // 取引遷移(match/transition)・決済連動は C4 対象外。
 app.route("/api/v1", marketRoutes);
+
+// PII セッション (design-c5 K2 §1.1 / V3-SEC-07 / route 045): POST /api/v1/settings/
+// pii-session。保護・非永続(maskPii を返すのみ・Truth へ生 PII を append しない)。
+app.route("/api/v1", piiRoutes);
 
 // POST /events — append an event envelope to Truth (R2, INSERT ONLY).
 // 201 inserted / 400 invalid envelope / 409 duplicate key (first-wins,

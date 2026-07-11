@@ -1,0 +1,44 @@
+{
+  "screen_id": "language-select",
+  "route": "/onboarding/language",
+  "title": "言語を選ぶ",
+  "layout": "standard",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "表示言語を選んでください", "level": 1 } },
+            {
+              "id": "language",
+              "type": "field",
+              "props": {
+                "variant": "select",
+                "name": "language",
+                "label": "言語",
+                "placeholder": "言語を選択",
+                "options": [
+                  { "value": "ja", "label": "日本語" },
+                  { "value": "en", "label": "English" }
+                ]
+              }
+            },
+            {
+              "id": "continue",
+              "type": "button",
+              "props": { "label": "続ける", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "terms" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "continue", "to_screen_id": "terms", "label": "言語選択後" }
+  ]
+}

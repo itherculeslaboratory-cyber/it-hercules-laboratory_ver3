@@ -73,16 +73,23 @@ export async function verifyToken(
 }
 
 export type MagicPayload = { email: string; purpose: "magic"; iat: number; exp: number };
-export type SessionPayload = { sub: string; iat: number; exp: number };
+// roles: V3-AUT-22 ロール claim(任意・後方互換)。非空時のみトークンに載る。
+export type SessionPayload = { sub: string; iat: number; exp: number; roles?: string[] };
 
 export async function issueMagicToken(email: string, secret: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   return signToken({ email, purpose: "magic", iat: now, exp: now + MAGIC_TTL }, secret);
 }
 
-export async function issueSessionToken(actorId: string, secret: string): Promise<string> {
+export async function issueSessionToken(
+  actorId: string,
+  secret: string,
+  roles: string[] = [],
+): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  return signToken({ sub: actorId, iat: now, exp: now + SESSION_TTL }, secret);
+  const payload: SessionPayload = { sub: actorId, iat: now, exp: now + SESSION_TTL };
+  if (roles.length > 0) payload.roles = roles; // 非空時のみ claim に載せる(後方互換)
+  return signToken(payload, secret);
 }
 
 export async function verifyMagicToken(token: string, secret: string): Promise<MagicPayload | null> {
