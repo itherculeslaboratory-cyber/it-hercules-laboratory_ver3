@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/telemetry-ingest.schema.json",
+  "title": "Telemetry ingest source event (ihl.src.telemetry.v1)",
+  "description": "テレメトリ取り込みイベント（バケット集約後）ihl.src.telemetry.v1 の data 部。Truth キー truth/ihl.src.telemetry.v1/<device_id>-<bucket_start_ms>.json。Tier B。putEventAt の put-if-absent が冪等マージを storage 層で保証（inserted=written / 409=skipped_duplicate）。real parquet は defer。値なしフィールドは省略（null/空文字禁止）。",
+  "x_ihl_req": "V3-FND-18",
+  "x_ihl_source": "docs/planning/c5/design-k7.md §1.2",
+  "type": "object",
+  "required": ["device_id", "bucket_start_ms", "metric", "mean", "count", "source_granularity_ms", "schema_version"],
+  "properties": {
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "テレメトリ発生デバイスの一意キー。"
+    },
+    "bucket_start_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "集約バケット開始時刻（Unix epoch ミリ秒）。冪等キーの一部。"
+    },
+    "metric": {
+      "type": "string",
+      "minLength": 1,
+      "description": "計測指標名（例 temperature・humidity）。"
+    },
+    "mean": {
+      "type": "number",
+      "description": "バケット内の平均値。"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "バケットに集約された元行数。"
+    },
+    "source_granularity_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "元行の粒度（ミリ秒。1 分粒度なら 60000）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベント型バージョン（ihl.src.telemetry.v1）。"
+    }
+  },
+  "additionalProperties": false
+}

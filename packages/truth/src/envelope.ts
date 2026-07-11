@@ -72,6 +72,15 @@ const VALIDATOR_NAME: Record<string, string> = {
   "gov-dispute": "govDispute",
   "gov-precedent": "govPrecedent",
   "gov-flag": "govFlag",
+  // C5 K7 source events (schemas/events/*, non-frozen, reversible). lineage-meta
+  // is a COMMON type (schemas/common/*), NOT an envelope-data target — its
+  // validator name is registered here for validateLineageMeta but it is kept
+  // OUT of EVENT_NAMES (never a dataschema target).
+  "lineage-meta": "lineageMeta",
+  placement: "placement",
+  "device-binding": "deviceBinding",
+  occupancy: "occupancy",
+  "telemetry-ingest": "telemetryIngest",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -157,6 +166,14 @@ const EVENT_NAMES = new Set([
   "gov-dispute",
   "gov-precedent",
   "gov-flag",
+  // C5 K7 — data validation MUST fire or putEvent stores unchecked data at 202
+  // permanently (Truth is INSERT ONLY, unfixable). See design-k7 §1.2.
+  // lineage-meta is intentionally NOT here: it is a shared provenance type
+  // (schemas/common/*), never a dataschema target itself.
+  "placement",
+  "device-binding",
+  "occupancy",
+  "telemetry-ingest",
 ]);
 
 function validatorFor(name: string): ValidateFn {

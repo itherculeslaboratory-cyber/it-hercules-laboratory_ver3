@@ -1,7 +1,10 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { getCookie } from "hono/cookie";
 import { TruthStore, deriveActorId } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { sourceRoutes } from "./source-routes";
+import { aiRoutes } from "./ai-kernel";
 import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
 import { obsRoutes } from "./observation-routes";
@@ -61,6 +64,47 @@ const PUBLIC_ROUTES = [
   // Forged/missing signature → 401 inside the route, so no session surface leaks.
   "/api/v1/github/webhook",
 ];
+
+// CORS (design-k7 FND-11 §1.5). credentials=true → `*` is forbidden; only an origin
+// present in the env allowlist is echoed. Registered BEFORE the auth gate so (a) an
+// OPTIONS preflight to a protected path returns 204 without a session, and (b) 401
+// responses still carry the ACAO header (hono/cors sets it before next(), and Hono
+// merges pre-set headers into the replacement response).
+const CORS_ALLOW_METHODS = "GET,POST,OPTIONS";
+const CORS_ALLOW_HEADERS = "Content-Type,Authorization";
+const CORS_MAX_AGE = 86400; // 24h preflight cache
+
+// Echo the request origin only when it is in CORS_ALLOW_ORIGINS (comma list); else
+// null → no ACAO. Never returns "*" (credentials mode). Shared by cors() + onError.
+function corsAllowOrigin(origin: string, env: Bindings): string | null {
+  if (!origin) return null;
+  const allow = (env.CORS_ALLOW_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return allow.includes(origin) ? origin : null;
+}
+
+app.use(
+  "*",
+  cors({
+    origin: (origin, c) => corsAllowOrigin(origin, c.env),
+    allowMethods: CORS_ALLOW_METHODS.split(","),
+    allowHeaders: CORS_ALLOW_HEADERS.split(","),
+    maxAge: CORS_MAX_AGE,
+    credentials: true,
+  }),
+);
+
+// 500s must ALSO carry CORS headers (FND-11): re-echo the allowed origin onto the
+// error response so a cross-origin caller can read the failure instead of it being
+// masked as an opaque CORS error. Non-allowed origins get no ACAO (same as success).
+app.onError((err, c) => {
+  const origin = corsAllowOrigin(c.req.header("origin") ?? "", c.env);
+  if (origin) {
+    c.header("Access-Control-Allow-Origin", origin);
+    c.header("Access-Control-Allow-Credentials", "true");
+  }
+  console.error(err);
+  return c.json({ error: "INTERNAL" }, 500);
+});
 
 // Auth middleware (§1.5). Order: PUBLIC → Cookie → Bearer session → Bearer DEV_TOKEN → 401.
 app.use("*", async (c, next) => {
@@ -282,6 +326,18 @@ app.route("/api/v1", researchCanonicalRoutes);
 // protected。Cron 定期配線(wrangler.toml [triggers] crons)は §6 人間ゲート—手動 route + scheduled
 // 実体までを納品。scheduled は下の dispatcher が NEWSPAPER_CRON_UTC で本日次バッチへ振り分ける。
 app.route("/api/v1", researchAgentBatchRoutes);
+
+// Source ingest (design-k7 FND-18 / V3-FND-18 / route-matrix infra-route-058..065):
+// POST/GET /placements・POST/POST/GET /device-bindings(+/end)・POST/GET /occupancy・
+// POST /telemetry。全て protected(PUBLIC_ROUTES 非登録)・書込 actor_id はセッション
+// principal 強制・TruthStore put-if-absent(INSERT ONLY)。telemetry は 1 分行→5 分
+// バケット冪等マージ(written/skipped_duplicate/skipped_invalid)。
+app.route("/api/v1", sourceRoutes);
+
+// AI kernel A90 (design-k7 FND-21 / V3-FND-21 / route-matrix infra-route-066): POST
+// /ai/:task。protected。既定 AI_DISABLED(501・IHL_AI_PROVIDER 未設定=LLM OFF・不変
+// 条項①)。未知 task→404。実プロバイダ鍵投入は人間ゲート(本 route は呼ばない)。
+app.route("/api/v1", aiRoutes);
 
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);

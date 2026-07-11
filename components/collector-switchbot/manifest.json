@@ -1,0 +1,15 @@
+{
+  "id": "collector-switchbot",
+  "title": "SwitchBot 環境コレクタ",
+  "entrypoint": "run.py",
+  "inputs": [
+    "SwitchBot Cloud API status (temperature/humidity)",
+    "collector identity (COLLECTOR_ID, Ed25519 private key PEM)",
+    "userId / placementId / deviceId"
+  ],
+  "outputs": [
+    "signed env_collector_ingest_v1 POST to INGEST_URL (collector_id/timestamp/payload/signature)"
+  ],
+  "tests": "tests/test_collector.py",
+  "golden": "golden/ingest-vector.json"
+}

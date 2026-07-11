@@ -23,6 +23,12 @@ export type Bindings = {
   // 研究 LLM 助言モード(design-k5 §2.5). 既定 off=静的ヒントのみ. on は実 API キー
   // 必須で人間ゲート「実鍵投入」まで throw. 実値は env のみ(コミット禁止)。
   RESEARCH_LLM_MODE?: string;
+  // CORS 許可 origin カンマ列(design-k7 FND-11 §1.6). credentials=true のため `*`
+  // 不可 — 一致 origin のみ echo する。未設定=全 origin 非許可(ACAO なし)。
+  CORS_ALLOW_ORIGINS?: string;
+  // AI プロバイダ名(design-k7 FND-21 §1.6). 未設定=AI_DISABLED(既定 OFF・不変条項①)。
+  // 実プロバイダの鍵投入は人間ゲート。実値は env のみ。
+  IHL_AI_PROVIDER?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

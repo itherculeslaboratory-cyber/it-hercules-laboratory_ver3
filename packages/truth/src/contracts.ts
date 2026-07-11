@@ -7,6 +7,22 @@ async function sha256(text: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(text)));
 }
 
+function bytesToHex(bytes: Uint8Array): string {
+  let hex = "";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+/**
+ * SHA-256 hex of a UTF-8 string (64 lowercase hex chars). Thin hex wrapper over
+ * the same crypto.subtle.digest used everywhere here — NOT a new hash algorithm.
+ * Shared by FND-15 lineage + FND-04/05 kernel/hash-chain (content/lineage/event
+ * /world hashes are all this). Reuses the exact hex loop from deriveActorId.
+ */
+export async function sha256Hex(text: string): Promise<string> {
+  return bytesToHex(await sha256(text));
+}
+
 /**
  * CL-09 canonical_json (ver2 libs/ihl/env/collector_ingest.py):
  * objects → keys sorted (code-point order, same as Python sorted() for BMP),
@@ -38,10 +54,7 @@ export async function deriveActorId(
   raw: string,
   salt = "ihl-pii-salt",
 ): Promise<string> {
-  const digest = await sha256(`${salt}:${raw}`);
-  let hex = "";
-  for (const b of digest) hex += b.toString(16).padStart(2, "0");
-  return hex;
+  return bytesToHex(await sha256(`${salt}:${raw}`));
 }
 
 /**

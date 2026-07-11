@@ -91,6 +91,13 @@ const SCHEMAS = [
   ["govDispute", "events/gov-dispute.schema.json"],
   ["govPrecedent", "events/gov-precedent.schema.json"],
   ["govFlag", "events/gov-flag.schema.json"],
+  // C5 K7 source events + lineage-meta common type (must match envelope.ts
+  // VALIDATOR_NAME; the 4 src events are also in EVENT_NAMES, lineageMeta is not).
+  ["lineageMeta", "common/lineage-meta.schema.json"],
+  ["placement", "events/placement.schema.json"],
+  ["deviceBinding", "events/device-binding.schema.json"],
+  ["occupancy", "events/occupancy.schema.json"],
+  ["telemetryIngest", "events/telemetry-ingest.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

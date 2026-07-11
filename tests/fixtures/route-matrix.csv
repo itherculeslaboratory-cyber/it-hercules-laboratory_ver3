@@ -59,3 +59,12 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/gmo/expected-payment,VPS,Workers,W2,infra-route-055,protected,planned,
 —,POST,/api/v1/gmo/va-deposit/subscribe,VPS,Workers,W2,infra-route-056,protected,planned,
 —,POST,/api/v1/gmo/webhook,VPS,Workers,W2,infra-route-057,protected,planned,
+—,POST,/api/v1/placements,VPS,Workers,W2,infra-route-058,protected,implemented,置き場所登録(C5 K7・design-k7 §1.1・V3-FND-18・put-if-absent INSERT ONLY・actor_id=session)
+—,GET,/api/v1/placements,VPS,Workers,W2,infra-route-059,protected,implemented,置き場所 本人スコープ一覧投影(C5 K7・design-k7 §1.1・prefix scan 都度再計算)
+—,POST,/api/v1/device-bindings,VPS,Workers,W2,infra-route-060,protected,implemented,機器バインド開始(C5 K7・design-k7 §1.1・未終了 dup→409・start=新 INSERT)
+—,POST,/api/v1/device-bindings/end,VPS,Workers,W2,infra-route-061,protected,implemented,機器バインド終了(C5 K7・design-k7 §1.1・end=新 INSERT・start は UPDATE しない)
+—,GET,/api/v1/device-bindings,VPS,Workers,W2,infra-route-062,protected,implemented,機器バインド 本人スコープ一覧+open/closed 投影(C5 K7・design-k7 §1.1)
+—,POST,/api/v1/occupancy,VPS,Workers,W2,infra-route-063,protected,implemented,占有記録登録(C5 K7・design-k7 §1.1・V3-FND-18・put-if-absent INSERT ONLY)
+—,GET,/api/v1/occupancy,VPS,Workers,W2,infra-route-064,protected,implemented,占有 本人スコープ一覧投影(C5 K7・design-k7 §1.1)
+—,POST,/api/v1/telemetry,VPS,Workers,W2,infra-route-065,protected,implemented,テレメトリ取込(C5 K7・design-k7 §1.1・1分→5分冪等マージ written/skipped_duplicate/skipped_invalid)
+—,POST,/api/v1/ai/{task},VPS,Workers,W2,infra-route-066,protected,implemented,AI kernel A90(C5 K7・design-k7 §1.1・V3-FND-21・既定 AI_DISABLED 501・LLM OFF 不変条項①・未知 task 404)

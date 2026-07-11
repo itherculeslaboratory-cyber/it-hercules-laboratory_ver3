@@ -39,6 +39,8 @@ export function scanText(text) {
 // type-only template, and build/vendor trees.
 const EXCLUDE_FILES = new Set([
   ".env.example",
+  ".env.platform.example",
+  ".env.local.example",
   "scripts/check-secrets.mjs",
   "scripts/pii-scan.mjs",
   "scripts/derive-collector-pubkey.mjs",

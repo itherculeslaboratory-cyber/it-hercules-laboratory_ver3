@@ -1,0 +1,19 @@
+{
+  "description": "Deterministic collector fixture: SwitchBot Meter status body -> env_collector_ingest_v1 payload (build_ingest_payload). No secrets; signing is exercised in tests/test_collector.py.",
+  "input": {
+    "status_body": { "temperature": 24.5, "humidity": 55 },
+    "user_id": "U-EXAMPLE",
+    "placement_id": "P-EXAMPLE",
+    "device_id": "DEVEXAMPLE01",
+    "captured_at": "2026-07-11T00:00:00Z"
+  },
+  "expected_payload": {
+    "schema": "env_collector_ingest_v1",
+    "userId": "U-EXAMPLE",
+    "placementId": "P-EXAMPLE",
+    "capturedAt": "2026-07-11T00:00:00Z",
+    "readings": [
+      { "deviceId": "DEVEXAMPLE01", "measurements": { "temperatureC": 24.5, "humidityPct": 55 } }
+    ]
+  }
+}

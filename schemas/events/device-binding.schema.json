@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/device-binding.schema.json",
+  "title": "Device binding source event (ihl.src.device_binding.v1)",
+  "description": "デバイス紐付けイベント ihl.src.device_binding.v1 の data 部。Truth キー truth/ihl.src.device_binding.v1/<binding_id>-<phase>.json。phase∈{start,end}。start は同一 device_id の open binding が有れば route が 409。end は新 INSERT（UPDATE しない）。値なしフィールドは省略（null/空文字禁止）。",
+  "x_ihl_req": "V3-FND-18",
+  "x_ihl_source": "docs/planning/c5/design-k7.md §1.2",
+  "type": "object",
+  "required": ["binding_id", "actor_id", "device_id", "placement_id", "phase", "effective_at", "schema_version"],
+  "properties": {
+    "binding_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "紐付けの一意キー（ULID）。start/end で共有。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "操作者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "device_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "紐付け対象デバイスの一意キー。"
+    },
+    "placement_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "紐付け先プレイスメントの一意キー。"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["start", "end"],
+      "description": "紐付けの相。start=開始・end=終了（新 INSERT）。"
+    },
+    "subject_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象個体等への参照（任意・値なしは省略）。"
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "この相の発効時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベント型バージョン（ihl.src.device_binding.v1）。"
+    }
+  },
+  "additionalProperties": false
+}

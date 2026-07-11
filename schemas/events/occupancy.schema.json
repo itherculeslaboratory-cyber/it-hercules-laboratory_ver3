@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/occupancy.schema.json",
+  "title": "Occupancy source event (ihl.src.occupancy.v1)",
+  "description": "在住（占有）イベント ihl.src.occupancy.v1 の data 部。Truth キー truth/ihl.src.occupancy.v1/<occupancy_id>.json。Tier A INSERT ONLY。値なしフィールドは省略（null/空文字禁止）。",
+  "x_ihl_req": "V3-FND-18",
+  "x_ihl_source": "docs/planning/c5/design-k7.md §1.2",
+  "type": "object",
+  "required": ["occupancy_id", "actor_id", "placement_id", "subject_ref", "effective_at", "schema_version"],
+  "properties": {
+    "occupancy_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "在住レコードの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "登録者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "placement_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "在住先プレイスメントの一意キー。"
+    },
+    "subject_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "在住対象（個体等）への参照。"
+    },
+    "effective_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "在住の発効時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベント型バージョン（ihl.src.occupancy.v1）。"
+    }
+  },
+  "additionalProperties": false
+}

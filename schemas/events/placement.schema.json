@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/placement.schema.json",
+  "title": "Placement source event (ihl.src.placement.v1)",
+  "description": "設置場所（プレイスメント）登録イベント ihl.src.placement.v1 の data 部。Truth キー truth/ihl.src.placement.v1/<placement_id>.json。Tier A INSERT ONLY。値なしフィールドは省略（null/空文字禁止）。",
+  "x_ihl_req": "V3-FND-18",
+  "x_ihl_source": "docs/planning/c5/design-k7.md §1.2",
+  "type": "object",
+  "required": ["placement_id", "actor_id", "label", "created_at", "schema_version"],
+  "properties": {
+    "placement_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "プレイスメントの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "登録者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "設置場所の表示ラベル。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "登録時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベント型バージョン（ihl.src.placement.v1）。"
+    }
+  },
+  "additionalProperties": false
+}

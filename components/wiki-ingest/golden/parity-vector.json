@@ -1,0 +1,14 @@
+{
+  "description": "Deterministic parity fixture for wiki-ingest (ruri-v3-70m PyTorch vs ONNX). Existence-gated golden; the live parity run in parity_check.py must meet threshold on >=5 inputs.",
+  "model_name": "ruri-v3-70m",
+  "embedding_dim": 384,
+  "threshold": 0.999,
+  "inputs": [
+    "IT Hercules Laboratory",
+    "individual heritage ledger",
+    "append-only truth store",
+    "switchbot environment collector",
+    "knowledge graph ingest"
+  ],
+  "expected": { "min_inputs": 5, "worst_cosine_at_least": 0.999 }
+}
