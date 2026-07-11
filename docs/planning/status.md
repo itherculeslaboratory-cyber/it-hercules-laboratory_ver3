@@ -11,6 +11,8 @@ status: draft
 
 ## 今どこ
 
+**Phase C6 完了(cutover 直前で停止 — 実施は人間ゲート)**(2026-07-11 — `docs/planning/c6/REPORT-ver3-phase-c6-2026-07-11.md`)。突合ハーネス(`scripts/reconcile-harness.mjs`・GET 限定強制・TC10)+66 route readiness 表+**staging 実機稼働**(`ihl-api-ver3-staging.…workers.dev`・dev R2・cron 無効・deny-by-default/dev token を実測)。**P0 所見: 旧 API は保護 route 12 本を未認証開放**(新側が正・`cutover-readiness.md` §3)。E2E 実走で結合実バグ(form→confirm 値引き継ぎ欠落)を検出し汎用 draft 機構で根治 → `npm run e2e` 3/3 green。批評家 FAIL 指摘(§0 過大主張)を反映して納品。**残る cutover 5 手順は全て人間ボタン**(`cutover-readiness.md` §4)。
+
 **Phase C5 完了・納品**（2026-07-11 — `docs/planning/c5/REPORT-ver3-phase-c5-2026-07-11.md`）。第1波 S+A 帯の実装対象 **139 件を 8 クラスタ(K1〜K8)で消化**(分析母集合 190 件・hold 2 件停止報告)。**wave 受入 PASS: 自動化可能 TC 145 本中 green 142 = 97.9% ≥ 80%**（`docs/planning/c5/tc-coverage.md`・deferred-e2e 3 本は C6 staging 実走・missing 0）。知の広場は **PROTECTED のまま実装完了**(Zulip型topic+Polis型投影・第8回裁定準拠)+ G1〜G6 判定材料完成（`plaza-gate-materials/`・HG-KN-01〜08 は帰宅後裁定）。第12回裁定で LICENSE=Apache 2.0 確定・トークン目標 4500k。**納品前 再走実測**: `npm run lint` **20 GATE 全 OK**(C4 の 9 → +11) / `npm test` = **851 passed・3 skipped**(C4 215 → +636) / `pytest -q` = **11 passed・1 skipped**。批評家実績: 分析11群+設計8+実装16+広場6+横断監査2 — 横断監査 major 1(GATE数誇張)・minor 1(生NULバイト)は納品前に修正済み。
 
 **Phase C4 完了（完了条件 (ii) は第11回裁定で受入クローズ — 残余1点は本番初入金で確定）**（2026-07-11 — `docs/planning/c4/REPORT-ver3-phase-c4-2026-07-11.md`）。完了条件 (i)(iii) 成立・(ii) は設計どおり「実疎通実測 + 擬似入金実行のみ停止報告」で成立。台帳+カルマ二層（投影で残高/カルマ都度再計算・`GET /me/ledger` 本人スコープ・Fibonacci カルマ判定 V3-KRM-02）+ GMO sunabar 照合（接続層 `sunabar`/`live` 分離・名前照合ポーリング・実 sunabar 疎通 HTTP 200 実測・擬似入金の作成 API 機構を契約確定・振込実行は権限分類器が拒否し停止報告）+ マーケット骨格（`ihl.mkt.listing.v1`・出品/一覧/詳細 route）。批評家 2 観点/1 ラウンドで major（人間ゲート正本表への反映漏れ）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK（codegen 19 files in sync）/ `npm test` = apps/api 1 + tests 199 + apps/web 15 = **215 passed / 0 failed**（C3 183→+32）/ `pytest -q` = **4 passed, 1 skipped**（C3 から変化なし）。
@@ -28,12 +30,14 @@ status: draft
 
 ## 次（最優先）
 
-**C6**（開発計画 §3.1 C6・§5.3。HANDOFF-c5-c6 §3 の到達上限 = **cutover 直前で停止**）。
+**人間ゲートの裁定祭り(帰宅後)** — AI 側の第1波作業は cutover 直前まで完了。裁定待ちを重要順に:
 
-- やってよい: 突合ハーネス(同一 GET → 新旧 JSON diff・許容差 whitelist)・route readiness 表(66 route)・staging デプロイ(承認済み・workers.dev のみ)・E2E on staging(deferred-e2e 3 本の green 化)。
-- 絶対にやらない: 本番 DNS/Pages/route 変更・ver3-live 停止・VPS 解約・本番書込系呼び出し(ver3-live へは GET 専用・承認済み)・R2 本番 Truth への新 API 書込有効化。
-- 成果物: `docs/planning/c6/cutover-readiness.md`(route 別 green/red・残差分・人間が押すボタンの手順書)。
-- C5 からの持ち越し(裁定不要): deferred-e2e 3 本・統一ロール taxonomy 裁定・projectThread O(n)/projectHub 3軸の後波化(REPORT §5)。
+1. **HG-KN-01〜08 + 知の広場本採用 Go**(材料 `docs/planning/c5/plaza-gate-materials/` — g1 に推奨・差し替えコスト付き)
+2. **cutover 5 手順**(`docs/planning/c6/cutover-readiness.md` §4 — 本番 R2 バインド→リハーサル→片系切替→ver3-live 停止→VPS 解約)。**P0: 旧 API の未認証開放 12 route の即時是正 or cutover 前倒しの判断**(§3)
+3. planned 残 route の扱い(onboarding 2・gmo webhook 系・market transfer/match の実装 or 廃止)
+4. hold 2 件(V3-FND-13/V3-AIP-61)・統一ロール taxonomy・月次経済 cron 実デプロイ・GMO 本番契約・collector 実鍵・公開の実施
+
+AI 側の残(裁定不要・次ラン): deferred-e2e の staging 実走 green 化・projectThread O(n) の channel スコープ化・projectHub 5 軸化(スキーマ連結キー導入波)。
 
 ### C3 からの持ち越し
 
