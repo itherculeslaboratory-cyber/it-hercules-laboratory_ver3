@@ -416,7 +416,7 @@ export function dedupVotes(events: Record<string, unknown>[]): Record<string, un
     const d = dataOf(e);
     const prov = (e.provenance ?? {}) as Record<string, unknown>;
     const actor = typeof prov.actor_id === "string" ? prov.actor_id : str(d.actor_id);
-    const key = `${actor} ${str(d.proposal_target)} ${str(d.kind)}`;
+    const key = `${actor}\u0000${str(d.proposal_target)}\u0000${str(d.kind)}`;
     const prev = latest.get(key);
     if (!prev || str(d.vote_id) > str(prev.vote_id)) latest.set(key, d);
   }

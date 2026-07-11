@@ -11,6 +11,8 @@ status: draft
 
 ## 今どこ
 
+**Phase C5 完了・納品**（2026-07-11 — `docs/planning/c5/REPORT-ver3-phase-c5-2026-07-11.md`）。第1波 S+A 帯の実装対象 **139 件を 8 クラスタ(K1〜K8)で消化**(分析母集合 190 件・hold 2 件停止報告)。**wave 受入 PASS: 自動化可能 TC 145 本中 green 142 = 97.9% ≥ 80%**（`docs/planning/c5/tc-coverage.md`・deferred-e2e 3 本は C6 staging 実走・missing 0）。知の広場は **PROTECTED のまま実装完了**(Zulip型topic+Polis型投影・第8回裁定準拠)+ G1〜G6 判定材料完成（`plaza-gate-materials/`・HG-KN-01〜08 は帰宅後裁定）。第12回裁定で LICENSE=Apache 2.0 確定・トークン目標 4500k。**納品前 再走実測**: `npm run lint` **20 GATE 全 OK**(C4 の 9 → +11) / `npm test` = **851 passed・3 skipped**(C4 215 → +636) / `pytest -q` = **11 passed・1 skipped**。批評家実績: 分析11群+設計8+実装16+広場6+横断監査2 — 横断監査 major 1(GATE数誇張)・minor 1(生NULバイト)は納品前に修正済み。
+
 **Phase C4 完了（完了条件 (ii) は第11回裁定で受入クローズ — 残余1点は本番初入金で確定）**（2026-07-11 — `docs/planning/c4/REPORT-ver3-phase-c4-2026-07-11.md`）。完了条件 (i)(iii) 成立・(ii) は設計どおり「実疎通実測 + 擬似入金実行のみ停止報告」で成立。台帳+カルマ二層（投影で残高/カルマ都度再計算・`GET /me/ledger` 本人スコープ・Fibonacci カルマ判定 V3-KRM-02）+ GMO sunabar 照合（接続層 `sunabar`/`live` 分離・名前照合ポーリング・実 sunabar 疎通 HTTP 200 実測・擬似入金の作成 API 機構を契約確定・振込実行は権限分類器が拒否し停止報告）+ マーケット骨格（`ihl.mkt.listing.v1`・出品/一覧/詳細 route）。批評家 2 観点/1 ラウンドで major（人間ゲート正本表への反映漏れ）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK（codegen 19 files in sync）/ `npm test` = apps/api 1 + tests 199 + apps/web 15 = **215 passed / 0 failed**（C3 183→+32）/ `pytest -q` = **4 passed, 1 skipped**（C3 から変化なし）。
 
 **Phase C3 完了（CL-07 裁定待ちを除く）**（2026-07-11 — `docs/planning/c3/REPORT-ver3-phase-c3-2026-07-11.md`）。完了条件 (i)(ii) 成立・(iii) は設計どおり分母除外（CL-07 は C3 冒頭の人間裁定待ち — 材料 `docs/planning/c3/cl-07-thumbnail-options.md` 提出済み・実装未着手）。類似検索の決定論梯子（whitelist→subset→embedding・`ladder_stage`・768次元遮断）+ CL-06/10 実サンプル TC（ihl-ver2 UAT サインオフ実個体ID + 実QRコードパス）+ collector ingest（Ed25519 署名認証）+ SwitchBot 単発コレクタ + wiki-ingest ruri-v3-70m backend（PyTorch/ONNX cosine=1.0 一致検証済み）。批評家 2 観点/1 ラウンドで major（design-c3.md 未追跡）解消。**納品前 再走実測**: `npm run lint` 9 GATE 全 OK / `npm test` = apps/api 1 + tests 167 + apps/web 15 = **183 passed / 0 failed**（C2 156→+27）/ `pytest -q` = **4 passed, 1 skipped**（skip は torch 依存 parity TC・bare CI の意図的挙動）。SwitchBot 実 API smoke（`--fetch-only`）は成功（実機 13 台検出）。
@@ -26,12 +28,12 @@ status: draft
 
 ## 次（最優先）
 
-**C5**（開発計画 §3.1 C5 参照。着手時に第1波 Tier A 149 件のクラスタ分割表を作成し 3 点見積を改訂 — 開発計画 §4.3 注記 — した上で設計契約 `docs/planning/c5/design-c5.md` を起票してから着手）。
+**C6**（開発計画 §3.1 C6・§5.3。HANDOFF-c5-c6 §3 の到達上限 = **cutover 直前で停止**）。
 
-- CL-07 は**完了**: 第10回裁定（4点確定）→ 実装済み（`cb5cd8f` — jSquash JPEG 512px + EXIF transpose + frozen const/TC セット）。
-- C4 完了条件 (ii) は**受入クローズ**: 第11回裁定（`docs/planning/rulings/user-ruling-2026-07-11-round-11.md`）。残余 1 点（銀行側 U-code 文字変換の有無）は GMO 本番契約後の本番初入金で確定（evidence §8）。
-- カルマ付与のイベントフック（観測 append 時の自動付与配線）は design-c4 §1 のとおり C5 スコープ（今回は付与関数 + TC まで）。
-- マーケットの取引遷移（match/transition）・決済連動は C4 対象外（design-c4 §3・route-matrix 030-032 = ver3_note）。
+- やってよい: 突合ハーネス(同一 GET → 新旧 JSON diff・許容差 whitelist)・route readiness 表(66 route)・staging デプロイ(承認済み・workers.dev のみ)・E2E on staging(deferred-e2e 3 本の green 化)。
+- 絶対にやらない: 本番 DNS/Pages/route 変更・ver3-live 停止・VPS 解約・本番書込系呼び出し(ver3-live へは GET 専用・承認済み)・R2 本番 Truth への新 API 書込有効化。
+- 成果物: `docs/planning/c6/cutover-readiness.md`(route 別 green/red・残差分・人間が押すボタンの手順書)。
+- C5 からの持ち越し(裁定不要): deferred-e2e 3 本・統一ロール taxonomy 裁定・projectThread O(n)/projectHub 3軸の後波化(REPORT §5)。
 
 ### C3 からの持ち越し
 
@@ -48,4 +50,6 @@ status: draft
 | GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`）。**本番初入金時に C4 (ii) 残余 1 点（U-code の remarks 文字変換の有無）を確定し evidence §9 を追記**（第11回裁定・sandbox では検証手段なしと実機確定） | 未 |
 | collector ingest 実鍵投入 | `COLLECTOR_PRIVATE_KEY_PEM`（Ed25519 秘密鍵）生成・`COLLECTOR_PUBLIC_KEYS` 登録・本番 `INGEST_URL` 配線 | 未 |
 | GOV-09 admin ゲート | **クローズ(2026-07-11)**: K2 実装済みの `requireRole("operator","admin")` を `POST /api/v1/gov/flags` に配線(fail-closed)。非 operator(DEV_TOKEN roles=[]/member セッション)→403+副作用ゼロの negative TC 3 本緑化(`tests/gov-flag.test.ts`)。統一ロール taxonomy の人間裁定は別途(この 2 role 名は運用者ゲートとして据置可能) | 済 |
+| 知の広場 HG-KN-01〜08 + 本採用 Go | 8 論点の判定材料は `docs/planning/c5/plaza-gate-materials/g1-ia-decision.md` に推奨・根拠・差し替えコスト付きで完成(2026-07-11)。実装は PROTECTED で完了済み — 解除・公開のみ人間 | 未(帰宅後) |
+| 月次経済 cron の実デプロイ | wrangler.toml `[triggers]` 配線+`config/consented-crons.json`(consented_by=pending-human-gate)まで済。デプロイ=常駐実行開始=人間ゲート | 未 |
 | 公開の実施 | repo / OSS スナップショットの実際の公開 | 未 |
