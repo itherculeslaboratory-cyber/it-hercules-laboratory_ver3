@@ -1,0 +1,2216 @@
+{
+  "generated_at": "2026-07-11T11:10:38.762Z",
+  "old_base": "https://api.it-hercules.uk",
+  "new_base": "https://ihl-api-ver3-staging.it-hercules-laboratory.workers.dev",
+  "whitelist": [
+    "id",
+    "etag",
+    "generated_at",
+    "timestamp",
+    "server_time",
+    "request_id",
+    "*_at"
+  ],
+  "totals": {
+    "match": 0,
+    "diff": 14,
+    "old-only": 4,
+    "new-only": 3,
+    "skipped_param": 9,
+    "error": 0
+  },
+  "routes": [
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "resolved_path": "/api/v1/auth/session",
+      "status_old": 401,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "AUTH_REQUIRED"
+        },
+        {
+          "path": "authenticated",
+          "kind": "new-only-key",
+          "new": false
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "resolved_path": "/api/v1/auth/session",
+      "status_old": 401,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "AUTH_REQUIRED"
+        },
+        {
+          "path": "authenticated",
+          "kind": "new-only-key",
+          "new": false
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/onboarding/status",
+      "resolved_path": "/api/v1/onboarding/status",
+      "status_old": 200,
+      "status_new": 404,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "$",
+          "kind": "value",
+          "old": {
+            "status": "pending",
+            "complete": false
+          },
+          "new": "404 Not Found"
+        }
+      ],
+      "verdict": "old-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/home/summary",
+      "resolved_path": "/api/v1/home/summary",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "today_lines",
+          "kind": "old-only-key",
+          "old": [
+            "次回観測予定: 将軍-2026-1（2026-10-26）",
+            "観測データは色補正なしで保存されます",
+            "マーケット Stage 1 は当事者 2 人の連絡のみ"
+          ]
+        },
+        {
+          "path": "cards",
+          "kind": "old-only-key",
+          "old": [
+            {
+              "id": "obs",
+              "label": "観測検索",
+              "value": "—",
+              "href": "/observation"
+            },
+            {
+              "id": "paper",
+              "label": "進行中の論文",
+              "value": "1",
+              "href": "/board/paper"
+            },
+            {
+              "id": "market",
+              "label": "取引中",
+              "value": "0",
+              "href": "/market"
+            },
+            {
+              "id": "vote",
+              "label": "公開投票",
+              "value": "1",
+              "href": "/vote"
+            }
+          ]
+        },
+        {
+          "path": "primary_cta",
+          "kind": "old-only-key",
+          "old": {
+            "label": "観測登録開始",
+            "href": "/observation/context"
+          }
+        },
+        {
+          "path": "overdue",
+          "kind": "new-only-key",
+          "new": []
+        },
+        {
+          "path": "near",
+          "kind": "new-only-key",
+          "new": []
+        },
+        {
+          "path": "observing",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/{capture_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "capture_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/{capture_id}/image",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "capture_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/{capture_id}/reanalysis-manifest",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "capture_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/measurement-dictionary",
+      "resolved_path": "/api/v1/observation/measurement-dictionary",
+      "status_old": 401,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "AUTH_REQUIRED"
+        },
+        {
+          "path": "dictionary",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/targets/catalog",
+      "resolved_path": "/api/v1/observation/targets/catalog",
+      "status_old": 401,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "AUTH_REQUIRED"
+        },
+        {
+          "path": "size",
+          "kind": "new-only-key",
+          "new": 256
+        },
+        {
+          "path": "question_bounds",
+          "kind": "new-only-key",
+          "new": {
+            "min": 7,
+            "max": 12
+          }
+        },
+        {
+          "path": "families",
+          "kind": "new-only-key",
+          "new": [
+            {
+              "family": "Family0",
+              "genera": [
+                {
+                  "genus": "Genus00",
+                  "species": [
+                    {
+                      "qid": "Q9000000",
+                      "scientific_name": "Genus00 species0"
+                    },
+                    {
+                      "qid": "Q9000001",
+                      "scientific_name": "Genus00 species1"
+                    },
+                    {
+                      "qid": "Q9000002",
+                      "scientific_name": "Genus00 species2"
+                    },
+                    {
+                      "qid": "Q9000003",
+                      "scientific_name": "Genus00 species3"
+                    },
+                    {
+                      "qid": "Q9000004",
+                      "scientific_name": "Genus00 species4"
+                    },
+                    {
+                      "qid": "Q9000005",
+                      "scientific_name": "Genus00 species5"
+                    },
+                    {
+                      "qid": "Q9000006",
+                      "scientific_name": "Genus00 species6"
+                    },
+                    {
+                      "qid": "Q9000007",
+                      "scientific_name": "Genus00 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus01",
+                  "species": [
+                    {
+                      "qid": "Q9000008",
+                      "scientific_name": "Genus01 species0"
+                    },
+                    {
+                      "qid": "Q9000009",
+                      "scientific_name": "Genus01 species1"
+                    },
+                    {
+                      "qid": "Q9000010",
+                      "scientific_name": "Genus01 species2"
+                    },
+                    {
+                      "qid": "Q9000011",
+                      "scientific_name": "Genus01 species3"
+                    },
+                    {
+                      "qid": "Q9000012",
+                      "scientific_name": "Genus01 species4"
+                    },
+                    {
+                      "qid": "Q9000013",
+                      "scientific_name": "Genus01 species5"
+                    },
+                    {
+                      "qid": "Q9000014",
+                      "scientific_name": "Genus01 species6"
+                    },
+                    {
+                      "qid": "Q9000015",
+                      "scientific_name": "Genus01 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus02",
+                  "species": [
+                    {
+                      "qid": "Q9000016",
+                      "scientific_name": "Genus02 species0"
+                    },
+                    {
+                      "qid": "Q9000017",
+                      "scientific_name": "Genus02 species1"
+                    },
+                    {
+                      "qid": "Q9000018",
+                      "scientific_name": "Genus02 species2"
+                    },
+                    {
+                      "qid": "Q9000019",
+                      "scientific_name": "Genus02 species3"
+                    },
+                    {
+                      "qid": "Q9000020",
+                      "scientific_name": "Genus02 species4"
+                    },
+                    {
+                      "qid": "Q9000021",
+                      "scientific_name": "Genus02 species5"
+                    },
+                    {
+                      "qid": "Q9000022",
+                      "scientific_name": "Genus02 species6"
+                    },
+                    {
+                      "qid": "Q9000023",
+                      "scientific_name": "Genus02 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus03",
+                  "species": [
+                    {
+                      "qid": "Q9000024",
+                      "scientific_name": "Genus03 species0"
+                    },
+                    {
+                      "qid": "Q9000025",
+                      "scientific_name": "Genus03 species1"
+                    },
+                    {
+                      "qid": "Q9000026",
+                      "scientific_name": "Genus03 species2"
+                    },
+                    {
+                      "qid": "Q9000027",
+                      "scientific_name": "Genus03 species3"
+                    },
+                    {
+                      "qid": "Q9000028",
+                      "scientific_name": "Genus03 species4"
+                    },
+                    {
+                      "qid": "Q9000029",
+                      "scientific_name": "Genus03 species5"
+                    },
+                    {
+                      "qid": "Q9000030",
+                      "scientific_name": "Genus03 species6"
+                    },
+                    {
+                      "qid": "Q9000031",
+                      "scientific_name": "Genus03 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus04",
+                  "species": [
+                    {
+                      "qid": "Q9000032",
+                      "scientific_name": "Genus04 species0"
+                    },
+                    {
+                      "qid": "Q9000033",
+                      "scientific_name": "Genus04 species1"
+                    },
+                    {
+                      "qid": "Q9000034",
+                      "scientific_name": "Genus04 species2"
+                    },
+                    {
+                      "qid": "Q9000035",
+                      "scientific_name": "Genus04 species3"
+                    },
+                    {
+                      "qid": "Q9000036",
+                      "scientific_name": "Genus04 species4"
+                    },
+                    {
+                      "qid": "Q9000037",
+                      "scientific_name": "Genus04 species5"
+                    },
+                    {
+                      "qid": "Q9000038",
+                      "scientific_name": "Genus04 species6"
+                    },
+                    {
+                      "qid": "Q9000039",
+                      "scientific_name": "Genus04 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus05",
+                  "species": [
+                    {
+                      "qid": "Q9000040",
+                      "scientific_name": "Genus05 species0"
+                    },
+                    {
+                      "qid": "Q9000041",
+                      "scientific_name": "Genus05 species1"
+                    },
+                    {
+                      "qid": "Q9000042",
+                      "scientific_name": "Genus05 species2"
+                    },
+                    {
+                      "qid": "Q9000043",
+                      "scientific_name": "Genus05 species3"
+                    },
+                    {
+                      "qid": "Q9000044",
+                      "scientific_name": "Genus05 species4"
+                    },
+                    {
+                      "qid": "Q9000045",
+                      "scientific_name": "Genus05 species5"
+                    },
+                    {
+                      "qid": "Q9000046",
+                      "scientific_name": "Genus05 species6"
+                    },
+                    {
+                      "qid": "Q9000047",
+                      "scientific_name": "Genus05 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus06",
+                  "species": [
+                    {
+                      "qid": "Q9000048",
+                      "scientific_name": "Genus06 species0"
+                    },
+                    {
+                      "qid": "Q9000049",
+                      "scientific_name": "Genus06 species1"
+                    },
+                    {
+                      "qid": "Q9000050",
+                      "scientific_name": "Genus06 species2"
+                    },
+                    {
+                      "qid": "Q9000051",
+                      "scientific_name": "Genus06 species3"
+                    },
+                    {
+                      "qid": "Q9000052",
+                      "scientific_name": "Genus06 species4"
+                    },
+                    {
+                      "qid": "Q9000053",
+                      "scientific_name": "Genus06 species5"
+                    },
+                    {
+                      "qid": "Q9000054",
+                      "scientific_name": "Genus06 species6"
+                    },
+                    {
+                      "qid": "Q9000055",
+                      "scientific_name": "Genus06 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus07",
+                  "species": [
+                    {
+                      "qid": "Q9000056",
+                      "scientific_name": "Genus07 species0"
+                    },
+                    {
+                      "qid": "Q9000057",
+                      "scientific_name": "Genus07 species1"
+                    },
+                    {
+                      "qid": "Q9000058",
+                      "scientific_name": "Genus07 species2"
+                    },
+                    {
+                      "qid": "Q9000059",
+                      "scientific_name": "Genus07 species3"
+                    },
+                    {
+                      "qid": "Q9000060",
+                      "scientific_name": "Genus07 species4"
+                    },
+                    {
+                      "qid": "Q9000061",
+                      "scientific_name": "Genus07 species5"
+                    },
+                    {
+                      "qid": "Q9000062",
+                      "scientific_name": "Genus07 species6"
+                    },
+                    {
+                      "qid": "Q9000063",
+                      "scientific_name": "Genus07 species7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "family": "Family1",
+              "genera": [
+                {
+                  "genus": "Genus10",
+                  "species": [
+                    {
+                      "qid": "Q9000064",
+                      "scientific_name": "Genus10 species0"
+                    },
+                    {
+                      "qid": "Q9000065",
+                      "scientific_name": "Genus10 species1"
+                    },
+                    {
+                      "qid": "Q9000066",
+                      "scientific_name": "Genus10 species2"
+                    },
+                    {
+                      "qid": "Q9000067",
+                      "scientific_name": "Genus10 species3"
+                    },
+                    {
+                      "qid": "Q9000068",
+                      "scientific_name": "Genus10 species4"
+                    },
+                    {
+                      "qid": "Q9000069",
+                      "scientific_name": "Genus10 species5"
+                    },
+                    {
+                      "qid": "Q9000070",
+                      "scientific_name": "Genus10 species6"
+                    },
+                    {
+                      "qid": "Q9000071",
+                      "scientific_name": "Genus10 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus11",
+                  "species": [
+                    {
+                      "qid": "Q9000072",
+                      "scientific_name": "Genus11 species0"
+                    },
+                    {
+                      "qid": "Q9000073",
+                      "scientific_name": "Genus11 species1"
+                    },
+                    {
+                      "qid": "Q9000074",
+                      "scientific_name": "Genus11 species2"
+                    },
+                    {
+                      "qid": "Q9000075",
+                      "scientific_name": "Genus11 species3"
+                    },
+                    {
+                      "qid": "Q9000076",
+                      "scientific_name": "Genus11 species4"
+                    },
+                    {
+                      "qid": "Q9000077",
+                      "scientific_name": "Genus11 species5"
+                    },
+                    {
+                      "qid": "Q9000078",
+                      "scientific_name": "Genus11 species6"
+                    },
+                    {
+                      "qid": "Q9000079",
+                      "scientific_name": "Genus11 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus12",
+                  "species": [
+                    {
+                      "qid": "Q9000080",
+                      "scientific_name": "Genus12 species0"
+                    },
+                    {
+                      "qid": "Q9000081",
+                      "scientific_name": "Genus12 species1"
+                    },
+                    {
+                      "qid": "Q9000082",
+                      "scientific_name": "Genus12 species2"
+                    },
+                    {
+                      "qid": "Q9000083",
+                      "scientific_name": "Genus12 species3"
+                    },
+                    {
+                      "qid": "Q9000084",
+                      "scientific_name": "Genus12 species4"
+                    },
+                    {
+                      "qid": "Q9000085",
+                      "scientific_name": "Genus12 species5"
+                    },
+                    {
+                      "qid": "Q9000086",
+                      "scientific_name": "Genus12 species6"
+                    },
+                    {
+                      "qid": "Q9000087",
+                      "scientific_name": "Genus12 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus13",
+                  "species": [
+                    {
+                      "qid": "Q9000088",
+                      "scientific_name": "Genus13 species0"
+                    },
+                    {
+                      "qid": "Q9000089",
+                      "scientific_name": "Genus13 species1"
+                    },
+                    {
+                      "qid": "Q9000090",
+                      "scientific_name": "Genus13 species2"
+                    },
+                    {
+                      "qid": "Q9000091",
+                      "scientific_name": "Genus13 species3"
+                    },
+                    {
+                      "qid": "Q9000092",
+                      "scientific_name": "Genus13 species4"
+                    },
+                    {
+                      "qid": "Q9000093",
+                      "scientific_name": "Genus13 species5"
+                    },
+                    {
+                      "qid": "Q9000094",
+                      "scientific_name": "Genus13 species6"
+                    },
+                    {
+                      "qid": "Q9000095",
+                      "scientific_name": "Genus13 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus14",
+                  "species": [
+                    {
+                      "qid": "Q9000096",
+                      "scientific_name": "Genus14 species0"
+                    },
+                    {
+                      "qid": "Q9000097",
+                      "scientific_name": "Genus14 species1"
+                    },
+                    {
+                      "qid": "Q9000098",
+                      "scientific_name": "Genus14 species2"
+                    },
+                    {
+                      "qid": "Q9000099",
+                      "scientific_name": "Genus14 species3"
+                    },
+                    {
+                      "qid": "Q9000100",
+                      "scientific_name": "Genus14 species4"
+                    },
+                    {
+                      "qid": "Q9000101",
+                      "scientific_name": "Genus14 species5"
+                    },
+                    {
+                      "qid": "Q9000102",
+                      "scientific_name": "Genus14 species6"
+                    },
+                    {
+                      "qid": "Q9000103",
+                      "scientific_name": "Genus14 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus15",
+                  "species": [
+                    {
+                      "qid": "Q9000104",
+                      "scientific_name": "Genus15 species0"
+                    },
+                    {
+                      "qid": "Q9000105",
+                      "scientific_name": "Genus15 species1"
+                    },
+                    {
+                      "qid": "Q9000106",
+                      "scientific_name": "Genus15 species2"
+                    },
+                    {
+                      "qid": "Q9000107",
+                      "scientific_name": "Genus15 species3"
+                    },
+                    {
+                      "qid": "Q9000108",
+                      "scientific_name": "Genus15 species4"
+                    },
+                    {
+                      "qid": "Q9000109",
+                      "scientific_name": "Genus15 species5"
+                    },
+                    {
+                      "qid": "Q9000110",
+                      "scientific_name": "Genus15 species6"
+                    },
+                    {
+                      "qid": "Q9000111",
+                      "scientific_name": "Genus15 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus16",
+                  "species": [
+                    {
+                      "qid": "Q9000112",
+                      "scientific_name": "Genus16 species0"
+                    },
+                    {
+                      "qid": "Q9000113",
+                      "scientific_name": "Genus16 species1"
+                    },
+                    {
+                      "qid": "Q9000114",
+                      "scientific_name": "Genus16 species2"
+                    },
+                    {
+                      "qid": "Q9000115",
+                      "scientific_name": "Genus16 species3"
+                    },
+                    {
+                      "qid": "Q9000116",
+                      "scientific_name": "Genus16 species4"
+                    },
+                    {
+                      "qid": "Q9000117",
+                      "scientific_name": "Genus16 species5"
+                    },
+                    {
+                      "qid": "Q9000118",
+                      "scientific_name": "Genus16 species6"
+                    },
+                    {
+                      "qid": "Q9000119",
+                      "scientific_name": "Genus16 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus17",
+                  "species": [
+                    {
+                      "qid": "Q9000120",
+                      "scientific_name": "Genus17 species0"
+                    },
+                    {
+                      "qid": "Q9000121",
+                      "scientific_name": "Genus17 species1"
+                    },
+                    {
+                      "qid": "Q9000122",
+                      "scientific_name": "Genus17 species2"
+                    },
+                    {
+                      "qid": "Q9000123",
+                      "scientific_name": "Genus17 species3"
+                    },
+                    {
+                      "qid": "Q9000124",
+                      "scientific_name": "Genus17 species4"
+                    },
+                    {
+                      "qid": "Q9000125",
+                      "scientific_name": "Genus17 species5"
+                    },
+                    {
+                      "qid": "Q9000126",
+                      "scientific_name": "Genus17 species6"
+                    },
+                    {
+                      "qid": "Q9000127",
+                      "scientific_name": "Genus17 species7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "family": "Family2",
+              "genera": [
+                {
+                  "genus": "Genus20",
+                  "species": [
+                    {
+                      "qid": "Q9000128",
+                      "scientific_name": "Genus20 species0"
+                    },
+                    {
+                      "qid": "Q9000129",
+                      "scientific_name": "Genus20 species1"
+                    },
+                    {
+                      "qid": "Q9000130",
+                      "scientific_name": "Genus20 species2"
+                    },
+                    {
+                      "qid": "Q9000131",
+                      "scientific_name": "Genus20 species3"
+                    },
+                    {
+                      "qid": "Q9000132",
+                      "scientific_name": "Genus20 species4"
+                    },
+                    {
+                      "qid": "Q9000133",
+                      "scientific_name": "Genus20 species5"
+                    },
+                    {
+                      "qid": "Q9000134",
+                      "scientific_name": "Genus20 species6"
+                    },
+                    {
+                      "qid": "Q9000135",
+                      "scientific_name": "Genus20 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus21",
+                  "species": [
+                    {
+                      "qid": "Q9000136",
+                      "scientific_name": "Genus21 species0"
+                    },
+                    {
+                      "qid": "Q9000137",
+                      "scientific_name": "Genus21 species1"
+                    },
+                    {
+                      "qid": "Q9000138",
+                      "scientific_name": "Genus21 species2"
+                    },
+                    {
+                      "qid": "Q9000139",
+                      "scientific_name": "Genus21 species3"
+                    },
+                    {
+                      "qid": "Q9000140",
+                      "scientific_name": "Genus21 species4"
+                    },
+                    {
+                      "qid": "Q9000141",
+                      "scientific_name": "Genus21 species5"
+                    },
+                    {
+                      "qid": "Q9000142",
+                      "scientific_name": "Genus21 species6"
+                    },
+                    {
+                      "qid": "Q9000143",
+                      "scientific_name": "Genus21 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus22",
+                  "species": [
+                    {
+                      "qid": "Q9000144",
+                      "scientific_name": "Genus22 species0"
+                    },
+                    {
+                      "qid": "Q9000145",
+                      "scientific_name": "Genus22 species1"
+                    },
+                    {
+                      "qid": "Q9000146",
+                      "scientific_name": "Genus22 species2"
+                    },
+                    {
+                      "qid": "Q9000147",
+                      "scientific_name": "Genus22 species3"
+                    },
+                    {
+                      "qid": "Q9000148",
+                      "scientific_name": "Genus22 species4"
+                    },
+                    {
+                      "qid": "Q9000149",
+                      "scientific_name": "Genus22 species5"
+                    },
+                    {
+                      "qid": "Q9000150",
+                      "scientific_name": "Genus22 species6"
+                    },
+                    {
+                      "qid": "Q9000151",
+                      "scientific_name": "Genus22 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus23",
+                  "species": [
+                    {
+                      "qid": "Q9000152",
+                      "scientific_name": "Genus23 species0"
+                    },
+                    {
+                      "qid": "Q9000153",
+                      "scientific_name": "Genus23 species1"
+                    },
+                    {
+                      "qid": "Q9000154",
+                      "scientific_name": "Genus23 species2"
+                    },
+                    {
+                      "qid": "Q9000155",
+                      "scientific_name": "Genus23 species3"
+                    },
+                    {
+                      "qid": "Q9000156",
+                      "scientific_name": "Genus23 species4"
+                    },
+                    {
+                      "qid": "Q9000157",
+                      "scientific_name": "Genus23 species5"
+                    },
+                    {
+                      "qid": "Q9000158",
+                      "scientific_name": "Genus23 species6"
+                    },
+                    {
+                      "qid": "Q9000159",
+                      "scientific_name": "Genus23 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus24",
+                  "species": [
+                    {
+                      "qid": "Q9000160",
+                      "scientific_name": "Genus24 species0"
+                    },
+                    {
+                      "qid": "Q9000161",
+                      "scientific_name": "Genus24 species1"
+                    },
+                    {
+                      "qid": "Q9000162",
+                      "scientific_name": "Genus24 species2"
+                    },
+                    {
+                      "qid": "Q9000163",
+                      "scientific_name": "Genus24 species3"
+                    },
+                    {
+                      "qid": "Q9000164",
+                      "scientific_name": "Genus24 species4"
+                    },
+                    {
+                      "qid": "Q9000165",
+                      "scientific_name": "Genus24 species5"
+                    },
+                    {
+                      "qid": "Q9000166",
+                      "scientific_name": "Genus24 species6"
+                    },
+                    {
+                      "qid": "Q9000167",
+                      "scientific_name": "Genus24 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus25",
+                  "species": [
+                    {
+                      "qid": "Q9000168",
+                      "scientific_name": "Genus25 species0"
+                    },
+                    {
+                      "qid": "Q9000169",
+                      "scientific_name": "Genus25 species1"
+                    },
+                    {
+                      "qid": "Q9000170",
+                      "scientific_name": "Genus25 species2"
+                    },
+                    {
+                      "qid": "Q9000171",
+                      "scientific_name": "Genus25 species3"
+                    },
+                    {
+                      "qid": "Q9000172",
+                      "scientific_name": "Genus25 species4"
+                    },
+                    {
+                      "qid": "Q9000173",
+                      "scientific_name": "Genus25 species5"
+                    },
+                    {
+                      "qid": "Q9000174",
+                      "scientific_name": "Genus25 species6"
+                    },
+                    {
+                      "qid": "Q9000175",
+                      "scientific_name": "Genus25 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus26",
+                  "species": [
+                    {
+                      "qid": "Q9000176",
+                      "scientific_name": "Genus26 species0"
+                    },
+                    {
+                      "qid": "Q9000177",
+                      "scientific_name": "Genus26 species1"
+                    },
+                    {
+                      "qid": "Q9000178",
+                      "scientific_name": "Genus26 species2"
+                    },
+                    {
+                      "qid": "Q9000179",
+                      "scientific_name": "Genus26 species3"
+                    },
+                    {
+                      "qid": "Q9000180",
+                      "scientific_name": "Genus26 species4"
+                    },
+                    {
+                      "qid": "Q9000181",
+                      "scientific_name": "Genus26 species5"
+                    },
+                    {
+                      "qid": "Q9000182",
+                      "scientific_name": "Genus26 species6"
+                    },
+                    {
+                      "qid": "Q9000183",
+                      "scientific_name": "Genus26 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus27",
+                  "species": [
+                    {
+                      "qid": "Q9000184",
+                      "scientific_name": "Genus27 species0"
+                    },
+                    {
+                      "qid": "Q9000185",
+                      "scientific_name": "Genus27 species1"
+                    },
+                    {
+                      "qid": "Q9000186",
+                      "scientific_name": "Genus27 species2"
+                    },
+                    {
+                      "qid": "Q9000187",
+                      "scientific_name": "Genus27 species3"
+                    },
+                    {
+                      "qid": "Q9000188",
+                      "scientific_name": "Genus27 species4"
+                    },
+                    {
+                      "qid": "Q9000189",
+                      "scientific_name": "Genus27 species5"
+                    },
+                    {
+                      "qid": "Q9000190",
+                      "scientific_name": "Genus27 species6"
+                    },
+                    {
+                      "qid": "Q9000191",
+                      "scientific_name": "Genus27 species7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "family": "Family3",
+              "genera": [
+                {
+                  "genus": "Genus30",
+                  "species": [
+                    {
+                      "qid": "Q9000192",
+                      "scientific_name": "Genus30 species0"
+                    },
+                    {
+                      "qid": "Q9000193",
+                      "scientific_name": "Genus30 species1"
+                    },
+                    {
+                      "qid": "Q9000194",
+                      "scientific_name": "Genus30 species2"
+                    },
+                    {
+                      "qid": "Q9000195",
+                      "scientific_name": "Genus30 species3"
+                    },
+                    {
+                      "qid": "Q9000196",
+                      "scientific_name": "Genus30 species4"
+                    },
+                    {
+                      "qid": "Q9000197",
+                      "scientific_name": "Genus30 species5"
+                    },
+                    {
+                      "qid": "Q9000198",
+                      "scientific_name": "Genus30 species6"
+                    },
+                    {
+                      "qid": "Q9000199",
+                      "scientific_name": "Genus30 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus31",
+                  "species": [
+                    {
+                      "qid": "Q9000200",
+                      "scientific_name": "Genus31 species0"
+                    },
+                    {
+                      "qid": "Q9000201",
+                      "scientific_name": "Genus31 species1"
+                    },
+                    {
+                      "qid": "Q9000202",
+                      "scientific_name": "Genus31 species2"
+                    },
+                    {
+                      "qid": "Q9000203",
+                      "scientific_name": "Genus31 species3"
+                    },
+                    {
+                      "qid": "Q9000204",
+                      "scientific_name": "Genus31 species4"
+                    },
+                    {
+                      "qid": "Q9000205",
+                      "scientific_name": "Genus31 species5"
+                    },
+                    {
+                      "qid": "Q9000206",
+                      "scientific_name": "Genus31 species6"
+                    },
+                    {
+                      "qid": "Q9000207",
+                      "scientific_name": "Genus31 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus32",
+                  "species": [
+                    {
+                      "qid": "Q9000208",
+                      "scientific_name": "Genus32 species0"
+                    },
+                    {
+                      "qid": "Q9000209",
+                      "scientific_name": "Genus32 species1"
+                    },
+                    {
+                      "qid": "Q9000210",
+                      "scientific_name": "Genus32 species2"
+                    },
+                    {
+                      "qid": "Q9000211",
+                      "scientific_name": "Genus32 species3"
+                    },
+                    {
+                      "qid": "Q9000212",
+                      "scientific_name": "Genus32 species4"
+                    },
+                    {
+                      "qid": "Q9000213",
+                      "scientific_name": "Genus32 species5"
+                    },
+                    {
+                      "qid": "Q9000214",
+                      "scientific_name": "Genus32 species6"
+                    },
+                    {
+                      "qid": "Q9000215",
+                      "scientific_name": "Genus32 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus33",
+                  "species": [
+                    {
+                      "qid": "Q9000216",
+                      "scientific_name": "Genus33 species0"
+                    },
+                    {
+                      "qid": "Q9000217",
+                      "scientific_name": "Genus33 species1"
+                    },
+                    {
+                      "qid": "Q9000218",
+                      "scientific_name": "Genus33 species2"
+                    },
+                    {
+                      "qid": "Q9000219",
+                      "scientific_name": "Genus33 species3"
+                    },
+                    {
+                      "qid": "Q9000220",
+                      "scientific_name": "Genus33 species4"
+                    },
+                    {
+                      "qid": "Q9000221",
+                      "scientific_name": "Genus33 species5"
+                    },
+                    {
+                      "qid": "Q9000222",
+                      "scientific_name": "Genus33 species6"
+                    },
+                    {
+                      "qid": "Q9000223",
+                      "scientific_name": "Genus33 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus34",
+                  "species": [
+                    {
+                      "qid": "Q9000224",
+                      "scientific_name": "Genus34 species0"
+                    },
+                    {
+                      "qid": "Q9000225",
+                      "scientific_name": "Genus34 species1"
+                    },
+                    {
+                      "qid": "Q9000226",
+                      "scientific_name": "Genus34 species2"
+                    },
+                    {
+                      "qid": "Q9000227",
+                      "scientific_name": "Genus34 species3"
+                    },
+                    {
+                      "qid": "Q9000228",
+                      "scientific_name": "Genus34 species4"
+                    },
+                    {
+                      "qid": "Q9000229",
+                      "scientific_name": "Genus34 species5"
+                    },
+                    {
+                      "qid": "Q9000230",
+                      "scientific_name": "Genus34 species6"
+                    },
+                    {
+                      "qid": "Q9000231",
+                      "scientific_name": "Genus34 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus35",
+                  "species": [
+                    {
+                      "qid": "Q9000232",
+                      "scientific_name": "Genus35 species0"
+                    },
+                    {
+                      "qid": "Q9000233",
+                      "scientific_name": "Genus35 species1"
+                    },
+                    {
+                      "qid": "Q9000234",
+                      "scientific_name": "Genus35 species2"
+                    },
+                    {
+                      "qid": "Q9000235",
+                      "scientific_name": "Genus35 species3"
+                    },
+                    {
+                      "qid": "Q9000236",
+                      "scientific_name": "Genus35 species4"
+                    },
+                    {
+                      "qid": "Q9000237",
+                      "scientific_name": "Genus35 species5"
+                    },
+                    {
+                      "qid": "Q9000238",
+                      "scientific_name": "Genus35 species6"
+                    },
+                    {
+                      "qid": "Q9000239",
+                      "scientific_name": "Genus35 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus36",
+                  "species": [
+                    {
+                      "qid": "Q9000240",
+                      "scientific_name": "Genus36 species0"
+                    },
+                    {
+                      "qid": "Q9000241",
+                      "scientific_name": "Genus36 species1"
+                    },
+                    {
+                      "qid": "Q9000242",
+                      "scientific_name": "Genus36 species2"
+                    },
+                    {
+                      "qid": "Q9000243",
+                      "scientific_name": "Genus36 species3"
+                    },
+                    {
+                      "qid": "Q9000244",
+                      "scientific_name": "Genus36 species4"
+                    },
+                    {
+                      "qid": "Q9000245",
+                      "scientific_name": "Genus36 species5"
+                    },
+                    {
+                      "qid": "Q9000246",
+                      "scientific_name": "Genus36 species6"
+                    },
+                    {
+                      "qid": "Q9000247",
+                      "scientific_name": "Genus36 species7"
+                    }
+                  ]
+                },
+                {
+                  "genus": "Genus37",
+                  "species": [
+                    {
+                      "qid": "Q9000248",
+                      "scientific_name": "Genus37 species0"
+                    },
+                    {
+                      "qid": "Q9000249",
+                      "scientific_name": "Genus37 species1"
+                    },
+                    {
+                      "qid": "Q9000250",
+                      "scientific_name": "Genus37 species2"
+                    },
+                    {
+                      "qid": "Q9000251",
+                      "scientific_name": "Genus37 species3"
+                    },
+                    {
+                      "qid": "Q9000252",
+                      "scientific_name": "Genus37 species4"
+                    },
+                    {
+                      "qid": "Q9000253",
+                      "scientific_name": "Genus37 species5"
+                    },
+                    {
+                      "qid": "Q9000254",
+                      "scientific_name": "Genus37 species6"
+                    },
+                    {
+                      "qid": "Q9000255",
+                      "scientific_name": "Genus37 species7"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/templates",
+      "resolved_path": "/api/v1/observation/templates",
+      "status_old": 401,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "AUTH_REQUIRED"
+        },
+        {
+          "path": "templates",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/templates/{template_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "template_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/market/listings",
+      "resolved_path": "/api/v1/market/listings",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "items",
+          "kind": "old-only-key",
+          "old": [
+            {
+              "listing_id": "lst_01",
+              "title": "ヘラクレス成虫ペア",
+              "price_pt": 1200,
+              "channel": "listing",
+              "status": "open",
+              "listing_state": "listed_fixed",
+              "seller_handle": "lab_researcher",
+              "condition": "excellent",
+              "thumbnail_url": null,
+              "trade_stage": 0
+            },
+            {
+              "listing_id": "lst_02",
+              "title": "ルシフェル幼虫 3 齢",
+              "price_pt": 800,
+              "channel": "auction",
+              "status": "open",
+              "listing_state": "listed_auction",
+              "seller_handle": "breeder_a",
+              "condition": "good",
+              "thumbnail_url": null,
+              "trade_stage": 0
+            }
+          ]
+        },
+        {
+          "path": "listings",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/market/listings/{listing_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "listing_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/market/transfer/{listing_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "listing_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/board/{category}/threads",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "category"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/board/categories",
+      "resolved_path": "/api/v1/board/categories",
+      "status_old": 200,
+      "status_new": 404,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "$",
+          "kind": "value",
+          "old": {
+            "categories": [
+              {
+                "id": "general",
+                "label": "一般",
+                "description": "飼育・雑談"
+              },
+              {
+                "id": "paper",
+                "label": "論文",
+                "description": "研究・case チップ"
+              },
+              {
+                "id": "rant",
+                "label": "愚痴",
+                "description": "匿名寄りの愚痴板"
+              },
+              {
+                "id": "component",
+                "label": "コンポーネント",
+                "description": "issue / PR"
+              }
+            ]
+          },
+          "new": "404 Not Found"
+        }
+      ],
+      "verdict": "old-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/component-board",
+      "resolved_path": "/api/v1/component-board",
+      "status_old": 200,
+      "status_new": 404,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "$",
+          "kind": "value",
+          "old": {
+            "items": [],
+            "source": "github"
+          },
+          "new": "404 Not Found"
+        }
+      ],
+      "verdict": "old-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/dispute/{thread_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "thread_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/me/preferences",
+      "resolved_path": "/api/v1/me/preferences",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "locale",
+          "kind": "new-only-key",
+          "new": "ja"
+        },
+        {
+          "path": "theme_pack_id",
+          "kind": "new-only-key",
+          "new": "minimal-light"
+        },
+        {
+          "path": "template_id",
+          "kind": "new-only-key",
+          "new": "default"
+        },
+        {
+          "path": "reduced_motion_override",
+          "kind": "new-only-key",
+          "new": "system"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/me/settings",
+      "resolved_path": "/api/v1/me/settings",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "preferences",
+          "kind": "new-only-key",
+          "new": {
+            "locale": "ja",
+            "theme_pack_id": "minimal-light",
+            "template_id": "default",
+            "reduced_motion_override": "system"
+          }
+        },
+        {
+          "path": "account",
+          "kind": "new-only-key",
+          "new": {
+            "actor_id": "30f9a6ba2045c8eb6f4d6ef15f04613c4f82f30737bc24190b4eef339263a114"
+          }
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/settings",
+      "resolved_path": "/api/v1/settings",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "locales",
+          "kind": "new-only-key",
+          "new": [
+            "ja",
+            "en"
+          ]
+        },
+        {
+          "path": "theme_packs",
+          "kind": "new-only-key",
+          "new": [
+            {
+              "$comment": "GENERATED FILE — do not edit by hand. source: config/design-tokens.json. regenerate: node scripts/codegen-theme-css.mjs",
+              "pack_id": "minimal-light",
+              "name": "Minimal Light",
+              "mode": "light",
+              "builtin": true,
+              "tokens": {
+                "bg": "#fbfbf9",
+                "surface": "#ffffff",
+                "surface-2": "#f2f2ef",
+                "text": "#141410",
+                "text-muted": "#5a5a52",
+                "border": "#dad9d2",
+                "primary": "#0b7a55",
+                "primary-text": "#ffffff",
+                "focus": "#0b7a55",
+                "danger": "#b3261e",
+                "danger-bg": "#fbeae8"
+              }
+            },
+            {
+              "$comment": "GENERATED FILE — do not edit by hand. source: config/design-tokens.json. regenerate: node scripts/codegen-theme-css.mjs",
+              "pack_id": "minimal-dark",
+              "name": "Minimal Dark",
+              "mode": "dark",
+              "builtin": true,
+              "tokens": {
+                "bg": "#0d0d0d",
+                "surface": "#1a1a1a",
+                "surface-2": "#242424",
+                "text": "#f2f2f0",
+                "text-muted": "#a8a8a2",
+                "border": "#2e2e2e",
+                "primary": "#2dd4a7",
+                "primary-text": "#06231a",
+                "focus": "#2dd4a7",
+                "danger": "#ff6b5e",
+                "danger-bg": "#2a1512"
+              }
+            }
+          ]
+        },
+        {
+          "path": "feature_flags",
+          "kind": "new-only-key",
+          "new": {
+            "llm": false,
+            "vision": false,
+            "faiss": false
+          }
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/theme-packs",
+      "resolved_path": "/api/v1/theme-packs",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "items",
+          "kind": "old-only-key",
+          "old": []
+        },
+        {
+          "path": "theme_packs",
+          "kind": "new-only-key",
+          "new": [
+            {
+              "$comment": "GENERATED FILE — do not edit by hand. source: config/design-tokens.json. regenerate: node scripts/codegen-theme-css.mjs",
+              "pack_id": "minimal-light",
+              "name": "Minimal Light",
+              "mode": "light",
+              "builtin": true,
+              "tokens": {
+                "bg": "#fbfbf9",
+                "surface": "#ffffff",
+                "surface-2": "#f2f2ef",
+                "text": "#141410",
+                "text-muted": "#5a5a52",
+                "border": "#dad9d2",
+                "primary": "#0b7a55",
+                "primary-text": "#ffffff",
+                "focus": "#0b7a55",
+                "danger": "#b3261e",
+                "danger-bg": "#fbeae8"
+              }
+            },
+            {
+              "$comment": "GENERATED FILE — do not edit by hand. source: config/design-tokens.json. regenerate: node scripts/codegen-theme-css.mjs",
+              "pack_id": "minimal-dark",
+              "name": "Minimal Dark",
+              "mode": "dark",
+              "builtin": true,
+              "tokens": {
+                "bg": "#0d0d0d",
+                "surface": "#1a1a1a",
+                "surface-2": "#242424",
+                "text": "#f2f2f0",
+                "text-muted": "#a8a8a2",
+                "border": "#2e2e2e",
+                "primary": "#2dd4a7",
+                "primary-text": "#06231a",
+                "focus": "#2dd4a7",
+                "danger": "#ff6b5e",
+                "danger-bg": "#2a1512"
+              }
+            }
+          ]
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/theme-packs/{pack_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "pack_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/settings",
+      "resolved_path": "/api/v1/settings",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "locales",
+          "kind": "new-only-key",
+          "new": [
+            "ja",
+            "en"
+          ]
+        },
+        {
+          "path": "theme_packs",
+          "kind": "new-only-key",
+          "new": [
+            {
+              "$comment": "GENERATED FILE — do not edit by hand. source: config/design-tokens.json. regenerate: node scripts/codegen-theme-css.mjs",
+              "pack_id": "minimal-light",
+              "name": "Minimal Light",
+              "mode": "light",
+              "builtin": true,
+              "tokens": {
+                "bg": "#fbfbf9",
+                "surface": "#ffffff",
+                "surface-2": "#f2f2ef",
+                "text": "#141410",
+                "text-muted": "#5a5a52",
+                "border": "#dad9d2",
+                "primary": "#0b7a55",
+                "primary-text": "#ffffff",
+                "focus": "#0b7a55",
+                "danger": "#b3261e",
+                "danger-bg": "#fbeae8"
+              }
+            },
+            {
+              "$comment": "GENERATED FILE — do not edit by hand. source: config/design-tokens.json. regenerate: node scripts/codegen-theme-css.mjs",
+              "pack_id": "minimal-dark",
+              "name": "Minimal Dark",
+              "mode": "dark",
+              "builtin": true,
+              "tokens": {
+                "bg": "#0d0d0d",
+                "surface": "#1a1a1a",
+                "surface-2": "#242424",
+                "text": "#f2f2f0",
+                "text-muted": "#a8a8a2",
+                "border": "#2e2e2e",
+                "primary": "#2dd4a7",
+                "primary-text": "#06231a",
+                "focus": "#2dd4a7",
+                "danger": "#ff6b5e",
+                "danger-bg": "#2a1512"
+              }
+            }
+          ]
+        },
+        {
+          "path": "feature_flags",
+          "kind": "new-only-key",
+          "new": {
+            "llm": false,
+            "vision": false,
+            "faiss": false
+          }
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/gmo/reconciliation/meta",
+      "resolved_path": "/api/v1/gmo/reconciliation/meta",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "ok",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "tier",
+          "kind": "old-only-key",
+          "old": "stub"
+        },
+        {
+          "path": "provider_note",
+          "kind": "old-only-key",
+          "old": "クライアントID/シークレット未設定時は JSON ストアのみ。銀行 API 呼び出しはスキップ。"
+        },
+        {
+          "path": "stub",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "webhook_client_configured",
+          "kind": "old-only-key",
+          "old": false
+        },
+        {
+          "path": "webhook_signature_enforced",
+          "kind": "old-only-key",
+          "old": false
+        },
+        {
+          "path": "expected_count",
+          "kind": "old-only-key",
+          "old": 0
+        },
+        {
+          "path": "webhook_event_count",
+          "kind": "old-only-key",
+          "old": 0
+        },
+        {
+          "path": "actor_id",
+          "kind": "new-only-key",
+          "new": "30f9a6ba2045c8eb6f4d6ef15f04613c4f82f30737bc24190b4eef339263a114"
+        },
+        {
+          "path": "matched_count",
+          "kind": "new-only-key",
+          "new": 0
+        },
+        {
+          "path": "confirmed_total",
+          "kind": "new-only-key",
+          "new": 0
+        },
+        {
+          "path": "accrued_total",
+          "kind": "new-only-key",
+          "new": 0
+        },
+        {
+          "path": "confirmed_deposits",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/gmo/transfer-code",
+      "resolved_path": "/api/v1/gmo/transfer-code",
+      "status_old": 200,
+      "status_new": 200,
+      "status_match": true,
+      "body_diff": [
+        {
+          "path": "user_id",
+          "kind": "old-only-key",
+          "old": "user-demo"
+        },
+        {
+          "path": "transfer_code",
+          "kind": "value",
+          "old": "U-5EGFC",
+          "new": "U-HA6M"
+        },
+        {
+          "path": "tier",
+          "kind": "old-only-key",
+          "old": "stub"
+        },
+        {
+          "path": "status",
+          "kind": "old-only-key",
+          "old": "awaiting_deposit"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/gmo/va-deposit/unsent",
+      "resolved_path": "/api/v1/gmo/va-deposit/unsent",
+      "status_old": 503,
+      "status_new": 404,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "$",
+          "kind": "value",
+          "old": {
+            "detail": "GMO bank API disabled in stub tier (set GMO_CONNECTOR_MODE=stg with credentials)"
+          },
+          "new": "404 Not Found"
+        }
+      ],
+      "verdict": "old-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/placements",
+      "resolved_path": "/api/v1/placements",
+      "status_old": 404,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "Not Found"
+        },
+        {
+          "path": "placements",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "new-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/device-bindings",
+      "resolved_path": "/api/v1/device-bindings",
+      "status_old": 404,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "Not Found"
+        },
+        {
+          "path": "bindings",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "new-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/occupancy",
+      "resolved_path": "/api/v1/occupancy",
+      "status_old": 404,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "Not Found"
+        },
+        {
+          "path": "occupancy",
+          "kind": "new-only-key",
+          "new": []
+        }
+      ],
+      "verdict": "new-only"
+    }
+  ]
+}

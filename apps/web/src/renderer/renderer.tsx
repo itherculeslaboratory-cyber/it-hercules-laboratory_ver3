@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { apiUrl } from "@/lib/api";
 import { ApiError, mapError } from "@/lib/error-messages";
 import { shouldOfferTranslation, translateOnDemand } from "@/lib/ugc-translate";
+import { clearDraft, loadDraft, saveDraft } from "./draft";
 import type { Action, ScreenDef, ScreenNode, Transition } from "./types";
 
 /* -------------------------------------------------------------------------- *
@@ -149,6 +150,16 @@ function screenHref(to: string, query?: Record<string, string>): string {
   return base + qs;
 }
 
+// Scalar form fields for the next screen's {{params.*}} display. Nested values
+// (measurements) ride the sessionStorage draft instead — this is display only.
+function queryFromBody(body: Record<string, unknown>): Record<string, string> {
+  const q: Record<string, string> = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (typeof v === "string" || typeof v === "number") q[k] = String(v);
+  }
+  return q;
+}
+
 // Common id-ish response fields worth carrying into the next screen as query.
 function queryFromResult(result: unknown): Record<string, string> {
   const r = (result ?? {}) as Record<string, unknown>;
@@ -232,28 +243,51 @@ function useRunAction(nodeId: string) {
   const { setActionResult } = useContext(DataSinkCtx);
   return useCallback(
     async (action: Action, body?: Record<string, unknown>, file?: File | null) => {
-      const act: Action =
-        action.kind === "api"
-          ? { ...action, path: interpolate(action.path, scope) }
-          : action;
+      // A form whose action is a navigate is the 3-screen-confirm carry (OBS-25):
+      // stash the shaped body + photo so the next screen's commit can replay it
+      // (survives the full-page reload), and put scalar fields on the query for
+      // {{params.*}} display. A plain button navigate (no body) keeps the old
+      // single-arg execute path so test/onAction observers see the raw action.
+      if (action.kind === "navigate") {
+        if (body === undefined) {
+          await execute(action);
+        } else {
+          await saveDraft(body, file ?? null);
+          navigate(action.to, queryFromBody(body));
+        }
+        return;
+      }
+      // An api action can replay the pending confirm draft (body_from:"draft"):
+      // the confirm screen's commit button carries no inline body, so pull the
+      // shaped body + photo the entry form stashed on navigate.
+      let effBody = body;
+      let effFile = file ?? null;
+      const fromDraft = action.body_from === "draft";
+      if (fromDraft) {
+        const d = await loadDraft();
+        if (d) {
+          effBody = d.body;
+          effFile = d.file;
+        }
+      }
+      const act: Action = { ...action, path: interpolate(action.path, scope) };
       // Keep the single-arg call shape when there is no body (buttons), so
       // action executors observed in tests see exactly the action.
-      const result = body === undefined ? await execute(act) : await execute(act, body);
-      if (act.kind === "api") {
-        if (result && typeof result === "object") setActionResult(result);
-        // Two-stage photo upload (design-c2 §3.2): the capture is created first,
-        // then — if the form carried a photo — the file is POSTed as multipart
-        // against the returned capture_id, BEFORE the transition unmounts us.
-        const captureId = (result as Record<string, unknown> | undefined)?.capture_id;
-        if (file && typeof captureId === "string") {
-          await execute(
-            { kind: "api", method: "POST", path: "/api/v1/observation/upload" },
-            { capture_id: captureId, file },
-          );
-        }
-        const t = transitions.find((x) => x.from === nodeId);
-        if (t) navigate(t.to_screen_id, queryFromResult(result));
+      const result = effBody === undefined ? await execute(act) : await execute(act, effBody);
+      if (result && typeof result === "object") setActionResult(result);
+      // Two-stage photo upload (design-c2 §3.2): the capture is created first,
+      // then — if the form carried a photo — the file is POSTed as multipart
+      // against the returned capture_id, BEFORE the transition unmounts us.
+      const captureId = (result as Record<string, unknown> | undefined)?.capture_id;
+      if (effFile && typeof captureId === "string") {
+        await execute(
+          { kind: "api", method: "POST", path: "/api/v1/observation/upload" },
+          { capture_id: captureId, file: effFile },
+        );
       }
+      if (fromDraft) clearDraft();
+      const t = transitions.find((x) => x.from === nodeId);
+      if (t) navigate(t.to_screen_id, queryFromResult(result));
     },
     [execute, scope, transitions, navigate, setActionResult, nodeId],
   );

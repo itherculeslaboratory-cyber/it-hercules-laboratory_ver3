@@ -136,15 +136,19 @@ export async function projectName(
  */
 export async function projectIndividual(s: TruthStore, id: string) {
   const master = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
-  if (!master) return null;
   const ref = `individual/${id}`;
   const life = (await s.listEvents(`truth/${LIFE_TYPE}/${id}-`))
     .map(dataOf)
     .filter((d) => d.individual_id === id);
-  const timeline = life.slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
   const observations = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
     .map(dataOf)
     .filter((d) => d.subject_ref === ref);
+  // An individual is implicit (不変条項① 派生値は投影で都度再計算): it exists as
+  // soon as anything references it — a capture's subject_ref or a life-event —
+  // even with no explicit master record (the observation flow never mints one).
+  // 404 stays reserved for a genuinely unknown id (no master, no derived refs).
+  if (!master && observations.length === 0 && life.length === 0) return null;
+  const timeline = life.slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
   const schedules = (await s.listEvents(`truth/${SCHEDULE_TYPE}/`))
     .map(dataOf)
     .filter((d) => d.individual_id === id);
@@ -156,7 +160,7 @@ export async function projectIndividual(s: TruthStore, id: string) {
   ];
   return {
     individual_id: id,
-    master: dataOf(master),
+    master: master ? dataOf(master) : null,
     name: await projectName(s, id),
     timeline,
     // 6 文化ブロック: 観測履歴 / スケジュール / テンプレ / DataSource=device / 市場オファー / 改善

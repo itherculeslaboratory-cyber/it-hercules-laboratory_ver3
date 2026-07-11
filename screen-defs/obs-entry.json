@@ -23,6 +23,7 @@
               "id": "capture-form",
               "type": "form",
               "action": { "kind": "navigate", "to": "obs-confirm" },
+              "props": { "static": { "measurements.0.kind": "number" } },
               "children": [
                 { "id": "domain", "type": "field", "props": { "variant": "select", "name": "domain", "label_key": "obs-entry.domain.label", "label": "観測ドメイン", "required": true, "placeholder": "ドメインを選ぶ", "options": [
                   { "value": "biology", "label": "生き物" },

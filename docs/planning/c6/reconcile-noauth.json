@@ -1,0 +1,771 @@
+{
+  "generated_at": "2026-07-11T11:09:34.223Z",
+  "old_base": "https://api.it-hercules.uk",
+  "new_base": "https://ihl-api-ver3-staging.it-hercules-laboratory.workers.dev",
+  "whitelist": [
+    "id",
+    "etag",
+    "generated_at",
+    "timestamp",
+    "server_time",
+    "request_id",
+    "*_at"
+  ],
+  "totals": {
+    "match": 3,
+    "diff": 15,
+    "old-only": 0,
+    "new-only": 3,
+    "skipped_param": 9,
+    "error": 0
+  },
+  "routes": [
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "resolved_path": "/api/v1/auth/session",
+      "status_old": 401,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "AUTH_REQUIRED"
+        },
+        {
+          "path": "authenticated",
+          "kind": "new-only-key",
+          "new": false
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "resolved_path": "/api/v1/auth/session",
+      "status_old": 401,
+      "status_new": 200,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "AUTH_REQUIRED"
+        },
+        {
+          "path": "authenticated",
+          "kind": "new-only-key",
+          "new": false
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/onboarding/status",
+      "resolved_path": "/api/v1/onboarding/status",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "status",
+          "kind": "old-only-key",
+          "old": "pending"
+        },
+        {
+          "path": "complete",
+          "kind": "old-only-key",
+          "old": false
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/home/summary",
+      "resolved_path": "/api/v1/home/summary",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "today_lines",
+          "kind": "old-only-key",
+          "old": [
+            "次回観測予定: 将軍-2026-1（2026-10-26）",
+            "観測データは色補正なしで保存されます",
+            "マーケット Stage 1 は当事者 2 人の連絡のみ"
+          ]
+        },
+        {
+          "path": "cards",
+          "kind": "old-only-key",
+          "old": [
+            {
+              "id": "obs",
+              "label": "観測検索",
+              "value": "—",
+              "href": "/observation"
+            },
+            {
+              "id": "paper",
+              "label": "進行中の論文",
+              "value": "1",
+              "href": "/board/paper"
+            },
+            {
+              "id": "market",
+              "label": "取引中",
+              "value": "0",
+              "href": "/market"
+            },
+            {
+              "id": "vote",
+              "label": "公開投票",
+              "value": "1",
+              "href": "/vote"
+            }
+          ]
+        },
+        {
+          "path": "primary_cta",
+          "kind": "old-only-key",
+          "old": {
+            "label": "観測登録開始",
+            "href": "/observation/context"
+          }
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/{capture_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "capture_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/{capture_id}/image",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "capture_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/{capture_id}/reanalysis-manifest",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "capture_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/measurement-dictionary",
+      "resolved_path": "/api/v1/observation/measurement-dictionary",
+      "status_old": 401,
+      "status_new": 401,
+      "status_match": true,
+      "body_diff": [],
+      "verdict": "match"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/targets/catalog",
+      "resolved_path": "/api/v1/observation/targets/catalog",
+      "status_old": 401,
+      "status_new": 401,
+      "status_match": true,
+      "body_diff": [],
+      "verdict": "match"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/templates",
+      "resolved_path": "/api/v1/observation/templates",
+      "status_old": 401,
+      "status_new": 401,
+      "status_match": true,
+      "body_diff": [],
+      "verdict": "match"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/observation/templates/{template_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "template_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/market/listings",
+      "resolved_path": "/api/v1/market/listings",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "items",
+          "kind": "old-only-key",
+          "old": [
+            {
+              "listing_id": "lst_01",
+              "title": "ヘラクレス成虫ペア",
+              "price_pt": 1200,
+              "channel": "listing",
+              "status": "open",
+              "listing_state": "listed_fixed",
+              "seller_handle": "lab_researcher",
+              "condition": "excellent",
+              "thumbnail_url": null,
+              "trade_stage": 0
+            },
+            {
+              "listing_id": "lst_02",
+              "title": "ルシフェル幼虫 3 齢",
+              "price_pt": 800,
+              "channel": "auction",
+              "status": "open",
+              "listing_state": "listed_auction",
+              "seller_handle": "breeder_a",
+              "condition": "good",
+              "thumbnail_url": null,
+              "trade_stage": 0
+            }
+          ]
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/market/listings/{listing_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "listing_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/market/transfer/{listing_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "listing_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/board/{category}/threads",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "category"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/board/categories",
+      "resolved_path": "/api/v1/board/categories",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "categories",
+          "kind": "old-only-key",
+          "old": [
+            {
+              "id": "general",
+              "label": "一般",
+              "description": "飼育・雑談"
+            },
+            {
+              "id": "paper",
+              "label": "論文",
+              "description": "研究・case チップ"
+            },
+            {
+              "id": "rant",
+              "label": "愚痴",
+              "description": "匿名寄りの愚痴板"
+            },
+            {
+              "id": "component",
+              "label": "コンポーネント",
+              "description": "issue / PR"
+            }
+          ]
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/component-board",
+      "resolved_path": "/api/v1/component-board",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "items",
+          "kind": "old-only-key",
+          "old": []
+        },
+        {
+          "path": "source",
+          "kind": "old-only-key",
+          "old": "github"
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/dispute/{thread_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "thread_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/me/preferences",
+      "resolved_path": "/api/v1/me/preferences",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/me/settings",
+      "resolved_path": "/api/v1/me/settings",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/settings",
+      "resolved_path": "/api/v1/settings",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/theme-packs",
+      "resolved_path": "/api/v1/theme-packs",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "items",
+          "kind": "old-only-key",
+          "old": []
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/theme-packs/{pack_id}",
+      "resolved_path": null,
+      "verdict": "skipped_param",
+      "missing": [
+        "pack_id"
+      ]
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/settings",
+      "resolved_path": "/api/v1/settings",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "language",
+          "kind": "old-only-key",
+          "old": "ja"
+        },
+        {
+          "path": "notifications",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "counterparty_pii_mode",
+          "kind": "old-only-key",
+          "old": "session_only"
+        },
+        {
+          "path": "truth_pii_policy",
+          "kind": "old-only-key",
+          "old": "no_plaintext"
+        },
+        {
+          "path": "default_device_id",
+          "kind": "old-only-key",
+          "old": null
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/gmo/reconciliation/meta",
+      "resolved_path": "/api/v1/gmo/reconciliation/meta",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "ok",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "tier",
+          "kind": "old-only-key",
+          "old": "stub"
+        },
+        {
+          "path": "provider_note",
+          "kind": "old-only-key",
+          "old": "クライアントID/シークレット未設定時は JSON ストアのみ。銀行 API 呼び出しはスキップ。"
+        },
+        {
+          "path": "stub",
+          "kind": "old-only-key",
+          "old": true
+        },
+        {
+          "path": "webhook_client_configured",
+          "kind": "old-only-key",
+          "old": false
+        },
+        {
+          "path": "webhook_signature_enforced",
+          "kind": "old-only-key",
+          "old": false
+        },
+        {
+          "path": "expected_count",
+          "kind": "old-only-key",
+          "old": 0
+        },
+        {
+          "path": "webhook_event_count",
+          "kind": "old-only-key",
+          "old": 0
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/gmo/transfer-code",
+      "resolved_path": "/api/v1/gmo/transfer-code",
+      "status_old": 200,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "user_id",
+          "kind": "old-only-key",
+          "old": "user-demo"
+        },
+        {
+          "path": "transfer_code",
+          "kind": "old-only-key",
+          "old": "U-5EGFC"
+        },
+        {
+          "path": "tier",
+          "kind": "old-only-key",
+          "old": "stub"
+        },
+        {
+          "path": "status",
+          "kind": "old-only-key",
+          "old": "awaiting_deposit"
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/gmo/va-deposit/unsent",
+      "resolved_path": "/api/v1/gmo/va-deposit/unsent",
+      "status_old": 503,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "GMO bank API disabled in stub tier (set GMO_CONNECTOR_MODE=stg with credentials)"
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "diff"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/placements",
+      "resolved_path": "/api/v1/placements",
+      "status_old": 404,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "Not Found"
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "new-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/device-bindings",
+      "resolved_path": "/api/v1/device-bindings",
+      "status_old": 404,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "Not Found"
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "new-only"
+    },
+    {
+      "feature": "—",
+      "method": "GET",
+      "path": "/api/v1/occupancy",
+      "resolved_path": "/api/v1/occupancy",
+      "status_old": 404,
+      "status_new": 401,
+      "status_match": false,
+      "body_diff": [
+        {
+          "path": "detail",
+          "kind": "old-only-key",
+          "old": "Not Found"
+        },
+        {
+          "path": "error",
+          "kind": "new-only-key",
+          "new": "AUTH_REQUIRED"
+        }
+      ],
+      "verdict": "new-only"
+    }
+  ]
+}

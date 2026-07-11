@@ -27,7 +27,7 @@
               "id": "commit",
               "type": "button",
               "props": { "label": "登録する", "variant": "primary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/solid-observation/commit" }
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/solid-observation/commit", "body_from": "draft" }
             }
           ]
         }

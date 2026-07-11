@@ -29,6 +29,12 @@ crons = ["0 15 * * *"]
 name = "ihl-api-ver3-staging"
 workers_dev = true
 
+# トップレベル [triggers] は env に継承されるため、staging では空配列で明示上書きし
+# cron を無効化する(cron の実稼働開始 = 常駐実行 = 人間ゲート。2026-07-11 初回デプロイで
+# 継承に気づき即時無効化 — 経緯は REPORT-ver3-phase-c6 §停止報告)。
+[env.staging.triggers]
+crons = []
+
 [[env.staging.r2_buckets]]
 binding = "TRUTH"
 bucket_name = "ihl-ver3-truth-dev"

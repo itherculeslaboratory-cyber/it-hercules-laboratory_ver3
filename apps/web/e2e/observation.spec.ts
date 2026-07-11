@@ -36,12 +36,12 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
   await shot(page, "02-home");
 
-  // 2. home → domain select → biology → obs-entry
+  // 2. home → obs-entry 直行(V3-UIX-02 3クリック導線・K4)。domain は obs-entry が
+  //    自前収集するため domain-select 画面はガイド用の並行導線(リンク存在のみ確認)。
+  await expect(page.getByRole("link", { name: "ドメインから選んで始める" })).toBeVisible();
   await page.getByRole("button", { name: "観測を始める" }).click();
-  await expect(page.getByRole("heading", { name: "何を観測しますか？" })).toBeVisible();
-  await shot(page, "03-obs-domain-select");
-  await page.getByRole("button", { name: "生き物" }).click();
   await expect(page.getByRole("heading", { name: "観測を記録する" })).toBeVisible();
+  await shot(page, "03-obs-entry-direct");
   // Gate on hydration before submitting: a click before the client bundle
   // attaches onSubmit does a native GET form submit (no capture is created).
   await page.waitForLoadState("networkidle");
@@ -59,8 +59,13 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await page.getByLabel("写真").setInputFiles({ name: "e2e.png", mimeType: "image/png", buffer: makePng() });
   await shot(page, "05-obs-entry-filled");
 
-  // 4. submit → 2-stage POST (capture then photo upload) → obs-detail
-  await page.getByRole("button", { name: "記録する" }).click();
+  // 4. submit via the mandatory confirm step (OBS-25, K1): 確認へ進む → obs-confirm
+  //    → 登録する → 2-stage POST (capture then photo upload) → obs-detail
+  await page.getByRole("button", { name: "確認へ進む" }).click();
+  await expect(page.getByRole("heading", { name: "観測を確認する" })).toBeVisible();
+  await page.waitForLoadState("networkidle"); // hydration gate before commit (see step 2)
+  await shot(page, "05b-obs-confirm");
+  await page.getByRole("button", { name: "登録する" }).click();
   await expect(page.getByRole("heading", { name: "観測の詳細" })).toBeVisible();
   const capture1Id = new URL(page.url()).searchParams.get("id")!;
   expect(capture1Id).toBeTruthy();
@@ -105,7 +110,10 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await page.getByLabel("計測項目").fill("体重");
   await page.getByLabel("計測値").fill("32");
   await page.getByLabel("対象個体 ID").fill(subjectRef);
-  await page.getByRole("button", { name: "記録する" }).click();
+  await page.getByRole("button", { name: "確認へ進む" }).click();
+  await expect(page.getByRole("heading", { name: "観測を確認する" })).toBeVisible();
+  await page.waitForLoadState("networkidle"); // hydration gate before commit (see step 4)
+  await page.getByRole("button", { name: "登録する" }).click();
   await expect(page.getByRole("heading", { name: "観測の詳細" })).toBeVisible();
   const capture2Id = new URL(page.url()).searchParams.get("id")!;
   await expect(page.getByText(/体重: 32/)).toBeVisible();
