@@ -120,6 +120,9 @@ describe("KRM-10 3 軸貢献度投影 projectContribution", () => {
     expect(p.axes.research).toEqual({ score: 150, minted: 1, next_threshold: 100, carry: 50, title: false });
     expect(p.axes.capital).toEqual({ score: 100, minted: 1, next_threshold: 100, carry: 0, title: false });
     expect(p.axes.development.score).toBe(0); // 軸独立（未加算軸は 0）
+    // axis_list は ScreenDef の list bind 用の配列鏡像（object と同値・3 軸順序固定）。
+    expect(p.axis_list.map((a) => a.axis)).toEqual(["research", "capital", "development"]);
+    expect(p.axis_list[0]).toEqual({ axis: "research", ...p.axes.research });
   });
 
   it("称号は score ≥ 10000 で投影導出（イベント不要）", async () => {

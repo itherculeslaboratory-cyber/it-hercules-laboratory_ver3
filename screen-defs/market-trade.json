@@ -20,12 +20,22 @@
               "props": { "text": "公開 → 非公開ボード（成立で当事者2人のみ）", "muted": true }
             },
 
+            { "id": "detail-title", "type": "heading", "props": { "text": "この出品", "level": 2 } },
+            {
+              "id": "detail",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/market/listings/{{params.listing_id}}",
+                "bind_text": "{{listing.title}} / {{listing.price}} 円"
+              }
+            },
+
             { "id": "state-title", "type": "heading", "props": { "text": "現在の状態", "level": 2 } },
             {
               "id": "state",
               "type": "card",
               "props": {
-                "source_path": "/api/v1/market/listings/{listing_id}/state",
+                "source_path": "/api/v1/market/listings/{{params.listing_id}}/state",
                 "bind_text": "状態 {{state}}（ステージ {{stage}}）"
               }
             },
@@ -35,7 +45,7 @@
               "id": "price",
               "type": "card",
               "props": {
-                "source_path": "/api/v1/market/listings/{listing_id}/price-recommendation",
+                "source_path": "/api/v1/market/listings/{{params.listing_id}}/price-recommendation",
                 "bind_text": "推奨 {{anchor}} 円（{{method}}）"
               }
             },
@@ -45,7 +55,7 @@
               "id": "shipping",
               "type": "card",
               "props": {
-                "source_path": "/api/v1/market/listings/{listing_id}/shipping-estimate",
+                "source_path": "/api/v1/market/listings/{{params.listing_id}}/shipping-estimate",
                 "bind_text": "サイズ {{size}} / 目安 {{yen}} 円（着払い）"
               }
             },
@@ -54,7 +64,7 @@
               "id": "board",
               "type": "list",
               "props": {
-                "source_path": "/api/v1/market/listings/{listing_id}/board",
+                "source_path": "/api/v1/market/listings/{{params.listing_id}}/board",
                 "bind_items": "data.offers",
                 "item_text": "{{from}} {{kind}} {{amount}}"
               }

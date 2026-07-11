@@ -22,7 +22,7 @@
               "type": "list",
               "props": {
                 "source_path": "/api/v1/market/templates",
-                "bind_items": "data.templates",
+                "bind_items": "data.templates.templates",
                 "item_text": "{{title}}（{{kind}}）スコア {{score}}"
               }
             },

@@ -1,44 +1,26 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 
-// V3-AIP-49 — market 実 UI E2E. Reuses the observation.spec harness: dev-login
-// (in-screen button, HttpOnly session cookie flows same-origin via the Next
-// rewrite) → ScreenDef Renderer draws the REAL market screen-def → input →
-// 実行 → 保存 通貫. Persistence lands in the worker's local R2 (wrangler dev
-// local mode = R2 simulated in memory), same backing store observation.spec
-// asserts against — that IS the in-memory FakeR2 for the E2E stack.
+// V3-AIP-49 / C7-T1 — market 実 UI + 実バックエンド E2E. observation.spec の作法:
+// in-screen dev-login（HttpOnly セッション cookie が Next rewrite 経由で same-origin
+// に流れる）→ ScreenDef Renderer が REAL market-trade を描画 → 出品→一覧→詳細 を実
+// worker + R2-local（wrangler dev local = メモリ R2 = E2E FakeR2）に対して通貫。
 //
-// DEPENDENCY GATE (design-k8 §5 / 批評家 F3): the render target is the K3
-// market screen-def (screen-defs/market.json). K8 owns the harness + FakeR2
-// mock, NOT the screen-def. Until K3 publishes market.json this test SKIPS and
-// reports the stop — symmetric with ledger.spec.ts / spec-thread.test.ts.
+// なぜ出品フローが同一オリジン fetch 駆動か（誠実な記録・モックではない）: 出品 create-form
+// を宣言する market screen-def は存在しないため、出品→一覧→詳細 は UI が叩くのと同一の
+// same-origin cookie で REAL /api/v1/market/* を直接駆動する。C7-T2 で market-trade の
+// source_path を {{params.listing_id}} に統一し（旧 {listing_id} 単一波括弧は Renderer が
+// 埋めなかった）+ 詳細カードに card bind_text を実装したので、末尾で listing_id 付き URL を
+// 開き、詳細カードが title/price を画面に描くことも実測する。
+//
+// 依存ゲート解除: market-trade.json は C5 で恒久存在（navigation.json 収録）。旧 skip
+// （K3 未産出待ち）は解消済み。
 
 const WEB = "http://127.0.0.1:3000";
 const SPEC_DIR = dirname(fileURLToPath(import.meta.url));
-const MARKET_DEF = resolve(SPEC_DIR, "..", "..", "..", "screen-defs", "market.json");
-const READY = existsSync(MARKET_DEF);
-
-if (!READY) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    "[STOP] market.spec.ts skipped: K3 render target screen-defs/market.json not produced yet " +
-      "(design-k8 §5 dependency gate). Harness + FakeR2 mock ready; wires automatically when K3 lands.",
-  );
-}
-
-type Node = { id: string; type: string; props?: Record<string, unknown>; action?: Record<string, unknown>; children?: Node[] };
-
-function flatten(def: { nodes: Node[] }): Node[] {
-  const out: Node[] = [];
-  const walk = (n: Node) => {
-    out.push(n);
-    for (const c of n.children ?? []) walk(c);
-  };
-  for (const n of def.nodes) walk(n);
-  return out;
-}
+const MARKET_DEF = resolve(SPEC_DIR, "..", "..", "..", "screen-defs", "market-trade.json");
 
 async function devLogin(page: Page): Promise<void> {
   await page.goto(`${WEB}/s/login`);
@@ -46,59 +28,63 @@ async function devLogin(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
 }
 
-// Drive the screen-def's own declared form: text fields → a run-unique value,
-// number fields → "1", selects → first real option. Contract-driven so it stays
-// correct against whatever K3 ships — no screen-specific field names hard-coded.
-async function fillDeclaredForm(page: Page, form: Node, stamp: string): Promise<void> {
-  const fields = (form.children ?? []).filter((c) => c.type === "field");
-  for (const f of fields) {
-    const label = (f.props?.label as string) ?? "";
-    if (!label) continue;
-    const variant = (f.props?.variant as string) ?? "text";
-    const control = page.getByLabel(label);
-    if (variant === "select") {
-      await control.selectOption({ index: 1 });
-    } else if (variant === "number") {
-      await control.fill("1");
-    } else {
-      await control.fill(`${label}-${stamp}`);
-    }
-  }
+// same-origin authenticated fetch (browser cookie jar). credentials:"include"
+// so the HttpOnly session authenticates exactly as the UI's own fetches do.
+async function api(page: Page, method: string, path: string, body?: unknown) {
+  return page.evaluate(
+    async ([m, p, b]) => {
+      const init: RequestInit = { method: m as string, credentials: "include" };
+      if (b != null) {
+        init.headers = { "content-type": "application/json" };
+        init.body = JSON.stringify(b);
+      }
+      const r = await fetch(p as string, init);
+      return { status: r.status, json: await r.json().catch(() => null) };
+    },
+    [method, path, body ?? null] as const,
+  );
 }
 
-test("market screen-def renders and a listing round-trips through the Renderer", async ({ page }) => {
-  test.skip(!READY, "K3 render target screen-defs/market.json not produced yet (design-k8 §5)");
-
-  const def = JSON.parse(readFileSync(MARKET_DEF, "utf8")) as { screen_id: string; route: string; title: string; nodes: Node[] };
-  const nodes = flatten(def);
-  const form = nodes.find((n) => n.type === "form");
-  const list = nodes.find((n) => n.type === "list");
-  const stamp = Date.now().toString(36);
+test("market lifecycle: dev-login, publish, list, detail through the real worker", async ({ page }) => {
+  expect(existsSync(MARKET_DEF), "market-trade.json must exist (C5 dependency)").toBe(true);
 
   await devLogin(page);
 
-  // 実 UI: the Renderer serves screens at /s/<screen_id> (observation.spec
-  // convention) — the real screen-def, not a mock.
-  await page.goto(`${WEB}/s/${def.screen_id}`);
-  await expect(page.getByRole("heading", { name: def.title })).toBeVisible();
-  await page.waitForLoadState("networkidle"); // hydration gate before submit
+  // 実 UI: the Renderer draws the REAL market-trade screen-def (heading proves it
+  // renders through the live catalog, not a mock).
+  await page.goto(`${WEB}/s/market-trade`);
+  await expect(page.getByRole("heading", { name: "取引", level: 1 })).toBeVisible();
+  await page.waitForLoadState("networkidle");
 
-  // 入力 → 実行 → 保存: fill the declared form and submit through the real action.
-  expect(form, "market screen-def must declare a form to exercise").toBeTruthy();
-  await fillDeclaredForm(page, form!, stamp);
-  const submit = page.getByRole("button").filter({ hasText: /出品|保存|記録|作成|登録/ }).first();
-  await submit.click();
+  const stamp = Date.now().toString(36);
+  const title = `E2E listing ${stamp}`;
 
-  // 保存 confirmed against real Truth: the screen-def's own read endpoint
-  // (list source_path) is fetched same-origin with the browser session cookie
-  // and returns HTTP 200 (persisted, not a mock). Deep field asserts belong to
-  // K3's own screen-def contract; this pins the write actually landed.
-  if (list?.props?.source_path) {
-    const src = list.props.source_path as string;
-    const status = await page.evaluate(async (p: string) => {
-      const r = await fetch(p, { credentials: "include" });
-      return r.status;
-    }, src);
-    expect(status).toBe(200);
-  }
+  // 出品: append a listing to real Truth (201).
+  const created = await api(page, "POST", "/api/v1/market/listings", { title, price: 1200 });
+  expect(created.status, "publish must be 201").toBe(201);
+  const listingId = (created.json as { listing_id: string }).listing_id;
+  expect(listingId, "publish returns a listing_id").toBeTruthy();
+
+  // 一覧: the projection (R2 prefix scan) now includes this listing.
+  const listed = await api(page, "GET", "/api/v1/market/listings");
+  expect(listed.status).toBe(200);
+  const listings = (listed.json as { listings: Array<{ listing_id: string; title: string }> }).listings;
+  const mine = listings.find((l) => l.listing_id === listingId);
+  expect(mine, "listing appears in the list projection").toBeTruthy();
+  expect(mine!.title).toBe(title);
+
+  // 詳細: the single-listing projection round-trips the same persisted record,
+  // with actor_id stamped by the session principal (V3-AUT-17).
+  const detail = await api(page, "GET", `/api/v1/market/listings/${listingId}`);
+  expect(detail.status).toBe(200);
+  const listing = (detail.json as { listing: { title: string; price: number; actor_id: string } }).listing;
+  expect(listing.title).toBe(title);
+  expect(listing.price).toBe(1200);
+  expect(typeof listing.actor_id).toBe("string");
+
+  // カード値描画の可視 assert: listing_id を渡して screen を開くと、詳細カードが
+  // bind_text で REAL /market/listings/{id} の title/price を画面テキストに描く
+  // （C7-T2 の card bind_text 実装 + source_path の {{params.listing_id}} 統一の実証）。
+  await page.goto(`${WEB}/s/market-trade?listing_id=${listingId}`);
+  await expect(page.getByText(`${title} / 1200 円`)).toBeVisible();
 });

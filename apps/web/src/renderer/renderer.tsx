@@ -571,13 +571,23 @@ function ListNode({ node }: { node: ScreenNode }) {
 function CardNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   useSource(node);
+  const scope = useContext(ScopeCtx);
   const children = node.children ?? [];
-  if (children.length === 0 && p.empty_text) {
+  const bindText = p.bind_text ? String(p.bind_text) : "";
+  if (children.length === 0 && !bindText && p.empty_text) {
     return <p className="civ-empty">{String(p.empty_text)}</p>;
   }
+  // props.bind_text renders the card's OWN fetched object (data[node.id]), so
+  // bare fields ({{karma_value}}, {{listing.title}}) resolve against the
+  // source_path response — the single-object twin of a list's bind_items.
   return (
     <article className="civ-card">
       {p.draft ? <span className="civ-draft-badge">草案</span> : null}
+      {bindText ? (
+        <p className="civ-text">
+          {interpolate(bindText, getPath(scope, `data.${node.id}`) ?? {})}
+        </p>
+      ) : null}
       <Children nodes={node.children} />
     </article>
   );

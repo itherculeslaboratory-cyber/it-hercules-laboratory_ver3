@@ -52,6 +52,8 @@ export interface AxisState {
 export interface ContributionProjection {
   actor_id: string;
   axes: Record<Axis, AxisState>;
+  // axes を配列でも公開（ScreenDef の list bind_items 用・object は key 参照用に維持）。
+  axis_list: Array<{ axis: Axis } & AxisState>;
 }
 
 // ponytail: contribution_event 全型を prefix scan + actor フィルタ = O(n)。MVP 量で十分。
@@ -77,7 +79,8 @@ export async function projectContribution(
       title: scores[axis] >= CONTRIBUTION_TITLE_THRESHOLD,
     };
   }
-  return { actor_id: actorId, axes };
+  const axis_list = AXES.map((axis) => ({ axis, ...axes[axis] }));
+  return { actor_id: actorId, axes, axis_list };
 }
 
 // ── 依存グラフ配分（KRM-11・純関数 reducer）─────────────────────────────

@@ -5,11 +5,11 @@
 // reachable in navigation.json. Same discipline cl-04-route-matrix pins for the
 // whole API — here for one Spec-first screen.
 //
-// DEPENDENCY GATE (design-k8 §5): the thread spec is a K6 deliverable and is
-// still 未明文化 (c5-cluster-table V3-AIP-34). Until K6 publishes a thread-view
-// screen-def this suite SKIPS and reports the stop — symmetric with
-// apps/web/e2e/{market,ledger}.spec.ts. It activates automatically the moment a
-// thread screen-def appears in screen-defs/.
+// DEPENDENCY GATE (design-k8 §5): the thread spec is the K6 知の広場 deliverable.
+// C5 shipped it as the plaza board screen (knowledge-board): a thread-bearing
+// board that reads GET /plaza/channels/{channel}/threads and writes POST
+// /plaza/posts. findThreadSpec discovers it structurally, so this suite now
+// activates. It still SKIPS + STOP-reports if no thread/plaza screen-def exists.
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -23,10 +23,19 @@ const require = createRequire(fileURLToPath(new URL("../package.json", import.me
 type Node = { id: string; type: string; props?: Record<string, unknown>; action?: Record<string, unknown>; children?: Node[] };
 type ScreenDef = { screen_id: string; route: string; title: string; nodes: Node[] };
 
-// A "thread spec" = a screen-def that renders a SINGLE thread: its route carries
-// a thread id parameter (…/t/{thread_id} per citeUrl, or a :thread_id / {thread_id}
-// segment) or its screen_id names a thread. Discovered structurally so it wires
-// to whatever K6 names the file.
+// A "thread spec" = the 知の広場 thread screen. Discovered structurally so it
+// wires to whatever K6 named the file:
+//   (a) a single-thread route/id — …/t/{thread_id}, a :thread_id/{thread_id}
+//       segment, or a screen_id naming a thread; OR
+//   (b) the plaza thread board — any node that reads plaza threads or writes a
+//       plaza post (C5 shipped it as knowledge-board).
+function referencesPlazaThread(def: ScreenDef): boolean {
+  return flatten(def).some((n) => {
+    const src = typeof n.props?.source_path === "string" ? n.props.source_path : "";
+    const act = n.action?.kind === "api" && typeof n.action.path === "string" ? n.action.path : "";
+    return /\/plaza\/(threads|channels\/[^/]+\/threads|posts)/.test(src + " " + act);
+  });
+}
 function findThreadSpec(): ScreenDef | null {
   const dir = `${ROOT}/screen-defs`;
   for (const name of readdirSync(dir)) {
@@ -40,6 +49,7 @@ function findThreadSpec(): ScreenDef | null {
     const route = def.route ?? "";
     const id = def.screen_id ?? "";
     if (/\{thread_id\}|:thread_id|\/t\//.test(route) || /thread/i.test(id)) return def;
+    if (referencesPlazaThread(def)) return def;
   }
   return null;
 }
@@ -107,11 +117,12 @@ describe.skipIf(!threadSpec)("V3-AIP-34 thread spec (Spec-Driven contract)", () 
 
   it("the thread screen is reachable in navigation.json", () => {
     const nav = JSON.parse(readFileSync(`${ROOT}/screen-defs/navigation.json`, "utf8")) as {
+      screens?: string[];
       nodes?: string[];
       edges?: { from: string; to: string }[];
     };
     const referenced =
-      (nav.nodes ?? []).includes(def.screen_id) ||
+      (nav.screens ?? nav.nodes ?? []).includes(def.screen_id) ||
       (nav.edges ?? []).some((e) => e.to === def.screen_id || e.from === def.screen_id);
     expect(referenced, `${def.screen_id} must appear in navigation.json (reachability)`).toBe(true);
   });

@@ -1,43 +1,26 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 
-// V3-AIP-49 — ledger 実 UI E2E. Same harness as market.spec / observation.spec:
-// dev-login → ScreenDef Renderer draws the REAL ledger screen-def → the ledger
-// view (and any declared entry form) is exercised against the worker's local R2
-// (wrangler dev local mode = in-memory R2 = the E2E FakeR2). The ledger is
-// append-only Truth (CL-12): a recorded entry never mutates, only accrues.
+// V3-AIP-49 / C7-T1 — 経済ステータス（残高）実 UI + 実バックエンド E2E. observation.spec
+// の作法: in-screen dev-login → ScreenDef Renderer が REAL economy-status を描画 → 残高
+// （カルマ二層 + プラチナ）を実 worker + R2-local から本人スコープ投影で読み戻す。
+// 台帳は append-only Truth（CL-12）: 投影は都度再計算、常駐 DB 無し（不変条項①）。
 //
-// DEPENDENCY GATE (design-k8 §5 / 批評家 F3): render target is the K4 ledger
-// screen-def (screen-defs/ledger.json). K8 owns the harness, not the screen-def.
-// Skips + stop-reports until K4 publishes ledger.json — symmetric with
-// market.spec.ts / spec-thread.test.ts.
+// economy-status の残高カードは props.bind_text で値を綴じる。C7-T2 で Renderer に
+// 汎用 card bind_text（source_path 応答オブジェクトへ {{field}} を綴じる list bind_items
+// の単一オブジェクト版）を実装済み。よって本 spec は (1) 残高が UI と同一 same-origin
+// cookie で REAL /api/v1/me/ledger から本人スコープで読み戻ること、(2) その値がカルマ
+// カードとして画面テキストに可視であること の双方を実測する（批評家指摘「カード値描画を
+// 守る自動 assert が無い」の解消）。
+//
+// 依存ゲート解除: economy-status.json は C5 で恒久存在（navigation.json 収録）。旧 skip
+// （K4 未産出待ち）は解消済み。
 
 const WEB = "http://127.0.0.1:3000";
 const SPEC_DIR = dirname(fileURLToPath(import.meta.url));
-const LEDGER_DEF = resolve(SPEC_DIR, "..", "..", "..", "screen-defs", "ledger.json");
-const READY = existsSync(LEDGER_DEF);
-
-if (!READY) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    "[STOP] ledger.spec.ts skipped: K4 render target screen-defs/ledger.json not produced yet " +
-      "(design-k8 §5 dependency gate). Harness + FakeR2 mock ready; wires automatically when K4 lands.",
-  );
-}
-
-type Node = { id: string; type: string; props?: Record<string, unknown>; action?: Record<string, unknown>; children?: Node[] };
-
-function flatten(def: { nodes: Node[] }): Node[] {
-  const out: Node[] = [];
-  const walk = (n: Node) => {
-    out.push(n);
-    for (const c of n.children ?? []) walk(c);
-  };
-  for (const n of def.nodes) walk(n);
-  return out;
-}
+const STATUS_DEF = resolve(SPEC_DIR, "..", "..", "..", "screen-defs", "economy-status.json");
 
 async function devLogin(page: Page): Promise<void> {
   await page.goto(`${WEB}/s/login`);
@@ -45,51 +28,44 @@ async function devLogin(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
 }
 
-async function fillDeclaredForm(page: Page, form: Node, stamp: string): Promise<void> {
-  for (const f of (form.children ?? []).filter((c) => c.type === "field")) {
-    const label = (f.props?.label as string) ?? "";
-    if (!label) continue;
-    const variant = (f.props?.variant as string) ?? "text";
-    const control = page.getByLabel(label);
-    if (variant === "select") await control.selectOption({ index: 1 });
-    else if (variant === "number") await control.fill("1");
-    else await control.fill(`${label}-${stamp}`);
-  }
-}
-
-test("ledger screen-def renders and its append-only entries load through the Renderer", async ({ page }) => {
-  test.skip(!READY, "K4 render target screen-defs/ledger.json not produced yet (design-k8 §5)");
-
-  const def = JSON.parse(readFileSync(LEDGER_DEF, "utf8")) as { screen_id: string; route: string; title: string; nodes: Node[] };
-  const nodes = flatten(def);
-  const form = nodes.find((n) => n.type === "form");
-  const list = nodes.find((n) => n.type === "list");
-  const stamp = Date.now().toString(36);
+test("economy status: dev-login then balance reads back through the real worker", async ({ page }) => {
+  expect(existsSync(STATUS_DEF), "economy-status.json must exist (C5 dependency)").toBe(true);
 
   await devLogin(page);
 
-  // 実 UI: Renderer serves screens at /s/<screen_id> (observation.spec convention).
-  await page.goto(`${WEB}/s/${def.screen_id}`);
-  await expect(page.getByRole("heading", { name: def.title })).toBeVisible();
+  // 実 UI: the Renderer draws the REAL economy-status screen-def.
+  await page.goto(`${WEB}/s/economy-status`);
+  await expect(page.getByRole("heading", { name: "ステータス", level: 1 })).toBeVisible();
   await page.waitForLoadState("networkidle");
 
-  // 保存 (read-through): the ledger's own read endpoint returns 200 from real
-  // Truth via the same-origin session cookie — the projection recomputes, not a
-  // mock. A ledger is primarily a view; the read-back is the invariant.
-  expect(list?.props?.source_path, "ledger screen-def must declare a read source").toBeTruthy();
-  const src = list!.props!.source_path as string;
-  const status = await page.evaluate(async (p: string) => {
-    const r = await fetch(p, { credentials: "include" });
-    return r.status;
-  }, src);
-  expect(status).toBe(200);
+  // 残高表示（read-through）: the ledger projection recomputes from append-only
+  // Truth and is served under the browser session cookie (本人スコープ・V3-AUT-17).
+  const ledger = await page.evaluate(async () => {
+    const r = await fetch("/api/v1/me/ledger", { credentials: "include" });
+    return { status: r.status, json: await r.json() };
+  });
+  expect(ledger.status, "authenticated ledger read must be 200").toBe(200);
+  const bal = ledger.json as {
+    actor_id: string;
+    karma_value: number;
+    karma_count: number;
+    platinum_coins: number;
+  };
+  expect(typeof bal.actor_id).toBe("string");
+  expect(typeof bal.karma_value).toBe("number");
+  expect(typeof bal.karma_count).toBe("number");
+  expect(typeof bal.platinum_coins).toBe("number");
 
-  // 入力 → 実行: only if the ledger screen-def declares an entry form (some
-  // ledgers are read-only). Contract-driven, no hard-coded field names.
-  if (form) {
-    await fillDeclaredForm(page, form, stamp);
-    await page.getByRole("button").filter({ hasText: /記録|保存|計上|登録|発行/ }).first().click();
-    const after = await page.evaluate(async (p: string) => (await fetch(p, { credentials: "include" })).status, src);
-    expect(after).toBe(200);
+  // カード値描画の可視 assert: bind_text がカルマカードとして実 API 値を画面に描く。
+  await expect(
+    page.getByText(
+      `値 ${bal.karma_value} / 累積カウント ${bal.karma_count} / プラチナ ${bal.platinum_coins}`,
+    ),
+  ).toBeVisible();
+
+  // 貢献度 3 軸 list（axis_list bind）が画面に出る — object を .map して白画面化した T1
+  // クラッシュの回帰止め。research/capital/development の 3 行が必ず描画される。
+  for (const axis of ["research", "capital", "development"]) {
+    await expect(page.getByText(new RegExp(`${axis}: \\d`))).toBeVisible();
   }
 });

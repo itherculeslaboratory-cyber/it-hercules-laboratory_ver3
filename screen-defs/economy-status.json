@@ -32,7 +32,7 @@
               "type": "list",
               "props": {
                 "source_path": "/api/v1/me/contribution",
-                "bind_items": "data.axes",
+                "bind_items": "data.contribution.axis_list",
                 "item_text": "{{axis}}: {{score}}（鋳造 {{minted}} / 次閾値 {{next_threshold}}）"
               }
             },
@@ -43,7 +43,7 @@
               "type": "list",
               "props": {
                 "source_path": "/api/v1/me/status",
-                "bind_items": "data.history",
+                "bind_items": "data.history.history",
                 "item_text": "{{created_at}} {{label}}"
               }
             },

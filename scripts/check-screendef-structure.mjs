@@ -67,9 +67,26 @@ export function checkStructure(def) {
   return v;
 }
 
+// A source_path must interpolate with `{{path}}`; a lone `{listing_id}` is sent
+// literally (Renderer only fills `{{...}}`) → the fetch 404s silently. Strip the
+// valid `{{…}}` pairs and any brace left over is a single-brace bug.
+export function checkSourcePaths(def) {
+  const v = [];
+  for (const n of flattenNodes(def)) {
+    const sp = n.props?.source_path;
+    if (typeof sp !== "string") continue;
+    const stripped = sp.replace(/\{\{/g, "").replace(/\}\}/g, "");
+    if (stripped.includes("{") || stripped.includes("}")) {
+      v.push(`single-brace source_path (use {{…}}): node ${n.id ?? "?"} "${sp}"`);
+    }
+  }
+  return v;
+}
+
 export function runGate(root = process.cwd()) {
   const dir = join(root, "screen-defs");
-  const byId = new Map(loadScreenDefs(dir).map((d) => [d.screen_id, d]));
+  const defs = loadScreenDefs(dir);
+  const byId = new Map(defs.map((d) => [d.screen_id, d]));
   const violations = [];
   for (const id of CLUSTER_OWNED) {
     const def = byId.get(id);
@@ -78,6 +95,11 @@ export function runGate(root = process.cwd()) {
       continue;
     }
     for (const msg of checkStructure(def)) violations.push(`${id}: ${msg}`);
+  }
+  // source_path interpolation is checked on ALL screens (any cluster) — a
+  // single-brace path silently breaks data binding regardless of ownership.
+  for (const def of defs) {
+    for (const msg of checkSourcePaths(def)) violations.push(`${def.screen_id}: ${msg}`);
   }
   return violations;
 }

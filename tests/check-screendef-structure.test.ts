@@ -2,7 +2,7 @@
 // violation (>3 sections, >3 cards, dead-end, >3-line text); every cluster-owned
 // real screen-def passes.
 import { describe, expect, it } from "vitest";
-import { checkStructure, runGate, CLUSTER_OWNED, flattenNodes } from "../scripts/check-screendef-structure.mjs";
+import { checkStructure, checkSourcePaths, runGate, CLUSTER_OWNED, flattenNodes } from "../scripts/check-screendef-structure.mjs";
 import { loadScreenDefs } from "../scripts/check-navigation.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -50,6 +50,19 @@ describe("V3-UIX-05 checkStructure", () => {
       forwardLink,
     ]);
     expect(checkStructure(ok)).toEqual([]);
+  });
+
+  it("flags a single-brace source_path and accepts a double-brace one", () => {
+    const bad = def([
+      { id: "c", type: "card", props: { source_path: "/api/v1/x/{listing_id}/state" } },
+      forwardLink,
+    ]);
+    expect(checkSourcePaths(bad).some((m) => m.includes("single-brace"))).toBe(true);
+    const ok = def([
+      { id: "c", type: "card", props: { source_path: "/api/v1/x/{{params.listing_id}}/state" } },
+      forwardLink,
+    ]);
+    expect(checkSourcePaths(ok)).toEqual([]);
   });
 
   it("every cluster-owned screen-def passes (real defs)", () => {

@@ -23,7 +23,7 @@
               "type": "list",
               "props": {
                 "source_path": "/api/v1/plaza/channels/knowledge-board/threads",
-                "bind_items": "data.threads",
+                "bind_items": "data.threads.threads",
                 "item_text": "{{topic}}（{{board_kind}} / {{post_count}}）"
               }
             },
