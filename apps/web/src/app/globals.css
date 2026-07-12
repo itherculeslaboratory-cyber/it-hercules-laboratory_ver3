@@ -806,6 +806,20 @@ body {
   object-fit: cover;
   flex-shrink: 0;
 }
+.civ-profile-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--civ-radius);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.civ-timeline-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--civ-radius);
+  object-fit: cover;
+  flex-shrink: 0;
+}
 .civ-basket-tray {
   position: fixed;
   left: 0;

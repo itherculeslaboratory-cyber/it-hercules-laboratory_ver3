@@ -417,6 +417,26 @@ export async function projectIndividualProfile(s: TruthStore, id: string) {
       .sort((a, b) => String(a.capture_id ?? "").localeCompare(String(b.capture_id ?? "")));
   const observations = capturesOf(id);
 
+  // 写真参照(V3-AIP-101 fix2・ヘッダ代表サムネ+タイムライン小サムネ): capture
+  // ごとに先頭 photo_id を解決して添える(projectAuthenticity の image_chain と
+  // 同じ per-capture listEvents(prefix) 方式・O(n) 前例あり)。
+  for (const obs of observations) {
+    const capId = String(obs.capture_id ?? "");
+    const photos = capId ? (await s.listEvents(`truth/${PHOTO_TYPE}/${capId}-`)).map(dataOf) : [];
+    const photoId = photos.length ? String(photos[0].photo_id ?? "") : null;
+    obs.photo_id = photoId || null;
+    obs.thumbnail_path = photoId ? `/api/v1/observation/${capId}/thumbnail/${photoId}` : null;
+  }
+  // ヘッダ代表写真: 最新観測から遡って最初に写真がある capture のサムネ
+  // (GET /individuals 一覧の thumbnail_path と同じ規約)。
+  let thumbnail_path: string | null = null;
+  for (let i = observations.length - 1; i >= 0; i--) {
+    if (observations[i].thumbnail_path) {
+      thumbnail_path = observations[i].thumbnail_path as string;
+      break;
+    }
+  }
+
   if (!master && observations.length === 0 && life.length === 0) return null;
 
   // stage: 直近 molt の detail.to_stage。
@@ -520,6 +540,7 @@ export async function projectIndividualProfile(s: TruthStore, id: string) {
     species: (m?.species as string | undefined) ?? null,
     stage,
     status,
+    thumbnail_path,
     placement_id,
     schedule,
     parents,

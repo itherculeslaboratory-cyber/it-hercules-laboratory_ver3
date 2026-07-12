@@ -1,13 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { makePng } from "./make-png";
 
 // V3-AIP-101 個体詳細スライスA(individual-detail・c7-wireframes-core5 §4 F1/F2)。
 // 家族(♂親+♀親に観測2点ずつ→子3体に観測2〜3点・1体死亡・1体は親リンク無しの
 // 単体個体)を実データで作り、d1(子個体=判断3指標フル: チャート親破線+コホート
-// 帯・血統健全度・近交リスク・血縁レール)→d2(親リンク無し=ⓘ帯+算定不能の
-// 第一級表示)→d3(血縁chipタップで親に差替+パンくず)→d4(タイムライン+値を
-// 訂正の展開)を実ブラウザで打鍵まで通す(目視ゲート用スクリーンショット4枚)。
+// 帯・血統健全度・近交リスク・血縁レール+代表写真サムネ)→d2(親リンク無し=ⓘ帯+
+// 算定不能の第一級表示)→d3(血縁chipタップで親に差替+パンくず)→d4(タイムライン
+// +値を訂正の展開)を実ブラウザで打鍵まで通す(目視ゲート用スクリーンショット4枚)。
 const WEB = "http://127.0.0.1:3000";
 const SPEC_DIR = dirname(fileURLToPath(import.meta.url));
 const SHOTS = resolve(SPEC_DIR, "..", "..", "..", "docs", "planning", "c7", "screens");
@@ -23,8 +24,12 @@ async function devLogin(page: Page) {
 test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip差替→タイムライン訂正", async ({ page }) => {
   await devLogin(page);
   const tag = Date.now().toString(36);
+  // fix#6(写真表示): 既存の2段階アップロード(POST capture → POST upload
+  // multipart)をブラウザ内 fetch で再現するため、Node 側で作った PNG を
+  // base64 にして evaluate へ渡す(page.evaluate はシリアライズ可能な値のみ)。
+  const pngBase64 = makePng().toString("base64");
 
-  const seed = await page.evaluate(async ({ tag }) => {
+  const seed = await page.evaluate(async ({ tag, pngBase64 }) => {
     const post = async (path: string, body: unknown) =>
       fetch(`/api/v1${path}`, {
         method: "POST",
@@ -38,6 +43,17 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
         subject_ref: `individual/${individualId}`,
         measurements: [{ item: "weight", kind: "number", value: weight, unit: "g", value_origin: "direct_observed" }],
       });
+    const uploadPhoto = async (captureId: string) => {
+      const bin = atob(pngBase64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const fd = new FormData();
+      fd.append("capture_id", captureId);
+      fd.append("file", new Blob([bytes], { type: "image/png" }), "e2e.png");
+      return fetch("/api/v1/observation/upload", { method: "POST", credentials: "include", body: fd }).then((r) =>
+        r.json(),
+      );
+    };
 
     const species = "オオクワガタ";
     const sireLabel = `E2E-IND-父-${tag}`;
@@ -71,7 +87,10 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
       at: new Date().toISOString(),
       detail: { to_stage: "third_early" },
     });
-    await capture(a.individual_id, 62);
+    // fix#6(写真表示): 最新観測に写真を1枚添える(d1 ヘッダのサムネ+
+    // タイムラインの62g行のサムネの両方を検証する)。
+    const capLast = await capture(a.individual_id, 62);
+    await uploadPhoto(capLast.capture_id);
     await post(`/individuals/${a.individual_id}/life-events`, { kind: "eclosion", at: new Date().toISOString() });
 
     await capture(b.individual_id, 28);
@@ -101,7 +120,7 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
       cLabel,
       species,
     };
-  }, { tag });
+  }, { tag, pngBase64 });
 
   // ── d1: 子個体(親あり・きょうだいあり)= 判断3指標フル ──────────────────
   await page.goto(`${WEB}/s/individual-detail?id=${seed.aId}`);
@@ -113,6 +132,14 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
   // ヘッダと同じ言語)。
   await expect(page.getByText(seed.species, { exact: true }).first()).toBeVisible();
   await expect(page.getByText("三令初期", { exact: true })).toBeVisible();
+
+  // fix#6(写真表示): ヘッダの代表写真サムネ(直近captureの写真)が実際に
+  // デコードされた画像として表示される(naturalWidth>0)。
+  const headerThumb = page.locator(".civ-profile-thumb");
+  await expect(headerThumb).toBeVisible();
+  await expect
+    .poll(() => headerThumb.evaluate((el: HTMLImageElement) => el.naturalWidth), { timeout: 10_000 })
+    .toBeGreaterThan(0);
 
   // 成長チャート: 親♂/親♀の破線凡例+コホート(きょうだい2匹・観測4点)帯。
   await expect(page.locator(".civ-growth-chart-svg")).toBeVisible();
@@ -171,6 +198,8 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
   await expect(page.getByRole("heading", { name: "変化点タイムライン" })).toBeVisible();
   await expect(page.getByText(/62g/)).toBeVisible();
   await expect(page.getByText(/\+17\.0g/)).toBeVisible(); // 62g - 45g(前回)のΔ
+  // fix#6(写真表示): 写真付き観測行(62g)に小サムネが出る。
+  await expect(page.locator(".civ-timeline-thumb")).toBeVisible();
   await page.getByRole("button", { name: /値を訂正/ }).first().click();
   await expect(page.getByText("記録値 62g → 訂正後の値")).toBeVisible();
   await shot(page, "d4", true);

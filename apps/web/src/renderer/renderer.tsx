@@ -3845,7 +3845,13 @@ function SearchNavigatorNode() {
 // =============================================================================
 
 type ProfileMeasurement = { item: string; kind: string; value: number | string; unit?: string };
-type ProfileCapture = { capture_id: string; time: string; measurements?: ProfileMeasurement[] };
+type ProfileCapture = {
+  capture_id: string;
+  time: string;
+  measurements?: ProfileMeasurement[];
+  photo_id?: string | null;
+  thumbnail_path?: string | null;
+};
 type ProfileLifeEvent = { individual_id: string; kind: string; at: string; detail?: Record<string, unknown> };
 type ProfileParentRef = { individual_id: string; label: string };
 type ProfileSibling = ProfileParentRef & { dead: boolean; eclosed: boolean };
@@ -3856,6 +3862,7 @@ type IndividualProfile = {
   species: string | null;
   stage: string | null;
   status: "alive" | "deceased";
+  thumbnail_path: string | null;
   placement_id: string | null;
   schedule: { next_observation_at: string } | null;
   parents: { sire?: ProfileParentRef; dam?: ProfileParentRef };
@@ -3885,19 +3892,32 @@ function measureValue(cap: ProfileCapture, item: string): number | null {
   return m ? (m.value as number) : null;
 }
 
-// 系列(x=そのシリーズ内での観測順位・y=値)。カレンダー日の実間隔ではなく
-// 観測順で等間隔に置く(親超え判定の趣旨=「同じ観測回次で比べる」)。軸ラベル/
-// ツールチップは出さない設計(「無いものは描かない」)なので、暦日そのままだと
-// 採取間隔が本個体と親でズレた時(あるいは短時間に連続計測した時)に点が
-// 潰れて見える問題を順位ベースで避ける。ponytail: 将来 X 軸目盛/ツールチップを
-// 追加するなら暦日ベースの経過日数に戻す(その時は t0 起点の日数計算に戻す)。
-// 時刻無効/値無しの行は無視。
-function seriesFor(caps: ProfileCapture[], item: string): { x: number; y: number; iso: string }[] {
+// 系列(x=経過時間[日]・系列ごとに自分の初回観測を0とする・y=値)。実観測間隔
+// (envelope time)を反映するので3ヶ月間隔と3日間隔が同じ幅に見えない(ユーザー
+// 裁定2026-07-12)。時刻無効/値無しの行は無視。
+// ponytail: E2E seed のようにループ内で連続 POST して全点が数秒未満(ミリ秒差)
+// に縮退する場合だけ観測順の等間隔にフォールバックする(degenerate は呼び出し
+// 側が本個体+親♂+親♀の合算レンジで判定・実運用は日〜月オーダーの間隔が付く
+// ので起きない)。
+function seriesFor(
+  caps: ProfileCapture[],
+  item: string,
+  degenerate: boolean,
+): { x: number; y: number; iso: string }[] {
   const pts = caps
     .map((c) => ({ t: Date.parse(c.time), y: measureValue(c, item), iso: c.time }))
     .filter((pt): pt is { t: number; y: number; iso: string } => Number.isFinite(pt.t) && pt.y != null)
     .sort((a, b) => a.t - b.t);
-  return pts.map((pt, i) => ({ x: i, y: pt.y, iso: pt.iso }));
+  if (pts.length === 0) return [];
+  const t0 = pts[0].t;
+  return pts.map((pt, i) => ({ x: degenerate ? i : (pt.t - t0) / 86_400_000, y: pt.y, iso: pt.iso }));
+}
+
+// 本個体+親♂+親♀を合算した実時刻レンジが1分未満なら「ミリ秒差で縮退」とみなす
+// (E2E seed 判定用の閾値。実運用の採取間隔は最短でも時間〜日オーダー)。
+function isDegenerate(seriesCaps: ProfileCapture[][]): boolean {
+  const ts = seriesCaps.flat().map((c) => Date.parse(c.time)).filter((t) => Number.isFinite(t));
+  return ts.length > 1 && Math.max(...ts) - Math.min(...ts) < 60_000;
 }
 
 const CHART_UNITS = [
@@ -3923,9 +3943,14 @@ function GrowthChartView({ profile, onLinked }: { profile: IndividualProfile; on
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const own = seriesFor(profile.observations, unit);
-  const sire = seriesFor(profile.parent_observations.sire, unit);
-  const dam = seriesFor(profile.parent_observations.dam, unit);
+  const degenerate = isDegenerate([
+    profile.observations,
+    profile.parent_observations.sire,
+    profile.parent_observations.dam,
+  ]);
+  const own = seriesFor(profile.observations, unit, degenerate);
+  const sire = seriesFor(profile.parent_observations.sire, unit, degenerate);
+  const dam = seriesFor(profile.parent_observations.dam, unit, degenerate);
   const cohortValues = profile.cohort_observations
     .map((o) => (unit === "weight" ? o.weight_g : o.length_mm))
     .filter((v): v is number => v != null);
@@ -4540,6 +4565,10 @@ function TimelineRow({
   return (
     <li className="civ-timeline-row">
       <span aria-hidden="true">📏</span>
+      {cap.thumbnail_path && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="civ-timeline-thumb" src={cap.thumbnail_path} alt="" />
+      )}
       <span className="civ-text">
         {formatDateJa(entry.atIso)}{" "}
         {ms.map((m, i) => {
@@ -4654,6 +4683,10 @@ function IndividualProfileNode() {
     <div className="civ-individual-profile">
       <section className="civ-card">
         <div className="civ-card-head">
+          {profile.thumbnail_path && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="civ-profile-thumb" src={profile.thumbnail_path} alt="" />
+          )}
           <h2 className="civ-card-title">{label}</h2>
           <StatusMenu profile={profile} onChanged={refresh} />
         </div>
