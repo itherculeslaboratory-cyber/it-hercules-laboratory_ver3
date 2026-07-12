@@ -740,3 +740,114 @@ body {
 .civ-roster-row > .civ-card {
   flex: 1;
 }
+
+/* =============================================================================
+ * V3-AIP-101 検索スライスA(obs-search) — 保存検索/ファセットチップ・0件緩和
+ * バー・主要数値・下部固定バスケット。既存トークンのみ(raw hex 禁止・
+ * check-ui-tokens GATE)。
+ * ========================================================================== */
+.civ-search-navigator {
+  padding-bottom: 96px; /* 下部固定バスケットの高さぶん本文が隠れないように */
+}
+.civ-facet-chip {
+  cursor: pointer;
+}
+.civ-facet-chip[data-active="true"] {
+  border-color: var(--civ-primary);
+  color: var(--civ-primary);
+}
+.civ-saved-chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.civ-chip-remove {
+  min-height: 22px;
+  min-width: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border-color: transparent;
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+}
+.civ-relief-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface-2);
+}
+.civ-search-primary {
+  margin: 0;
+  font-size: var(--civ-fs-4);
+  font-weight: 300;
+  color: var(--civ-text);
+}
+.civ-search-primary-unit {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+  margin-left: 4px;
+}
+.civ-search-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--civ-radius);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.civ-basket-tray {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--civ-surface);
+  border-top: 1px solid var(--civ-border);
+}
+.civ-basket-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+.civ-basket-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface-2);
+  color: var(--civ-text);
+  font-size: var(--civ-fs-1);
+}
+.civ-basket-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+.civ-snackbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface-2);
+  color: var(--civ-text);
+  font-size: var(--civ-fs-1);
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}

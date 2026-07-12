@@ -43,7 +43,12 @@ export type NodeType =
   | "clutch-intake"
   | "batch-roster"
   | "batch-summary"
-  | "batch-done";
+  | "batch-done"
+  // V3-AIP-101 検索スライスA(c7-wireframes-core5 §2 obs-navigator のトーン/
+  // 語彙のみ流用): GET /individuals + GET /placements の取得、保存検索チップ
+  // (localStorage)、ファセット絞り込み+0件緩和バー、4択ソート、下部固定
+  // バスケットを1画面に持つ。
+  | "search-navigator";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported

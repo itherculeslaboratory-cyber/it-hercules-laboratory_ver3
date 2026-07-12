@@ -20,6 +20,7 @@
     "obs-register-batch",
     "obs-register-batch-confirm",
     "obs-register-batch-done",
+    "obs-search",
     "individual-detail",
     "cross",
     "bio-card",
@@ -78,6 +79,11 @@
       "from": "home",
       "to": "obs-domain-select",
       "label": "観測ドメイン選択へ"
+    },
+    {
+      "from": "home",
+      "to": "obs-search",
+      "label": "検索へ"
     },
     {
       "from": "home",
@@ -283,6 +289,16 @@
       "from": "obs-register-batch",
       "to": "obs-register-batch-confirm",
       "label": "確認へ"
+    },
+    {
+      "from": "obs-search",
+      "to": "obs-register-batch",
+      "label": "計測グリッドへ"
+    },
+    {
+      "from": "obs-search",
+      "to": "obs-register-entry",
+      "label": "追観測へ"
     },
     {
       "from": "obs-register-clutch",

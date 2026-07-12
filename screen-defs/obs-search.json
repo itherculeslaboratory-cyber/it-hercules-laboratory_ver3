@@ -1,0 +1,24 @@
+{
+  "screen_id": "obs-search",
+  "route": "/observe/search",
+  "title": "検索",
+  "layout": "standard",
+  "notes": "V3-AIP-101 検索スライスA(c7-wireframes-core5 §2 obs-navigator のトーン/語彙のみ流用・F3類似度検索/ステージ別グルーピング/F1L軽量グリッド/コールドスタート自動プリセットは明示的に対象外)。実装は search-navigator ノード1個: GET /individuals + GET /placements を取得し、localStorage 保存検索チップ+ファセット絞り込み(種/ステージ/棚+体長/体重の±レンジ)+0件時の1タップ緩和バー+4択ソート+下部固定バスケットをクライアント側で組み立てる。[→ 計測グリッドへ]でバスケットの個体IDを savePreselect() 経由で sessionStorage に積み obs-register-batch へハンドオフする。トーンは中立(2026-07-12ユーザー裁定: 赤/催促表現禁止)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "検索", "level": 1 } },
+            { "id": "navigator", "type": "search-navigator" }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

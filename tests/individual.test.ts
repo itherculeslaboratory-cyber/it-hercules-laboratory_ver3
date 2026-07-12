@@ -395,4 +395,91 @@ describe("V3-AIP-101 GET /individuals?q= (観測登録スライス1 F1 検索)",
     };
     expect(body.individuals.map((i) => i.individual_id)).toEqual([mine]);
   });
+
+  // 検索スライスA(V3-AIP-101 obs-search) 拡張フィールド。
+  it("latest_weight_g/latest_length_mm/capture_count を最新 capture から返す", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "DHH-24-050", species: "Dynastes hercules" });
+    await post(
+      "/api/v1/observation/captures",
+      {
+        domain: "biology",
+        subject_ref: `individual/${id}`,
+        measurements: [
+          { item: "weight", kind: "number", value: 90.2, unit: "g", value_origin: "direct_observed" },
+          { item: "length", kind: "number", value: 65, unit: "mm", value_origin: "direct_observed" },
+        ],
+      },
+      env,
+    );
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: {
+        individual_id: string;
+        latest_weight_g: number | null;
+        latest_length_mm: number | null;
+        capture_count: number;
+      }[];
+    };
+    const row = body.individuals.find((i) => i.individual_id === id)!;
+    expect(row.latest_weight_g).toBe(90.2);
+    expect(row.latest_length_mm).toBe(65);
+    expect(row.capture_count).toBe(1);
+  });
+
+  it("capture_count はゼロ件の個体で 0、計測値は null", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "DHH-24-051" });
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; capture_count: number; latest_weight_g: number | null }[];
+    };
+    const row = body.individuals.find((i) => i.individual_id === id)!;
+    expect(row.capture_count).toBe(0);
+    expect(row.latest_weight_g).toBeNull();
+  });
+
+  it("eclosion life-event の at を eclosion_at に返す", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "DHH-24-052" });
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "eclosion", at: "2026-06-01T00:00:00Z" }, env);
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; eclosion_at: string | null }[];
+    };
+    const row = body.individuals.find((i) => i.individual_id === id)!;
+    expect(row.eclosion_at).toBe("2026-06-01T00:00:00Z");
+  });
+
+  it("thumbnail_path: 直近 capture に写真があれば URL、無ければ null", async () => {
+    const { env } = ctx();
+    const withPhoto = await createInd(env, { local_label_text: "DHH-24-053" });
+    const cap = await post(
+      "/api/v1/observation/captures",
+      { domain: "biology", subject_ref: `individual/${withPhoto}` },
+      env,
+    );
+    const captureId = ((await cap.json()) as { capture_id: string }).capture_id;
+    const fd = new FormData();
+    fd.append("capture_id", captureId);
+    fd.append("file", new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" }), "p.png");
+    const up = await app.request(
+      "/api/v1/observation/upload",
+      { method: "POST", headers: AUTH, body: fd },
+      env,
+    );
+    const { photo_id } = (await up.json()) as { photo_id: string };
+
+    const withoutPhoto = await createInd(env, { local_label_text: "DHH-24-054" });
+    await post(
+      "/api/v1/observation/captures",
+      { domain: "biology", subject_ref: `individual/${withoutPhoto}` },
+      env,
+    );
+
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; thumbnail_path: string | null }[];
+    };
+    const rowWith = body.individuals.find((i) => i.individual_id === withPhoto)!;
+    const rowWithout = body.individuals.find((i) => i.individual_id === withoutPhoto)!;
+    expect(rowWith.thumbnail_path).toBe(`/api/v1/observation/${captureId}/thumbnail/${photo_id}`);
+    expect(rowWithout.thumbnail_path).toBeNull();
+  });
 });

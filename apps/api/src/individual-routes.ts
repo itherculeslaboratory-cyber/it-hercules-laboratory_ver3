@@ -475,9 +475,15 @@ function representativeMeasurement(data: Record<string, unknown>): string | null
 // スライス2拡張(C7): stage(直近 molt life-event の detail.to_stage)/
 // placement_id(直近 occupancy start・phase="end"は除外)/last_care_at(直近
 // capture の at=last_capture_at と同値。F4 一覧が「お世話」語彙で読む列)。
-// ponytail: O(n) full master + capture/life-event/occupancy scan(1回ずつ), per-
-// actor/individual index は在庫が伸びたら昇格(既存 /observation/search 前例と
-// 同じ縮退)。
+// 検索スライスA拡張(C7): latest_weight_g/latest_length_mm/capture_count(直近
+// capture・既存 latest 変数を再利用)/eclosion_at(life-event 走査に eclosion
+// 分岐を追加・molt と同じループに畳み込み=スキャン追加なし)/thumbnail_path
+// (PHOTO_TYPE の 4 本目の全件スキャンを追加・capture_id→先頭 photo_id の
+// マップを作り、個体の caps を新しい方から辿って最初にヒットした capture の
+// サムネ URL を返す)。
+// ponytail: O(n) full master + capture/life-event/occupancy/photo scan(1回
+// ずつ、計4本), per-actor/individual index は在庫が伸びたら昇格(既存
+// /observation/search 前例と同じ縮退)。
 individualRoutes.get("/individuals", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   const actorId = c.get("actorId");
@@ -496,12 +502,24 @@ individualRoutes.get("/individuals", async (c) => {
     capturesByIndividual.set(id, rows);
   }
   const moltsByIndividual = new Map<string, Record<string, unknown>[]>();
+  const eclosionsByIndividual = new Map<string, Record<string, unknown>[]>();
   for (const e of await s.listEvents(`truth/${LIFE_TYPE}/`)) {
     const d = dataOf(e);
-    if (d.kind !== "molt") continue;
     const id = String(d.individual_id ?? "");
     if (!id) continue;
-    (moltsByIndividual.get(id) ?? moltsByIndividual.set(id, []).get(id)!).push(d);
+    if (d.kind === "molt") (moltsByIndividual.get(id) ?? moltsByIndividual.set(id, []).get(id)!).push(d);
+    else if (d.kind === "eclosion")
+      (eclosionsByIndividual.get(id) ?? eclosionsByIndividual.set(id, []).get(id)!).push(d);
+  }
+  // 検索スライスA: capture_id → 先頭 photo_id(1個体1capture分あれば十分・
+  // サムネは最新観測の代表1枚)。既存3本の全件スキャンと同じ O(n) スタイル。
+  const firstPhotoByCapture = new Map<string, string>();
+  for (const e of await s.listEvents(`truth/${PHOTO_TYPE}/`)) {
+    const d = dataOf(e);
+    const capId = String(d.capture_id ?? "");
+    const photoId = String(d.photo_id ?? "");
+    if (!capId || !photoId || firstPhotoByCapture.has(capId)) continue;
+    firstPhotoByCapture.set(capId, photoId);
   }
   const placementByIndividual = new Map<string, Record<string, unknown>[]>();
   for (const e of await s.listEvents(`truth/${OCCUPANCY_TYPE}/`)) {
@@ -534,6 +552,20 @@ individualRoutes.get("/individuals", async (c) => {
       .slice()
       .sort((a, b) => String(a.effective_at).localeCompare(String(b.effective_at)));
     const latestPlacement = placements[placements.length - 1];
+    const eclosions = (eclosionsByIndividual.get(id) ?? [])
+      .slice()
+      .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const latestEclosion = eclosions[eclosions.length - 1];
+    // 最新観測から遡って最初に写真がある capture のサムネ URL(無ければ null)。
+    let thumbnailPath: string | null = null;
+    for (let i = caps.length - 1; i >= 0; i--) {
+      const capId = String(caps[i].data.capture_id ?? "");
+      const photoId = capId ? firstPhotoByCapture.get(capId) : undefined;
+      if (photoId) {
+        thumbnailPath = `/api/v1/observation/${capId}/thumbnail/${photoId}`;
+        break;
+      }
+    }
     individuals.push({
       individual_id: id,
       label: label || name || id,
@@ -544,6 +576,11 @@ individualRoutes.get("/individuals", async (c) => {
       stage,
       placement_id: latestPlacement ? (latestPlacement.placement_id as string) : null,
       last_care_at: latest ? latest.time || null : null,
+      latest_weight_g: latest ? latestMeasure(latest.data, "weight") : null,
+      latest_length_mm: latest ? latestMeasure(latest.data, "length") : null,
+      capture_count: caps.length,
+      eclosion_at: latestEclosion ? String(latestEclosion.at ?? "") || null : null,
+      thumbnail_path: thumbnailPath,
     });
   }
   individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));

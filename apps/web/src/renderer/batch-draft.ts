@@ -7,6 +7,7 @@
 
 const KEY = "ihl:batch-draft";
 const RESULTS_KEY = "ihl:batch-results";
+const PRESELECT_KEY = "ihl:batch-preselect";
 
 export type BatchGroup = "measure" | "move" | "death" | "stage" | "clutch-reconcile" | "clutch-promote";
 
@@ -71,4 +72,24 @@ export function loadBatchResults(): BatchResults | null {
 export function clearBatch(): void {
   store()?.removeItem(KEY);
   store()?.removeItem(RESULTS_KEY);
+}
+
+// 検索スライスA(obs-search): バスケットの個体IDだけを運ぶ小さい別キャリー。
+// BatchDraft(items/rows=確定済みコミット内容)とは形が違いすぎる(こちらは
+// 「まだ何も組み立てていない、チェックだけ引き継ぎたい」プリセレクト)ので
+// 使い回さず、専用の小さいキー1本にした。読んだら消費(1回きりの引き継ぎ)。
+export function savePreselect(ids: string[]): void {
+  store()?.setItem(PRESELECT_KEY, JSON.stringify(ids));
+}
+
+export function loadPreselect(): string[] | null {
+  const raw = store()?.getItem(PRESELECT_KEY);
+  if (!raw) return null;
+  store()?.removeItem(PRESELECT_KEY); // consume — one-shot handoff
+  try {
+    const ids = JSON.parse(raw) as unknown;
+    return Array.isArray(ids) ? ids.filter((v): v is string => typeof v === "string") : null;
+  } catch {
+    return null;
+  }
 }

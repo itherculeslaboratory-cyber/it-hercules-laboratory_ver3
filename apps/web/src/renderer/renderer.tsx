@@ -19,8 +19,10 @@ import {
   clearBatch,
   loadBatchDraft,
   loadBatchResults,
+  loadPreselect,
   saveBatchDraft,
   saveBatchResults,
+  savePreselect,
   type BatchCommitItem,
   type BatchDraft,
   type BatchGroup,
@@ -2246,6 +2248,14 @@ function BatchRosterNode() {
   useEffect(() => {
     if (!loaded || seededRef.current) return;
     seededRef.current = true;
+    // 検索スライスA(obs-search) ハンドオフ: sessionStorage にプリセレクトが
+    // あればそれを優先(→計測グリッドへ の実体)。無ければ従来の「そろそろ」
+    // 自動選択のまま(既存挙動は不変)。
+    const preselect = loadPreselect();
+    if (preselect) {
+      setSelected(new Set(preselect));
+      return;
+    }
     setSelected(new Set(individuals.filter((i) => daysSince(i.last_care_at) >= OVERDUE_DAYS).map((i) => i.individual_id)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
@@ -3081,6 +3091,735 @@ function BatchDoneNode() {
   );
 }
 
+// =============================================================================
+// V3-AIP-101 検索スライスA(obs-search・c7-wireframes-core5 §2 のトーン/語彙
+// のみ流用: F3類似度検索/ステージ別グルーピング/F1L軽量グリッド/コールド
+// スタート自動プリセットは対象外)。GET /individuals(拡張フィールド込み)+
+// GET /placements を1回ずつ取得し、保存検索チップ(localStorage)+ファセット
+// 絞り込み+0件緩和バー+4択ソート+下部固定バスケットをこのノード1個で完結
+// させる(batch-roster と同じ縮退理由: 複数API呼び出し+行単位ローカル状態が
+// 多く、既存の宣言的語彙では表現しきれない)。
+// =============================================================================
+
+type SearchRow = {
+  individual_id: string;
+  label: string;
+  species: string | null;
+  stage: string | null;
+  placement_id: string | null;
+  last_care_at: string | null;
+  latest_weight_g: number | null;
+  latest_length_mm: number | null;
+  capture_count: number;
+  eclosion_at: string | null;
+  thumbnail_path: string | null;
+};
+
+type SearchFilters = {
+  species: string | null;
+  stage: string | null;
+  shelf: string | null;
+  lengthX: number | null;
+  lengthY: number | null;
+  weightX: number | null;
+  weightY: number | null;
+};
+
+const DEFAULT_SEARCH_FILTERS: SearchFilters = {
+  species: null,
+  stage: null,
+  shelf: null,
+  lengthX: null,
+  lengthY: null,
+  weightX: null,
+  weightY: null,
+};
+
+type SearchSort = "length_desc" | "weight_desc" | "last_capture_desc" | "eclosion_desc";
+const DEFAULT_SEARCH_SORT: SearchSort = "last_capture_desc";
+const SEARCH_SORT_LABELS: Record<SearchSort, string> = {
+  length_desc: "体長↓",
+  weight_desc: "体重↓",
+  last_capture_desc: "最終観測日",
+  eclosion_desc: "羽化日(新しい順)",
+};
+
+// 直近使った条件(フィルタ+ソート)の自動復元キー。
+const SEARCH_LAST_KEY = "ihl:obs-search-last-filter";
+// 保存検索チップ。Truth 保存の是非は c7-wireframes-core5.md の open_questions
+// (~L899-903)がまだ裁定待ちのため、意図的に localStorage だけに留める
+// (裁定後の後続波で Truth 化を検討)。
+const SEARCH_SAVED_KEY = "ihl:obs-search-saved";
+
+type SavedSearch = { id: string; name: string; filters: SearchFilters; sort: SearchSort };
+
+function loadLastFilter(): { filters: SearchFilters; sort: SearchSort } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SEARCH_LAST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { filters?: Partial<SearchFilters>; sort?: SearchSort };
+    return {
+      filters: { ...DEFAULT_SEARCH_FILTERS, ...(parsed.filters ?? {}) },
+      sort: parsed.sort && parsed.sort in SEARCH_SORT_LABELS ? parsed.sort : DEFAULT_SEARCH_SORT,
+    };
+  } catch {
+    return null;
+  }
+}
+function saveLastFilter(filters: SearchFilters, sort: SearchSort): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SEARCH_LAST_KEY, JSON.stringify({ filters, sort }));
+  } catch {
+    /* best effort */
+  }
+}
+function loadSavedSearches(): SavedSearch[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SEARCH_SAVED_KEY);
+    const rows = raw ? (JSON.parse(raw) as SavedSearch[]) : [];
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+function persistSavedSearches(rows: SavedSearch[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SEARCH_SAVED_KEY, JSON.stringify(rows));
+  } catch {
+    /* best effort */
+  }
+}
+function filtersEqual(a: SearchFilters, b: SearchFilters): boolean {
+  return (
+    a.species === b.species &&
+    a.stage === b.stage &&
+    a.shelf === b.shelf &&
+    a.lengthX === b.lengthX &&
+    a.lengthY === b.lengthY &&
+    a.weightX === b.weightX &&
+    a.weightY === b.weightY
+  );
+}
+function matchesFilters(row: SearchRow, f: SearchFilters): boolean {
+  if (f.species != null && row.species !== f.species) return false;
+  if (f.stage != null && row.stage !== f.stage) return false;
+  if (f.shelf != null && row.placement_id !== f.shelf) return false;
+  // 中心値・幅の両方が揃って初めてレンジが有効になる(片方だけでは絞らない —
+  // 小数の完全一致で誤って0件化するのを避ける)。
+  if (f.lengthX != null && f.lengthY != null) {
+    if (row.latest_length_mm == null || Math.abs(row.latest_length_mm - f.lengthX) > f.lengthY) return false;
+  }
+  if (f.weightX != null && f.weightY != null) {
+    if (row.latest_weight_g == null || Math.abs(row.latest_weight_g - f.weightX) > f.weightY) return false;
+  }
+  return true;
+}
+function facetCount(rows: SearchRow[], filters: SearchFilters, key: "species" | "stage" | "shelf", value: string): number {
+  return rows.filter((r) => matchesFilters(r, { ...filters, [key]: value })).length;
+}
+function sortValue(row: SearchRow, sort: SearchSort): number | null {
+  if (sort === "length_desc") return row.latest_length_mm;
+  if (sort === "weight_desc") return row.latest_weight_g;
+  const iso = sort === "eclosion_desc" ? row.eclosion_at : row.last_care_at;
+  return iso ? new Date(iso).getTime() : null;
+}
+function sortRows(rows: SearchRow[], sort: SearchSort): SearchRow[] {
+  return [...rows].sort((a, b) => {
+    const av = sortValue(a, sort);
+    const bv = sortValue(b, sort);
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1; // null は末尾
+    if (bv == null) return -1;
+    return bv - av; // 降順
+  });
+}
+// 主要数値(bold): ステージが成虫寄り(adult/pupa/prepupa)なら体長優先、それ
+// 以外は体重優先。片方しか値が無ければ他方にフォールバック。
+function primaryMeasure(row: SearchRow): { text: string; unit: string } | null {
+  const lengthFirst = row.stage === "adult" || row.stage === "pupa" || row.stage === "prepupa";
+  if (lengthFirst && row.latest_length_mm != null) return { text: String(row.latest_length_mm), unit: "mm" };
+  if (row.latest_weight_g != null) return { text: String(row.latest_weight_g), unit: "g" };
+  if (row.latest_length_mm != null) return { text: String(row.latest_length_mm), unit: "mm" };
+  return null;
+}
+
+function SearchNavigatorNode() {
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+
+  const [individuals, setIndividuals] = useState<SearchRow[]>([]);
+  const [placements, setPlacements] = useState<PlacementRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const [filters, setFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
+  const [sort, setSort] = useState<SearchSort>(DEFAULT_SEARCH_SORT);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
+
+  const [lengthXDraft, setLengthXDraft] = useState("");
+  const [lengthYDraft, setLengthYDraft] = useState("");
+  const [weightXDraft, setWeightXDraft] = useState("");
+  const [weightYDraft, setWeightYDraft] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [basketExpanded, setBasketExpanded] = useState(false);
+  const [snack, setSnack] = useState<{ ids: string[] } | null>(null);
+  const snackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [ind, pl] = await Promise.all([
+        execute({ kind: "api", method: "GET", path: "/api/v1/individuals" }) as Promise<
+          { individuals?: SearchRow[] } | undefined
+        >,
+        execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
+          { placements?: PlacementRow[] } | undefined
+        >,
+      ]);
+      if (!alive) return;
+      setIndividuals((ind?.individuals ?? []).map((i) => ({ ...i, label: safeLabel(i.label, i.species) })));
+      setPlacements(pl?.placements ?? []);
+      setSavedSearches(loadSavedSearches());
+      // 直近条件の自動復元: 「読み込み中…」ゲートの裏でここまで適用してから
+      // loaded を立てるので、未フィルタの全件表示が一瞬でも画面に出ない。
+      const last = loadLastFilter();
+      if (last) {
+        setFilters(last.filters);
+        setSort(last.sort);
+        setLengthXDraft(last.filters.lengthX != null ? String(last.filters.lengthX) : "");
+        setLengthYDraft(last.filters.lengthY != null ? String(last.filters.lengthY) : "");
+        setWeightXDraft(last.filters.weightX != null ? String(last.filters.weightX) : "");
+        setWeightYDraft(last.filters.weightY != null ? String(last.filters.weightY) : "");
+      }
+      setLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 直近条件の永続化(初回ロード後のみ — 復元直後の再書き込みで壊さない)。
+  useEffect(() => {
+    if (!loaded) return;
+    saveLastFilter(filters, sort);
+  }, [loaded, filters, sort]);
+
+  const placementLabel = useCallback(
+    (id: string | null) => placements.find((p) => p.placement_id === id)?.label ?? "",
+    [placements],
+  );
+
+  const speciesValues = useMemo(
+    () => Array.from(new Set(individuals.map((i) => i.species).filter((v): v is string => !!v))).sort(),
+    [individuals],
+  );
+  const stageValues = useMemo(
+    () => Array.from(new Set(individuals.map((i) => i.stage).filter((v): v is string => !!v))),
+    [individuals],
+  );
+  const shelfValues = useMemo(
+    () => Array.from(new Set(individuals.map((i) => i.placement_id).filter((v): v is string => !!v))),
+    [individuals],
+  );
+
+  const filtered = useMemo(() => individuals.filter((r) => matchesFilters(r, filters)), [individuals, filters]);
+  const sorted = useMemo(() => sortRows(filtered, sort), [filtered, sort]);
+  const totalCaptures = filtered.reduce((sum, r) => sum + (r.capture_count ?? 0), 0);
+
+  const commitLength = () => {
+    const xRaw = lengthXDraft.trim();
+    const yRaw = lengthYDraft.trim();
+    const x = xRaw === "" ? null : Number(xRaw);
+    const y = yRaw === "" ? null : Number(yRaw);
+    setFilters((f) => ({
+      ...f,
+      lengthX: x != null && Number.isFinite(x) ? x : null,
+      lengthY: y != null && Number.isFinite(y) ? y : null,
+    }));
+  };
+  const commitWeight = () => {
+    const xRaw = weightXDraft.trim();
+    const yRaw = weightYDraft.trim();
+    const x = xRaw === "" ? null : Number(xRaw);
+    const y = yRaw === "" ? null : Number(yRaw);
+    setFilters((f) => ({
+      ...f,
+      weightX: x != null && Number.isFinite(x) ? x : null,
+      weightY: y != null && Number.isFinite(y) ? y : null,
+    }));
+  };
+
+  const toggleFacet = (key: "species" | "stage" | "shelf", value: string) => {
+    setFilters((f) => ({ ...f, [key]: f[key] === value ? null : value }));
+  };
+
+  // 0件時の緩和バー: 現在アクティブなファセット/レンジごとに「これを外したら
+  // 何件になるか」を計算し、実際に効くもの(>0件)だけ1タップ導線として出す。
+  const reliefOptions = useMemo(() => {
+    if (sorted.length > 0) return [];
+    const opts: { key: string; label: string; count: number; apply: () => void }[] = [];
+    if (filters.species != null) {
+      const next = { ...filters, species: null };
+      const count = individuals.filter((r) => matchesFilters(r, next)).length;
+      if (count > 0) opts.push({ key: "species", label: `${filters.species}を外す`, count, apply: () => setFilters(next) });
+    }
+    if (filters.stage != null) {
+      const next = { ...filters, stage: null };
+      const count = individuals.filter((r) => matchesFilters(r, next)).length;
+      if (count > 0)
+        opts.push({
+          key: "stage",
+          label: `${STAGE_LABELS_JA[filters.stage] ?? filters.stage}を外す`,
+          count,
+          apply: () => setFilters(next),
+        });
+    }
+    if (filters.shelf != null) {
+      const next = { ...filters, shelf: null };
+      const count = individuals.filter((r) => matchesFilters(r, next)).length;
+      if (count > 0)
+        opts.push({ key: "shelf", label: `${placementLabel(filters.shelf) || "棚"}を外す`, count, apply: () => setFilters(next) });
+    }
+    if (filters.lengthX != null && filters.lengthY != null) {
+      const next = { ...filters, lengthX: null, lengthY: null };
+      const count = individuals.filter((r) => matchesFilters(r, next)).length;
+      if (count > 0)
+        opts.push({
+          key: "length",
+          label: "体長の範囲を外す",
+          count,
+          apply: () => {
+            setFilters(next);
+            setLengthXDraft("");
+            setLengthYDraft("");
+          },
+        });
+    }
+    if (filters.weightX != null && filters.weightY != null) {
+      const next = { ...filters, weightX: null, weightY: null };
+      const count = individuals.filter((r) => matchesFilters(r, next)).length;
+      if (count > 0)
+        opts.push({
+          key: "weight",
+          label: "体重の範囲を外す",
+          count,
+          apply: () => {
+            setFilters(next);
+            setWeightXDraft("");
+            setWeightYDraft("");
+          },
+        });
+    }
+    return opts;
+  }, [sorted.length, filters, individuals, placementLabel]);
+
+  const applyFilterState = (f: SearchFilters, s: SearchSort) => {
+    setFilters(f);
+    setSort(s);
+    setLengthXDraft(f.lengthX != null ? String(f.lengthX) : "");
+    setLengthYDraft(f.lengthY != null ? String(f.lengthY) : "");
+    setWeightXDraft(f.weightX != null ? String(f.weightX) : "");
+    setWeightYDraft(f.weightY != null ? String(f.weightY) : "");
+  };
+
+  const saveCurrentSearch = () => {
+    const name = window.prompt("この条件を保存する名前を入力してください");
+    if (!name) return;
+    const entry: SavedSearch = {
+      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      filters,
+      sort,
+    };
+    const next = [...savedSearches, entry];
+    setSavedSearches(next);
+    persistSavedSearches(next);
+    setActiveSavedId(entry.id);
+  };
+  const applySavedSearch = (s: SavedSearch) => {
+    applyFilterState(s.filters, s.sort);
+    setActiveSavedId(s.id);
+  };
+  const deleteSavedSearch = (id: string) => {
+    const next = savedSearches.filter((s) => s.id !== id);
+    setSavedSearches(next);
+    persistSavedSearches(next);
+    if (activeSavedId === id) setActiveSavedId(null);
+  };
+
+  const toggleSelect = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const clearBasket = () => {
+    if (selected.size === 0) return;
+    const prev = [...selected];
+    setSelected(new Set());
+    setBasketExpanded(false);
+    if (snackTimer.current) clearTimeout(snackTimer.current);
+    setSnack({ ids: prev });
+    snackTimer.current = setTimeout(() => setSnack(null), 5000);
+  };
+  const undoClear = () => {
+    if (!snack) return;
+    if (snackTimer.current) clearTimeout(snackTimer.current);
+    setSelected(new Set(snack.ids));
+    setSnack(null);
+  };
+
+  const goToBatch = () => {
+    savePreselect([...selected]);
+    navigate("obs-register-batch");
+  };
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
+
+  const basketIds = [...selected];
+  const activeSaved = savedSearches.find((s) => s.id === activeSavedId) ?? null;
+  const savedDirty = activeSaved != null && !filtersEqual(activeSaved.filters, filters);
+
+  return (
+    <div className="civ-form civ-search-navigator">
+      <div className="civ-chip-row">
+        {savedSearches.map((s) => (
+          <span key={s.id} className="civ-saved-chip-wrap">
+            <button
+              type="button"
+              className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+              data-active={s.id === activeSavedId || undefined}
+              onClick={() => applySavedSearch(s)}
+            >
+              {s.name}
+              {s.id === activeSavedId && savedDirty ? " ✱" : ""}
+            </button>
+            <button
+              type="button"
+              className={cn("civ-interactive", "civ-chip-remove")}
+              aria-label={`${s.name} を削除`}
+              onClick={() => deleteSavedSearch(s.id)}
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="ghost"
+          data-compact
+          onClick={saveCurrentSearch}
+        >
+          ＋今の条件を保存
+        </button>
+      </div>
+
+      <p className="civ-text">
+        {sorted.length}個体 / {totalCaptures}枚
+      </p>
+
+      <div className="civ-disclosure" data-open={filterOpen || undefined}>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button", "civ-disclosure-trigger")}
+          data-variant="secondary"
+          aria-expanded={filterOpen}
+          onClick={() => setFilterOpen((o) => !o)}
+        >
+          絞り込み {filterOpen ? "▾" : "▸"}
+        </button>
+        {filterOpen && (
+          <div className="civ-disclosure-body">
+            {speciesValues.length > 0 && (
+              <div className="civ-chip-row">
+                {speciesValues.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+                    data-active={filters.species === v || undefined}
+                    onClick={() => toggleFacet("species", v)}
+                  >
+                    {v}({facetCount(individuals, filters, "species", v)})
+                  </button>
+                ))}
+              </div>
+            )}
+            {stageValues.length > 0 && (
+              <div className="civ-chip-row">
+                {stageValues.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+                    data-active={filters.stage === v || undefined}
+                    onClick={() => toggleFacet("stage", v)}
+                  >
+                    {STAGE_LABELS_JA[v] ?? v}({facetCount(individuals, filters, "stage", v)})
+                  </button>
+                ))}
+              </div>
+            )}
+            {shelfValues.length > 0 && (
+              <div className="civ-chip-row">
+                {shelfValues.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+                    data-active={filters.shelf === v || undefined}
+                    onClick={() => toggleFacet("shelf", v)}
+                  >
+                    {placementLabel(v) || v}({facetCount(individuals, filters, "shelf", v)})
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="civ-picker-row">
+              <label className="civ-label" htmlFor="search-length-x">
+                体長(mm)
+              </label>
+              <input
+                id="search-length-x"
+                className="civ-input"
+                type="number"
+                inputMode="decimal"
+                placeholder="中心値"
+                value={lengthXDraft}
+                onChange={(e) => setLengthXDraft(e.target.value)}
+                onBlur={commitLength}
+                onKeyDown={(e) => e.key === "Enter" && commitLength()}
+              />
+              <span className="civ-text" data-muted="true">
+                ±
+              </span>
+              <input
+                className="civ-input"
+                type="number"
+                inputMode="decimal"
+                placeholder="幅"
+                aria-label="体長の幅"
+                value={lengthYDraft}
+                onChange={(e) => setLengthYDraft(e.target.value)}
+                onBlur={commitLength}
+                onKeyDown={(e) => e.key === "Enter" && commitLength()}
+              />
+            </div>
+            <div className="civ-picker-row">
+              <label className="civ-label" htmlFor="search-weight-x">
+                体重(g)
+              </label>
+              <input
+                id="search-weight-x"
+                className="civ-input"
+                type="number"
+                inputMode="decimal"
+                placeholder="中心値"
+                value={weightXDraft}
+                onChange={(e) => setWeightXDraft(e.target.value)}
+                onBlur={commitWeight}
+                onKeyDown={(e) => e.key === "Enter" && commitWeight()}
+              />
+              <span className="civ-text" data-muted="true">
+                ±
+              </span>
+              <input
+                className="civ-input"
+                type="number"
+                inputMode="decimal"
+                placeholder="幅"
+                aria-label="体重の幅"
+                value={weightYDraft}
+                onChange={(e) => setWeightYDraft(e.target.value)}
+                onBlur={commitWeight}
+                onKeyDown={(e) => e.key === "Enter" && commitWeight()}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {sorted.length === 0 && reliefOptions.length > 0 && (
+        <div className="civ-relief-bar">
+          {reliefOptions.map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              className={cn("civ-interactive", "civ-button")}
+              data-variant="secondary"
+              data-compact
+              onClick={o.apply}
+            >
+              {o.label} → {o.count}件
+            </button>
+          ))}
+        </div>
+      )}
+      {sorted.length === 0 && reliefOptions.length === 0 && (
+        <p className="civ-text" data-muted="true">
+          該当する個体がいません。
+        </p>
+      )}
+
+      <div className="civ-segmented" role="radiogroup" aria-label="並び替え">
+        {(Object.keys(SEARCH_SORT_LABELS) as SearchSort[]).map((k) => (
+          <label key={k} className="civ-segment">
+            <input type="radio" checked={sort === k} onChange={() => setSort(k)} />
+            <span>{SEARCH_SORT_LABELS[k]}</span>
+          </label>
+        ))}
+      </div>
+
+      <ul className="civ-list">
+        {sorted.map((row) => {
+          const checked = selected.has(row.individual_id);
+          const primary = primaryMeasure(row);
+          let dateIso: string | null = null;
+          let dateLabel = "";
+          if (row.eclosion_at) {
+            dateIso = row.eclosion_at;
+            dateLabel = "羽化";
+          } else if (row.last_care_at) {
+            dateIso = row.last_care_at;
+            dateLabel = "最終観測";
+          }
+          return (
+            <li key={row.individual_id} className="civ-roster-row">
+              <label className="civ-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleSelect(row.individual_id)}
+                  aria-label={`${row.label} を選択`}
+                />
+              </label>
+              <article className="civ-card">
+                <div className="civ-card-head">
+                  {row.thumbnail_path && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="civ-search-thumb" src={row.thumbnail_path} alt="" />
+                  )}
+                  <h3 className="civ-card-title">{row.label}</h3>
+                </div>
+                <div className="civ-card-badges">
+                  {row.species && <Badge text={row.species} tone="neutral" />}
+                  {row.stage && <Badge text={STAGE_LABELS_JA[row.stage] ?? row.stage} tone="neutral" />}
+                </div>
+                {primary && (
+                  <p className="civ-search-primary">
+                    {primary.text}
+                    <span className="civ-search-primary-unit">{primary.unit}</span>
+                  </p>
+                )}
+                <p className="civ-text" data-muted="true">
+                  {dateIso ? `${dateLabel} ${relativeLabel(new Date(dateIso).getTime())}` : "観測記録なし"}
+                  {`・観測${row.capture_count}回`}
+                </p>
+                <button
+                  type="button"
+                  className={cn("civ-interactive", "civ-button")}
+                  data-variant="secondary"
+                  data-compact
+                  onClick={() => navigate("obs-register-entry", { id: row.individual_id })}
+                >
+                  追観測 →
+                </button>
+              </article>
+            </li>
+          );
+        })}
+      </ul>
+
+      {(basketIds.length > 0 || snack) && (
+        <div className="civ-basket-tray">
+          {snack && (
+            <div className="civ-snackbar">
+              <span>{snack.ids.length}個体を削除しました</span>
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="ghost"
+                data-compact
+                onClick={undoClear}
+              >
+                元に戻す
+              </button>
+            </div>
+          )}
+          {basketIds.length > 0 && (
+            <>
+              <div className="civ-basket-chips">
+                {(basketExpanded ? basketIds : basketIds.slice(0, 6)).map((id) => {
+                  const ind = individuals.find((i) => i.individual_id === id);
+                  return (
+                    <span key={id} className="civ-basket-chip">
+                      {ind?.label ?? id}
+                      <button
+                        type="button"
+                        className={cn("civ-interactive", "civ-chip-remove")}
+                        aria-label={`${ind?.label ?? id} を外す`}
+                        onClick={() => toggleSelect(id)}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
+                {!basketExpanded && basketIds.length > 6 && (
+                  <button
+                    type="button"
+                    className={cn("civ-interactive", "civ-button")}
+                    data-variant="ghost"
+                    data-compact
+                    onClick={() => setBasketExpanded(true)}
+                  >
+                    ＋{basketIds.length - 6} 一覧▾
+                  </button>
+                )}
+              </div>
+              <div className="civ-basket-actions">
+                <button
+                  type="button"
+                  className={cn("civ-interactive", "civ-button")}
+                  data-variant="ghost"
+                  data-compact
+                  onClick={clearBasket}
+                >
+                  空にする
+                </button>
+                <button
+                  type="button"
+                  className={cn("civ-interactive", "civ-button")}
+                  data-variant="primary"
+                  onClick={goToBatch}
+                >
+                  → 計測グリッドへ({basketIds.length}件)
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
@@ -3207,6 +3946,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <BatchSummaryNode />;
     case "batch-done":
       return <BatchDoneNode />;
+    case "search-navigator":
+      return <SearchNavigatorNode />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (
