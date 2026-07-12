@@ -211,6 +211,16 @@ function props(node: ScreenNode): Record<string, unknown> {
   return node.props ?? {};
 }
 
+// Normalize a props.options-style list ("g" | {value,label}) into {value,label}.
+type Opt = { value: string; label: string };
+function toOptions(raw: unknown): Opt[] {
+  return ((raw as Array<Record<string, unknown> | string>) ?? []).map((o) =>
+    typeof o === "string"
+      ? { value: o, label: o }
+      : { value: String(o.value ?? ""), label: String(o.label ?? o.value ?? "") },
+  );
+}
+
 // Fetch node.props.source_path (GET) on mount, store the response at data[id].
 function useSource(node: ScreenNode) {
   const p = props(node);
@@ -375,7 +385,31 @@ function FieldNode({ node }: { node: ScreenNode }) {
   } as const;
 
   let control: React.ReactNode;
-  if (variant === "select") {
+  if (variant === "segmented") {
+    // V3-OBS-18: a horizontal toggle group. Native radios (FormData picks the
+    // checked one, no JS state needed) styled as buttons. One option is checked
+    // from first paint (props.default or the first), so a `required` segmented
+    // is always satisfied and its value always rides the submit body.
+    const options = toOptions(p.options);
+    const def = p.default != null ? String(p.default) : options[0]?.value ?? "";
+    control = (
+      <div className="civ-segmented" role="radiogroup" aria-label={displayText(resolve, p.label_key, p.label, name)}>
+        {options.map((o) => (
+          <label key={o.value} className="civ-segment">
+            <input
+              type="radio"
+              name={name}
+              value={o.value}
+              defaultChecked={o.value === def}
+              data-required={required || undefined}
+              aria-required={required || undefined}
+            />
+            <span>{o.label}</span>
+          </label>
+        ))}
+      </div>
+    );
+  } else if (variant === "select") {
     const options = (p.options as Array<Record<string, unknown> | string>) ?? [];
     control = (
       <select {...shared} defaultValue="">
@@ -403,7 +437,7 @@ function FieldNode({ node }: { node: ScreenNode }) {
     control = (
       <input
         {...shared}
-        type={variant === "number" ? "number" : "text"}
+        type={variant === "number" ? "number" : variant === "date" ? "date" : "text"}
         placeholder={p.placeholder ? String(p.placeholder) : undefined}
       />
     );
@@ -568,13 +602,27 @@ function ListNode({ node }: { node: ScreenNode }) {
 // at data[node.id], so children can read scalar fields via {{data.<id>.…}}.
 // (Lists bind arrays; cards surface the same fetch for single-object screens
 // like obs-detail's summary and qr-resume's token→individual resolve.)
+//
+// A層(c7 ui-parity-map §2-2 リッチカード): additive rich props on the SAME
+// "card" node type (upper-compat — a plain card with none of these props
+// renders exactly as before). icon is a literal glyph (no icon lib dependency
+// — see renderer.test.tsx/design notes), title/meta interpolate against the
+// full scope like heading/text do, badges[] reuses <Badge>, and a chevron nav
+// affordance renders only when the node itself carries an `action` (unused by
+// CardNode until now — action is a generic ScreenNode field per the schema).
 function CardNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   useSource(node);
   const scope = useContext(ScopeCtx);
+  const resolve = useContext(MessagesCtx);
+  const run = useRunAction(node.id);
   const children = node.children ?? [];
   const bindText = p.bind_text ? String(p.bind_text) : "";
-  if (children.length === 0 && !bindText && p.empty_text) {
+  const icon = p.icon != null ? String(p.icon) : "";
+  const title = interpolate(displayText(resolve, p.title_key, p.title, ""), scope);
+  const meta = p.meta != null ? interpolate(displayText(resolve, p.meta_key, p.meta, ""), scope) : "";
+  const badges = (p.badges as Array<Record<string, unknown>> | undefined) ?? [];
+  if (children.length === 0 && !bindText && !title && p.empty_text) {
     return <p className="civ-empty">{String(p.empty_text)}</p>;
   }
   // props.bind_text renders the card's OWN fetched object (data[node.id]), so
@@ -583,13 +631,316 @@ function CardNode({ node }: { node: ScreenNode }) {
   return (
     <article className="civ-card">
       {p.draft ? <span className="civ-draft-badge">草案</span> : null}
+      {(icon || title) && (
+        <div className="civ-card-head">
+          {icon && (
+            <span className="civ-card-icon" aria-hidden="true">
+              {icon}
+            </span>
+          )}
+          {title && <h3 className="civ-card-title">{title}</h3>}
+        </div>
+      )}
+      {meta && (
+        <p className="civ-text" data-muted="true">
+          {meta}
+        </p>
+      )}
+      {badges.length > 0 && (
+        <div className="civ-card-badges">
+          {badges.map((b, i) => (
+            <Badge
+              key={i}
+              text={displayText(resolve, b.text_key ?? b.label_key, b.text ?? b.label, "")}
+              tone={b.tone != null ? String(b.tone) : undefined}
+            />
+          ))}
+        </div>
+      )}
       {bindText ? (
         <p className="civ-text">
           {interpolate(bindText, getPath(scope, `data.${node.id}`) ?? {})}
         </p>
       ) : null}
       <Children nodes={node.children} />
+      {node.action && (
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button", "civ-card-nav-btn")}
+          data-variant="ghost"
+          aria-label={displayText(resolve, p.nav_label_key, p.nav_label, "開く")}
+          onClick={() => run(node.action!)}
+        >
+          ›
+        </button>
+      )}
     </article>
+  );
+}
+
+// Status badge / chip tone (§2-3): success/warning/caution/neutral, mapped
+// onto the existing --civ-primary/--civ-danger/--civ-danger-bg/--civ-text-muted
+// tokens (no new hex — check-ui-tokens forbids it). warning is filled danger,
+// caution is outlined danger (same hue, lower urgency); success is outlined
+// primary; neutral (default/unknown tone) is the muted outline.
+type Tone = "success" | "warning" | "caution" | "neutral";
+const TONES: readonly Tone[] = ["success", "warning", "caution", "neutral"];
+function Badge({ text, tone }: { text: string; tone?: string }) {
+  const t: Tone = TONES.includes(tone as Tone) ? (tone as Tone) : "neutral";
+  return (
+    <span className="civ-badge" data-tone={t}>
+      {text}
+    </span>
+  );
+}
+
+function BadgeNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
+  const text = interpolate(displayText(resolve, p.text_key, p.text ?? p.label, ""), scope);
+  return <Badge text={text} tone={p.tone != null ? String(p.tone) : undefined} />;
+}
+
+// Progress bar / gauge (§2-4). value/max accept a literal number or a
+// "{{...}}" template resolved against scope (so a screen can bind a fetched
+// count without a dedicated bind_* prop, same trick heading/text use).
+function numFromProp(raw: unknown, scope: Scope): number {
+  if (typeof raw === "number") return raw;
+  const n = Number(interpolate(String(raw ?? "0"), scope));
+  return Number.isFinite(n) ? n : 0;
+}
+function ProgressBar({ value, max, label }: { value: number; max: number; label?: string }) {
+  const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
+  return (
+    <div
+      className="civ-progress"
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-label={label || undefined}
+    >
+      <div className="civ-progress-track">
+        <div className="civ-progress-fill" style={{ transform: `scaleX(${pct / 100})` }} />
+      </div>
+    </div>
+  );
+}
+function ProgressNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
+  const value = numFromProp(p.value, scope);
+  const max = p.max != null ? numFromProp(p.max, scope) : 100;
+  const label = displayText(resolve, p.label_key, p.label, "");
+  const showValue = p.show_value !== false;
+  return (
+    <div className="civ-progress-field">
+      {label && <span className="civ-label">{label}</span>}
+      <ProgressBar value={value} max={max} label={label || undefined} />
+      {showValue && (
+        <span className="civ-progress-value">{Math.round((value / (max || 1)) * 100)}%</span>
+      )}
+    </div>
+  );
+}
+
+// Multi-column data table (§2-1, the biggest single fix — the main cause of
+// the "table collapses to a 1-line list" density loss per ui-parity-map §0).
+// Rows bind the same way a list does (source_path fetch + bind_items dotted
+// path); columns are declarative ({key,label,cell}) so a column can render its
+// cell as plain text, a Badge, or a ProgressBar without any per-screen code.
+function useBoundItems(node: ScreenNode): unknown[] {
+  useSource(node);
+  const p = props(node);
+  const scope = useContext(ScopeCtx);
+  const path = p.bind_items ? String(p.bind_items) : "";
+  if (!path) return [];
+  return (getPath(scope, path) as unknown[]) ?? [];
+}
+function renderCell(col: Record<string, unknown>, row: unknown): React.ReactNode {
+  const key = String(col.key ?? "");
+  const value = getPath(row, key);
+  const cell = String(col.cell ?? "text");
+  if (cell === "badge") {
+    const tone =
+      col.tone != null
+        ? String(col.tone)
+        : col.tone_key != null
+          ? String(getPath(row, String(col.tone_key)) ?? "neutral")
+          : "neutral";
+    return <Badge text={String(value ?? "")} tone={tone} />;
+  }
+  if (cell === "progress") {
+    const n = Number(value ?? 0);
+    return <ProgressBar value={Number.isFinite(n) ? n : 0} max={Number(col.max ?? 100)} />;
+  }
+  return value == null ? "" : String(value);
+}
+function TableNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const items = useBoundItems(node);
+  const columns = (p.columns as Array<Record<string, unknown>>) ?? [];
+  if (items.length === 0 && p.empty_text) {
+    return <p className="civ-empty">{String(p.empty_text)}</p>;
+  }
+  return (
+    <table className="civ-table">
+      <thead>
+        <tr>
+          {columns.map((c, i) => (
+            <th key={i}>{displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((row, ri) => (
+          <tr key={ri}>
+            {columns.map((c, ci) => (
+              <td key={ci}>{renderCell(c, row)}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// Tabs / section switcher (§2-5). props.tabs[] drives the tab strip; each
+// child node opts into a tab via props.tab_id — only the active tab's
+// children render (unassigned children never show, keeping the contract
+// explicit rather than "everything without tab_id always shows").
+function TabsNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const tabs = (p.tabs as Array<Record<string, unknown>>) ?? [];
+  const [active, setActive] = useState<string>(
+    p.default_tab != null ? String(p.default_tab) : String(tabs[0]?.id ?? ""),
+  );
+  const children = node.children ?? [];
+  return (
+    <div className="civ-tabs">
+      <div className="civ-tab-list" role="tablist">
+        {tabs.map((t) => {
+          const id = String(t.id ?? "");
+          const selected = id === active;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              className={cn("civ-interactive", "civ-tab")}
+              data-active={selected || undefined}
+              onClick={() => setActive(id)}
+            >
+              {displayText(resolve, t.label_key, t.label, id)}
+            </button>
+          );
+        })}
+      </div>
+      <div className="civ-tab-panel" role="tabpanel">
+        {children
+          .filter((c) => String(c.props?.tab_id ?? "") === active)
+          .map((c) => (
+            <NodeView key={c.id} node={c} />
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// Image grid / thumbnail cards (§2-6) — the bind_items twin of ListNode's
+// image branch, laid out as a grid instead of a stacked list, each cell
+// carrying a meta line + optional Badge.
+function ImageGridNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const items = useBoundItems(node);
+  if (items.length === 0 && p.empty_text) {
+    return <p className="civ-empty">{String(p.empty_text)}</p>;
+  }
+  const imgTpl = p.item_image ? String(p.item_image) : "";
+  const altTpl = p.item_alt ? String(p.item_alt) : "";
+  const labelTpl = p.item_label ? String(p.item_label) : "";
+  const metaTpl = p.item_meta ? String(p.item_meta) : "";
+  const badgeTpl = p.item_badge ? String(p.item_badge) : "";
+  const badgeToneTpl = p.item_badge_tone ? String(p.item_badge_tone) : "";
+  return (
+    <div className="civ-image-grid">
+      {items.map((it, i) => (
+        <figure className="civ-thumb-card" key={i}>
+          {imgTpl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="civ-image" src={interpolate(imgTpl, it)} alt={interpolate(altTpl, it)} />
+          )}
+          <figcaption>
+            {labelTpl && <p className="civ-text">{interpolate(labelTpl, it)}</p>}
+            {metaTpl && (
+              <p className="civ-text" data-muted="true">
+                {interpolate(metaTpl, it)}
+              </p>
+            )}
+            {badgeTpl && (
+              <Badge
+                text={interpolate(badgeTpl, it)}
+                tone={badgeToneTpl ? interpolate(badgeToneTpl, it) : undefined}
+              />
+            )}
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  );
+}
+
+// Stepper — multi-stage progress with the current step highlighted (§2-7).
+// props.current is either a 0-based index or a step id (matched against
+// steps[].id); steps before it are "done", the match is "current", the rest
+// "upcoming".
+function StepperNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const steps = (p.steps as Array<Record<string, unknown>>) ?? [];
+  const cur = p.current;
+  const currentIndex =
+    typeof cur === "number" ? cur : Math.max(0, steps.findIndex((s) => String(s.id ?? "") === String(cur ?? "")));
+  return (
+    <ol className="civ-stepper">
+      {steps.map((s, i) => {
+        const state = i < currentIndex ? "done" : i === currentIndex ? "current" : "upcoming";
+        return (
+          <li key={String(s.id ?? i)} className="civ-step" data-state={state}>
+            <span className="civ-step-index" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span className="civ-step-label">{displayText(resolve, s.label_key, s.label, String(i + 1))}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// KPI / stat tile (§2-8) — a big number + label + optional trend Badge.
+// props.value/trend are templates interpolated against scope (like text
+// nodes); an optional own source_path feeds {{data.<id>.field}} the same way
+// CardNode's source_path does, so a tile can be the only fetcher on screen.
+function KpiTileNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  useSource(node);
+  const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
+  const value = interpolate(String(p.value ?? ""), scope);
+  const label = displayText(resolve, p.label_key, p.label, "");
+  const trend = p.trend != null ? interpolate(String(p.trend), scope) : "";
+  return (
+    <div className="civ-kpi-tile">
+      <span className="civ-kpi-value">{value}</span>
+      {label && <span className="civ-kpi-label">{label}</span>}
+      {trend && <Badge text={trend} tone={p.trend_tone != null ? String(p.trend_tone) : undefined} />}
+    </div>
   );
 }
 
@@ -657,6 +1008,187 @@ function UgcText({ node, text }: { node: ScreenNode; text: string }) {
   );
 }
 
+// V3-OBS-18: the observation measurement table — a header row (項目/数値/単位/
+// 計測方法) over N rows, each row an item select + number input + unit select +
+// method select. props.rows seeds the initial template rows; "行を追加" appends
+// blank rows (client state). Each row also emits a hidden measurements.i.kind so
+// the shaped body is [{item,value,unit,method,kind:"number"}] — the same dotted
+// FormData nesting obs-entry uses, so it rides the existing form contract.
+// ponytail: uncontrolled rows. An untouched template row still submits its
+// item/unit/method/kind with an empty value; the confirm/API step should drop
+// measurements missing a value. Add per-row value-gating only if that leak bites.
+function MeasurementTableNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const baseItems = toOptions(p.item_options);
+  const baseUnits = toOptions(p.unit_options);
+  const methodOpts = toOptions(p.method_options);
+  const templates = (p.rows as Array<Record<string, unknown>>) ?? [];
+  const [extra, setExtra] = useState(0);
+  // V3-OBS-18 自由項目: user-defined item/unit choices extend every row's select.
+  const [extraItems, setExtraItems] = useState<Opt[]>([]);
+  const [extraUnits, setExtraUnits] = useState<Opt[]>([]);
+  const [adding, setAdding] = useState<null | "item" | "unit">(null);
+  const [pendingName, setPendingName] = useState("");
+  const itemOpts = [...baseItems, ...extraItems];
+  const unitOpts = [...baseUnits, ...extraUnits];
+  const rowCount = templates.length + extra;
+  const th = (k: unknown, l: unknown, fb: string) => displayText(resolve, k, l, fb);
+  const itemLabel = th(p.item_label_key, p.item_label, "項目");
+  const valueLabel = th(p.value_label_key, p.value_label, "数値");
+  const unitLabel = th(p.unit_label_key, p.unit_label, "単位");
+  const methodLabel = th(p.method_label_key, p.method_label, "計測方法");
+  const canAddItem = p.add_item_label != null;
+  const canAddUnit = p.add_unit_label != null;
+
+  const confirmAdd = () => {
+    const v = pendingName.trim();
+    if (v) {
+      const opt = { value: v, label: v };
+      const setter = adding === "item" ? setExtraItems : setExtraUnits;
+      setter((xs) => (xs.some((o) => o.value === v) ? xs : [...xs, opt]));
+    }
+    setPendingName("");
+    setAdding(null);
+  };
+
+  return (
+    <div className="civ-measure-table" role="group" aria-label={th(p.label_key, p.label, "計測")}>
+      <div className="civ-measure-head" aria-hidden="true">
+        <span>{itemLabel}</span>
+        <span>{valueLabel}</span>
+        <span>{unitLabel}</span>
+        <span>{methodLabel}</span>
+      </div>
+      {Array.from({ length: rowCount }).map((_, i) => {
+        const tpl = templates[i] ?? {};
+        const dItem = tpl.item != null ? String(tpl.item) : "";
+        const dUnit = tpl.unit != null ? String(tpl.unit) : "";
+        const dMethod =
+          tpl.method != null ? String(tpl.method) : String(methodOpts[0]?.value ?? "");
+        const rowN = i + 1;
+        return (
+          <div className="civ-measure-row" key={i}>
+            <select
+              className="civ-input"
+              name={`measurements.${i}.item`}
+              defaultValue={dItem}
+              aria-label={`${itemLabel} ${rowN}`}
+            >
+              {dItem === "" && <option value="">—</option>}
+              {itemOpts.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <input
+              className="civ-input"
+              type="number"
+              inputMode="decimal"
+              name={`measurements.${i}.value`}
+              aria-label={`${valueLabel} ${rowN}`}
+            />
+            <select
+              className="civ-input"
+              name={`measurements.${i}.unit`}
+              defaultValue={dUnit}
+              aria-label={`${unitLabel} ${rowN}`}
+            >
+              {dUnit === "" && <option value="">—</option>}
+              {unitOpts.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className="civ-input"
+              name={`measurements.${i}.method`}
+              defaultValue={dMethod}
+              aria-label={`${methodLabel} ${rowN}`}
+            >
+              {methodOpts.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <input type="hidden" name={`measurements.${i}.kind`} value="number" readOnly />
+          </div>
+        );
+      })}
+      <div className="civ-measure-actions">
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="secondary"
+          onClick={() => setExtra((n) => n + 1)}
+        >
+          {th(p.add_label_key, p.add_label, "行を追加")}
+        </button>
+        {canAddItem && (
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant="ghost"
+            onClick={() => {
+              setAdding("item");
+              setPendingName("");
+            }}
+          >
+            {th(p.add_item_label_key, p.add_item_label, "＋ 項目を追加")}
+          </button>
+        )}
+        {canAddUnit && (
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant="ghost"
+            onClick={() => {
+              setAdding("unit");
+              setPendingName("");
+            }}
+          >
+            {th(p.add_unit_label_key, p.add_unit_label, "＋ 単位を追加")}
+          </button>
+        )}
+      </div>
+      {adding && (
+        <div className="civ-measure-add">
+          {/* no `name` — this is a choice-builder, not a submitted measurement field */}
+          <input
+            className="civ-input"
+            value={pendingName}
+            onChange={(e) => setPendingName(e.target.value)}
+            placeholder={String(
+              (adding === "item" ? p.item_placeholder : p.unit_placeholder) ??
+                (adding === "item" ? "例: 頭角幅" : "例: mg"),
+            )}
+            aria-label={adding === "item" ? itemLabel : unitLabel}
+          />
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant="secondary"
+            onClick={confirmAdd}
+          >
+            {adding === "item" ? "項目を追加" : "単位を追加"}
+          </button>
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant="ghost"
+            onClick={() => setAdding(null)}
+          >
+            閉じる
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
@@ -714,6 +1246,22 @@ export function NodeView({ node }: { node: ScreenNode }) {
       );
     case "qr-code":
       return <QrNode node={node} />;
+    case "measurement-table":
+      return <MeasurementTableNode node={node} />;
+    case "table":
+      return <TableNode node={node} />;
+    case "badge":
+      return <BadgeNode node={node} />;
+    case "progress":
+      return <ProgressNode node={node} />;
+    case "tabs":
+      return <TabsNode node={node} />;
+    case "image-grid":
+      return <ImageGridNode node={node} />;
+    case "stepper":
+      return <StepperNode node={node} />;
+    case "kpi-tile":
+      return <KpiTileNode node={node} />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (

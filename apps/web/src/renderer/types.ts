@@ -15,11 +15,31 @@ export type NodeType =
   | "card"
   | "image"
   | "qr-code"
-  | "link";
+  | "link"
+  | "measurement-table"
+  // A層共有レンダラ語彙（c7 ui-parity-map §2）。table/badge/progress/tabs/
+  // image-grid/stepper/kpi-tile の 7 種を追加。card は既存ノードに rich な
+  // props（icon/title/meta/badges/action によるナビ）を additive に拡張した
+  // ので新種は起こしていない（上位互換・既存 screen-def は無変更で動く）。
+  | "table"
+  | "badge"
+  | "progress"
+  | "tabs"
+  | "image-grid"
+  | "stepper"
+  | "kpi-tile";
 
-// field node props.variant (V3-AUT-06 adds "checkbox"). Documents the supported
+// field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
+// "segmented" — a horizontal toggle group of radios). Documents the supported
 // controls; the Renderer reads props.variant untyped, schema is the SSOT.
-export type FieldVariant = "text" | "number" | "select" | "photo" | "checkbox";
+export type FieldVariant =
+  | "text"
+  | "number"
+  | "date"
+  | "select"
+  | "photo"
+  | "checkbox"
+  | "segmented";
 
 // Documented props the Renderer understands (props stays an open Record so the
 // schema — additionalProperties:true — remains the SSOT). C5/K4 adds:
@@ -30,6 +50,14 @@ export type FieldVariant = "text" | "number" | "select" | "photo" | "checkbox";
 //  - ugc + lang: mark viewer-generated text; enables the on-device translate
 //    affordance when the viewer locale differs from `lang` (V3-I18-06).
 //  - next_step: trailing "次にやること" navigation hint (V3-UIX-05).
+// A層（c7 ui-parity-map §2）: table props.columns[] ({key,label,cell:
+// "text"|"badge"|"progress",tone_key,max}) + bind_items; badge/progress
+// props.tone (success|warning|caution|neutral — no new hex, mapped onto the
+// existing primary/danger/muted trio); tabs props.tabs[] + child props.tab_id;
+// image-grid mirrors list's bind_items with item_image/item_label/item_meta/
+// item_badge; stepper props.steps[] + props.current; kpi-tile props.value/
+// label/trend. card gains icon/title/meta/badges[] + a nav chevron rendered
+// when the card node itself carries an `action`.
 export interface KnownNodeProps {
   text?: string;
   text_key?: string;

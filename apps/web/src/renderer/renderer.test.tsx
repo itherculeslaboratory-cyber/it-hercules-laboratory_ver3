@@ -473,6 +473,375 @@ describe("Renderer — API error copy (V3-UIX-03)", () => {
   });
 });
 
+describe("Renderer — segmented toggle field (V3-OBS-18)", () => {
+  it("checks the default option and carries the selected value in the submit body", async () => {
+    const onAction = vi.fn(async () => ({}));
+    const action: Action = { kind: "api", method: "POST", path: "/api/v1/observation/captures" };
+    render(
+      <Renderer
+        onAction={onAction}
+        def={screenDef([
+          {
+            id: "f",
+            type: "form",
+            action,
+            children: [
+              {
+                id: "sex",
+                type: "field",
+                props: {
+                  variant: "segmented",
+                  name: "sex",
+                  label: "性別",
+                  default: "male",
+                  options: [
+                    { value: "male", label: "雄" },
+                    { value: "female", label: "雌" },
+                  ],
+                },
+              },
+              { id: "s", type: "button", props: { label: "送信", type: "submit" } },
+            ],
+          },
+        ])}
+      />,
+    );
+    // default paint: 雄 checked, no input event needed
+    expect(screen.getByRole("radio", { name: "雄" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "雌" })).not.toBeChecked();
+    // pick 雌, then submit — the selected radio value rides the body
+    fireEvent.click(screen.getByRole("radio", { name: "雌" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "送信" }));
+    });
+    expect(onAction).toHaveBeenCalledWith(action, { sex: "female" });
+  });
+});
+
+describe("Renderer — measurement-table node (V3-OBS-18)", () => {
+  const tableDef = (): ScreenDef =>
+    screenDef([
+      {
+        id: "f",
+        type: "form",
+        action: { kind: "api", method: "POST", path: "/api/v1/observation/captures" },
+        children: [
+          {
+            id: "measurements",
+            type: "measurement-table",
+            props: {
+              add_label: "行を追加",
+              add_item_label: "＋ 項目を追加",
+              item_options: [{ value: "体長", label: "体長" }],
+              unit_options: [{ value: "mm", label: "mm" }],
+              method_options: [{ value: "手入力", label: "手入力" }],
+              rows: [{ item: "体長", unit: "mm" }],
+            },
+          },
+          { id: "s", type: "button", props: { label: "送信", type: "submit" } },
+        ],
+      },
+    ]);
+
+  it("shapes a filled row into measurements[] with kind/unit/method (dotted nesting)", async () => {
+    const onAction = vi.fn(async () => ({}));
+    render(<Renderer onAction={onAction} def={tableDef()} />);
+    fireEvent.change(screen.getByLabelText("数値 1"), { target: { value: "65" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "送信" }));
+    });
+    const body = onAction.mock.calls[0][1] as { measurements: Array<Record<string, unknown>> };
+    expect(body.measurements[0]).toMatchObject({
+      item: "体長",
+      value: "65",
+      unit: "mm",
+      method: "手入力",
+      kind: "number",
+    });
+  });
+
+  it("adds a row when 行を追加 is pressed (value inputs grow)", () => {
+    render(<Renderer onAction={vi.fn()} def={tableDef()} />);
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "行を追加" }));
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(2);
+  });
+
+  it("reveals a free-item choice builder on ＋ 項目を追加", () => {
+    render(<Renderer onAction={vi.fn()} def={tableDef()} />);
+    fireEvent.click(screen.getByRole("button", { name: "＋ 項目を追加" }));
+    expect(screen.getByRole("button", { name: "項目を追加" })).toBeInTheDocument();
+  });
+});
+
+describe("Renderer — A層 badge/progress (c7 ui-parity-map §2-3/§2-4)", () => {
+  it("renders a badge with the requested tone as a data attribute", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([{ id: "b", type: "badge", props: { text: "良好", tone: "success" } }])}
+      />,
+    );
+    const badge = screen.getByText("良好");
+    expect(badge).toHaveClass("civ-badge");
+    expect(badge).toHaveAttribute("data-tone", "success");
+  });
+
+  it("falls back to the neutral tone for an unknown/missing tone", () => {
+    render(
+      <Renderer onAction={vi.fn()} def={screenDef([{ id: "b", type: "badge", props: { text: "草案" } }])} />,
+    );
+    expect(screen.getByText("草案")).toHaveAttribute("data-tone", "neutral");
+  });
+
+  it("renders a progressbar with the correct aria values and rounded percentage", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          { id: "p", type: "progress", props: { value: 30, max: 40, label: "充足度" } },
+        ])}
+      />,
+    );
+    const bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "30");
+    expect(bar).toHaveAttribute("aria-valuemax", "40");
+    expect(screen.getByText("75%")).toBeInTheDocument();
+  });
+});
+
+describe("Renderer — A層 table node (c7 ui-parity-map §2-1)", () => {
+  it("binds rows via bind_items and dispatches cell type (text/badge/progress)", async () => {
+    const onAction = vi.fn(async () => ({
+      rows: [{ name: "個体A", state: "良好", tone: "success", pct: 50 }],
+    }));
+    render(
+      <Renderer
+        onAction={onAction}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "tbl",
+              type: "table",
+              props: {
+                source_path: "/api/v1/x",
+                bind_items: "data.tbl.rows",
+                columns: [
+                  { key: "name", label: "名前" },
+                  { key: "state", label: "状態", cell: "badge", tone_key: "tone" },
+                  { key: "pct", label: "進捗", cell: "progress", max: 100 },
+                ],
+              },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(await screen.findByText("個体A")).toBeInTheDocument();
+    const badge = screen.getByText("良好");
+    expect(badge).toHaveClass("civ-badge");
+    expect(badge).toHaveAttribute("data-tone", "success");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+  });
+
+  it("renders empty_text when the bound array is empty", async () => {
+    const onAction = vi.fn(async () => ({ rows: [] }));
+    render(
+      <Renderer
+        onAction={onAction}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "tbl",
+              type: "table",
+              props: {
+                source_path: "/api/v1/x",
+                bind_items: "data.tbl.rows",
+                columns: [{ key: "name", label: "名前" }],
+                empty_text: "まだ記録がありません",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(await screen.findByText("まだ記録がありません")).toBeInTheDocument();
+  });
+});
+
+describe("Renderer — A層 tabs node (c7 ui-parity-map §2-5)", () => {
+  it("shows only the default tab's children, switching on click", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          {
+            id: "tabs",
+            type: "tabs",
+            props: { tabs: [{ id: "a", label: "A" }, { id: "b", label: "B" }] },
+            children: [
+              { id: "ca", type: "text", props: { text: "Aの中身", tab_id: "a" } },
+              { id: "cb", type: "text", props: { text: "Bの中身", tab_id: "b" } },
+            ],
+          },
+        ])}
+      />,
+    );
+    expect(screen.getByText("Aの中身")).toBeInTheDocument();
+    expect(screen.queryByText("Bの中身")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "B" }));
+    expect(screen.queryByText("Aの中身")).not.toBeInTheDocument();
+    expect(screen.getByText("Bの中身")).toBeInTheDocument();
+  });
+});
+
+describe("Renderer — A層 image-grid node (c7 ui-parity-map §2-6)", () => {
+  it("binds items into thumbnail cards with label/meta/badge", async () => {
+    const onAction = vi.fn(async () => ({
+      items: [{ url: "/x.jpg", name: "個体A", note: "良好", tone: "success" }],
+    }));
+    render(
+      <Renderer
+        onAction={onAction}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "grid",
+              type: "image-grid",
+              props: {
+                source_path: "/api/v1/x",
+                bind_items: "data.grid.items",
+                item_image: "{{url}}",
+                item_alt: "{{name}}",
+                item_label: "{{name}}",
+                item_meta: "{{note}}",
+                item_badge: "{{note}}",
+                item_badge_tone: "{{tone}}",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(await screen.findByText("個体A")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "個体A" })).toHaveAttribute("src", "/x.jpg");
+    const badge = screen.getAllByText("良好").find((el) => el.className.includes("civ-badge"));
+    expect(badge).toHaveAttribute("data-tone", "success");
+  });
+});
+
+describe("Renderer — A層 stepper node (c7 ui-parity-map §2-7)", () => {
+  it("marks steps before current as done, the match as current, the rest upcoming", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          {
+            id: "s",
+            type: "stepper",
+            props: {
+              current: 1,
+              steps: [{ id: "s1", label: "対象確定" }, { id: "s2", label: "計測" }, { id: "s3", label: "確認" }],
+            },
+          },
+        ])}
+      />,
+    );
+    expect(screen.getByText("対象確定").closest(".civ-step")).toHaveAttribute("data-state", "done");
+    expect(screen.getByText("計測").closest(".civ-step")).toHaveAttribute("data-state", "current");
+    expect(screen.getByText("確認").closest(".civ-step")).toHaveAttribute("data-state", "upcoming");
+  });
+});
+
+describe("Renderer — A層 kpi-tile node (c7 ui-parity-map §2-8)", () => {
+  it("renders a bound value/label and an optional trend badge", async () => {
+    const onAction = vi.fn(async () => ({ count: 42 }));
+    render(
+      <Renderer
+        onAction={onAction}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "kpi",
+              type: "kpi-tile",
+              props: {
+                source_path: "/api/v1/x",
+                value: "{{data.kpi.count}}",
+                label: "登録数",
+                trend: "+12%",
+                trend_tone: "success",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(await screen.findByText("42")).toBeInTheDocument();
+    expect(screen.getByText("登録数")).toBeInTheDocument();
+    expect(screen.getByText("+12%")).toHaveAttribute("data-tone", "success");
+  });
+});
+
+describe("Renderer — A層 rich card (c7 ui-parity-map §2-2, upper-compat on 'card')", () => {
+  it("renders icon/title/meta/badges and a nav chevron that fires the card's action", async () => {
+    const onAction = vi.fn(async () => ({}));
+    render(
+      <Renderer
+        onAction={onAction}
+        def={screenDef([
+          {
+            id: "card1",
+            type: "card",
+            props: {
+              icon: "🐛",
+              title: "ヘラクレスオオカブト #12",
+              meta: "最終計測: 78mm",
+              badges: [{ text: "取引可", tone: "success" }],
+            },
+            action: { kind: "navigate", to: "individual-detail" },
+          },
+        ])}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "ヘラクレスオオカブト #12", level: 3 })).toBeInTheDocument();
+    expect(screen.getByText("最終計測: 78mm")).toBeInTheDocument();
+    expect(screen.getByText("取引可")).toHaveAttribute("data-tone", "success");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "開く" }));
+    });
+    expect(onAction).toHaveBeenCalledWith({ kind: "navigate", to: "individual-detail" });
+  });
+
+  it("a plain card with none of the rich props still renders exactly as before (upper-compat)", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          {
+            id: "card1",
+            type: "card",
+            children: [{ id: "t", type: "text", props: { text: "本文のみ" } }],
+          },
+        ])}
+      />,
+    );
+    expect(screen.getByText("本文のみ")).toBeInTheDocument();
+    expect(screen.queryByText("開く")).not.toBeInTheDocument();
+  });
+});
+
 describe("Renderer — UGC on-device translate affordance (V3-I18-06)", () => {
   it("offers 翻訳 only when the viewer locale differs from the content lang", () => {
     const ugc = (): ScreenDef =>

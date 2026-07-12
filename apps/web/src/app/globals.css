@@ -268,6 +268,333 @@ body {
   font-size: var(--civ-fs-1);
   color: var(--civ-danger);
 }
+
+/* segmented toggle (field variant · V3-OBS-18) — a horizontal group of radios
+ * styled as buttons. The checked option carries the primary accent. */
+.civ-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.civ-segment {
+  position: relative;
+  display: inline-flex;
+}
+.civ-segment input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.civ-segment span {
+  min-height: var(--civ-tap);
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface);
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-2);
+  transition:
+    border-color var(--civ-motion) ease,
+    color var(--civ-motion) ease;
+}
+.civ-segment input:hover + span {
+  border-color: var(--civ-text-muted);
+}
+.civ-segment input:checked + span {
+  border-color: var(--civ-primary);
+  color: var(--civ-primary);
+}
+.civ-segment input:focus-visible + span {
+  outline: 2px solid var(--civ-focus);
+  outline-offset: 2px;
+}
+
+/* measurement table (measurement-table node · V3-OBS-18) — item/value/unit/
+ * method columns over N rows, with 行を追加 / 自由項目 affordances. */
+.civ-measure-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface);
+  padding: 16px;
+}
+.civ-measure-head,
+.civ-measure-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 0.8fr 1.1fr;
+  gap: 12px;
+  align-items: center;
+}
+.civ-measure-head {
+  padding: 0 2px 4px;
+}
+.civ-measure-head span {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+}
+.civ-measure-table .civ-input {
+  width: 100%;
+}
+.civ-measure-actions,
+.civ-measure-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  align-items: center;
+}
+@media (max-width: 560px) {
+  .civ-measure-head {
+    display: none;
+  }
+  .civ-measure-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* section card title (heading level 2 inside a card) sits flush with card top */
+.civ-card > .civ-heading {
+  margin-bottom: 4px;
+}
+
+/* =============================================================================
+ * A層 共有レンダラ語彙（c7 ui-parity-map §2）— table/badge/progress/tabs/
+ * image-grid/stepper/kpi-tile + rich card additions. No raw hex: every color
+ * below is var(--civ-*); check-ui-tokens GATE forbids anything else.
+ * ========================================================================== */
+
+/* rich card additions (icon+title / meta / badge row / nav chevron) */
+.civ-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.civ-card-icon {
+  font-size: var(--civ-fs-3);
+  line-height: 1;
+}
+.civ-card-title {
+  margin: 0;
+  font-size: var(--civ-fs-3);
+  font-weight: 300;
+  color: var(--civ-text);
+}
+.civ-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.civ-card-nav-btn {
+  align-self: flex-end;
+  padding: 0 12px;
+}
+
+/* status badge / chip (§2-3): success/warning/caution/neutral tones, all
+ * derived from the existing primary/danger/danger-bg/text-muted tokens. */
+.civ-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface-2);
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.civ-badge[data-tone="success"] {
+  border-color: var(--civ-primary);
+  color: var(--civ-primary);
+  background: transparent;
+}
+.civ-badge[data-tone="warning"] {
+  border-color: var(--civ-danger);
+  color: var(--civ-danger);
+  background: var(--civ-danger-bg);
+}
+.civ-badge[data-tone="caution"] {
+  border-color: var(--civ-danger);
+  color: var(--civ-danger);
+  background: transparent;
+}
+
+/* progress bar / gauge (§2-4) */
+.civ-progress-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.civ-progress {
+  width: 100%;
+}
+.civ-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--civ-surface-2);
+  overflow: hidden;
+}
+.civ-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--civ-primary);
+  border-radius: 999px;
+  transform-origin: left;
+  transition: transform var(--civ-motion) ease;
+}
+.civ-progress-value {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+}
+
+/* multi-column data table (§2-1) */
+.civ-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--civ-fs-2);
+}
+.civ-table th,
+.civ-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--civ-border);
+}
+.civ-table th {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+  font-weight: 400;
+}
+.civ-table tbody tr:last-child td {
+  border-bottom: none;
+}
+@media (max-width: 560px) {
+  .civ-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* tabs / section switcher (§2-5) */
+.civ-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--civ-border);
+}
+.civ-tab {
+  padding: 0 16px;
+  border-color: transparent;
+  border-radius: var(--civ-radius) var(--civ-radius) 0 0;
+  background: transparent;
+  color: var(--civ-text-muted);
+}
+.civ-tab[data-active="true"] {
+  color: var(--civ-primary);
+  border-bottom: 2px solid var(--civ-primary);
+}
+.civ-tab-panel {
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* image grid / thumbnail cards (§2-6) */
+.civ-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.civ-thumb-card {
+  margin: 0;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  overflow: hidden;
+  background: var(--civ-surface);
+  display: flex;
+  flex-direction: column;
+}
+.civ-thumb-card .civ-image {
+  border-radius: 0;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+.civ-thumb-card figcaption {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* stepper — multi-stage progress (§2-7) */
+.civ-stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.civ-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  color: var(--civ-text-muted);
+}
+.civ-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: var(--civ-fs-1);
+}
+.civ-step[data-state="current"] {
+  border-color: var(--civ-primary);
+  color: var(--civ-primary);
+}
+.civ-step[data-state="done"] {
+  color: var(--civ-text);
+}
+.civ-step[data-state="done"] .civ-step-index {
+  background: var(--civ-primary);
+  border-color: var(--civ-primary);
+  color: var(--civ-primary-text);
+}
+
+/* KPI / stat tile (§2-8) */
+.civ-kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface);
+}
+.civ-kpi-value {
+  font-size: var(--civ-fs-4);
+  font-weight: 300;
+  color: var(--civ-text);
+}
+.civ-kpi-label {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+}
 .civ-form-error {
   background: var(--civ-danger-bg);
   color: var(--civ-danger);

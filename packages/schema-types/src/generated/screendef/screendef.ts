@@ -67,7 +67,7 @@ export interface Node {
    */
   id: string;
   /**
-   * コンポーネントカタログ v0（§4.2 の 12 種）。field は props.variant で text|number|select|photo を表現。
+   * コンポーネントカタログ v0（§4.2 の 12 種 + measurement-table + A層7種）。field は props.variant で text|number|select|photo|checkbox|segmented を表現。measurement-table は行追加できる計測入力表（項目/数値/単位/計測方法 × N 行 → measurements[] へ整形・V3-OBS-18）。table/badge/progress/tabs/image-grid/stepper/kpi-tile は共有レンダラ語彙 A層（c7 ui-parity-map §2）。card は既存ノードを icon/title/meta/badges/action ナビで上位互換拡張（新種なし）。
    */
   type:
     | "app-shell"
@@ -81,7 +81,15 @@ export interface Node {
     | "card"
     | "image"
     | "qr-code"
-    | "link";
+    | "link"
+    | "measurement-table"
+    | "table"
+    | "badge"
+    | "progress"
+    | "tabs"
+    | "image-grid"
+    | "stepper"
+    | "kpi-tile";
   /**
    * semantic props のみ（variant 等）。raw hex/任意色クラスは禁止（check-ui-tokens.mjs が拒否）。
    */
