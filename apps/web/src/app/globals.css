@@ -484,6 +484,15 @@ body {
 .civ-table tbody tr:last-child td {
   border-bottom: none;
 }
+/* long individual labels (e.g. E2E-BATCH-017-mrhdy15r) must stay on one line
+ * in the measurement grid instead of wrapping to 4 lines — clip+ellipsis,
+ * full text available via title attribute. */
+.civ-table td.civ-cell-clip {
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 @media (max-width: 560px) {
   .civ-table {
     display: block;

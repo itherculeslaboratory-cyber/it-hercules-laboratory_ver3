@@ -22,8 +22,10 @@ import {
   saveBatchDraft,
   saveBatchResults,
   type BatchCommitItem,
+  type BatchDraft,
   type BatchGroup,
   type BatchResult,
+  type BatchResults,
   type DraftRow,
   type ScheduleTarget,
 } from "./batch-draft";
@@ -2750,7 +2752,9 @@ function BatchRosterNode() {
               const delta = prev != null && g.weight !== "" && Number.isFinite(w) ? w - prev : null;
               return (
                 <tr key={id}>
-                  <td>{ind.label}</td>
+                  <td className="civ-cell-clip" title={ind.label}>
+                    {ind.label}
+                  </td>
                   <td>
                     <input
                       className="civ-input"
@@ -2806,11 +2810,29 @@ const BATCH_GROUP_LABELS: Record<BatchGroup, string> = {
 function BatchSummaryNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
-  const [draft] = useState(() => loadBatchDraft());
+  // sessionStorage は SSR 時に window が無く常に null を返す。マウント前の
+  // 初回クライアント render は SSR と一致させる必要がある(hydration mismatch
+  // 回避)ため、読み込みは useEffect に移し BatchRosterNode と同じ
+  // 「読み込み中…」ゲートを挟む(F5b/F6b で Next.js dev の 1 Issue バッジが
+  // 出ていた根本原因)。
+  const [draft, setDraft] = useState<BatchDraft | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setDraft(loadBatchDraft());
+    setLoaded(true);
+  }, []);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [registerSchedule, setRegisterSchedule] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
 
   if (!draft || (draft.items.length === 0 && draft.rows.length === 0)) {
     return (
@@ -2958,8 +2980,24 @@ function BatchSummaryNode() {
 // (部分失敗を隠さない)。
 function BatchDoneNode() {
   const navigate = useContext(NavigateCtx);
-  const [draft] = useState(() => loadBatchDraft());
-  const [results] = useState(() => loadBatchResults());
+  // BatchSummaryNode と同じ理由(hydration mismatch 回避)で sessionStorage
+  // 読み込みは useEffect に移す。
+  const [draft, setDraft] = useState<BatchDraft | null>(null);
+  const [results, setResults] = useState<BatchResults | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setDraft(loadBatchDraft());
+    setResults(loadBatchResults());
+    setLoaded(true);
+  }, []);
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
 
   if (!draft || !results) {
     return (
