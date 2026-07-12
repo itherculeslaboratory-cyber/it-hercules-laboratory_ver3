@@ -52,7 +52,8 @@
                 "label": "次の目安を登録",
                 "auto": true,
                 "auto_when": "{{params.register_schedule}}",
-                "success_label": "✓ 次の目安 登録済み(間隔30日・{{result.next_observation_at}})",
+                "success_label": "✓ 次の目安 登録済み — {{date}} 頃(間隔30日)",
+                "success_label_date_from": "result.next_observation_at",
                 "static": {
                   "individual_id": "{{params.individual_id}}",
                   "stage": "unspecified",
@@ -62,8 +63,18 @@
               },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/schedule" }
             },
-            { "id": "add-more", "type": "link", "props": { "label": "同じコに追加", "href": "/s/obs-register-entry?id={{params.individual_id}}" } },
-            { "id": "done", "type": "link", "props": { "label": "完了", "href": "/" } }
+            {
+              "id": "add-more",
+              "type": "button",
+              "props": { "label": "同じコに追加", "variant": "primary" },
+              "action": { "kind": "navigate", "to": "obs-register-entry?id={{params.individual_id}}" }
+            },
+            {
+              "id": "done",
+              "type": "button",
+              "props": { "label": "完了", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "home" }
+            }
           ]
         }
       ]

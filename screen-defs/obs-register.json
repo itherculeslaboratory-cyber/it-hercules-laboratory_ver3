@@ -29,7 +29,11 @@
                   "type": "field",
                   "props": { "variant": "text", "name": "q", "label": "個体・種で検索", "placeholder": "例: DHH-24 / hercules" }
                 },
-                { "id": "search-submit", "type": "button", "props": { "label": "検索", "variant": "primary", "type": "submit" } }
+                {
+                  "id": "search-submit",
+                  "type": "button",
+                  "props": { "label": "検索", "variant": "secondary", "type": "submit", "compact": true }
+                }
               ]
             },
             {
@@ -42,6 +46,12 @@
                 "columns": [
                   { "key": "label", "label": "個体" },
                   { "key": "species", "label": "種" },
+                  {
+                    "key": "last_capture_at",
+                    "label": "最終観測",
+                    "cell": "observed",
+                    "measurement_key": "last_measurement_summary"
+                  },
                   {
                     "key": "individual_id",
                     "label": "",

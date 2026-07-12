@@ -341,6 +341,39 @@ describe("V3-AIP-101 GET /individuals?q= (観測登録スライス1 F1 検索)",
     expect(body.individuals).toEqual([]);
   });
 
+  it("最終観測(last_capture_at・代表計測値)を返す(磨き直し fix#2)", async () => {
+    const { env, bucket } = ctx();
+    const id = await createInd(env, { local_label_text: "DHH-24-017", species: "Dynastes hercules" });
+    const s = new TruthStore(bucket);
+    await s.putEventAt(
+      `truth/ihl.obs.capture.v1/${ulid()}.json`,
+      envOf("ihl.obs.capture.v1", "schemas/events/obs-capture.schema.json", {
+        capture_id: ulid(),
+        actor_id: DEV_ACTOR,
+        domain: "biology",
+        subject_ref: `individual/${id}`,
+        measurements: [{ item: "weight", kind: "number", value: 82.5, unit: "g", value_origin: "direct_observed" }],
+      }),
+    );
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; last_capture_at: string | null; last_measurement_summary: string | null }[];
+    };
+    const row = body.individuals.find((i) => i.individual_id === id)!;
+    expect(row.last_capture_at).toBe("2026-07-11T00:00:00Z");
+    expect(row.last_measurement_summary).toBe("82.5g");
+  });
+
+  it("観測ゼロの個体は last_capture_at/last_measurement_summary が null", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "DHH-24-020" });
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; last_capture_at: string | null; last_measurement_summary: string | null }[];
+    };
+    const row = body.individuals.find((i) => i.individual_id === id)!;
+    expect(row.last_capture_at).toBeNull();
+    expect(row.last_measurement_summary).toBeNull();
+  });
+
   it("他 actor の個体は返さない(本人スコープ)", async () => {
     const { env, bucket } = ctx();
     const mine = await createInd(env, { local_label_text: "MINE" });

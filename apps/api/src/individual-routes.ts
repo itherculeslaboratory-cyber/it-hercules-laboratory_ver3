@@ -409,11 +409,24 @@ individualRoutes.post("/individuals", async (c) => {
   return c.json({ individual_id: individualId }, 201);
 });
 
+// 磨き直し fix#2: pick the representative measurement string for a capture's
+// row — weight if the capture recorded one (the common "82.5g" summary), else
+// whatever measurement item comes first. null when the capture carried none.
+function representativeMeasurement(data: Record<string, unknown>): string | null {
+  const ms = Array.isArray(data.measurements) ? (data.measurements as Record<string, unknown>[]) : [];
+  const pick = ms.find((m) => m.item === "weight" && typeof m.value === "number") ?? ms.find((m) => typeof m.value === "number");
+  return pick ? `${pick.value}${pick.unit ?? ""}` : null;
+}
+
 // GET /individuals?q= — 本人の個体一覧/検索(V3-AIP-101 観測登録スライス1 F1).
 // q が local_label_text/name/species の部分一致(大小無視)に当たる個体のみ返す。
 // q なしは本人の全件。label は local_label_text→name→id の優先で埋める。
-// ponytail: O(n) full master scan + 該当件のみ projectName、per-actor index は
-// 在庫が伸びたら昇格(既存 /observation/search 前例と同じ縮退)。
+// last_capture_at/last_measurement_summary(磨き直し fix#2): 検索結果テーブルの
+// 「最終観測」列。capture_id(ULID)昇順=時刻順の規約に乗せ、envelope の `time`
+// を返す(data には capture 自身のタイムスタンプが無い・latestMeasurement と
+// 同じ規約)。
+// ponytail: O(n) full master + capture scan(1回ずつ), per-actor/individual
+// index は在庫が伸びたら昇格(既存 /observation/search 前例と同じ縮退)。
 individualRoutes.get("/individuals", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   const actorId = c.get("actorId");
@@ -421,6 +434,16 @@ individualRoutes.get("/individuals", async (c) => {
   const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
     .map(dataOf)
     .filter((m) => m.actor_id === actorId);
+  const capturesByIndividual = new Map<string, { data: Record<string, unknown>; time: string }[]>();
+  for (const e of await s.listEvents(`truth/${CAPTURE_TYPE}/`)) {
+    const d = dataOf(e);
+    const ref = typeof d.subject_ref === "string" ? d.subject_ref : "";
+    if (!ref.startsWith("individual/")) continue;
+    const id = ref.slice("individual/".length);
+    const rows = capturesByIndividual.get(id) ?? [];
+    rows.push({ data: d, time: String(e.time ?? "") });
+    capturesByIndividual.set(id, rows);
+  }
   const individuals: Record<string, unknown>[] = [];
   for (const m of masters) {
     const id = String(m.individual_id ?? "");
@@ -429,7 +452,18 @@ individualRoutes.get("/individuals", async (c) => {
     const species = typeof m.species === "string" ? m.species : "";
     const name = await projectName(s, id);
     if (q && ![label, species, name ?? ""].some((v) => v.toLowerCase().includes(q))) continue;
-    individuals.push({ individual_id: id, label: label || name || id, name, species: species || null });
+    const caps = (capturesByIndividual.get(id) ?? [])
+      .slice()
+      .sort((a, b) => String(a.data.capture_id ?? "").localeCompare(String(b.data.capture_id ?? "")));
+    const latest = caps[caps.length - 1];
+    individuals.push({
+      individual_id: id,
+      label: label || name || id,
+      name,
+      species: species || null,
+      last_capture_at: latest ? latest.time || null : null,
+      last_measurement_summary: latest ? representativeMeasurement(latest.data) : null,
+    });
   }
   individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
   return c.json({ individuals });

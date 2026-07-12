@@ -32,7 +32,11 @@ export type NodeType =
   // convenience cache (no new Truth type). visit-tracker stamps localStorage on
   // mount (invisible); recent-chips reads the last 3 as tap-to-navigate chips.
   | "visit-tracker"
-  | "recent-chips";
+  | "recent-chips"
+  // V3-AIP-101 磨き直し(c7 親レビュー13件・fix#5/#6): a collapsed-by-default
+  // trigger (badge- or button-styled) that reveals its children on tap. Shared
+  // by the F2 stage chip and the death-record button — one mechanism, no fork.
+  | "disclosure";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported

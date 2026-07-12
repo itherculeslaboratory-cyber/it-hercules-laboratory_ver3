@@ -3,7 +3,7 @@
   "route": "/observe/register/confirm",
   "title": "確認",
   "layout": "standard",
-  "notes": "V3-AIP-101 観測登録スライス1(F5 1件版)。入力recap+「次の目安を登録」opt-outチェック(既定ON)+保存。保存 = POST /solid-observation/commit のみ(OBS-25 と同じ単一 commit ゲート)。value_origin は手入力系を明示付与(direct_observed)・サーバは補完しない。",
+  "notes": "V3-AIP-101 観測登録スライス1(F5 1件版)。入力recap+「次の目安を登録」opt-outチェック(既定ON)+保存。保存 = POST /solid-observation/commit のみ(OBS-25 と同じ単一 commit ゲート)。value_origin は手入力系を明示付与(direct_observed)・サーバは補完しない。磨き直し(2026-07-12親レビュー): recapは前回値とのΔ表示付きカード(F6と同じ compare_* 部品・fix#9)。ステージ変化/死亡はこのスライスではF2で直接append-onlyコミット済み(F5合流のドラフト待ちキューは無い)ため、このスライスでは種別行は構造上発生しない — 新規のドラフト積み上げ機構は作らない。",
   "nodes": [
     {
       "id": "shell",
@@ -14,8 +14,35 @@
           "type": "page",
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "確認", "level": 1 } },
-            { "id": "recap-weight", "type": "text", "props": { "text": "体重 {{params.weight_g}}g" } },
-            { "id": "recap-length", "type": "text", "props": { "text": "体長 {{params.length_mm}}mm" } },
+            {
+              "id": "individual",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.individual_id}}" },
+              "children": [
+                {
+                  "id": "recap-weight",
+                  "type": "text",
+                  "props": {
+                    "text": "体重 {{params.weight_g}}g",
+                    "compare_source": "individual",
+                    "compare_item": "weight",
+                    "compare_unit": "g",
+                    "compare_current": "{{params.weight_g}}"
+                  }
+                },
+                {
+                  "id": "recap-length",
+                  "type": "text",
+                  "props": {
+                    "text": "体長 {{params.length_mm}}mm",
+                    "compare_source": "individual",
+                    "compare_item": "length",
+                    "compare_unit": "mm",
+                    "compare_current": "{{params.length_mm}}"
+                  }
+                }
+              ]
+            },
             {
               "id": "confirm-form",
               "type": "form",
@@ -40,7 +67,13 @@
                 {
                   "id": "register-schedule",
                   "type": "field",
-                  "props": { "variant": "checkbox", "name": "register_schedule", "label": "次の目安を登録(間隔30日)", "default": true }
+                  "props": {
+                    "variant": "checkbox",
+                    "name": "register_schedule",
+                    "label": "次の目安を登録 — {{date}} 頃(間隔30日・既定)",
+                    "label_date_offset_days": 30,
+                    "default": true
+                  }
                 },
                 { "id": "commit-submit", "type": "button", "props": { "label": "保存", "variant": "primary", "type": "submit" } }
               ]

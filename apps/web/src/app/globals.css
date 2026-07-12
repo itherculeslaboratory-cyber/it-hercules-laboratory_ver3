@@ -214,6 +214,13 @@ body {
   color: var(--civ-text);
   border-color: transparent;
 }
+/* V3-AIP-101 磨き直し fix#3: a "modest" button (obs-register search-submit) —
+ * de-emphasized next to the candidate chips/results, not a giant full-width
+ * primary. Overrides the .civ-form column's default align-items:stretch for
+ * this one button only; every other full-width submit is unaffected. */
+.civ-button[data-compact="true"] {
+  align-self: flex-start;
+}
 
 /* link */
 .civ-link {
@@ -389,6 +396,7 @@ body {
 .civ-card-badges {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 6px;
 }
 .civ-card-nav-btn {
@@ -601,4 +609,93 @@ body {
   border-radius: var(--civ-radius);
   padding: 8px 12px;
   font-size: var(--civ-fs-1);
+}
+
+/* =============================================================================
+ * V3-AIP-101 磨き直し(親レビュー13件反映・c7-wireframes-core5) — F1候補チップ/
+ * 死亡・ステージの disclosure/写真フィールド/カスタムチェックボックス。全て
+ * 既存 var(--civ-*) トークンのみ(raw hex 禁止・check-ui-tokens GATE)。
+ * ========================================================================== */
+
+/* F1候補チップ(fix#1) — .civ-card + .civ-interactive を合成したクリッカブル
+ * カード。1行に並べる行コンテナ。 */
+.civ-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.civ-recent-chip {
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-width: 160px;
+}
+
+/* スタイル済みチェックボックス行(fix#10) — ブラウザ既定の青チェックボックス
+ * を独自トークンで置換。ネイティブ input はそのまま(a11y/フォーム値は不変)。 */
+.civ-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.civ-checkbox-row .civ-label {
+  margin: 0;
+}
+.civ-checkbox-row input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color var(--civ-motion) ease,
+    border-color var(--civ-motion) ease;
+}
+.civ-checkbox-row input[type="checkbox"]:checked {
+  background: var(--civ-primary);
+  border-color: var(--civ-primary);
+}
+.civ-checkbox-row input[type="checkbox"]:checked::after {
+  content: "✓";
+  color: var(--civ-primary-text);
+  font-size: var(--civ-fs-1);
+  line-height: 1;
+}
+.civ-checkbox-row input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--civ-focus);
+  outline-offset: 2px;
+}
+
+/* 写真フィールド(fix#7) — 生の <input type=file> をアイコン付き行に。 */
+.civ-field-photo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.civ-field-photo-icon {
+  font-size: var(--civ-fs-3);
+  line-height: 1;
+}
+.civ-field-photo input[type="file"] {
+  flex: 1;
+}
+
+/* disclosure(fix#5/#6) — 既定折りたたみのトリガー+開示本体。トリガー自体は
+ * 既存 .civ-badge / .civ-button の見た目をそのまま流用(新規色なし)。 */
+.civ-disclosure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-disclosure-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

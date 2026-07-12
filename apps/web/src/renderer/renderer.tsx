@@ -227,6 +227,40 @@ export function currentStage(timeline: unknown): string | null {
   return null;
 }
 
+// V3-AIP-101 磨き直し fix#11: format an ISO/epoch scope value into a plain
+// "2026-08-11" date — the ONLY date formatter in the renderer (fix#2/#10 reuse
+// it too), so no raw ISO/Z ever reaches the screen. Invalid/empty input → "".
+export function formatDateJa(value: unknown): string {
+  const d = value instanceof Date ? value : new Date(String(value ?? ""));
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Today + `days`, as a Date (local time) — F5/F6's client-computed "次の目安". */
+function todayPlusDays(days: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+// F2ステージ表示(fix#5/#8): shared by BadgeNode (standalone) and DisclosureNode
+// (the F2 header chip trigger) so the timeline→stage→label lookup lives ONE
+// place, not hand-copied per consumer.
+function stageBadgeText(
+  scope: Scope,
+  deriveFrom: unknown,
+  stageLabels: unknown,
+  emptyText: unknown,
+): { text: string; hasStage: boolean } {
+  const stage = currentStage(getPath(scope, String(deriveFrom)));
+  const labels = (stageLabels as Record<string, string> | undefined) ?? {};
+  const text = stage ? (labels[stage] ?? stage) : String(emptyText ?? "ステージ未記録");
+  return { text, hasStage: !!stage };
+}
+
 function readQuery(): Record<string, string> {
   if (typeof window === "undefined") return {};
   return Object.fromEntries(new URLSearchParams(window.location.search).entries());
@@ -431,12 +465,19 @@ function ButtonNode({ node }: { node: ScreenNode }) {
   const disabled = p.disabled === true || loading || (isSubmit && !formValid);
 
   const fire = useCallback(async () => {
-    if (!node.action) return;
+    const action = node.action;
+    if (!action) return;
     setError(null);
     setPending(true);
     try {
       const stat = p.static as Record<string, unknown> | undefined;
-      await run(node.action, stat ? resolveStatic(stat, scope) : undefined);
+      // V3-AIP-101 磨き直し fix#12: a navigate action's `to` may carry a
+      // "{{...}}" scope template (same convention "link" nodes' href already
+      // uses), e.g. "obs-register-entry?id={{params.individual_id}}" — the
+      // interpolated string rides straight through screenHref's literal
+      // concat, so a bare id-carrying navigate button needs no new plumbing.
+      const act: Action = action.kind === "navigate" ? { ...action, to: interpolate(action.to, scope) } : action;
+      await run(act, stat ? resolveStatic(stat, scope) : undefined);
       setDone(true);
     } catch (e) {
       setError(errorText(e));
@@ -466,7 +507,19 @@ function ButtonNode({ node }: { node: ScreenNode }) {
   }, []);
 
   if (p.auto && done) {
-    const successText = interpolate(displayText(resolve, p.success_label_key, p.success_label, "登録しました"), scope);
+    // V3-AIP-101 磨き直し fix#11: success_label_date_from points at a scope
+    // path (e.g. "result.next_observation_at") whose value is a server ISO
+    // timestamp — never interpolated raw. It's formatted (formatDateJa) and
+    // exposed to the SAME interpolate() call as a synthetic `date` field, so
+    // success_label just writes "{{date}} 頃" — no new template syntax.
+    const dateFrom = p.success_label_date_from;
+    const successScope = dateFrom
+      ? { ...scope, date: formatDateJa(getPath(scope, String(dateFrom))) }
+      : scope;
+    const successText = interpolate(
+      displayText(resolve, p.success_label_key, p.success_label, "登録しました"),
+      successScope,
+    );
     return (
       <p className="civ-text" role="status">
         {successText}
@@ -480,6 +533,7 @@ function ButtonNode({ node }: { node: ScreenNode }) {
         type={(p.type as "button" | "submit") ?? "button"}
         className={cn("civ-interactive", "civ-button")}
         data-variant={String(p.variant ?? "primary")}
+        data-compact={p.compact === true || undefined}
         data-loading={loading || undefined}
         aria-busy={loading || undefined}
         disabled={disabled}
@@ -526,6 +580,14 @@ function FieldNode({ node }: { node: ScreenNode }) {
         current: hasLive ? liveNum : null,
       })
     : "";
+  // V3-AIP-101 磨き直し fix#10: label_date_offset_days lets a field's label
+  // carry a client-computed "today+N days" via the SAME {{date}} convention
+  // ButtonNode's success_label_date_from uses (fix#11) — one date formatter,
+  // two call sites. No API round-trip for a value that's pure arithmetic.
+  const dateOffsetDays = p.label_date_offset_days;
+  const labelScope =
+    dateOffsetDays != null ? { ...scope, date: formatDateJa(todayPlusDays(Number(dateOffsetDays))) } : scope;
+  const labelText = interpolate(displayText(resolve, p.label_key, p.label, name), labelScope);
 
   const shared = {
     id,
@@ -581,13 +643,44 @@ function FieldNode({ node }: { node: ScreenNode }) {
       </select>
     );
   } else if (variant === "photo") {
-    control = <input {...shared} type="file" accept="image/*" />;
+    // V3-AIP-101 磨き直し fix#7: a labeled/styled field instead of a bare
+    // <input type=file> — icon + input row, same .civ-input border/height as
+    // every other control (no drastic redesign, just not naked).
+    return (
+      <div className="civ-field">
+        <label className="civ-label" htmlFor={id}>
+          {labelText}
+          {required ? " *" : ""}
+        </label>
+        <div className="civ-field-photo">
+          <span className="civ-field-photo-icon" aria-hidden="true">
+            📷
+          </span>
+          <input {...shared} type="file" accept="image/*" />
+        </div>
+      </div>
+    );
   } else if (variant === "checkbox") {
+    // V3-AIP-101 磨き直し fix#10: a styled labeled row (custom check mark via
+    // CSS — no raw hex, tokens only) replacing the browser-default checkbox.
     // data-required='true' means "must be checked"; scanFormValidity + the
     // submit-time missing scan (unchecked => fd.get null) both cover it.
     // props.default:true = checked from first paint (F5's opt-out-by-default
-    // "次の目安を登録" checkbox, V3-AIP-101).
-    control = <input {...shared} type="checkbox" defaultChecked={p.default === true} />;
+    // "次の目安を登録" checkbox, V3-AIP-101). labelText may carry a
+    // client-computed {{date}} (label_date_offset_days, see above).
+    return (
+      <div className="civ-field">
+        <label className="civ-checkbox-row" htmlFor={id}>
+          <input {...shared} type="checkbox" defaultChecked={p.default === true} />
+          <span className="civ-label">{labelText}</span>
+        </label>
+        {invalid && (
+          <span role="alert" className="civ-field-error">
+            {String(p.error ?? "この項目を確認してください")}
+          </span>
+        )}
+      </div>
+    );
   } else if (variant === "hidden") {
     // Carries a scope value forward through a navigate/draft hop (e.g. the
     // individual id from F2 to F5) so a later screen's `static` can reference
@@ -608,7 +701,7 @@ function FieldNode({ node }: { node: ScreenNode }) {
   return (
     <div className="civ-field">
       <label className="civ-label" htmlFor={id}>
-        {displayText(resolve, p.label_key, p.label, name)}
+        {labelText}
         {required ? " *" : ""}
       </label>
       {control}
@@ -790,6 +883,13 @@ function CardNode({ node }: { node: ScreenNode }) {
   const title = interpolate(displayText(resolve, p.title_key, p.title, ""), scope);
   const meta = p.meta != null ? interpolate(displayText(resolve, p.meta_key, p.meta, ""), scope) : "";
   const badges = (p.badges as Array<Record<string, unknown>> | undefined) ?? [];
+  // V3-AIP-101 磨き直し fix#5/#8: a `disclosure` child marked props.badge_row
+  // rides INSIDE the same badges flex row as the decorative species badge —
+  // the stage chip must be tappable while card's own badges[] stay inert, so
+  // the interactive trigger is a normal child rendered in-row instead of a
+  // fork of the badges[] shape. Every other child renders below as usual.
+  const badgeRowChildren = children.filter((c) => c.type === "disclosure" && c.props?.badge_row === true);
+  const restChildren = children.filter((c) => !(c.type === "disclosure" && c.props?.badge_row === true));
   if (children.length === 0 && !bindText && !title && p.empty_text) {
     return <p className="civ-empty">{String(p.empty_text)}</p>;
   }
@@ -814,14 +914,20 @@ function CardNode({ node }: { node: ScreenNode }) {
           {meta}
         </p>
       )}
-      {badges.length > 0 && (
+      {(badges.length > 0 || badgeRowChildren.length > 0) && (
         <div className="civ-card-badges">
           {badges.map((b, i) => (
             <Badge
               key={i}
-              text={displayText(resolve, b.text_key ?? b.label_key, b.text ?? b.label, "")}
+              // fix#8: badge text now interpolates against the full scope
+              // (species: "{{data.individual.master.species}}") — a literal
+              // badge with no "{{" is unaffected (interpolate is a no-op).
+              text={interpolate(displayText(resolve, b.text_key ?? b.label_key, b.text ?? b.label, ""), scope)}
               tone={b.tone != null ? String(b.tone) : undefined}
             />
+          ))}
+          {badgeRowChildren.map((c) => (
+            <NodeView key={c.id} node={c} />
           ))}
         </div>
       )}
@@ -830,7 +936,7 @@ function CardNode({ node }: { node: ScreenNode }) {
           {interpolate(bindText, getPath(scope, `data.${node.id}`) ?? {})}
         </p>
       ) : null}
-      <Children nodes={node.children} />
+      <Children nodes={restChildren} />
       {node.action && (
         <button
           type="button"
@@ -871,10 +977,8 @@ function BadgeNode({ node }: { node: ScreenNode }) {
   // JSON-authored label map, so the vocabulary/labels stay in the screen-def,
   // not hardcoded in the renderer. No timeline yet ⇒ empty_text.
   if (p.derive_from) {
-    const stage = currentStage(getPath(scope, String(p.derive_from)));
-    const labels = (p.stage_labels as Record<string, string> | undefined) ?? {};
-    const text = stage ? (labels[stage] ?? stage) : String(p.empty_text ?? "ステージ未記録");
-    return <Badge text={text} tone={stage ? String(p.tone ?? "neutral") : "neutral"} />;
+    const { text, hasStage } = stageBadgeText(scope, p.derive_from, p.stage_labels, p.empty_text);
+    return <Badge text={text} tone={hasStage ? String(p.tone ?? "neutral") : "neutral"} />;
   }
   const text = interpolate(displayText(resolve, p.text_key, p.text ?? p.label, ""), scope);
   return <Badge text={text} tone={p.tone != null ? String(p.tone) : undefined} />;
@@ -953,6 +1057,18 @@ function renderCell(col: Record<string, unknown>, row: unknown): React.ReactNode
   if (cell === "progress") {
     const n = Number(value ?? 0);
     return <ProgressBar value={Number.isFinite(n) ? n : 0} max={Number(col.max ?? 100)} />;
+  }
+  if (cell === "date") {
+    return formatDateJa(value) || "—";
+  }
+  if (cell === "observed") {
+    // V3-AIP-101 磨き直し fix#2: date + a representative measurement in one
+    // column ("2026-07-11・82.5g") — col.key is the date field, col.measurement_key
+    // the summary string field (both come straight off GET /individuals).
+    const dateStr = formatDateJa(value);
+    if (!dateStr) return "—";
+    const measure = col.measurement_key ? getPath(row, String(col.measurement_key)) : undefined;
+    return measure != null && measure !== "" ? `${dateStr}・${measure}` : dateStr;
   }
   if (cell === "link") {
     // V3-AIP-101: a row-level navigate affordance (bind_items has no per-item
@@ -1383,8 +1499,12 @@ function MeasurementTableNode({ node }: { node: ScreenNode }) {
 // sessionStorage carry). visit-tracker stamps the current individual on F2
 // mount; recent-chips reads the last 3 on F1. Capped at 10, newest first,
 // deduped by id.
+// 磨き直し fix#1: the entry carries label/name/species/stage too (never the
+// raw id) so F1 can render a rich chip instead of a bare-ULID pill. Old
+// bare {id,at} rows already in localStorage still parse fine — the extra
+// fields are just undefined until the next visit re-stamps them.
 const RECENT_KEY = "ihl:obs-recent-individuals";
-type RecentEntry = { id: string; at: number };
+type RecentEntry = { id: string; at: number; label?: string; name?: string; species?: string; stage?: string };
 
 function readRecent(): RecentEntry[] {
   if (typeof window === "undefined") return [];
@@ -1396,9 +1516,9 @@ function readRecent(): RecentEntry[] {
     return [];
   }
 }
-function pushRecent(id: string): void {
-  if (typeof window === "undefined" || !id) return;
-  const next = [{ id, at: Date.now() }, ...readRecent().filter((e) => e.id !== id)].slice(0, 10);
+function pushRecent(entry: Omit<RecentEntry, "at">): void {
+  if (typeof window === "undefined" || !entry.id) return;
+  const next = [{ ...entry, at: Date.now() }, ...readRecent().filter((e) => e.id !== entry.id)].slice(0, 10);
   try {
     window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   } catch {
@@ -1418,13 +1538,39 @@ function VisitTrackerNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
   const id = p.id_from ? String(getPath(scope, String(p.id_from)) ?? "") : "";
+  // 磨き直し fix#1: props.from points at the paired card's fetched individual
+  // (e.g. "data.individual") so the stamped entry carries label/species/stage,
+  // not just the id. The effect deliberately depends on the RESOLVED source
+  // object, not just `id` — `useSource`'s fetch resolves asynchronously via
+  // setNodeData (a re-render), so gating on `source` (not just `id`) means the
+  // pre-fetch empty enrichment is never the one that gets persisted. Without a
+  // `from` prop (no other consumer today) it falls back to the old id-only stamp.
+  const fromPath = p.from ? String(p.from) : "";
+  const source = fromPath ? (getPath(scope, fromPath) as Record<string, unknown> | undefined) : undefined;
+  const stageLabels = (p.stage_labels as Record<string, string> | undefined) ?? {};
   useEffect(() => {
-    if (id) pushRecent(id);
+    if (!id) return;
+    if (!fromPath) {
+      pushRecent({ id });
+      return;
+    }
+    if (!source) return; // still waiting on the paired fetch
+    const master = (source.master as Record<string, unknown> | undefined) ?? {};
+    const label = typeof master.local_label_text === "string" ? master.local_label_text : undefined;
+    const name = typeof source.name === "string" ? source.name : undefined;
+    const species = typeof master.species === "string" ? master.species : undefined;
+    const stageCode = currentStage(source.timeline);
+    const stage = stageCode ? (stageLabels[stageCode] ?? stageCode) : undefined;
+    pushRecent({ id, label, name, species, stage });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, fromPath, source]);
   return null;
 }
 
+// 磨き直し fix#1: a rich CardNode-style chip — label/name lead over the raw
+// id (never shown), species+stage as badges, relative time as the caption.
+// Reuses the same .civ-card/.civ-badge/.civ-interactive vocabulary CardNode
+// uses (a bare button pill would have re-invented that shell).
 function RecentChipsNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const resolve = useContext(MessagesCtx);
@@ -1434,19 +1580,91 @@ function RecentChipsNode({ node }: { node: ScreenNode }) {
   // 履歴ゼロならチップ行ごと非表示(空行を出さない・仕様どおり).
   if (entries.length === 0) return null;
   const to = p.to ? String(p.to) : "";
+  const label = displayText(resolve, p.label_key, p.label, "この子への追観測?");
   return (
-    <div className="civ-segmented" role="group" aria-label={displayText(resolve, p.label_key, p.label, "この子への追観測?")}>
-      {entries.map((e) => (
+    <section aria-label={label}>
+      <p className="civ-text" data-muted="true">
+        {label}
+      </p>
+      <div className="civ-chip-row">
+        {entries.map((e) => {
+          const title = e.label || e.name || e.species || "個体";
+          return (
+            <button
+              key={e.id}
+              type="button"
+              className={cn("civ-interactive", "civ-card", "civ-recent-chip")}
+              onClick={() => navigate(to, { id: e.id })}
+            >
+              <span className="civ-card-title">{title}</span>
+              {(e.species || e.stage) && (
+                <span className="civ-card-badges">
+                  {e.species && <Badge text={e.species} tone="neutral" />}
+                  {e.stage && <Badge text={e.stage} tone="neutral" />}
+                </span>
+              )}
+              <span className="civ-text" data-muted="true">
+                {relativeLabel(e.at)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// 磨き直し fix#5/#6: one shared collapsed-by-default trigger + revealed-body
+// mechanism (no forked half-implementation per fix). trigger_style:"badge"
+// renders a tappable Badge chip (F2 stage — text can be derive_from-computed,
+// same lookup BadgeNode uses); anything else renders a normal .civ-button
+// (F2 death). Children show only once tapped; collapsing back is out of scope
+// (both consumers navigate/reload on submit, which resets `open` for free).
+function DisclosureNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
+  const [open, setOpen] = useState(false);
+  const isBadge = p.trigger_style === "badge";
+  let label: string;
+  let tone: string | undefined;
+  if (p.derive_from) {
+    const derived = stageBadgeText(scope, p.derive_from, p.stage_labels, p.empty_text);
+    label = derived.text;
+    tone = derived.hasStage ? String(p.tone ?? "neutral") : "neutral";
+  } else {
+    label = interpolate(displayText(resolve, p.trigger_label_key, p.trigger_label, "詳細"), scope);
+    tone = p.tone != null ? String(p.tone) : undefined;
+  }
+  if (isBadge) label = `${label} ${open ? "▾" : "▸"}`;
+  return (
+    <div className="civ-disclosure" data-open={open || undefined}>
+      {isBadge ? (
         <button
-          key={e.id}
           type="button"
-          className={cn("civ-interactive", "civ-button")}
-          data-variant="secondary"
-          onClick={() => navigate(to, { id: e.id })}
+          className={cn("civ-interactive", "civ-badge", "civ-disclosure-trigger")}
+          data-tone={tone ?? "neutral"}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
         >
-          {e.id}（{relativeLabel(e.at)}）
+          {label}
         </button>
-      ))}
+      ) : (
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button", "civ-disclosure-trigger")}
+          data-variant={String(p.trigger_style ?? "secondary")}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {label}
+        </button>
+      )}
+      {open && (
+        <div className="civ-disclosure-body">
+          <Children nodes={node.children} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1479,6 +1697,24 @@ export function NodeView({ node }: { node: ScreenNode }) {
       );
     }
     case "text": {
+      // V3-AIP-101 磨き直し fix#4: hide_if_empty_path points at a scope array
+      // (e.g. pedigree.parents) — an empty/absent array swaps the templated
+      // text for a muted replacement line (or nothing, if none is given)
+      // instead of interpolating "×" out of two missing tokens.
+      if (p.hide_if_empty_path) {
+        const arr = getPath(scope, String(p.hide_if_empty_path));
+        const isEmpty = !Array.isArray(arr) || arr.length === 0;
+        if (isEmpty) {
+          if (p.empty_replacement_text || p.empty_replacement_text_key) {
+            return (
+              <p className="civ-text" data-muted="true">
+                {displayText(resolve, p.empty_replacement_text_key, p.empty_replacement_text, "")}
+              </p>
+            );
+          }
+          return null;
+        }
+      }
       const content = interpolate(displayText(resolve, p.text_key, p.text, ""), scope);
       // V3-AIP-101 F6 の静的 Δ recap: compare_current is a scope template (the
       // saved value, e.g. "{{params.weight_g}}") rather than live input — the
@@ -1549,6 +1785,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <VisitTrackerNode node={node} />;
     case "recent-chips":
       return <RecentChipsNode node={node} />;
+    case "disclosure":
+      return <DisclosureNode node={node} />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (

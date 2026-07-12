@@ -67,7 +67,7 @@ export interface Node {
    */
   id: string;
   /**
-   * コンポーネントカタログ v0（§4.2 の 12 種 + measurement-table + A層7種 + 観測登録スライス1の2種）。field は props.variant で text|number|select|photo|checkbox|segmented|hidden を表現。measurement-table は行追加できる計測入力表（項目/数値/単位/計測方法 × N 行 → measurements[] へ整形・V3-OBS-18）。table/badge/progress/tabs/image-grid/stepper/kpi-tile は共有レンダラ語彙 A層（c7 ui-parity-map §2）。card は既存ノードを icon/title/meta/badges/action ナビで上位互換拡張（新種なし）。visit-tracker/recent-chips は V3-AIP-101 観測登録スライス1: 個体閲覧履歴を localStorage に記録/直近3件をチップ表示する client-only 部品（新 Truth 型なし）。
+   * コンポーネントカタログ v0（§4.2 の 12 種 + measurement-table + A層7種 + 観測登録スライス1の2種 + 磨き直し1種）。field は props.variant で text|number|select|photo|checkbox|segmented|hidden を表現。measurement-table は行追加できる計測入力表（項目/数値/単位/計測方法 × N 行 → measurements[] へ整形・V3-OBS-18）。table/badge/progress/tabs/image-grid/stepper/kpi-tile は共有レンダラ語彙 A層（c7 ui-parity-map §2）。card は既存ノードを icon/title/meta/badges/action ナビで上位互換拡張（新種なし）。visit-tracker/recent-chips は V3-AIP-101 観測登録スライス1: 個体閲覧履歴を localStorage に記録/直近3件をチップ表示する client-only 部品（新 Truth 型なし）。disclosure は V3-AIP-101 磨き直し: 既定折りたたみのトリガー（badge/buttonスタイル）+タップで開く children（F2ステージ変更・死亡記録）。
    */
   type:
     | "app-shell"
@@ -91,7 +91,8 @@ export interface Node {
     | "stepper"
     | "kpi-tile"
     | "visit-tracker"
-    | "recent-chips";
+    | "recent-chips"
+    | "disclosure";
   /**
    * semantic props のみ（variant 等）。raw hex/任意色クラスは禁止（check-ui-tokens.mjs が拒否）。
    */
