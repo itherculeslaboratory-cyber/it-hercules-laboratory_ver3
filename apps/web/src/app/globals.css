@@ -881,6 +881,21 @@ body {
   height: auto;
   display: block;
 }
+/* fix#2(磨き直し): Y軸min/max・X軸日付ラベル(SVG text)。raw hex 禁止=既存
+ * ミュートトークンを fill に使う。 */
+.civ-chart-axis-label {
+  fill: var(--civ-text-muted);
+  font-size: 9px;
+}
+/* fix#5(磨き直し): 観測1回のみ=点1つ+広い空白の代わりに小さい枠に収める。 */
+.civ-growth-chart-single {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.civ-growth-chart-single .civ-growth-chart-svg {
+  max-height: 56px;
+}
 .civ-info-banner {
   display: flex;
   flex-direction: column;

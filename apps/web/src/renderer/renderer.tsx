@@ -3892,12 +3892,12 @@ function measureValue(cap: ProfileCapture, item: string): number | null {
 // 潰れて見える問題を順位ベースで避ける。ponytail: 将来 X 軸目盛/ツールチップを
 // 追加するなら暦日ベースの経過日数に戻す(その時は t0 起点の日数計算に戻す)。
 // 時刻無効/値無しの行は無視。
-function seriesFor(caps: ProfileCapture[], item: string): { x: number; y: number }[] {
+function seriesFor(caps: ProfileCapture[], item: string): { x: number; y: number; iso: string }[] {
   const pts = caps
-    .map((c) => ({ t: Date.parse(c.time), y: measureValue(c, item) }))
-    .filter((pt): pt is { t: number; y: number } => Number.isFinite(pt.t) && pt.y != null)
+    .map((c) => ({ t: Date.parse(c.time), y: measureValue(c, item), iso: c.time }))
+    .filter((pt): pt is { t: number; y: number; iso: string } => Number.isFinite(pt.t) && pt.y != null)
     .sort((a, b) => a.t - b.t);
-  return pts.map((pt, i) => ({ x: i, y: pt.y }));
+  return pts.map((pt, i) => ({ x: i, y: pt.y, iso: pt.iso }));
 }
 
 const CHART_UNITS = [
@@ -3905,6 +3905,9 @@ const CHART_UNITS = [
   { value: "length", label: "体長(mm)" },
 ] as const;
 type ChartUnit = (typeof CHART_UNITS)[number]["value"];
+const CHART_UNIT_SUFFIX: Record<ChartUnit, string> = { weight: "g", length: "mm" };
+// axis labels stay short (小さく) — round to 1 decimal only when needed.
+const fmtAxisVal = (v: number): string => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 
 // V3-AIP-101 新レンダラ部品 growth-chart: 本個体実線+親破線オーバーレイ+
 // コホート(兄弟)min-max帯を手書き SVG で描く(チャートライブラリ非依存)。
@@ -3933,15 +3936,28 @@ function GrowthChartView({ profile, onLinked }: { profile: IndividualProfile; on
 
   const allY = [...own, ...sire, ...dam].map((pt) => pt.y).concat(cohortBand ?? []);
   const maxX = Math.max(1, ...[...own, ...sire, ...dam].map((pt) => pt.x));
-  const yMin = allY.length ? Math.min(0, ...allY) : 0;
-  const yMax = allY.length ? Math.max(...allY) * 1.05 : 1;
+  // fix#2(磨き直し): axis hints need the REAL data min/max (not baselined at 0)
+  // so the two small numbers at the left edge mean something ("45g"/"120g").
+  // A little headroom (8%) keeps points off the very edge of the plot.
+  const rawMin = allY.length ? Math.min(...allY) : null;
+  const rawMax = allY.length ? Math.max(...allY) : null;
+  const yPad = rawMin != null && rawMax != null ? (rawMax - rawMin) * 0.08 || Math.max(1, rawMax * 0.1) : 1;
+  const yMin = rawMin != null ? rawMin - yPad : 0;
+  const yMax = rawMax != null ? rawMax + yPad : 1;
+  const unitSuffix = CHART_UNIT_SUFFIX[unit];
   const W = 320;
   const H = 160;
-  const PAD = 8;
-  const px = (x: number) => PAD + (x / maxX) * (W - PAD * 2);
-  const py = (y: number) => H - PAD - ((y - yMin) / (yMax - yMin || 1)) * (H - PAD * 2);
+  const PAD_L = 28; // room for the y-axis min/max labels at the left edge
+  const PAD_R = 8;
+  const PAD_T = 12; // room for the top (max) label
+  const PAD_B = 16; // room for the x-axis date labels
+  const px = (x: number) => PAD_L + (x / maxX) * (W - PAD_L - PAD_R);
+  const py = (y: number) => H - PAD_B - ((y - yMin) / (yMax - yMin || 1)) * (H - PAD_T - PAD_B);
   const pathOf = (pts: { x: number; y: number }[]) =>
     pts.map((pt, i) => `${i === 0 ? "M" : "L"}${px(pt.x).toFixed(1)},${py(pt.y).toFixed(1)}`).join(" ");
+  // 最大3本の水平グリッド線(上端・中央・下端) — 親破線が「宙に浮いて見える」
+  // 問題を、目盛りの手がかりで解消する(fix#2)。
+  const gridYs = [PAD_T, (PAD_T + (H - PAD_B)) / 2, H - PAD_B];
 
   const submitLink = async () => {
     if (!sireId.trim() && !damId.trim()) return;
@@ -4038,15 +4054,32 @@ function GrowthChartView({ profile, onLinked }: { profile: IndividualProfile; on
       )}
 
       {own.length === 0 ? (
-        <p className="civ-empty">観測データがまだありません。</p>
+        <p className="civ-empty">まだ観測がありません</p>
+      ) : own.length === 1 ? (
+        // fix#5(磨き直し): 点1つ+広い空白の代わりに、小さい枠+点の下の1行に留める。
+        <div className="civ-growth-chart-single">
+          <svg className="civ-growth-chart-svg" viewBox={`0 0 ${W} 56`} role="img" aria-label="成長曲線(観測1回)">
+            <circle cx={W / 2} cy={28} r={3} fill="var(--civ-primary)" />
+            <text x={W / 2 + 8} y={32} className="civ-chart-axis-label">
+              {fmtAxisVal(own[0].y)}
+              {unitSuffix}
+            </text>
+          </svg>
+          <p className="civ-text" data-muted="true">
+            観測1回 — 2回目からカーブになります
+          </p>
+        </div>
       ) : (
         <>
           <svg className="civ-growth-chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="成長曲線">
+            {gridYs.map((gy, i) => (
+              <line key={i} x1={PAD_L} x2={W - PAD_R} y1={gy} y2={gy} stroke="var(--civ-border)" strokeWidth="1" />
+            ))}
             {cohortBand && (
               <rect
-                x={PAD}
+                x={PAD_L}
                 y={py(cohortBand[1])}
-                width={W - PAD * 2}
+                width={W - PAD_L - PAD_R}
                 height={Math.max(1, py(cohortBand[0]) - py(cohortBand[1]))}
                 fill="var(--civ-surface-2)"
               />
@@ -4061,6 +4094,25 @@ function GrowthChartView({ profile, onLinked }: { profile: IndividualProfile; on
             {own.map((pt, i) => (
               <circle key={i} cx={px(pt.x)} cy={py(pt.y)} r={2.5} fill="var(--civ-primary)" />
             ))}
+            {/* fix#2(磨き直し): Y軸min/max・X軸最初/最後の観測日を小さく添える。 */}
+            {rawMax != null && (
+              <text x={2} y={py(rawMax) + 3} className="civ-chart-axis-label">
+                {fmtAxisVal(rawMax)}
+                {unitSuffix}
+              </text>
+            )}
+            {rawMin != null && (
+              <text x={2} y={py(rawMin) + 3} className="civ-chart-axis-label">
+                {fmtAxisVal(rawMin)}
+                {unitSuffix}
+              </text>
+            )}
+            <text x={px(own[0].x)} y={H - 2} className="civ-chart-axis-label" textAnchor="start">
+              {formatDateJa(own[0].iso)}
+            </text>
+            <text x={px(own[own.length - 1].x)} y={H - 2} className="civ-chart-axis-label" textAnchor="end">
+              {formatDateJa(own[own.length - 1].iso)}
+            </text>
           </svg>
           <div className="civ-chip-row">
             <span className="civ-text" data-muted="true">
@@ -4135,20 +4187,36 @@ function inbreedingCoefficient(pedigree: PedNode | null): number | null {
   return f;
 }
 
+// fix#3(磨き直し): F係数に語+トーンを添える。あくまで表示上の目安(自動確定
+// ではない・認定文言は出さない)。
+// ponytail: 閾値は暫定・裁定で調整可。
+function inbreedingTone(f: number): { symbol: string; word: string } {
+  if (f < 0.0625) return { symbol: "●", word: "低" };
+  if (f < 0.125) return { symbol: "▲", word: "中" };
+  return { symbol: "⚠", word: "高" };
+}
+
 // 血統健全度(同腹N匹・死亡率・羽化到達率)。siblings が空(単体登録・購入個体)
 // なら算出母数が無いので null(「同腹集計なし」の第一級表示に回す)。
+// fix#4(磨き直し): 死亡率に良し悪し語を添える(羽化到達は語なし)。母数5未満
+// は smallSample フラグで「(母数小)」を誠実に併記する。
 function computeHealth(profile: IndividualProfile) {
   if (profile.siblings.length === 0) return null;
   const cohortSize = profile.siblings.length + 1;
   const selfEclosed = profile.life_events.some((e) => e.kind === "eclosion");
   const deathCount = profile.siblings.filter((s) => s.dead).length + (profile.status === "deceased" ? 1 : 0);
   const eclosionCount = profile.siblings.filter((s) => s.eclosed).length + (selfEclosed ? 1 : 0);
+  const deathPct = Math.round((deathCount / cohortSize) * 100);
+  const deathTone =
+    deathPct < 10 ? { symbol: "●", word: "良" } : deathPct < 30 ? { symbol: "▲", word: "注意" } : { symbol: "⚠", word: "高" };
   return {
     cohortSize,
     deathCount,
-    deathPct: Math.round((deathCount / cohortSize) * 100),
+    deathPct,
+    deathTone,
     eclosionCount,
     eclosionPct: Math.round((eclosionCount / cohortSize) * 100),
+    smallSample: cohortSize < 5,
   };
 }
 
@@ -4525,6 +4593,9 @@ function IndividualProfileNode() {
   const fromId = scope.params.from;
   const [profile, setProfile] = useState<IndividualProfile | null>(null);
   const [pedigree, setPedigree] = useState<PedNode | null>(null);
+  // fix#1(磨き直し): placement_id→ラベル解決用(GET /placements は既存 BatchRoster
+  // /search-navigator と同じ「無ければ非表示」の縮退。取れなければ [] のまま)。
+  const [placements, setPlacements] = useState<PlacementRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
@@ -4532,13 +4603,17 @@ function IndividualProfileNode() {
     let alive = true;
     (async () => {
       try {
-        const [prof, ped] = await Promise.all([
+        const [prof, ped, pl] = await Promise.all([
           execute({ kind: "api", method: "GET", path: `/api/v1/individuals/${id}/profile` }) as Promise<IndividualProfile>,
           execute({ kind: "api", method: "GET", path: `/api/v1/individuals/${id}/pedigree` }) as Promise<PedNode>,
+          (execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
+            { placements?: PlacementRow[] } | undefined
+          >).catch(() => undefined),
         ]);
         if (!alive) return;
         setProfile(prof);
         setPedigree(ped);
+        setPlacements(pl?.placements ?? []);
       } catch {
         if (alive) setNotFound(true);
       } finally {
@@ -4568,7 +4643,9 @@ function IndividualProfileNode() {
 
   const label = profileLabel(profile);
   const stageLabel = profile.stage ? STAGE_LABELS_JA[profile.stage] ?? profile.stage : null;
+  const placementLabel = placements.find((p) => p.placement_id === profile.placement_id)?.label ?? null;
   const fCoef = inbreedingCoefficient(pedigree);
+  const fTone = fCoef != null ? inbreedingTone(fCoef) : null;
   const health = computeHealth(profile);
   const gotoIndividual = (targetId: string) => navigate("individual-detail", { id: targetId, from: id });
   const hasKin = !!profile.parents.sire || !!profile.parents.dam || profile.children.length > 0 || profile.siblings.length > 0;
@@ -4580,10 +4657,15 @@ function IndividualProfileNode() {
           <h2 className="civ-card-title">{label}</h2>
           <StatusMenu profile={profile} onChanged={refresh} />
         </div>
-        <p className="civ-text" data-muted="true">
-          {[profile.species, stageLabel].filter(Boolean).join(" ・ ")}
-          {profile.placement_id ? `・${profile.placement_id}` : ""}
-        </p>
+        {/* fix#1(磨き直し): obs-register-entry ヘッダと同じ言語(種/ステージ/棚を
+            badge で並べる) — placement_id はラベル解決できた時だけ出す。 */}
+        {(profile.species || stageLabel || placementLabel) && (
+          <div className="civ-card-badges">
+            {profile.species && <Badge text={profile.species} tone="neutral" />}
+            {stageLabel && <Badge text={stageLabel} tone="neutral" />}
+            {placementLabel && <Badge text={placementLabel} tone="neutral" />}
+          </div>
+        )}
         {profile.schedule && (
           <p className="civ-text" data-muted="true">
             次の目安 {formatDateJa(profile.schedule.next_observation_at)} 頃
@@ -4603,13 +4685,15 @@ function IndividualProfileNode() {
             {health ? (
               <>
                 <p className="civ-text" data-muted="true">
-                  同腹 {health.cohortSize}匹
+                  同腹 {health.cohortSize}匹{health.smallSample ? "(母数小)" : ""}
                 </p>
                 <p className="civ-text">
                   死亡率 {health.deathPct}%{" "}
                   <span className="civ-text" data-muted="true">
                     ({health.deathCount}/{health.cohortSize})
-                  </span>
+                  </span>{" "}
+                  {health.deathTone.symbol}
+                  {health.deathTone.word}
                 </p>
                 <p className="civ-text">
                   羽化到達 {health.eclosionPct}%{" "}
@@ -4626,8 +4710,12 @@ function IndividualProfileNode() {
           </section>
           <section className="civ-card">
             <h3 className="civ-card-title">近交リスク</h3>
-            {fCoef != null ? (
-              <p className="civ-text">F = {fCoef.toFixed(4)}</p>
+            {fCoef != null && fTone ? (
+              <p className="civ-text">
+                F = {fCoef.toFixed(3)} {fTone.symbol}
+                {fTone.word}
+                {fCoef === 0 ? "(共通祖先なし)" : ""}
+              </p>
             ) : (
               <p className="civ-text" data-muted="true">
                 算定不能(血統データ無し)

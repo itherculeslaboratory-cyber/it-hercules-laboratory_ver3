@@ -39,23 +39,25 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
         measurements: [{ item: "weight", kind: "number", value: weight, unit: "g", value_origin: "direct_observed" }],
       });
 
+    const species = "オオクワガタ";
     const sireLabel = `E2E-IND-父-${tag}`;
     const damLabel = `E2E-IND-母-${tag}`;
     const aLabel = `E2E-IND-子A-${tag}`;
     const bLabel = `E2E-IND-子B-${tag}`;
     const cLabel = `E2E-IND-子C-${tag}`;
     const zLabel = `E2E-IND-単体Z-${tag}`;
+    const zeroLabel = `E2E-IND-ゼロ-${tag}`;
 
-    const sire = await post("/individuals", { local_label_text: sireLabel });
-    const dam = await post("/individuals", { local_label_text: damLabel });
+    const sire = await post("/individuals", { local_label_text: sireLabel, species });
+    const dam = await post("/individuals", { local_label_text: damLabel, species });
     await capture(sire.individual_id, 140);
     await capture(sire.individual_id, 150);
     await capture(dam.individual_id, 118);
     await capture(dam.individual_id, 124);
 
-    const a = await post("/individuals", { local_label_text: aLabel });
-    const b = await post("/individuals", { local_label_text: bLabel });
-    const c = await post("/individuals", { local_label_text: cLabel });
+    const a = await post("/individuals", { local_label_text: aLabel, species });
+    const b = await post("/individuals", { local_label_text: bLabel, species });
+    const c = await post("/individuals", { local_label_text: cLabel, species });
     for (const kid of [a, b, c]) {
       await post(`/individuals/${kid.individual_id}/parents`, { parent_id: sire.individual_id, parent_role: "sire" });
       await post(`/individuals/${kid.individual_id}/parents`, { parent_id: dam.individual_id, parent_role: "dam" });
@@ -63,6 +65,12 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
 
     await capture(a.individual_id, 30);
     await capture(a.individual_id, 45);
+    // fix#1(磨き直し): d1 のヘッダにステージbadgeが出ることを確認するための脱皮。
+    await post(`/individuals/${a.individual_id}/life-events`, {
+      kind: "molt",
+      at: new Date().toISOString(),
+      detail: { to_stage: "third_early" },
+    });
     await capture(a.individual_id, 62);
     await post(`/individuals/${a.individual_id}/life-events`, { kind: "eclosion", at: new Date().toISOString() });
 
@@ -74,18 +82,24 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
     await capture(c.individual_id, 47);
 
     // 親リンク無しの単体個体(購入個体相当) — 親カーブ欠損の第一級状態(d2)。
-    const z = await post("/individuals", { local_label_text: zLabel });
+    // 観測1点のみ(fix#5: 観測1回の縮小チャート状態を兼ねる)。
+    const z = await post("/individuals", { local_label_text: zLabel, species });
     await capture(z.individual_id, 55);
+
+    // fix#5(磨き直し): 観測0回状態の確認専用(スクショなし・打鍵チェックのみ)。
+    const zero = await post("/individuals", { local_label_text: zeroLabel, species });
 
     return {
       sireId: sire.individual_id as string,
       aId: a.individual_id as string,
       zId: z.individual_id as string,
+      zeroId: zero.individual_id as string,
       sireLabel,
       damLabel,
       aLabel,
       bLabel,
       cLabel,
+      species,
     };
   }, { tag });
 
@@ -95,19 +109,29 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: seed.aLabel })).toBeVisible();
 
+  // fix#1(磨き直し): ヘッダに種badge・ステージbadgeが並ぶ(obs-register-entry
+  // ヘッダと同じ言語)。
+  await expect(page.getByText(seed.species, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("三令初期", { exact: true })).toBeVisible();
+
   // 成長チャート: 親♂/親♀の破線凡例+コホート(きょうだい2匹・観測4点)帯。
   await expect(page.locator(".civ-growth-chart-svg")).toBeVisible();
   await expect(page.getByText("┄┄ 親♂")).toBeVisible();
   await expect(page.getByText("┈┈ 親♀")).toBeVisible();
   await expect(page.getByText(/▧ 同腹帯\(n=4\)/)).toBeVisible();
+  // fix#2(磨き直し): Y軸min/max(全系列の実値28g〜150g)・X軸最初/最後の観測日
+  // が小さく添えられる(グリッド線は最大3本)。
+  await expect(page.getByText("150g", { exact: true })).toBeVisible();
+  await expect(page.getByText("28g", { exact: true })).toBeVisible();
+  await expect(page.locator(".civ-chart-axis-label")).toHaveCount(4);
 
-  // 血統健全度: 同腹3匹(a+b+c)・死亡率33%(b死亡)・羽化到達33%(aのみ羽化)。
-  await expect(page.getByText("同腹 3匹")).toBeVisible();
-  await expect(page.getByText(/死亡率 33%/)).toBeVisible();
+  // 血統健全度: 同腹3匹(母数小)・死亡率33%(b死亡・⚠高)・羽化到達33%(aのみ羽化)。
+  await expect(page.getByText("同腹 3匹(母数小)")).toBeVisible();
+  await expect(page.getByText(/死亡率 33%.*⚠高/)).toBeVisible();
   await expect(page.getByText(/羽化到達 33%/)).toBeVisible();
 
-  // 近交リスク: sire/damは互いに無関係(共通祖先なし)なので F=0(算定は可能)。
-  await expect(page.getByText("F = 0.0000")).toBeVisible();
+  // 近交リスク: sire/damは互いに無関係(共通祖先なし)なので F=0(算定は可能・低)。
+  await expect(page.getByText("F = 0.000 ●低(共通祖先なし)")).toBeVisible();
 
   // 血縁レール: 親♂/♀chip・死亡きょうだいは(死亡)付き・生存きょうだいは通常表示。
   await expect(page.getByRole("button", { name: new RegExp(`♂ ${seed.sireLabel}`) })).toBeVisible();
@@ -123,7 +147,14 @@ test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip
   await expect(page.getByText("同腹集計なし(単体登録)")).toBeVisible();
   await expect(page.getByText("算定不能(血統データ無し)")).toBeVisible();
   await expect(page.getByText("血縁情報なし(単体登録)")).toBeVisible();
+  // fix#5(磨き直し): 観測1回のみ=点1つ+ミュート1行(広い空白にしない)。
+  await expect(page.getByText("観測1回 — 2回目からカーブになります")).toBeVisible();
   await shot(page, "d2");
+
+  // fix#5(磨き直し): 観測0回状態の確認(スクショなし・4枚制約を守る)。
+  await page.goto(`${WEB}/s/individual-detail?id=${seed.zeroId}`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("まだ観測がありません")).toBeVisible();
 
   // ── d3: 血縁chipタップで対象個体を親に差替(パンくず「前の個体に戻る」)──
   await page.goto(`${WEB}/s/individual-detail?id=${seed.aId}`);
