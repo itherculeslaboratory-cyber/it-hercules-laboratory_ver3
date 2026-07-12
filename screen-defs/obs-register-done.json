@@ -64,6 +64,11 @@
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/schedule" }
             },
             {
+              "id": "to-individual-detail",
+              "type": "link",
+              "props": { "label": "個体詳細で見る", "href": "/s/individual-detail?id={{params.individual_id}}" }
+            },
+            {
               "id": "add-more",
               "type": "button",
               "props": { "label": "同じコに追加", "variant": "primary" },

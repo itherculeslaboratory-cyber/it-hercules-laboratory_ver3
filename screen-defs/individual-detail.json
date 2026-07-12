@@ -3,7 +3,7 @@
   "route": "/individuals/detail",
   "title": "個体の詳細",
   "layout": "standard",
-  "notes": "IND-13 6文化ブロック(観測履歴/スケジュール/テンプレ/データソース=機器/市場オファー/改善)+ timeline を1レスポンス(GET /individuals/{id})に集約。累代分析(IND-12)とバイオカード(IND-15)へ id を引き継ぐ link で遷移。",
+  "notes": "V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2・判断3指標=成長比較/血統健全度/近交リスク+血縁レール+変化点タイムラインを1画面に集約)。実装は individual-profile ノード1個(ヘッダ/血統健全度・近交リスクチップ/血縁レール/タイムライン/sticky下端バーを持つ)が担う。GET /individuals/{id}/profile + /pedigree を自前取得し(近交F係数はクライアント計算)、成長グラフは新レンダラ部品 growth-chart(手書き SVG 折れ線・依存追加なし・NodeType としても登録済みで単独 screen-def からも宣言的に使える)を内部呼び出しする(二重取得を避けるため個体詳細では growth-chart を別ノードとして並べない)。旧版(6文化ブロックの薄い一覧58点)を同じ screen_id で置き換え — 累代分析(cross)・バイオカード(bio-card)・QR発行リンクはスコープA対象外につき廃止(死にUIを出さない・後続波で復活検討)。親カーブ欠損(購入個体・[訂正8])はⓘ帯+親リンク小フォームで第一級表示、due目安は中立表示(赤/催促禁止・2026-07-12ユーザー裁定)。",
   "nodes": [
     {
       "id": "shell",
@@ -14,80 +14,15 @@
           "type": "page",
           "children": [
             { "id": "title", "type": "heading", "props": { "text_key": "individual-detail.title.text", "text": "個体の詳細", "level": 1 } },
-            { "id": "ind-id", "type": "text", "props": { "text_key": "individual-detail.ind-id.text", "text": "個体 ID: {{params.id}}", "muted": true } },
             {
-              "id": "ind",
-              "type": "card",
-              "props": { "source_path": "/api/v1/individuals/{{params.id}}" },
-              "children": [
-                { "id": "timeline-title", "type": "heading", "props": { "text_key": "individual-detail.timeline-title.text", "text": "タイムライン", "level": 2 } },
-                {
-                  "id": "timeline",
-                  "type": "list",
-                  "props": { "bind_items": "data.ind.timeline", "item_text": "{{kind}} {{at}}" }
-                },
-                { "id": "obs-title", "type": "heading", "props": { "text_key": "individual-detail.obs-title.text", "text": "観測履歴", "level": 2 } },
-                {
-                  "id": "observations",
-                  "type": "list",
-                  "props": { "bind_items": "data.ind.observations", "item_text": "{{species_candidate}} {{measurements.0.item}} {{measurements.0.value}}{{measurements.0.unit}}" }
-                },
-                { "id": "schedule-title", "type": "heading", "props": { "text_key": "individual-detail.schedule-title.text", "text": "スケジュール", "level": 2 } },
-                {
-                  "id": "schedules",
-                  "type": "list",
-                  "props": { "bind_items": "data.ind.schedules", "item_text": "次回 {{next_observation_at}}" }
-                },
-                { "id": "source-title", "type": "heading", "props": { "text_key": "individual-detail.source-title.text", "text": "データソース（機器）", "level": 2 } },
-                {
-                  "id": "data-sources",
-                  "type": "list",
-                  "props": { "bind_items": "data.ind.data_sources", "item_text": "{{display_name}}" }
-                },
-                { "id": "template-title", "type": "heading", "props": { "text_key": "individual-detail.template-title.text", "text": "テンプレート", "level": 2 } },
-                {
-                  "id": "templates",
-                  "type": "list",
-                  "props": { "bind_items": "data.ind.templates", "item_text": "{{template_id}}" }
-                },
-                { "id": "market-title", "type": "heading", "props": { "text_key": "individual-detail.market-title.text", "text": "市場オファー", "level": 2 } },
-                {
-                  "id": "market-offers",
-                  "type": "list",
-                  "props": { "bind_items": "data.ind.market_offers", "item_text": "{{listing_id}}" }
-                },
-                { "id": "improve-title", "type": "heading", "props": { "text_key": "individual-detail.improve-title.text", "text": "改善（fork）", "level": 2 } },
-                {
-                  "id": "improvements",
-                  "type": "list",
-                  "props": { "bind_items": "data.ind.improvements", "item_text": "{{note}}" }
-                }
-              ]
-            },
-            {
-              "id": "to-cross",
-              "type": "link",
-              "props": { "label_key": "individual-detail.to-cross.label", "label": "累代分析を見る", "href": "/s/cross?id={{params.id}}" }
-            },
-            {
-              "id": "to-bio-card",
-              "type": "link",
-              "props": { "label_key": "individual-detail.to-bio-card.label", "label": "バイオカードを見る", "href": "/s/bio-card?id={{params.id}}" }
-            },
-            {
-              "id": "issue-qr",
-              "type": "button",
-              "props": { "label_key": "individual-detail.issue-qr.label", "label": "QR ラベルを発行する", "variant": "primary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/{{params.id}}/qr" }
-            },
-            { "id": "qr", "type": "qr-code", "props": { "value": "{{result.token}}" } }
+              "id": "profile",
+              "type": "individual-profile",
+              "props": { "next_step": "sticky下端バー: 記録を追加 / まとめて記録へ(individual-profile ノードが自前で navigate する)" }
+            }
           ]
         }
       ]
     }
   ],
-  "transitions": [
-    { "from": "to-cross", "to_screen_id": "cross", "label": "累代分析へ" },
-    { "from": "to-bio-card", "to_screen_id": "bio-card", "label": "バイオカードへ" }
-  ]
+  "transitions": []
 }

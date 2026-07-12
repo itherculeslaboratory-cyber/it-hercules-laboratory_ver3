@@ -15,8 +15,8 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["birth", "molt", "death", "eclosion", "specimen", "move"],
-      "description": "ライフイベント種別（誕生／脱皮／死亡／羽化／標本化／移動）。"
+      "enum": ["birth", "molt", "death", "eclosion", "specimen", "move", "survival_correction"],
+      "description": "ライフイベント種別（誕生／脱皮／死亡／羽化／標本化／移動／生存訂正）。survival_correction は誤った死亡記録の訂正（V3-AIP-101 個体詳細スライスA・append-only — 元の death レコードは消さず、より新しい survival_correction が status 導出で優先される）。"
     },
     "at": {
       "type": "string",

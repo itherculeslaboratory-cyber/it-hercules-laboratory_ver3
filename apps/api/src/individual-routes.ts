@@ -384,6 +384,154 @@ export async function projectAuthenticity(s: TruthStore, id: string) {
   };
 }
 
+/**
+ * individual-detail スライスA投影 (V3-AIP-101 c7-wireframes-core5 §4 F1/F2)。
+ * 判断3指標(成長比較・血統健全度・近交リスク)とタイムラインが1レスポンスで
+ * 描画できる形に集約する。無いものは null/[](親カーブ欠損は第一級状態
+ * [訂正8] — エラーではなく空配列/null で正常表現)。近交F係数はクライアント
+ * が /pedigree から計算する(このAPIは生データのみ返す)。
+ * ponytail: O(n) 複数回 listEvents 全件スキャン(既存 GET /individuals 一覧と
+ * 同じ縮退)。captures/life-events は1回ずつ全件取得しメモリ上でフィルタして
+ * 使い回す(親・きょうだいぶんの再スキャンをしない)。常駐キャッシュは持たない
+ * (都度再計算・不変条項①)。
+ */
+export async function projectIndividualProfile(s: TruthStore, id: string) {
+  const master = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
+  const ref = `individual/${id}`;
+  const m = master ? dataOf(master) : null;
+
+  const allLife = (await s.listEvents(`truth/${LIFE_TYPE}/`)).map(dataOf);
+  const lifeOf = (pid: string) => allLife.filter((d) => d.individual_id === pid);
+  const life = lifeOf(id).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+
+  // グラフの X 軸(初回観測からの日数)は capture data 自身に時刻を持たない
+  // (envelope.time が唯一の時刻ソース・既存 GET /individuals の last_capture_at
+  // と同じ規約)ので、data に time を合成して1個の行として持ち回す。
+  const allCaptures = (await s.listEvents(`truth/${CAPTURE_TYPE}/`)).map((e) => ({
+    ...dataOf(e),
+    time: String(e.time ?? ""),
+  }));
+  const capturesOf = (pid: string) =>
+    allCaptures
+      .filter((d) => d.subject_ref === `individual/${pid}`)
+      .sort((a, b) => String(a.capture_id ?? "").localeCompare(String(b.capture_id ?? "")));
+  const observations = capturesOf(id);
+
+  if (!master && observations.length === 0 && life.length === 0) return null;
+
+  // stage: 直近 molt の detail.to_stage。
+  const molts = life.filter((d) => d.kind === "molt");
+  const latestMolt = molts[molts.length - 1];
+  const stage =
+    latestMolt && typeof latestMolt.detail === "object" && latestMolt.detail !== null
+      ? ((latestMolt.detail as Record<string, unknown>).to_stage as string | undefined) ?? null
+      : null;
+
+  // status: death/survival_correction のうち時刻が最も新しいものが勝つ
+  // (誤記録の訂正は append-only の新レコード追記 — 元の death は消さない・不変条項③)。
+  const statusOf = (evs: Record<string, unknown>[]): "alive" | "deceased" => {
+    const rows = evs
+      .filter((d) => d.kind === "death" || d.kind === "survival_correction")
+      .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    return rows.length && rows[rows.length - 1].kind === "death" ? "deceased" : "alive";
+  };
+  const status = statusOf(life);
+
+  const placement = (await s.listEvents(`truth/${OCCUPANCY_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.subject_ref === ref && d.phase !== "end")
+    .sort((a, b) => String(a.effective_at).localeCompare(String(b.effective_at)));
+  const placement_id = placement.length ? (placement[placement.length - 1].placement_id as string) : null;
+
+  const labelOf = async (pid: string): Promise<string> => {
+    const pm = await s.readEvent(`truth/${MASTER_TYPE}/${pid}.json`);
+    const pd = pm ? dataOf(pm) : null;
+    const nm = await projectName(s, pid);
+    return (pd?.local_label_text as string | undefined) || nm || pid;
+  };
+
+  const allCross = (await s.listEvents(`truth/${CROSS_TYPE}/`)).map(dataOf);
+  const parentLinks = allCross.filter((d) => d.child_id === id);
+  const sireLink = parentLinks.find((d) => d.parent_role === "sire");
+  const damLink = parentLinks.find((d) => d.parent_role === "dam");
+  const parents: Record<string, { individual_id: string; label: string }> = {};
+  if (sireLink) parents.sire = { individual_id: String(sireLink.parent_id), label: await labelOf(String(sireLink.parent_id)) };
+  if (damLink) parents.dam = { individual_id: String(damLink.parent_id), label: await labelOf(String(damLink.parent_id)) };
+
+  const childIds = [...new Set(allCross.filter((d) => d.parent_id === id).map((d) => String(d.child_id)))].sort();
+  const children: { individual_id: string; label: string }[] = [];
+  for (const cid of childIds) children.push({ individual_id: cid, label: await labelOf(cid) });
+
+  // きょうだい = sire・dam の両方が一致する他個体のみ(半きょうだいは対象外)。
+  // 片親でも系統不明なら siblings=[](「同じ sire&dam を持つ」が判定不能)。
+  const siblings: { individual_id: string; label: string; dead: boolean; eclosed: boolean }[] = [];
+  if (sireLink && damLink) {
+    const bySire = allCross.filter((d) => d.parent_role === "sire" && d.parent_id === sireLink.parent_id).map((d) => String(d.child_id));
+    const byDam = new Set(
+      allCross.filter((d) => d.parent_role === "dam" && d.parent_id === damLink.parent_id).map((d) => String(d.child_id)),
+    );
+    const sibIds = [...new Set(bySire.filter((cid) => byDam.has(cid) && cid !== id))];
+    for (const sid of sibIds) {
+      const sLife = lifeOf(sid);
+      siblings.push({
+        individual_id: sid,
+        label: await labelOf(sid),
+        dead: statusOf(sLife) === "deceased",
+        eclosed: sLife.some((d) => d.kind === "eclosion"),
+      });
+    }
+  }
+
+  const parent_observations = {
+    sire: sireLink ? capturesOf(String(sireLink.parent_id)) : [],
+    dam: damLink ? capturesOf(String(damLink.parent_id)) : [],
+  };
+
+  // 兄弟の観測は体重/体長のみの軽い形(コホート帯の min-max 計算専用)。
+  const cohort_observations: { individual_id: string; capture_id: string; weight_g: number | null; length_mm: number | null }[] = [];
+  for (const sib of siblings) {
+    for (const cap of capturesOf(sib.individual_id)) {
+      cohort_observations.push({
+        individual_id: sib.individual_id,
+        capture_id: String(cap.capture_id ?? ""),
+        weight_g: latestMeasure(cap, "weight"),
+        length_mm: latestMeasure(cap, "length"),
+      });
+    }
+  }
+
+  // 次の目安(中立表示専用・「予定」ではない — ユーザー裁定2026-07-12第1陣②)。
+  // 直近登録された ihl.obs.schedule.v1 の next_observation_at のみ返す。起点の
+  // from/間隔日数は ihl.obs.schedule.v1 に保存されない(POST /observation/schedule
+  // は都度計算した next_observation_at だけを INSERT する設計・home-routes.ts)
+  // ので、created_at からの逆算は書き込み時刻とズレて不正確 — 出さない
+  // (誇張ゼロ: 不正確な数字よりゼロ情報のほうが誠実)。
+  const schedules = (await s.listEvents(`truth/${SCHEDULE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.individual_id === id)
+    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+  const latestSchedule = schedules[schedules.length - 1];
+  const schedule = latestSchedule ? { next_observation_at: String(latestSchedule.next_observation_at ?? "") } : null;
+
+  return {
+    individual_id: id,
+    master: m,
+    name: await projectName(s, id),
+    species: (m?.species as string | undefined) ?? null,
+    stage,
+    status,
+    placement_id,
+    schedule,
+    parents,
+    siblings,
+    children,
+    observations,
+    life_events: life,
+    parent_observations,
+    cohort_observations,
+  };
+}
+
 // ── routes ────────────────────────────────────────────────────────────────────
 
 // Shared master-creation logic (IND-02). Extracted so clutch promote (C7
@@ -590,6 +738,13 @@ individualRoutes.get("/individuals", async (c) => {
 // GET /individuals/{id} — whole-individual projection (6 文化 + timeline · IND-13).
 individualRoutes.get("/individuals/:id", async (c) => {
   const proj = await projectIndividual(store(c), c.req.param("id"));
+  if (!proj) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json(proj);
+});
+
+// GET /individuals/{id}/profile — individual-detail スライスA投影 (V3-AIP-101).
+individualRoutes.get("/individuals/:id/profile", async (c) => {
+  const proj = await projectIndividualProfile(store(c), c.req.param("id"));
   if (!proj) return c.json({ error: "NOT_FOUND" }, 404);
   return c.json(proj);
 });

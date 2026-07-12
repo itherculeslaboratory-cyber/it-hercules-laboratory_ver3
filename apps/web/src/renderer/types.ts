@@ -48,7 +48,19 @@ export type NodeType =
   // 語彙のみ流用): GET /individuals + GET /placements の取得、保存検索チップ
   // (localStorage)、ファセット絞り込み+0件緩和バー、4択ソート、下部固定
   // バスケットを1画面に持つ。
-  | "search-navigator";
+  | "search-navigator"
+  // V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2): 手書き SVG
+  // 折れ線チャート(本個体実線+親破線オーバーレイ+コホート帯)。依存追加禁止
+  // (ライブラリ無し)。親カーブ欠損時はⓘ帯+親リンクの小フォームを内包。
+  | "growth-chart"
+  // V3-AIP-101 個体詳細スライスA: ヘッダ(名前/種/ステージ/状態badge・死亡記録
+  // /誤記録訂正)+血統健全度・近交リスクチップ+血縁レール(親/子/きょうだい
+  // chip・chipタップで対象個体を差替)+変化点タイムライン(観測+life-events
+  // マージ・Δ計算・値の訂正)+sticky下端の次の一手バーを1画面に持つ。
+  // GET /individuals/{id}/profile + /pedigree の2本を自前取得する(growth-chart
+  // と合わせて2重取得になるが、この規模では素朴な自前fetchのほうが軽い —
+  // search-navigator/batch-summary と同じ縮退)。
+  | "individual-profile";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported

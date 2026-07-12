@@ -161,6 +161,21 @@
       "label": "バイオカードへ"
     },
     {
+      "from": "individual-detail",
+      "to": "obs-register-entry",
+      "label": "sticky下端バー: 記録を追加"
+    },
+    {
+      "from": "individual-detail",
+      "to": "obs-register-batch",
+      "label": "sticky下端バー: まとめて記録へ"
+    },
+    {
+      "from": "individual-detail",
+      "to": "individual-detail",
+      "label": "血縁chipタップ/死亡記録・訂正・親リンク後の再表示"
+    },
+    {
       "from": "qr-resume",
       "to": "obs-entry",
       "label": "個体文脈付きで観測入力へ"
@@ -301,6 +316,11 @@
       "label": "追観測へ"
     },
     {
+      "from": "obs-search",
+      "to": "individual-detail",
+      "label": "カード本体タップで個体詳細へ"
+    },
+    {
       "from": "obs-register-clutch",
       "to": "obs-register-batch",
       "label": "保存後にまとめて記録へ"
@@ -354,6 +374,11 @@
       "from": "obs-register-confirm",
       "to": "obs-register-done",
       "label": "保存後に完了へ"
+    },
+    {
+      "from": "obs-register-done",
+      "to": "individual-detail",
+      "label": "個体詳細で見る"
     },
     {
       "from": "obs-register-done",

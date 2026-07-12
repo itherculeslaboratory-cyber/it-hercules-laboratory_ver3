@@ -403,6 +403,14 @@ body {
   align-self: flex-end;
   padding: 0 12px;
 }
+/* V3-AIP-101 検索スライスA磨き直し: カード本体タップで個体詳細へ(obs-search)。 */
+.civ-card[data-clickable="true"] {
+  cursor: pointer;
+}
+.civ-card[data-clickable="true"]:focus-visible {
+  outline: 2px solid var(--civ-focus);
+  outline-offset: 2px;
+}
 
 /* status badge / chip (§2-3): success/warning/caution/neutral tones, all
  * derived from the existing primary/danger/danger-bg/text-muted tokens. */
@@ -850,4 +858,81 @@ body {
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
+}
+
+/* =============================================================================
+ * V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2) — growth-chart
+ * (手書き SVG)/血縁レールの chip/判断3指標2カラム/sticky下端バー。既存トークン
+ * のみ(raw hex 禁止・check-ui-tokens GATE)。
+ * ========================================================================== */
+.civ-individual-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 88px; /* sticky 下端バーの高さぶん本文が隠れないように */
+}
+.civ-growth-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-growth-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.civ-info-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface-2);
+}
+.civ-indicator-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: stretch;
+}
+.civ-growth-chart-card {
+  flex: 2 1 320px;
+}
+.civ-indicator-side {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.civ-recent-chip[data-muted="true"] {
+  opacity: 0.55;
+}
+.civ-timeline {
+  gap: 12px;
+}
+.civ-timeline-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--civ-border);
+}
+.civ-timeline-row > span:first-child {
+  font-size: var(--civ-fs-2);
+}
+.civ-sticky-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--civ-surface);
+  border-top: 1px solid var(--civ-border);
+}
+.civ-sticky-bar .civ-button {
+  flex: 1;
 }

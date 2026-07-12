@@ -483,3 +483,125 @@ describe("V3-AIP-101 GET /individuals?q= (観測登録スライス1 F1 検索)",
     expect(rowWithout.thumbnail_path).toBeNull();
   });
 });
+
+describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", () => {
+  async function capture(env: object, individualId: string, weight: number) {
+    const cap = await post(
+      "/api/v1/observation/captures",
+      {
+        domain: "biology",
+        subject_ref: `individual/${individualId}`,
+        measurements: [{ item: "weight", kind: "number", value: weight, unit: "g" }],
+      },
+      env,
+    );
+    return ((await cap.json()) as { capture_id: string }).capture_id;
+  }
+
+  it("親・きょうだい・子・観測・タイムラインを1レスポンスに集約", async () => {
+    const { env } = ctx();
+    const sire = await createInd(env, { local_label_text: "父" });
+    const dam = await createInd(env, { local_label_text: "母" });
+    await capture(env, sire, 145);
+    await capture(env, dam, 130);
+
+    const a = await createInd(env, { local_label_text: "子A" }); // 生存・羽化
+    const b = await createInd(env, { local_label_text: "子B" }); // 死亡
+    const cOther = await createInd(env); // 片親のみ(半きょうだい扱い・siblings対象外)
+    for (const kid of [a, b]) {
+      await post(`/api/v1/individuals/${kid}/parents`, { parent_id: sire, parent_role: "sire" }, env);
+      await post(`/api/v1/individuals/${kid}/parents`, { parent_id: dam, parent_role: "dam" }, env);
+    }
+    await post(`/api/v1/individuals/${cOther}/parents`, { parent_id: sire, parent_role: "sire" }, env);
+
+    await post(`/api/v1/individuals/${a}/life-events`, { kind: "molt", at: "2026-02-01T00:00:00Z", detail: { to_stage: "third_late" } }, env);
+    await post(`/api/v1/individuals/${a}/life-events`, { kind: "eclosion", at: "2026-03-01T00:00:00Z" }, env);
+    await capture(env, a, 82.5);
+    await post(`/api/v1/individuals/${b}/life-events`, { kind: "death", at: "2026-02-05T00:00:00Z" }, env);
+    await capture(env, b, 70);
+
+    const body = (await (await get(`/api/v1/individuals/${a}/profile`, env)).json()) as {
+      species: string | null;
+      stage: string | null;
+      status: string;
+      parents: { sire?: { individual_id: string; label: string }; dam?: { individual_id: string; label: string } };
+      siblings: { individual_id: string; label: string; dead: boolean; eclosed: boolean }[];
+      children: unknown[];
+      observations: { capture_id: string; time: string }[];
+      life_events: { kind: string }[];
+      parent_observations: { sire: { capture_id: string }[]; dam: { capture_id: string }[] };
+      cohort_observations: { individual_id: string; weight_g: number | null }[];
+    };
+
+    expect(body.stage).toBe("third_late");
+    expect(body.status).toBe("alive");
+    expect(body.parents.sire?.individual_id).toBe(sire);
+    expect(body.parents.sire?.label).toBe("父");
+    expect(body.parents.dam?.individual_id).toBe(dam);
+    expect(body.children).toEqual([]);
+    expect(body.observations).toHaveLength(1);
+    expect(body.observations[0].time).toMatch(/^\d{4}-\d{2}-\d{2}T/); // グラフX軸用のenvelope.time合成
+    expect(body.life_events.map((e) => e.kind)).toEqual(["molt", "eclosion"]);
+    expect(body.parent_observations.sire).toHaveLength(1);
+    expect(body.parent_observations.dam).toHaveLength(1);
+
+    // siblings: 両親一致の b のみ(半きょうだい cOther は含まれない)。
+    expect(body.siblings.map((s) => s.individual_id).sort()).toEqual([b]);
+    const sibB = body.siblings.find((s) => s.individual_id === b)!;
+    expect(sibB.dead).toBe(true);
+    expect(sibB.eclosed).toBe(false);
+    expect(body.cohort_observations.some((o) => o.individual_id === b && o.weight_g === 70)).toBe(true);
+  });
+
+  it("親カーブ欠損(購入個体): parents={}・parent_observations は空配列", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "購入個体" });
+    const body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as {
+      parents: Record<string, unknown>;
+      parent_observations: { sire: unknown[]; dam: unknown[] };
+      siblings: unknown[];
+    };
+    expect(body.parents).toEqual({});
+    expect(body.parent_observations).toEqual({ sire: [], dam: [] });
+    expect(body.siblings).toEqual([]);
+  });
+
+  it("survival_correction: 直近の訂正が death より新しければ alive に復元(append-only)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "death", at: "2026-02-05T00:00:00Z" }, env);
+    let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as { status: string };
+    expect(body.status).toBe("deceased");
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "survival_correction", at: "2026-02-06T00:00:00Z" }, env);
+    body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as { status: string };
+    expect(body.status).toBe("alive");
+  });
+
+  it("schedule: 次の目安(中立表示専用)を返す・未登録は null", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as {
+      schedule: { next_observation_at: string } | null;
+    };
+    expect(body.schedule).toBeNull();
+    await post(
+      "/api/v1/observation/schedule",
+      {
+        individual_id: id,
+        stage: "unspecified",
+        from: "2026-07-01T00:00:00Z",
+        template: { stage_interval_days: { unspecified: 45 } },
+      },
+      env,
+    );
+    body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as {
+      schedule: { next_observation_at: string } | null;
+    };
+    expect(body.schedule?.next_observation_at).toBe("2026-08-15T00:00:00.000Z");
+  });
+
+  it("未知の id は 404", async () => {
+    const { env } = ctx();
+    expect((await get("/api/v1/individuals/ghost/profile", env)).status).toBe(404);
+  });
+});
