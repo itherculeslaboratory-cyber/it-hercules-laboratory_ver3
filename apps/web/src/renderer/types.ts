@@ -27,7 +27,12 @@ export type NodeType =
   | "tabs"
   | "image-grid"
   | "stepper"
-  | "kpi-tile";
+  | "kpi-tile"
+  // V3-AIP-101 観測登録スライス1(c7): client-only "recently viewed individual"
+  // convenience cache (no new Truth type). visit-tracker stamps localStorage on
+  // mount (invisible); recent-chips reads the last 3 as tap-to-navigate chips.
+  | "visit-tracker"
+  | "recent-chips";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported
@@ -39,7 +44,10 @@ export type FieldVariant =
   | "select"
   | "photo"
   | "checkbox"
-  | "segmented";
+  | "segmented"
+  // V3-AIP-101: an invisible carry-forward field (props.default, scope-
+  // interpolated) — e.g. the individual id riding F2 → F5 through the draft.
+  | "hidden";
 
 // Documented props the Renderer understands (props stays an open Record so the
 // schema — additionalProperties:true — remains the SSOT). C5/K4 adds:

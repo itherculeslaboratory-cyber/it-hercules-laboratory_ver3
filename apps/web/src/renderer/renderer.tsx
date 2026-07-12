@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import QRCode from "qrcode";
@@ -136,6 +137,94 @@ export function setPath(obj: Record<string, unknown>, path: string, value: unkno
     cur = cur[k] as Record<string, unknown>;
   }
   cur[keys[keys.length - 1]] = value;
+}
+
+// V3-AIP-101 観測登録スライス1: static injects a body field is-literal today
+// (obs-entry's "measurements.0.kind":"number"). resolveStatic additionally lets
+// a static VALUE carry a `{{...}}` scope template (e.g. "individual/{{params.id}}")
+// or the literal token "{{now}}" (server time isn't known at screen-def-authoring
+// time). A templated value that resolves empty (an unset optional query param) is
+// OMITTED rather than sent as "" — so an optional measurement slot with no input
+// doesn't ride to the API as a malformed empty-value entry.
+// Nests via setPath (same dotted-array/object convention FormData submission
+// uses) so a caller can spread the result straight into a request body — the
+// F6 schedule button's "template.stage_interval_days.unspecified" key needs
+// the same {template:{stage_interval_days:{unspecified:N}}} shape a form's own
+// dotted field names produce.
+function resolveStatic(stat: Record<string, unknown>, scope: Scope): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(stat)) {
+    if (typeof v === "string" && v.includes("{{")) {
+      const resolved = v.trim() === "{{now}}" ? new Date().toISOString() : interpolate(v, scope);
+      if (resolved === "") continue;
+      setPath(out, k, resolved);
+    } else {
+      setPath(out, k, v);
+    }
+  }
+  return out;
+}
+
+/** Latest numeric value for `item` across capture-shaped rows (sorted by
+ *  capture_id — a ULID, so ascending = chronological). `excludeCaptureId` skips
+ *  the just-saved capture on a post-commit screen, so "previous" excludes itself. */
+export function latestMeasurement(
+  observations: unknown,
+  item: string,
+  excludeCaptureId?: string,
+): number | null {
+  const rows = (Array.isArray(observations) ? observations : []) as Record<string, unknown>[];
+  const sorted = rows
+    .filter((r) => !excludeCaptureId || r.capture_id !== excludeCaptureId)
+    .slice()
+    .sort((a, b) => String(a.capture_id ?? "").localeCompare(String(b.capture_id ?? "")));
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const ms = Array.isArray(sorted[i].measurements) ? (sorted[i].measurements as Record<string, unknown>[]) : [];
+    for (const m of ms) {
+      if (m.item !== item) continue;
+      const n = typeof m.value === "number" ? m.value : Number(m.value);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+}
+
+// "前回 X〈unit〉  +Δ〈unit〉↑" comparison line shared by FieldNode (live, as the
+// user types — F2) and the text node's compare_* props (static recap — F6).
+// `current: null` (nothing typed/known yet) renders the previous value alone.
+function compareLine(
+  scope: Scope,
+  opts: { source?: unknown; item?: unknown; unit?: unknown; exclude?: unknown; current: number | null },
+): string {
+  const source = opts.source ? String(opts.source) : "";
+  const item = opts.item ? String(opts.item) : "";
+  if (!source || !item) return "";
+  const unit = opts.unit != null ? String(opts.unit) : "";
+  const exclude = opts.exclude ? interpolate(String(opts.exclude), scope) : "";
+  const history = getPath(scope, `data.${source}.observations`);
+  const prev = latestMeasurement(history, item, exclude || undefined);
+  if (prev == null) return "初回の記録です";
+  if (opts.current == null || !Number.isFinite(opts.current)) return `前回 ${prev}${unit}`;
+  const delta = opts.current - prev;
+  const sign = delta > 0 ? "+" : delta < 0 ? "" : "±";
+  const arrow = delta > 0 ? "↑" : delta < 0 ? "▼" : "";
+  return `前回 ${prev}${unit}　${sign}${delta.toFixed(1)}${unit}${arrow}`;
+}
+
+/** Current life-stage: the latest molt/eclosion life-event's detail.to_stage
+ *  (individual_id's timeline, at-sorted defensively — projectIndividual already
+ *  sorts, but a raw scope path might not). null = no stage recorded yet. */
+export function currentStage(timeline: unknown): string | null {
+  const rows = (Array.isArray(timeline) ? timeline : []) as Record<string, unknown>[];
+  const sorted = rows.slice().sort((a, b) => String(a.at ?? "").localeCompare(String(b.at ?? "")));
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const e = sorted[i];
+    if (e.kind === "molt" || e.kind === "eclosion") {
+      const d = e.detail as Record<string, unknown> | undefined;
+      if (d && typeof d.to_stage === "string") return d.to_stage;
+    }
+  }
+  return null;
 }
 
 function readQuery(): Record<string, string> {
@@ -276,8 +365,13 @@ function useRunAction(nodeId: string) {
       if (fromDraft) {
         const d = await loadDraft();
         if (d) {
-          effBody = d.body;
-          effFile = d.file;
+          // A caller that already shaped its own body (a form with its own
+          // fields/static — e.g. F5's opt-out checkbox, V3-AIP-101) wins per-key
+          // over the replayed draft; the draft only backfills what the caller
+          // didn't provide. obs-confirm's plain-button case (body undefined) is
+          // unchanged: effBody just becomes d.body as before.
+          effBody = { ...d.body, ...(effBody ?? {}) };
+          effFile = effFile ?? d.file;
         }
       }
       const act: Action = { ...action, path: interpolate(action.path, scope) };
@@ -297,7 +391,12 @@ function useRunAction(nodeId: string) {
       }
       if (fromDraft) clearDraft();
       const t = transitions.find((x) => x.from === nodeId);
-      if (t) navigate(t.to_screen_id, queryFromResult(result));
+      // Scalar request-body fields ride forward too (not just the response) —
+      // the next screen's confirm/done recap reads them via {{params.*}} (V3-AIP-101,
+      // same trick queryFromBody already does for the navigate-kind branch above).
+      // queryFromResult is spread last so an id/token in the response always wins
+      // a key collision with a same-named request field.
+      if (t) navigate(t.to_screen_id, { ...queryFromBody(effBody ?? {}), ...queryFromResult(result) });
     },
     [execute, scope, transitions, navigate, setActionResult, nodeId],
   );
@@ -317,8 +416,13 @@ function ButtonNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const run = useRunAction(node.id);
   const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(p.error ? String(p.error) : null);
+  // V3-AIP-101 zero-tap registration (F6 "次の目安"): props.auto fires this
+  // button's action once on mount instead of waiting for a click; `done` swaps
+  // the button for a status line once it succeeds.
+  const [done, setDone] = useState(false);
   const formValid = useContext(FormValidityCtx);
   const loading = pending || p.loading === true;
   const isSubmit = (p.type ?? "button") === "submit";
@@ -326,18 +430,49 @@ function ButtonNode({ node }: { node: ScreenNode }) {
   // paint until the form is valid — before any input event fires.
   const disabled = p.disabled === true || loading || (isSubmit && !formValid);
 
-  const onClick = useCallback(async () => {
-    if (!node.action || disabled) return;
+  const fire = useCallback(async () => {
+    if (!node.action) return;
     setError(null);
     setPending(true);
     try {
-      await run(node.action);
+      const stat = p.static as Record<string, unknown> | undefined;
+      await run(node.action, stat ? resolveStatic(stat, scope) : undefined);
+      setDone(true);
     } catch (e) {
       setError(errorText(e));
     } finally {
       setPending(false);
     }
-  }, [node.action, disabled, run]);
+  }, [node.action, run, p.static, scope]);
+
+  const onClick = useCallback(() => {
+    if (disabled) return;
+    void fire();
+  }, [disabled, fire]);
+
+  const firedRef = useRef(false);
+  useEffect(() => {
+    if (!p.auto || firedRef.current || !node.action) return;
+    // auto_when gates the fire: a scope template that resolves empty/"false"/
+    // "off" skips it — the F5 opt-out checkbox rides here as a query param
+    // (present="on" when checked, absent when unchecked → resolves "").
+    if (p.auto_when !== undefined) {
+      const v = interpolate(String(p.auto_when), scope);
+      if (!v || v === "false" || v === "off") return;
+    }
+    firedRef.current = true;
+    void fire();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (p.auto && done) {
+    const successText = interpolate(displayText(resolve, p.success_label_key, p.success_label, "登録しました"), scope);
+    return (
+      <p className="civ-text" role="status">
+        {successText}
+      </p>
+    );
+  }
 
   return (
     <>
@@ -368,11 +503,29 @@ function FieldNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const invalidCtx = useContext(InvalidCtx);
   const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
   const variant = String(p.variant ?? "text");
   const name = String(p.name ?? node.id);
   const required = p.required === true;
   const invalid = p.invalid === true || invalidCtx.has(name);
   const id = `field-${node.id}`;
+  // V3-AIP-101 "前回値とΔ" (F2 live, obs-register-entry): a number field with
+  // compare_source (another node's fetched `{source}.observations`) + compare_item
+  // renders the previous value below the input and, as the user types, the delta.
+  // liveValue is display-only state — the input stays uncontrolled for submit.
+  const [liveValue, setLiveValue] = useState("");
+  const compareSource = p.compare_source;
+  const liveNum = Number(liveValue);
+  const hasLive = liveValue !== "" && Number.isFinite(liveNum);
+  const compareText = compareSource
+    ? compareLine(scope, {
+        source: compareSource,
+        item: p.compare_item,
+        unit: p.compare_unit,
+        exclude: p.compare_exclude,
+        current: hasLive ? liveNum : null,
+      })
+    : "";
 
   const shared = {
     id,
@@ -432,13 +585,22 @@ function FieldNode({ node }: { node: ScreenNode }) {
   } else if (variant === "checkbox") {
     // data-required='true' means "must be checked"; scanFormValidity + the
     // submit-time missing scan (unchecked => fd.get null) both cover it.
-    control = <input {...shared} type="checkbox" />;
+    // props.default:true = checked from first paint (F5's opt-out-by-default
+    // "次の目安を登録" checkbox, V3-AIP-101).
+    control = <input {...shared} type="checkbox" defaultChecked={p.default === true} />;
+  } else if (variant === "hidden") {
+    // Carries a scope value forward through a navigate/draft hop (e.g. the
+    // individual id from F2 to F5) so a later screen's `static` can reference
+    // {{params.*}} without the user re-entering it. No visible label/wrapper.
+    return <input {...shared} type="hidden" value={interpolate(String(p.default ?? ""), scope)} readOnly />;
   } else {
     control = (
       <input
         {...shared}
         type={variant === "number" ? "number" : variant === "date" ? "date" : "text"}
         placeholder={p.placeholder ? String(p.placeholder) : undefined}
+        defaultValue={p.default != null ? interpolate(String(p.default), scope) : undefined}
+        onChange={compareSource ? (e) => setLiveValue(e.target.value) : undefined}
       />
     );
   }
@@ -450,6 +612,11 @@ function FieldNode({ node }: { node: ScreenNode }) {
         {required ? " *" : ""}
       </label>
       {control}
+      {compareText && (
+        <p className="civ-text" data-muted="true">
+          {compareText}
+        </p>
+      )}
       {invalid && (
         <span role="alert" className="civ-field-error">
           {String(p.error ?? "この項目を確認してください")}
@@ -461,6 +628,7 @@ function FieldNode({ node }: { node: ScreenNode }) {
 
 function FormNode({ node }: { node: ScreenNode }) {
   const p = props(node);
+  const scope = useContext(ScopeCtx);
   const run = useRunAction(node.id);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(p.error ? String(p.error) : null);
@@ -503,7 +671,7 @@ function FormNode({ node }: { node: ScreenNode }) {
       // (`measurements.0.item`) nest into the arrays the schema requires.
       const body: Record<string, unknown> = {};
       const stat = p.static as Record<string, unknown> | undefined;
-      if (stat) for (const [k, v] of Object.entries(stat)) setPath(body, k, v);
+      if (stat) Object.assign(body, resolveStatic(stat, scope));
       // Split the form: text fields nest into the JSON body; a non-empty file
       // field (the photo) rides separately so run() can do the 2-stage upload.
       // ponytail: one photo per capture (design-c2 §3.1) — first file wins.
@@ -524,7 +692,7 @@ function FormNode({ node }: { node: ScreenNode }) {
         setPending(false);
       }
     },
-    [node.action, run, p.static],
+    [node.action, run, p.static, scope],
   );
 
   return (
@@ -698,6 +866,16 @@ function BadgeNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const resolve = useContext(MessagesCtx);
   const scope = useContext(ScopeCtx);
+  // V3-AIP-101 F2 ステージ表示: derive_from points at a timeline array (life
+  // events); the badge shows the current stage (latest molt/eclosion) via a
+  // JSON-authored label map, so the vocabulary/labels stay in the screen-def,
+  // not hardcoded in the renderer. No timeline yet ⇒ empty_text.
+  if (p.derive_from) {
+    const stage = currentStage(getPath(scope, String(p.derive_from)));
+    const labels = (p.stage_labels as Record<string, string> | undefined) ?? {};
+    const text = stage ? (labels[stage] ?? stage) : String(p.empty_text ?? "ステージ未記録");
+    return <Badge text={text} tone={stage ? String(p.tone ?? "neutral") : "neutral"} />;
+  }
   const text = interpolate(displayText(resolve, p.text_key, p.text ?? p.label, ""), scope);
   return <Badge text={text} tone={p.tone != null ? String(p.tone) : undefined} />;
 }
@@ -775,6 +953,17 @@ function renderCell(col: Record<string, unknown>, row: unknown): React.ReactNode
   if (cell === "progress") {
     const n = Number(value ?? 0);
     return <ProgressBar value={Number.isFinite(n) ? n : 0} max={Number(col.max ?? 100)} />;
+  }
+  if (cell === "link") {
+    // V3-AIP-101: a row-level navigate affordance (bind_items has no per-item
+    // action hook otherwise). href_tpl interpolates against the ROW (list/
+    // image-grid item templates use the same row-as-scope convention).
+    const href = interpolate(String(col.href_tpl ?? ""), row);
+    return (
+      <a className="civ-link" href={href}>
+        {String(col.link_label ?? "開く")}
+      </a>
+    );
   }
   return value == null ? "" : String(value);
 }
@@ -1189,6 +1378,79 @@ function MeasurementTableNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// V3-AIP-101 「この子への追観測?」候補チップ: a client-only recently-viewed
+// cache (no new Truth type — a convenience index, same footing as the draft
+// sessionStorage carry). visit-tracker stamps the current individual on F2
+// mount; recent-chips reads the last 3 on F1. Capped at 10, newest first,
+// deduped by id.
+const RECENT_KEY = "ihl:obs-recent-individuals";
+type RecentEntry = { id: string; at: number };
+
+function readRecent(): RecentEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    const rows = raw ? (JSON.parse(raw) as RecentEntry[]) : [];
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+function pushRecent(id: string): void {
+  if (typeof window === "undefined" || !id) return;
+  const next = [{ id, at: Date.now() }, ...readRecent().filter((e) => e.id !== id)].slice(0, 10);
+  try {
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    /* storage full/unavailable — best effort, no crash */
+  }
+}
+function relativeLabel(at: number): string {
+  const mins = Math.max(0, Math.round((Date.now() - at) / 60_000));
+  if (mins < 1) return "たった今";
+  if (mins < 60) return `${mins}分前`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}時間前`;
+  return `${Math.round(hours / 24)}日前`;
+}
+
+function VisitTrackerNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const scope = useContext(ScopeCtx);
+  const id = p.id_from ? String(getPath(scope, String(p.id_from)) ?? "") : "";
+  useEffect(() => {
+    if (id) pushRecent(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+  return null;
+}
+
+function RecentChipsNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const resolve = useContext(MessagesCtx);
+  const navigate = useContext(NavigateCtx);
+  const [entries, setEntries] = useState<RecentEntry[]>([]);
+  useEffect(() => setEntries(readRecent().slice(0, 3)), []);
+  // 履歴ゼロならチップ行ごと非表示(空行を出さない・仕様どおり).
+  if (entries.length === 0) return null;
+  const to = p.to ? String(p.to) : "";
+  return (
+    <div className="civ-segmented" role="group" aria-label={displayText(resolve, p.label_key, p.label, "この子への追観測?")}>
+      {entries.map((e) => (
+        <button
+          key={e.id}
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="secondary"
+          onClick={() => navigate(to, { id: e.id })}
+        >
+          {e.id}（{relativeLabel(e.at)}）
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
@@ -1218,6 +1480,27 @@ export function NodeView({ node }: { node: ScreenNode }) {
     }
     case "text": {
       const content = interpolate(displayText(resolve, p.text_key, p.text, ""), scope);
+      // V3-AIP-101 F6 の静的 Δ recap: compare_current is a scope template (the
+      // saved value, e.g. "{{params.weight_g}}") rather than live input — the
+      // FieldNode twin above compares against what the user is typing instead.
+      if (p.compare_source) {
+        const curRaw = p.compare_current != null ? interpolate(String(p.compare_current), scope) : "";
+        const curNum = curRaw !== "" ? Number(curRaw) : null;
+        const cmp = compareLine(scope, {
+          source: p.compare_source,
+          item: p.compare_item,
+          unit: p.compare_unit,
+          exclude: p.compare_exclude,
+          current: curNum != null && Number.isFinite(curNum) ? curNum : null,
+        });
+        return (
+          <p className="civ-text">
+            {content}
+            {content && cmp ? "　" : ""}
+            {cmp}
+          </p>
+        );
+      }
       if (p.ugc) return <UgcText node={node} text={content} />;
       return (
         <p className="civ-text" data-muted={p.muted === true || undefined}>
@@ -1262,6 +1545,10 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <StepperNode node={node} />;
     case "kpi-tile":
       return <KpiTileNode node={node} />;
+    case "visit-tracker":
+      return <VisitTrackerNode node={node} />;
+    case "recent-chips":
+      return <RecentChipsNode node={node} />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (

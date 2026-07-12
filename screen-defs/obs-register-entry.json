@@ -1,0 +1,154 @@
+{
+  "screen_id": "obs-register-entry",
+  "route": "/observe/register/entry",
+  "title": "追観測",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス1(F2 既存個体への追観測)。継承ヘッダは確認のみ(編集させない)。今回の差分だけ=体重g・体長mmの2入力+前回値とΔ。環境はCSVファースト縮退(鮮度ドット・温度入力欄は出さない)。ステージ変化・死亡は life-events へ独立append(Truthはappend-onlyなので一括confirm待ちにしない・簡略化はHANDOFF参照)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "追観測", "level": 1 } },
+            { "id": "visit", "type": "visit-tracker", "props": { "id_from": "params.id" } },
+            {
+              "id": "individual",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.id}}" },
+              "children": [
+                {
+                  "id": "ind-name",
+                  "type": "text",
+                  "props": { "text": "{{data.individual.master.local_label_text}}　{{data.individual.master.species}}" }
+                },
+                {
+                  "id": "ind-stage",
+                  "type": "badge",
+                  "props": {
+                    "derive_from": "data.individual.timeline",
+                    "stage_labels": {
+                      "first": "初令",
+                      "second": "二令",
+                      "third_early": "三令初期",
+                      "third_mid": "三令中期",
+                      "third_late": "三令後期",
+                      "prepupa": "前蛹",
+                      "pupa": "蛹",
+                      "adult": "成虫"
+                    },
+                    "empty_text": "ステージ未記録"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "pedigree",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.id}}/pedigree" },
+              "children": [
+                {
+                  "id": "pedigree-text",
+                  "type": "text",
+                  "props": { "text": "血統: {{data.pedigree.parents.0.individual_id}} × {{data.pedigree.parents.1.individual_id}}", "muted": true }
+                }
+              ]
+            },
+            {
+              "id": "stage-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/{{params.id}}/life-events" },
+              "props": { "static": { "kind": "molt", "at": "{{now}}" } },
+              "children": [
+                {
+                  "id": "to-stage",
+                  "type": "field",
+                  "props": {
+                    "variant": "select",
+                    "name": "detail.to_stage",
+                    "label": "ステージを変更",
+                    "placeholder": "ステージを選ぶ",
+                    "options": [
+                      { "value": "first", "label": "初令" },
+                      { "value": "second", "label": "二令" },
+                      { "value": "third_early", "label": "三令初期" },
+                      { "value": "third_mid", "label": "三令中期" },
+                      { "value": "third_late", "label": "三令後期" },
+                      { "value": "prepupa", "label": "前蛹" },
+                      { "value": "pupa", "label": "蛹" },
+                      { "value": "adult", "label": "成虫" }
+                    ]
+                  }
+                },
+                { "id": "stage-submit", "type": "button", "props": { "label": "ステージを更新", "variant": "secondary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "death-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/{{params.id}}/life-events" },
+              "props": { "static": { "kind": "death", "at": "{{now}}" } },
+              "children": [
+                {
+                  "id": "confirm-death",
+                  "type": "field",
+                  "props": { "variant": "checkbox", "name": "death_confirmed", "label": "死亡として記録することを確認しました", "required": true }
+                },
+                { "id": "death-submit", "type": "button", "props": { "label": "☠ 死亡として記録", "variant": "secondary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "measure-form",
+              "type": "form",
+              "action": { "kind": "navigate", "to": "obs-register-confirm" },
+              "children": [
+                { "id": "carry-id", "type": "field", "props": { "variant": "hidden", "name": "individual_id", "default": "{{params.id}}" } },
+                {
+                  "id": "weight",
+                  "type": "field",
+                  "props": {
+                    "variant": "number",
+                    "name": "weight_g",
+                    "label": "体重(g)",
+                    "required": true,
+                    "compare_source": "individual",
+                    "compare_item": "weight",
+                    "compare_unit": "g"
+                  }
+                },
+                {
+                  "id": "length",
+                  "type": "field",
+                  "props": {
+                    "variant": "number",
+                    "name": "length_mm",
+                    "label": "体長(mm)",
+                    "required": true,
+                    "compare_source": "individual",
+                    "compare_item": "length",
+                    "compare_unit": "mm"
+                  }
+                },
+                { "id": "photo", "type": "field", "props": { "variant": "photo", "name": "photo", "label": "写真(任意)" } },
+                {
+                  "id": "env-note",
+                  "type": "text",
+                  "props": { "text": "環境は棚の記録から参照します(あとからCSVで埋められます)。", "muted": true }
+                },
+                { "id": "measure-submit", "type": "button", "props": { "label": "確認へ →", "variant": "primary", "type": "submit" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "stage-form", "to_screen_id": "obs-register-entry", "label": "更新後にこの画面を再表示" },
+    { "from": "death-form", "to_screen_id": "obs-register", "label": "死亡記録後に記録開始へ" },
+    { "from": "measure-form", "to_screen_id": "obs-register-confirm", "label": "確認へ" }
+  ]
+}

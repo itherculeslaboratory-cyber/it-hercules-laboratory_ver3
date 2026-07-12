@@ -1,0 +1,47 @@
+{
+  "screen_id": "obs-register-new",
+  "route": "/observe/register/new",
+  "title": "新規個体として登録",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス1(F1-N 最小版)。個体 ID はサーバ側 POST /individuals が自動採番(ulid)。種は任意(空欄=不明・あとで確定)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "新規個体として登録", "level": 1 } },
+            { "id": "id-note", "type": "text", "props": { "text": "個体 ID は登録時に自動採番されます。", "muted": true } },
+            {
+              "id": "new-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals" },
+              "children": [
+                {
+                  "id": "label",
+                  "type": "field",
+                  "props": { "variant": "text", "name": "local_label_text", "label": "ラベル(任意)", "placeholder": "例: DHH-26-201" }
+                },
+                {
+                  "id": "species",
+                  "type": "field",
+                  "props": {
+                    "variant": "text",
+                    "name": "species",
+                    "label": "種(任意・空欄は「不明・あとで確定」)",
+                    "placeholder": "例: Dynastes hercules"
+                  }
+                },
+                { "id": "submit", "type": "button", "props": { "label": "登録して計測へ →", "variant": "primary", "type": "submit" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [{ "from": "new-form", "to_screen_id": "obs-register-entry", "label": "登録して計測へ" }]
+}

@@ -1,0 +1,54 @@
+{
+  "screen_id": "obs-register-confirm",
+  "route": "/observe/register/confirm",
+  "title": "確認",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス1(F5 1件版)。入力recap+「次の目安を登録」opt-outチェック(既定ON)+保存。保存 = POST /solid-observation/commit のみ(OBS-25 と同じ単一 commit ゲート)。value_origin は手入力系を明示付与(direct_observed)・サーバは補完しない。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "確認", "level": 1 } },
+            { "id": "recap-weight", "type": "text", "props": { "text": "体重 {{params.weight_g}}g" } },
+            { "id": "recap-length", "type": "text", "props": { "text": "体長 {{params.length_mm}}mm" } },
+            {
+              "id": "confirm-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/solid-observation/commit", "body_from": "draft" },
+              "props": {
+                "static": {
+                  "domain": "biology",
+                  "subject_ref": "individual/{{params.individual_id}}",
+                  "measurements.0.item": "weight",
+                  "measurements.0.kind": "number",
+                  "measurements.0.unit": "g",
+                  "measurements.0.value": "{{params.weight_g}}",
+                  "measurements.0.value_origin": "direct_observed",
+                  "measurements.1.item": "length",
+                  "measurements.1.kind": "number",
+                  "measurements.1.unit": "mm",
+                  "measurements.1.value": "{{params.length_mm}}",
+                  "measurements.1.value_origin": "direct_observed"
+                }
+              },
+              "children": [
+                {
+                  "id": "register-schedule",
+                  "type": "field",
+                  "props": { "variant": "checkbox", "name": "register_schedule", "label": "次の目安を登録(間隔30日)", "default": true }
+                },
+                { "id": "commit-submit", "type": "button", "props": { "label": "保存", "variant": "primary", "type": "submit" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [{ "from": "confirm-form", "to_screen_id": "obs-register-done", "label": "保存後に完了へ" }]
+}

@@ -310,3 +310,56 @@ describe("IND-21 真正性(projectAuthenticity)", () => {
     expect(auth!.lineage_conflicts.some((cf) => cf.type === "self_parent")).toBe(true);
   });
 });
+
+describe("V3-AIP-101 GET /individuals?q= (観測登録スライス1 F1 検索)", () => {
+  it("q なしは本人の全件を返す", async () => {
+    const { env } = ctx();
+    await createInd(env, { local_label_text: "DHH-24-017", species: "Dynastes hercules" });
+    await createInd(env, { local_label_text: "DHH-24-021", species: "Dynastes hercules" });
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; label: string; species: string | null }[];
+    };
+    expect(body.individuals).toHaveLength(2);
+    expect(body.individuals.every((i) => i.species === "Dynastes hercules")).toBe(true);
+  });
+
+  it("q は local_label_text/species の部分一致(大小無視)", async () => {
+    const { env } = ctx();
+    const hit = await createInd(env, { local_label_text: "DHH-24-017", species: "Dynastes hercules" });
+    await createInd(env, { local_label_text: "CL-26-002", species: "Extatosoma tiaratum" });
+    const body = (await (await get("/api/v1/individuals?q=dhh-24", env)).json()) as {
+      individuals: { individual_id: string; label: string }[];
+    };
+    expect(body.individuals.map((i) => i.individual_id)).toEqual([hit]);
+    expect(body.individuals[0].label).toBe("DHH-24-017");
+  });
+
+  it("0件はそのまま空配列(行き止まりの検知はクライアント側)", async () => {
+    const { env } = ctx();
+    await createInd(env, { local_label_text: "DHH-24-017" });
+    const body = (await (await get("/api/v1/individuals?q=ムナカタ", env)).json()) as { individuals: unknown[] };
+    expect(body.individuals).toEqual([]);
+  });
+
+  it("他 actor の個体は返さない(本人スコープ)", async () => {
+    const { env, bucket } = ctx();
+    const mine = await createInd(env, { local_label_text: "MINE" });
+    // seed a second individual directly under a different actor_id (bypasses
+    // the route's actor_id force-stamp, same technique as IND-21's fixtures).
+    const s = new TruthStore(bucket);
+    const otherId = ulid();
+    await s.putEventAt(
+      `truth/ihl.ind.master.v1/${otherId}.json`,
+      envOf("ihl.ind.master.v1", "schemas/events/ind-master.schema.json", {
+        individual_id: otherId,
+        actor_id: "someone-else",
+        local_label_text: "NOT-MINE",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+    );
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(body.individuals.map((i) => i.individual_id)).toEqual([mine]);
+  });
+});

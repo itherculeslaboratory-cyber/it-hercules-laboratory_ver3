@@ -409,6 +409,32 @@ individualRoutes.post("/individuals", async (c) => {
   return c.json({ individual_id: individualId }, 201);
 });
 
+// GET /individuals?q= — 本人の個体一覧/検索(V3-AIP-101 観測登録スライス1 F1).
+// q が local_label_text/name/species の部分一致(大小無視)に当たる個体のみ返す。
+// q なしは本人の全件。label は local_label_text→name→id の優先で埋める。
+// ponytail: O(n) full master scan + 該当件のみ projectName、per-actor index は
+// 在庫が伸びたら昇格(既存 /observation/search 前例と同じ縮退)。
+individualRoutes.get("/individuals", async (c) => {
+  const q = (c.req.query("q") ?? "").trim().toLowerCase();
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
+    .map(dataOf)
+    .filter((m) => m.actor_id === actorId);
+  const individuals: Record<string, unknown>[] = [];
+  for (const m of masters) {
+    const id = String(m.individual_id ?? "");
+    if (!id) continue;
+    const label = typeof m.local_label_text === "string" ? m.local_label_text : "";
+    const species = typeof m.species === "string" ? m.species : "";
+    const name = await projectName(s, id);
+    if (q && ![label, species, name ?? ""].some((v) => v.toLowerCase().includes(q))) continue;
+    individuals.push({ individual_id: id, label: label || name || id, name, species: species || null });
+  }
+  individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
+  return c.json({ individuals });
+});
+
 // GET /individuals/{id} — whole-individual projection (6 文化 + timeline · IND-13).
 individualRoutes.get("/individuals/:id", async (c) => {
   const proj = await projectIndividual(store(c), c.req.param("id"));

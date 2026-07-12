@@ -8,9 +8,15 @@
     "home",
     "obs-domain-select",
     "obs-entry",
+    "observation-input",
     "obs-navigator",
     "obs-confirm",
     "obs-detail",
+    "obs-register",
+    "obs-register-new",
+    "obs-register-entry",
+    "obs-register-confirm",
+    "obs-register-done",
     "individual-detail",
     "cross",
     "bio-card",
@@ -207,6 +213,16 @@
     },
     {
       "from": "home",
+      "to": "observation-input",
+      "label": "高密度計測入力へ"
+    },
+    {
+      "from": "observation-input",
+      "to": "obs-confirm",
+      "label": "確認画面へ"
+    },
+    {
+      "from": "home",
       "to": "knowledge-hub",
       "label": "知の広場へ"
     },
@@ -244,6 +260,56 @@
       "from": "knowledge-thread",
       "to": "knowledge-board",
       "label": "掲示板へ戻る"
+    },
+    {
+      "from": "obs-register",
+      "to": "obs-register",
+      "label": "検索結果を表示"
+    },
+    {
+      "from": "obs-register",
+      "to": "obs-register-new",
+      "label": "新規個体として登録"
+    },
+    {
+      "from": "obs-register",
+      "to": "obs-register-entry",
+      "label": "候補チップ/検索結果から追観測へ"
+    },
+    {
+      "from": "obs-register-new",
+      "to": "obs-register-entry",
+      "label": "登録して計測へ"
+    },
+    {
+      "from": "obs-register-entry",
+      "to": "obs-register-entry",
+      "label": "ステージ更新後にこの画面を再表示"
+    },
+    {
+      "from": "obs-register-entry",
+      "to": "obs-register",
+      "label": "死亡記録後に記録開始へ"
+    },
+    {
+      "from": "obs-register-entry",
+      "to": "obs-register-confirm",
+      "label": "確認へ"
+    },
+    {
+      "from": "obs-register-confirm",
+      "to": "obs-register-done",
+      "label": "保存後に完了へ"
+    },
+    {
+      "from": "obs-register-done",
+      "to": "obs-register-entry",
+      "label": "同じコに追加"
+    },
+    {
+      "from": "obs-register-done",
+      "to": "home",
+      "label": "完了"
     }
   ]
 }

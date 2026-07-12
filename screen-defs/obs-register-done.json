@@ -1,0 +1,73 @@
+{
+  "screen_id": "obs-register-done",
+  "route": "/observe/register/done",
+  "title": "保存しました",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス1(F6)。保存直後のΔrecap+次の目安のゼロタップ登録(POST /observation/schedule)。この画面では間隔30日固定(stage:'unspecified')で登録する簡略版 — 個体の現ステージに応じた間隔自動選択は今後の波(ponytail: stage_interval のスキーマ採番後にテンプレ側へ)。register_schedule opt-out時は自動登録せず、ボタンは手動登録として残る(死んだボタンにしない)。params.id はここでは capture_id(useRunAction の queryFromResult が API 応答の capture_id/individual_id を常に `id` に載せる規約のため)。個体参照は F2 が hidden field で運んだ params.individual_id を使う。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "保存しました", "level": 1 } },
+            {
+              "id": "individual",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{params.individual_id}}" },
+              "children": [
+                {
+                  "id": "recap-weight",
+                  "type": "text",
+                  "props": {
+                    "text": "体重 {{params.weight_g}}g",
+                    "compare_source": "individual",
+                    "compare_item": "weight",
+                    "compare_unit": "g",
+                    "compare_current": "{{params.weight_g}}",
+                    "compare_exclude": "{{params.id}}"
+                  }
+                },
+                {
+                  "id": "recap-length",
+                  "type": "text",
+                  "props": {
+                    "text": "体長 {{params.length_mm}}mm",
+                    "compare_source": "individual",
+                    "compare_item": "length",
+                    "compare_unit": "mm",
+                    "compare_current": "{{params.length_mm}}",
+                    "compare_exclude": "{{params.id}}"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "schedule-register",
+              "type": "button",
+              "props": {
+                "label": "次の目安を登録",
+                "auto": true,
+                "auto_when": "{{params.register_schedule}}",
+                "success_label": "✓ 次の目安 登録済み(間隔30日・{{result.next_observation_at}})",
+                "static": {
+                  "individual_id": "{{params.individual_id}}",
+                  "stage": "unspecified",
+                  "from": "{{now}}",
+                  "template.stage_interval_days.unspecified": 30
+                }
+              },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/schedule" }
+            },
+            { "id": "add-more", "type": "link", "props": { "label": "同じコに追加", "href": "/s/obs-register-entry?id={{params.individual_id}}" } },
+            { "id": "done", "type": "link", "props": { "label": "完了", "href": "/" } }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

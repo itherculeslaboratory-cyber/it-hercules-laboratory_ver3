@@ -1,0 +1,66 @@
+{
+  "screen_id": "obs-register",
+  "route": "/observe/register",
+  "title": "記録する",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス1(F1 対象確定)。既定は最頻行動=既存個体への追観測(候補チップ+検索)。QR/カメラ/[まとめて記録]/「今日の流れから」はこのスライスでは描画しない(実績・機能がなければ行が消えるだけ・V3-UIX-01 / c7-wireframes-core5 §1)。既存 obs-entry/obs-confirm は無変更(cutoverは後)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "記録する", "level": 1 } },
+            {
+              "id": "recent",
+              "type": "recent-chips",
+              "props": { "to": "obs-register-entry", "label": "この子への追観測?" }
+            },
+            {
+              "id": "search-form",
+              "type": "form",
+              "action": { "kind": "navigate", "to": "obs-register" },
+              "children": [
+                {
+                  "id": "q",
+                  "type": "field",
+                  "props": { "variant": "text", "name": "q", "label": "個体・種で検索", "placeholder": "例: DHH-24 / hercules" }
+                },
+                { "id": "search-submit", "type": "button", "props": { "label": "検索", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "results",
+              "type": "table",
+              "props": {
+                "source_path": "/api/v1/individuals?q={{params.q}}",
+                "bind_items": "data.results.individuals",
+                "empty_text": "個体が見つかりませんでした。",
+                "columns": [
+                  { "key": "label", "label": "個体" },
+                  { "key": "species", "label": "種" },
+                  {
+                    "key": "individual_id",
+                    "label": "",
+                    "cell": "link",
+                    "href_tpl": "/s/obs-register-entry?id={{individual_id}}",
+                    "link_label": "追観測へ →"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "new-individual",
+              "type": "link",
+              "props": { "label": "新規個体として登録 →", "href": "/s/obs-register-new" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [{ "from": "search-form", "to_screen_id": "obs-register", "label": "検索結果を表示" }]
+}
