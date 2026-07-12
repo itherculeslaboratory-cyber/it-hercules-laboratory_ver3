@@ -26,6 +26,9 @@ const VALIDATOR_NAME: Record<string, string> = {
   "ind-name-event": "indNameEvent",
   "ind-brand-template": "indBrandTemplate",
   "ind-life-event": "indLifeEvent",
+  // C7 スライス2 クラッチ(匿名プール) events
+  "ind-clutch": "indClutch",
+  "ind-clutch-event": "indClutchEvent",
   "taxon-species": "taxonSpecies",
   "taxon-morph": "taxonMorph",
   "taxon-alias": "taxonAlias",
@@ -121,6 +124,10 @@ const EVENT_NAMES = new Set([
   "ind-name-event",
   "ind-brand-template",
   "ind-life-event",
+  // C7 スライス2 — data validation MUST fire or putEvent stores unchecked data
+  // at 201 permanently (Truth is INSERT ONLY, unfixable).
+  "ind-clutch",
+  "ind-clutch-event",
   "taxon-species",
   "taxon-morph",
   "taxon-alias",

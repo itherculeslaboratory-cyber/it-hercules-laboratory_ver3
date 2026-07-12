@@ -45,6 +45,9 @@ const SCHEMAS = [
   ["indNameEvent", "events/ind-name-event.schema.json"],
   ["indBrandTemplate", "events/ind-brand-template.schema.json"],
   ["indLifeEvent", "events/ind-life-event.schema.json"],
+  // C7 スライス2 クラッチ(匿名プール) events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
+  ["indClutch", "events/ind-clutch.schema.json"],
+  ["indClutchEvent", "events/ind-clutch-event.schema.json"],
   ["taxonSpecies", "events/taxon-species.schema.json"],
   ["taxonMorph", "events/taxon-morph.schema.json"],
   ["taxonAlias", "events/taxon-alias.schema.json"],

@@ -1,0 +1,59 @@
+// GENERATED FILE — do not edit by hand.
+// source: schemas/events/ind-clutch.schema.json
+// title: Individual Clutch data (ihl.ind.clutch.v1)
+// direction: schemas/ -> generated (one-way; edit the schema, then re-run)
+// regenerate: node scripts/codegen-schemas.mjs
+
+/**
+ * クラッチ（匿名プール・count層）登録イベント ihl.ind.clutch.v1 の data 部。Truth キー truth/ihl.ind.clutch.v1/<clutch_id>.json。個体IDは未発行（個別容器分割/QR発行の瞬間=昇格イベントで初めて発生）。current_count は clutch-event の投影で都度再計算（常駐カウンタなし・不変条項①）。
+ */
+export interface IndClutch {
+  /**
+   * クラッチの一意キー（ULID）。
+   */
+  clutch_id: string;
+  /**
+   * 登録者の actor_id（セッション principal 強制・V3-AUT-17）。
+   */
+  actor_id: string;
+  /**
+   * 父個体の individual_id（任意・産卵セットから継承）。
+   */
+  sire_id?: string;
+  /**
+   * 母個体の individual_id（任意・♀のみ・父不明の場合もある）。
+   */
+  dam_id?: string;
+  /**
+   * 種（任意・親なし選択時はクラッチへ直付け）。
+   */
+  species?: string;
+  /**
+   * 亜種候補（AI提案・ユーザー確定前は candidate のまま・任意）。
+   */
+  subspecies_candidate?: string;
+  /**
+   * 亜種確定者。"user" のみ許可（AI自動確定禁止ゲート）。
+   */
+  subspecies_confirmed_by?: "user";
+  /**
+   * 割り出し日。
+   */
+  harvested_at: string;
+  /**
+   * 割り出し時点の匹数。
+   */
+  initial_count: number;
+  /**
+   * 容器ラベル（任意・既定はまとめ置き）。
+   */
+  container_label?: string;
+  /**
+   * 配置先 placement_id（任意）。
+   */
+  placement_id?: string;
+  /**
+   * 登録時刻（RFC3339）。
+   */
+  created_at: string;
+}

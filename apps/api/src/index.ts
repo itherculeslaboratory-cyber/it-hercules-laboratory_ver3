@@ -26,6 +26,8 @@ import { individualRoutes } from "./individual-routes";
 import { taxonRoutes } from "./taxon-routes";
 import { tagRoutes } from "./tag-routes";
 import { matchRoutes } from "./match-routes";
+import { clutchRoutes } from "./clutch-routes";
+import { batchCommitRoutes } from "./batch-commit-routes";
 import { deviceRoutes } from "./device-routes";
 import { homeRoutes } from "./home-routes";
 import { cusbRoutes } from "./cusb-routes";
@@ -256,6 +258,18 @@ app.route("/api/v1", tagRoutes);
 // Match preference learning (design-k1 §1.1 / V3-IND-07): POST /api/v1/match/
 // preference · GET /api/v1/match/ranking. w←w+α·y·x; score non-exposed. Protected.
 app.route("/api/v1", matchRoutes);
+
+// Clutch(匿名プール・count層) system (V3-AIP-101 C7 スライス2 / wireframes-core5
+// §F3/F4): POST/GET /clutches(+/{id})・POST /clutches/{id}/events(recount/
+// attrition)・POST /clutches/{id}/promote(個体化). Individual IDはpromote時に
+// 初めて発生。current_countは常駐カウンタなし都度再計算。All protected.
+app.route("/api/v1", clutchRoutes);
+
+// Batch commit (V3-AIP-101 C7 スライス2 / wireframes-core5 §F4/F5「まとめて記録」):
+// POST /observation/batch-commit — capture/life-event/clutch-event/move を1保存で
+// 逐次append(トランザクション無し・per-item {ok,id}|{ok:false,error}で部分失敗を
+// 隠さない・上限200件)。All protected.
+app.route("/api/v1", batchCommitRoutes);
 
 // Observation devices (design-k1 §1.1 / V3-OBS-31): POST/GET /api/v1/devices +
 // /devices/{id}/test. Placement-bound (individual → 400); api key AES-GCM encrypted.

@@ -20,7 +20,28 @@ const ANALYSIS_TYPE = "ihl.obs.analysis.v1";
 
 // The 9 frozen provenance value_origin values (CONFIDENCE_ORDER is keyed by
 // exactly this enum — reuse it so the gate can never drift from the schema).
-const VALUE_ORIGINS = new Set(Object.keys(CONFIDENCE_ORDER));
+export const VALUE_ORIGINS = new Set(Object.keys(CONFIDENCE_ORDER));
+
+// ── shared commit gates (extracted so batch-commit reuses the SAME checks as
+// solid-observation/commit and /observation/measurements — コピペ二重化しない) ──
+
+/** OBS-62/03 亜種自動確定禁止ゲート: a subspecies candidate needs subspecies_confirmed_by==="user". */
+export function subspeciesGateError(body: Record<string, unknown>): string | null {
+  if (body.subspecies_candidate !== undefined && body.subspecies_confirmed_by !== "user") {
+    return "SUBSPECIES_NOT_CONFIRMED";
+  }
+  return null;
+}
+
+/** value_origin, if present on a measurement, must be one of the 9 frozen values. */
+export function measurementValueOriginError(measurements: unknown): string | null {
+  if (!Array.isArray(measurements)) return null;
+  for (const m of measurements as Record<string, unknown>[]) {
+    if (m.value_origin === undefined) continue;
+    if (typeof m.value_origin !== "string" || !VALUE_ORIGINS.has(m.value_origin)) return "INVALID_VALUE_ORIGIN";
+  }
+  return null;
+}
 
 // CL-08 / design-c3 §1: embeddings are frozen at 384 dims. A manifest whose
 // embedding_dim differs is blocked from search (ver2 scoring.py:44 guard).
@@ -569,10 +590,9 @@ obsRoutes.post("/observation/measurements", async (c) => {
   if (!measurements || measurements.length === 0) return c.json({ error: "NO_MEASUREMENTS" }, 400);
   for (const m of measurements) {
     if (m.value_origin === undefined) return c.json({ error: "MEASUREMENT_VALUE_ORIGIN_REQUIRED" }, 400);
-    if (typeof m.value_origin !== "string" || !VALUE_ORIGINS.has(m.value_origin)) {
-      return c.json({ error: "INVALID_VALUE_ORIGIN" }, 400);
-    }
   }
+  const originErr = measurementValueOriginError(measurements);
+  if (originErr) return c.json({ error: originErr }, 400);
   // OBS-18 item_hash 未登録検出 against the measurement dictionary.
   const dict = new Set<string>();
   for (const t of (await store(c).listEvents(`truth/${TEMPLATE_TYPE}/`)).map(dataOf)) {
@@ -770,25 +790,40 @@ obsRoutes.get("/observation/:capture_id/thumbnail/:photo_id", async (c) => {
   return new Response(await obj.arrayBuffer(), { headers: { "content-type": "image/jpeg" } });
 });
 
+// Shared commit-path capture write (OBS-25/62/03), reused by
+// POST /observation/batch-commit kind:"capture" (body = 同一形状・同一ゲート —
+// コピペ二重化しない). Gates: subspecies 自動確定禁止 + value_origin(値あれば
+// enum内).
+export async function writeCaptureFromCommitBody(
+  s: TruthStore,
+  actorId: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: true; capture_id: string } | { ok: false; error: string; details?: string[] }> {
+  const gateErr = subspeciesGateError(body);
+  if (gateErr) return { ok: false, error: gateErr };
+  const originErr = measurementValueOriginError(body.measurements);
+  if (originErr) return { ok: false, error: originErr };
+  const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
+  const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId };
+  for (const k of CAPTURE_FIELDS) if (body[k] !== undefined) data[k] = body[k];
+  const res = await s.putEvent(
+    envelope(CAPTURE_TYPE, captureId, "schemas/events/obs-capture.schema.json", actorId, data),
+  );
+  if (res.status === "invalid") return { ok: false, error: "INVALID_CAPTURE", details: res.errors };
+  if (res.status === "conflict") return { ok: false, error: "DUPLICATE_CAPTURE" };
+  return { ok: true, capture_id: captureId };
+}
+
 // POST /solid-observation/commit — the ONLY save path after the 3-screen confirm
 // (OBS-25). Enforces the OBS-62/03 gate: a subspecies candidate must be
 // user-confirmed (AI 自動確定禁止) before anything is written.
 obsRoutes.post("/solid-observation/commit", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return c.json({ error: "INVALID_BODY" }, 400);
-  if (body.subspecies_candidate !== undefined && body.subspecies_confirmed_by !== "user") {
-    return c.json({ error: "SUBSPECIES_NOT_CONFIRMED" }, 400);
-  }
   const actorId = c.get("actorId");
-  const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
-  const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId };
-  for (const k of CAPTURE_FIELDS) if (body[k] !== undefined) data[k] = body[k];
-  const res = await store(c).putEvent(
-    envelope(CAPTURE_TYPE, captureId, "schemas/events/obs-capture.schema.json", actorId, data),
-  );
-  if (res.status === "invalid") return c.json({ error: "INVALID_CAPTURE", details: res.errors }, 400);
-  if (res.status === "conflict") return c.json({ error: "DUPLICATE_CAPTURE", key: res.key }, 409);
-  return c.json({ capture_id: captureId, committed: true }, 202);
+  const r = await writeCaptureFromCommitBody(store(c), actorId, body);
+  if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_CAPTURE" ? 409 : 400);
+  return c.json({ capture_id: r.capture_id, committed: true }, 202);
 });
 
 // GET /observation/{capture_id} — detail projection: capture + photos[].

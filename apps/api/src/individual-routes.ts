@@ -20,11 +20,12 @@ const CROSS_TYPE = "ihl.ind.cross_parent.v1";
 const NAME_TYPE = "ihl.ind.name_event.v1";
 const BRAND_TYPE = "ihl.ind.brand_template.v1";
 const LIFE_TYPE = "ihl.ind.life_event.v1";
-// cross-module read-only types (owned by observation / market packages).
+// cross-module read-only types (owned by observation / market / source packages).
 const CAPTURE_TYPE = "ihl.obs.capture.v1";
 const PHOTO_TYPE = "ihl.obs.photo.v1";
 const SCHEDULE_TYPE = "ihl.obs.schedule.v1";
 const DEVICE_TYPE = "ihl.obs.device.v1";
+const OCCUPANCY_TYPE = "ihl.src.occupancy.v1";
 
 const SCHEMA = {
   master: "schemas/events/ind-master.schema.json",
@@ -385,25 +386,71 @@ export async function projectAuthenticity(s: TruthStore, id: string) {
 
 // ── routes ────────────────────────────────────────────────────────────────────
 
-// POST /individuals — create a master record (no growth fields · IND-02).
-// individual_id: client MAY supply (idempotency → 409); else generated.
-individualRoutes.post("/individuals", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
-  const actorId = c.get("actorId");
+// Shared master-creation logic (IND-02). Extracted so clutch promote (C7
+// スライス2) generates individuals the SAME way as POST /individuals instead
+// of re-implementing envelope/key construction (コピペ二重化しない).
+export async function createIndividualMaster(
+  s: TruthStore,
+  actorId: string,
+  fields: {
+    individual_id?: string;
+    local_label_text?: string;
+    species?: string;
+    birth_or_hatch_date?: string;
+    source_type?: string;
+  },
+): Promise<{ individualId: string; res: Awaited<ReturnType<TruthStore["putEventAt"]>> }> {
   const individualId =
-    typeof body.individual_id === "string" && body.individual_id ? body.individual_id : ulid();
+    typeof fields.individual_id === "string" && fields.individual_id ? fields.individual_id : ulid();
   const data: Record<string, unknown> = {
     individual_id: individualId,
     actor_id: actorId,
     created_at: nowIso(),
   };
   for (const k of ["local_label_text", "species", "birth_or_hatch_date", "source_type"] as const) {
-    if (body[k] !== undefined) data[k] = body[k];
+    if (fields[k] !== undefined) data[k] = fields[k];
   }
-  const res = await store(c).putEventAt(
+  const res = await s.putEventAt(
     `truth/${MASTER_TYPE}/${individualId}.json`,
     envelope(MASTER_TYPE, SCHEMA.master, actorId, data),
   );
+  return { individualId, res };
+}
+
+// Shared blood-link logic (IND-01/12), reused by clutch promote to inherit
+// sire_id/dam_id (コピペ二重化しない). Same key/conflict semantics as the route.
+export async function linkParent(
+  s: TruthStore,
+  actorId: string,
+  childId: string,
+  parentId: string,
+  role: string,
+): Promise<Awaited<ReturnType<TruthStore["putEventAt"]>>> {
+  const data: Record<string, unknown> = {
+    child_id: childId,
+    parent_id: parentId,
+    parent_role: role,
+    actor_id: actorId,
+    created_at: nowIso(),
+  };
+  return s.putEventAt(
+    `truth/${CROSS_TYPE}/${childId}-${role}.json`,
+    envelope(CROSS_TYPE, SCHEMA.cross, actorId, data),
+  );
+}
+
+// POST /individuals — create a master record (no growth fields · IND-02).
+// individual_id: client MAY supply (idempotency → 409); else generated.
+individualRoutes.post("/individuals", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const { individualId, res } = await createIndividualMaster(store(c), actorId, {
+    individual_id: typeof body.individual_id === "string" ? body.individual_id : undefined,
+    local_label_text: body.local_label_text as string | undefined,
+    species: body.species as string | undefined,
+    birth_or_hatch_date: body.birth_or_hatch_date as string | undefined,
+    source_type: body.source_type as string | undefined,
+  });
   if (res.status === "invalid") return c.json({ error: "INVALID_INDIVIDUAL", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_INDIVIDUAL", key: res.key }, 409);
   return c.json({ individual_id: individualId }, 201);
@@ -425,8 +472,12 @@ function representativeMeasurement(data: Record<string, unknown>): string | null
 // 「最終観測」列。capture_id(ULID)昇順=時刻順の規約に乗せ、envelope の `time`
 // を返す(data には capture 自身のタイムスタンプが無い・latestMeasurement と
 // 同じ規約)。
-// ponytail: O(n) full master + capture scan(1回ずつ), per-actor/individual
-// index は在庫が伸びたら昇格(既存 /observation/search 前例と同じ縮退)。
+// スライス2拡張(C7): stage(直近 molt life-event の detail.to_stage)/
+// placement_id(直近 occupancy start・phase="end"は除外)/last_care_at(直近
+// capture の at=last_capture_at と同値。F4 一覧が「お世話」語彙で読む列)。
+// ponytail: O(n) full master + capture/life-event/occupancy scan(1回ずつ), per-
+// actor/individual index は在庫が伸びたら昇格(既存 /observation/search 前例と
+// 同じ縮退)。
 individualRoutes.get("/individuals", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   const actorId = c.get("actorId");
@@ -444,6 +495,23 @@ individualRoutes.get("/individuals", async (c) => {
     rows.push({ data: d, time: String(e.time ?? "") });
     capturesByIndividual.set(id, rows);
   }
+  const moltsByIndividual = new Map<string, Record<string, unknown>[]>();
+  for (const e of await s.listEvents(`truth/${LIFE_TYPE}/`)) {
+    const d = dataOf(e);
+    if (d.kind !== "molt") continue;
+    const id = String(d.individual_id ?? "");
+    if (!id) continue;
+    (moltsByIndividual.get(id) ?? moltsByIndividual.set(id, []).get(id)!).push(d);
+  }
+  const placementByIndividual = new Map<string, Record<string, unknown>[]>();
+  for (const e of await s.listEvents(`truth/${OCCUPANCY_TYPE}/`)) {
+    const d = dataOf(e);
+    if (d.phase === "end") continue; // 現在地の候補から除外(引っ越し済み)
+    const ref = typeof d.subject_ref === "string" ? d.subject_ref : "";
+    if (!ref.startsWith("individual/")) continue;
+    const id = ref.slice("individual/".length);
+    (placementByIndividual.get(id) ?? placementByIndividual.set(id, []).get(id)!).push(d);
+  }
   const individuals: Record<string, unknown>[] = [];
   for (const m of masters) {
     const id = String(m.individual_id ?? "");
@@ -456,6 +524,16 @@ individualRoutes.get("/individuals", async (c) => {
       .slice()
       .sort((a, b) => String(a.data.capture_id ?? "").localeCompare(String(b.data.capture_id ?? "")));
     const latest = caps[caps.length - 1];
+    const molts = (moltsByIndividual.get(id) ?? []).slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const latestMolt = molts[molts.length - 1];
+    const stage =
+      latestMolt && typeof latestMolt.detail === "object" && latestMolt.detail !== null
+        ? ((latestMolt.detail as Record<string, unknown>).to_stage as string | undefined) ?? null
+        : null;
+    const placements = (placementByIndividual.get(id) ?? [])
+      .slice()
+      .sort((a, b) => String(a.effective_at).localeCompare(String(b.effective_at)));
+    const latestPlacement = placements[placements.length - 1];
     individuals.push({
       individual_id: id,
       label: label || name || id,
@@ -463,6 +541,9 @@ individualRoutes.get("/individuals", async (c) => {
       species: species || null,
       last_capture_at: latest ? latest.time || null : null,
       last_measurement_summary: latest ? representativeMeasurement(latest.data) : null,
+      stage,
+      placement_id: latestPlacement ? (latestPlacement.placement_id as string) : null,
+      last_care_at: latest ? latest.time || null : null,
     });
   }
   individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
@@ -483,17 +564,7 @@ individualRoutes.post("/individuals/:id/parents", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
   const role = body.parent_role;
-  const data: Record<string, unknown> = {
-    child_id: childId,
-    parent_id: body.parent_id,
-    parent_role: role,
-    actor_id: actorId,
-    created_at: nowIso(),
-  };
-  const res = await store(c).putEventAt(
-    `truth/${CROSS_TYPE}/${childId}-${String(role)}.json`,
-    envelope(CROSS_TYPE, SCHEMA.cross, actorId, data),
-  );
+  const res = await linkParent(store(c), actorId, childId, String(body.parent_id), String(role));
   if (res.status === "invalid") return c.json({ error: "INVALID_PARENT", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_PARENT", key: res.key }, 409);
   return c.json({ child_id: childId, parent_role: role }, 201);
@@ -591,24 +662,37 @@ individualRoutes.get("/individuals/:id/authenticity", async (c) => {
   return c.json(auth);
 });
 
-// POST /individuals/{id}/life-events — append a life milestone (IND-12/13).
-individualRoutes.post("/individuals/:id/life-events", async (c) => {
-  const id = c.req.param("id");
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
-  const actorId = c.get("actorId");
+// Shared life-event append (IND-12/13), reused by batch-commit kind:"life-event"
+// (コピペ二重化しない — F4 行メニュー/一括どちらも同じ append 経路)。
+export async function writeLifeEvent(
+  s: TruthStore,
+  actorId: string,
+  individualId: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: true; individual_id: string; kind: unknown } | { ok: false; error: string; details?: string[] }> {
   const data: Record<string, unknown> = {
-    individual_id: id,
+    individual_id: individualId,
     kind: body.kind,
     at: body.at,
     actor_id: actorId,
     created_at: nowIso(),
   };
   if (body.detail !== undefined) data.detail = body.detail;
-  const res = await store(c).putEventAt(
-    `truth/${LIFE_TYPE}/${id}-${ulid()}.json`,
+  const res = await s.putEventAt(
+    `truth/${LIFE_TYPE}/${individualId}-${ulid()}.json`,
     envelope(LIFE_TYPE, SCHEMA.life, actorId, data),
   );
-  if (res.status === "invalid") return c.json({ error: "INVALID_LIFE_EVENT", details: res.errors }, 400);
-  if (res.status === "conflict") return c.json({ error: "DUPLICATE_LIFE_EVENT", key: res.key }, 409);
-  return c.json({ individual_id: id, kind: body.kind }, 201);
+  if (res.status === "invalid") return { ok: false, error: "INVALID_LIFE_EVENT", details: res.errors };
+  if (res.status === "conflict") return { ok: false, error: "DUPLICATE_LIFE_EVENT" };
+  return { ok: true, individual_id: individualId, kind: body.kind };
+}
+
+// POST /individuals/{id}/life-events — append a life milestone (IND-12/13).
+individualRoutes.post("/individuals/:id/life-events", async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const r = await writeLifeEvent(store(c), actorId, id, body);
+  if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_LIFE_EVENT" ? 409 : 400);
+  return c.json({ individual_id: r.individual_id, kind: r.kind }, 201);
 });

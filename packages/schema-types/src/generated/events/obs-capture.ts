@@ -21,7 +21,7 @@ export interface ObsCapture {
    */
   domain: "biology" | "mineral" | "digital" | "place" | "custom";
   /**
-   * 観測対象個体の参照（'individual/<individual_id>' 形式・V3-IND-01）。任意。
+   * 観測対象への参照。'individual/<individual_id>'（V3-IND-01）または 'clutch/<clutch_id>'（クラッチの抜き取り計測・専用APIを持たず既存captureで表現 — C7 スライス2 wireframes-core5 §F3）。任意。
    */
   subject_ref?: string;
   /**

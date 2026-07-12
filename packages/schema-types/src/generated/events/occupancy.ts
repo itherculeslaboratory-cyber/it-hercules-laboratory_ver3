@@ -5,7 +5,7 @@
 // regenerate: node scripts/codegen-schemas.mjs
 
 /**
- * 在住（占有）イベント ihl.src.occupancy.v1 の data 部。Truth キー truth/ihl.src.occupancy.v1/<occupancy_id>.json。Tier A INSERT ONLY。値なしフィールドは省略（null/空文字禁止）。
+ * 在住（占有）イベント ihl.src.occupancy.v1 の data 部。Truth キー truth/ihl.src.occupancy.v1/<occupancy_id>.json（phase 無し・単発記録・既存互換）または truth/ihl.src.occupancy.v1/<occupancy_id>-<phase>.json（phase∈{start,end}・移動の2相記録・device-binding と同型）。Tier A INSERT ONLY。値なしフィールドは省略（null/空文字禁止）。
  */
 export interface Occupancy {
   /**
@@ -28,6 +28,10 @@ export interface Occupancy {
    * 在住の発効時刻（RFC3339）。
    */
   effective_at: string;
+  /**
+   * 移動（1 item = 旧 placement の end + 新 placement の start）を束ねる相（任意・additive）。省略時は phase 無しの単発記録（既存互換）。
+   */
+  phase?: "start" | "end";
   /**
    * イベント型バージョン（ihl.src.occupancy.v1）。
    */

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ind-clutch-event.schema.json",
+  "title": "Individual Clutch Event data (ihl.ind.clutch_event.v1)",
+  "description": "クラッチ append-only イベント ihl.ind.clutch_event.v1 の data 部（匹数照合・減耗照合・昇格）。Truth キー truth/ihl.ind.clutch_event.v1/<clutch_id>-<event_id>.json。current_count は clutch.initial_count → 最新 recount を基点に、以降の attrition/promote の death_count を差し引いて都度再計算する（常駐カウンタなし・不変条項①）。",
+  "x_ihl_req": "V3-IND-02",
+  "x_ihl_source": "docs/planning/c7/wireframes-core5.md §F4",
+  "type": "object",
+  "required": ["event_id", "clutch_id", "kind", "at", "actor_id", "created_at"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベントの一意キー（ULID）。"
+    },
+    "clutch_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象クラッチの clutch_id。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["recount", "attrition", "promote"],
+      "description": "イベント種別。recount=絶対数の再計測（基点リセット）／attrition=減耗照合（死亡差引）／promote=個別容器へ分割（個体化・count層からindividual層へ）。"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "イベント発生時刻（RFC3339）。"
+    },
+    "counted": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "recount 時の絶対数（この値が以後の新しい基点になる）。"
+    },
+    "death_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "attrition/promote 時の死亡照合数（current_count から差し引く）。"
+    },
+    "promoted_individual_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "promote 時に生成された individual_id の一覧。"
+    },
+    "note": {
+      "type": "string",
+      "description": "任意の注記。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "記録者の actor_id（V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "記録時刻（RFC3339）。"
+    }
+  },
+  "additionalProperties": false
+}

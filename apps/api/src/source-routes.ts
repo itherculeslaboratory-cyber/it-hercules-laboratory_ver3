@@ -215,9 +215,88 @@ sourceRoutes.get("/occupancy", async (c) => {
   const rows = (await store(c).listEvents(`truth/${OCCUPANCY_TYPE}/`))
     .map(dataOf)
     .filter((d) => d.actor_id === actorId)
-    .map((d) => ({ occupancy_id: d.occupancy_id, placement_id: d.placement_id, subject_ref: d.subject_ref, effective_at: d.effective_at }));
+    .map((d) => ({
+      occupancy_id: d.occupancy_id,
+      placement_id: d.placement_id,
+      subject_ref: d.subject_ref,
+      effective_at: d.effective_at,
+      phase: d.phase ?? null,
+    }));
   return c.json({ occupancy: rows });
 });
+
+/**
+ * Open occupancy for a subject_ref: a phase:"start" record with no matching
+ * phase:"end" for the same occupancy_id (same reasoning as
+ * projectOpenBindings — a subject occupies at most one placement at a time).
+ * Legacy phase-less single-shot records are not "open" intervals — only
+ * start/end-tagged records participate (V3-AIP-101 F4 移動).
+ */
+export async function projectOpenOccupancy(
+  bucket: R2BucketLite,
+  subjectRef: string,
+): Promise<{ occupancy_id: string; placement_id: string } | null> {
+  const events = (await new TruthStore(bucket).listEvents(`truth/${OCCUPANCY_TYPE}/`)).map(dataOf);
+  const started = new Map<string, string>(); // occupancy_id -> placement_id
+  const ended = new Set<string>();
+  for (const d of events) {
+    if (d.subject_ref !== subjectRef) continue;
+    if (d.phase === "start") started.set(String(d.occupancy_id), String(d.placement_id));
+    else if (d.phase === "end") ended.add(String(d.occupancy_id));
+  }
+  for (const [id, placementId] of started) {
+    if (!ended.has(id)) return { occupancy_id: id, placement_id: placementId };
+  }
+  return null;
+}
+
+/**
+ * Move a subject to a new placement: end the currently-open occupancy (if
+ * any) + start a new one, as ONE logical action (F4 wireframe「移動」/
+ * batch-commit kind:"move" — device-binding start/end と同型の2相append).
+ */
+export async function moveOccupancy(
+  bucket: R2BucketLite,
+  actorId: string,
+  subjectRef: string,
+  toPlacementId: string,
+  at: string,
+): Promise<{ occupancy_id: string; ended_previous: boolean }> {
+  const s = new TruthStore(bucket);
+  const open = await projectOpenOccupancy(bucket, subjectRef);
+  let endedPrevious = false;
+  if (open) {
+    const endData = {
+      occupancy_id: open.occupancy_id,
+      actor_id: actorId,
+      placement_id: open.placement_id,
+      subject_ref: subjectRef,
+      phase: "end",
+      effective_at: at,
+      schema_version: OCCUPANCY_TYPE,
+    };
+    const endRes = await s.putEventAt(
+      `truth/${OCCUPANCY_TYPE}/${open.occupancy_id}-end.json`,
+      envelope(OCCUPANCY_TYPE, OCCUPANCY_SCHEMA, actorId, endData),
+    );
+    endedPrevious = endRes.status === "inserted";
+  }
+  const newId = ulid();
+  const startData = {
+    occupancy_id: newId,
+    actor_id: actorId,
+    placement_id: toPlacementId,
+    subject_ref: subjectRef,
+    phase: "start",
+    effective_at: at,
+    schema_version: OCCUPANCY_TYPE,
+  };
+  await s.putEventAt(
+    `truth/${OCCUPANCY_TYPE}/${newId}-start.json`,
+    envelope(OCCUPANCY_TYPE, OCCUPANCY_SCHEMA, actorId, startData),
+  );
+  return { occupancy_id: newId, ended_previous: endedPrevious };
+}
 
 // ── telemetry ───────────────────────────────────────────────────────────────
 
