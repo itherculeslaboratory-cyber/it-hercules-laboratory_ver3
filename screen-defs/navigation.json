@@ -8,7 +8,6 @@
     "home",
     "obs-domain-select",
     "obs-entry",
-    "observation-input",
     "obs-navigator",
     "obs-confirm",
     "obs-detail",
@@ -214,16 +213,6 @@
       "from": "home",
       "to": "obs-entry",
       "label": "観測入力へ(3クリック導線)"
-    },
-    {
-      "from": "home",
-      "to": "observation-input",
-      "label": "高密度計測入力へ"
-    },
-    {
-      "from": "observation-input",
-      "to": "obs-confirm",
-      "label": "確認画面へ"
     },
     {
       "from": "home",

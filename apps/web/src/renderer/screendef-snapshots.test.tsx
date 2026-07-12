@@ -42,7 +42,6 @@ const SCREEN_IDS = [
   "obs-register-done",
   "obs-register-entry",
   "obs-register-new",
-  "observation-input",
   "paper-detail",
   "paper-match",
   "platinum-shop",
