@@ -1,0 +1,24 @@
+{
+  "screen_id": "obs-register-batch",
+  "route": "/observe/register/batch",
+  "title": "まとめて記録",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス2(F4 まとめて記録=お世話一括+移動+クラッチ照合・昇格)。実装は batch-roster ノード1個が担う: GET /individuals・GET /clutches・GET /placements を取得し、クライアント側フィルタ+チェック選択+計測グリッドで束ねる。既定選択=そろそろ(前回お世話から30日以上)を自動プリセレクト — 温度感は中立(2026-07-12ユーザー裁定: 超過赤/件数バッジ禁止・「そろそろ」表現のみ)。[確認へ]でバッチドラフトを sessionStorage に積み obs-register-batch-confirm(F5b)へ。昇格(個体ID即時発行)だけは batch-commit 未対応のためその場で POST /clutches/:id/promote する。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "まとめて記録", "level": 1 } },
+            { "id": "roster", "type": "batch-roster" }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

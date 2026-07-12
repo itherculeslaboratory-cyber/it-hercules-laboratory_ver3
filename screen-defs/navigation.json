@@ -17,6 +17,10 @@
     "obs-register-entry",
     "obs-register-confirm",
     "obs-register-done",
+    "obs-register-clutch",
+    "obs-register-batch",
+    "obs-register-batch-confirm",
+    "obs-register-batch-done",
     "individual-detail",
     "cross",
     "bio-card",
@@ -275,6 +279,51 @@
       "from": "obs-register",
       "to": "obs-register-entry",
       "label": "候補チップ/検索結果から追観測へ"
+    },
+    {
+      "from": "obs-register",
+      "to": "obs-register-batch",
+      "label": "まとめて記録へ"
+    },
+    {
+      "from": "obs-register-batch",
+      "to": "obs-register-clutch",
+      "label": "割り出しへ"
+    },
+    {
+      "from": "obs-register-batch",
+      "to": "obs-register-batch-confirm",
+      "label": "確認へ"
+    },
+    {
+      "from": "obs-register-clutch",
+      "to": "obs-register-batch",
+      "label": "保存後にまとめて記録へ"
+    },
+    {
+      "from": "obs-register-clutch",
+      "to": "obs-register",
+      "label": "保存後に記録するへ戻る"
+    },
+    {
+      "from": "obs-register-batch-confirm",
+      "to": "obs-register-batch",
+      "label": "測り直す/やり直す"
+    },
+    {
+      "from": "obs-register-batch-confirm",
+      "to": "obs-register-batch-done",
+      "label": "一括保存後に完了へ"
+    },
+    {
+      "from": "obs-register-batch-done",
+      "to": "obs-register-batch",
+      "label": "同じ条件でもう一度"
+    },
+    {
+      "from": "obs-register-batch-done",
+      "to": "home",
+      "label": "完了"
     },
     {
       "from": "obs-register-new",

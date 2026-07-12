@@ -36,7 +36,14 @@ export type NodeType =
   // V3-AIP-101 磨き直し(c7 親レビュー13件・fix#5/#6): a collapsed-by-default
   // trigger (badge- or button-styled) that reveals its children on tap. Shared
   // by the F2 stage chip and the death-record button — one mechanism, no fork.
-  | "disclosure";
+  | "disclosure"
+  // V3-AIP-101 観測登録スライス2(c7-wireframes-core5 §F3/F4/F5/F6): クラッチ
+  // 割り出し1画面完結フォーム(F3)/お世話・移動・クラッチ照合昇格の一括選択
+  // グリッド(F4)/バッチ確認サマリ(F5b)/バッチ保存後の完了表示(F6b)。
+  | "clutch-intake"
+  | "batch-roster"
+  | "batch-summary"
+  | "batch-done";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported

@@ -1,0 +1,24 @@
+{
+  "screen_id": "obs-register-clutch",
+  "route": "/observe/register/clutch",
+  "title": "割り出し",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス2(F3 割り出し・クラッチ一括=匿名プール)。若齢は個体でなくクラッチ(count層)。個体IDは個別容器分割/QR発行の瞬間に初めて発生する — このスライスでは保存しない。実装は clutch-intake ノード1個(親3択+種継承/直付け候補+匹数+抜き取り計測の平均自動計算+容器)が担う。保存 = POST /clutches(+抜き取り計測があれば POST /observation/captures を subject_ref=clutch/<id> で連鎖)し、この画面内で完了表示まで行う(F4/F5のバッチドラフトは経由しない)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "割り出し — 新しいクラッチ", "level": 1 } },
+            { "id": "intake", "type": "clutch-intake" }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

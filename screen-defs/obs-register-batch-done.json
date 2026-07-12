@@ -1,0 +1,24 @@
+{
+  "screen_id": "obs-register-batch-done",
+  "route": "/observe/register/batch/done",
+  "title": "保存しました",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス2(F6 測った甲斐・バッチ版)。batch-done ノードが sessionStorage のバッチドラフト+保存結果を読み、行ごとの値+Δ・クラッチ結果(照合/昇格)・次の目安の事後登録を表示する。batch-commit の部分失敗は行ごとに「保存できませんでした」と表示し隠さない。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "保存しました — 今日の成長", "level": 1 } },
+            { "id": "done", "type": "batch-done" }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

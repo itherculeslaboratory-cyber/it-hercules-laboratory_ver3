@@ -1,0 +1,24 @@
+{
+  "screen_id": "obs-register-batch-confirm",
+  "route": "/observe/register/batch/confirm",
+  "title": "確認",
+  "layout": "standard",
+  "notes": "V3-AIP-101 観測登録スライス2(F5 一括確認・バッチ版)。F4 が sessionStorage に積んだバッチドラフトを batch-summary ノードが読み、種別ごとの1行サマリ+注意行(Δマイナス)だけ個別表示する(正常は畳む・確認は個体数ぶん繰り返さない)。[N件を一括保存] = POST /observation/batch-commit、続けて(オプトインなら)個体ごと POST /observation/schedule。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "確認", "level": 1 } },
+            { "id": "summary", "type": "batch-summary" }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

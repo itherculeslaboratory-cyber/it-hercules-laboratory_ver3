@@ -699,3 +699,35 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
+/* =============================================================================
+ * V3-AIP-101 観測登録スライス2(c7-wireframes-core5 §F3/F4/F5/F6) — F3 の親
+ * ピッカー検索行 + F4 まとめて記録のフィルタ行/行レイアウト。既存トークン
+ * (.civ-input/.civ-button/.civ-list/.civ-card 等)の組み合わせで足りない
+ * flex レイアウトだけをここに足す(新規色なし)。
+ * ========================================================================== */
+.civ-picker-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.civ-picker-row .civ-input {
+  flex: 1;
+}
+.civ-roster-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.civ-roster-filters .civ-input {
+  width: auto;
+}
+.civ-roster-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.civ-roster-row > .civ-card {
+  flex: 1;
+}
