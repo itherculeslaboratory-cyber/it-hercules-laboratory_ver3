@@ -87,7 +87,16 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await expect(indLink).toHaveAttribute("href", `/s/individual-detail?id=${bareId}`);
   await indLink.click();
   await expect(page.getByRole("heading", { name: "個体の詳細" })).toBeVisible();
-  await expect(page.getByText(/Dynastes hercules 体長 65/)).toBeVisible();
+  // individual-detail's species badge comes from the individual MASTER record
+  // (profile.species), not the capture's species_candidate — and this subject_ref
+  // was never explicitly registered via POST /individuals, so no master exists
+  // here (design-k1 individual-routes.ts projectIndividualProfile). The change-
+  // point timeline (TimelineRow, renderer.tsx) also never re-prints the raw
+  // measurement item text — only value+unit (see individual-detail.spec.ts d4's
+  // `/62g/` check) — and this obs-entry flow attaches no unit, so the visible
+  // token is the bare value. Scope to the timeline list to avoid matching "65"
+  // elsewhere (e.g. inside the generated id).
+  await expect(page.locator(".civ-timeline").getByText("65")).toBeVisible();
 
   // 6. issue a QR label; the qr-code node renders the freshly-issued token.
   await page.getByRole("button", { name: "QR ラベルを発行する" }).click();
@@ -121,8 +130,9 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
 
   // 9. the individual history now shows BOTH captures — persisted in real Truth.
   await page.goto(`${WEB}/s/individual-detail?id=${bareId}`);
-  await expect(page.getByText(/体長 65/)).toBeVisible();
-  await expect(page.getByText(/体重 32/)).toBeVisible();
+  const timeline = page.locator(".civ-timeline");
+  await expect(timeline.getByText("65")).toBeVisible();
+  await expect(timeline.getByText("32")).toBeVisible();
 
   // Enumerate Truth keys via a same-origin authenticated read (proves the
   // browser cookie authenticates; yields photo_id for the key list).

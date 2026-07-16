@@ -223,7 +223,7 @@ describe("Renderer runtime — body-shaping, transitions, data-binding", () => {
     expect(onAction).toHaveBeenCalledWith(action, {
       domain: "biology",
       species_confirmed_by: "user",
-      measurements: [{ kind: "number", item: "体長", value: "65" }],
+      measurements: [{ kind: "number", item: "体長", value: 65 }],
     });
   });
 
@@ -556,7 +556,7 @@ describe("Renderer — measurement-table node (V3-OBS-18)", () => {
     const body = onAction.mock.calls[0][1] as { measurements: Array<Record<string, unknown>> };
     expect(body.measurements[0]).toMatchObject({
       item: "体長",
-      value: "65",
+      value: 65,
       unit: "mm",
       method: "手入力",
       kind: "number",

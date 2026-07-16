@@ -804,7 +804,14 @@ function FormNode({ node }: { node: ScreenNode }) {
       let file: File | null = null;
       fd.forEach((v, k) => {
         if (typeof v === "string") {
-          if (v.trim() !== "") setPath(body, k, v);
+          if (v.trim() === "") return;
+          // A `variant:"number"` field renders <input type="number">, but
+          // FormData always yields strings — coerce back to a JS number so
+          // downstream numeric checks (typeof value === "number", e.g.
+          // TimelineRow/measureValue) see a real number, not "65".
+          const el = form.elements.namedItem(k);
+          const isNumber = el instanceof HTMLInputElement && el.type === "number";
+          setPath(body, k, isNumber ? Number(v) : v);
         } else if (v instanceof File && v.size > 0 && !file) {
           file = v;
         }
