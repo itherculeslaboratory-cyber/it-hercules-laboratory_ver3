@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>第16回裁定 質問シート(全51問)</title>
+<style>
+ :root{--bg:#0f1216;--card:#171b22;--line:#272d38;--fg:#e7e9ee;--dim:#8a93a3;--acc:#ff7a1a;--acc-bg:#2a1a0e;--ok:#3fb950;--warn:#d9a53b;}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 "Segoe UI",system-ui,sans-serif}
+ header{position:sticky;top:0;z-index:20;background:var(--bg);padding:22px 30px 18px;border-bottom:1px solid var(--line)}
+ h1{margin:0 0 6px;font-size:21px}
+ .sub{margin:0 0 14px;color:var(--dim);font-size:13px}
+ .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+ .progress{font-size:13px;color:var(--dim);border:1px solid var(--line);border-radius:20px;padding:6px 16px}
+ .progress b{color:var(--fg)}
+ .progress .chg{color:var(--acc)}
+ .progress .cmt{color:var(--warn)}
+ button.act{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:13.5px;cursor:pointer}
+ button.act:hover{border-color:var(--acc);color:var(--acc)}
+ button.primary{background:var(--acc);color:#1a0f05;border-color:var(--acc);font-weight:600}
+ button.primary:hover{opacity:.9;color:#1a0f05}
+ nav.jump{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+ nav.jump a{font-size:12.5px;color:var(--dim);border:1px solid var(--line);border-radius:20px;padding:4px 12px;text-decoration:none}
+ nav.jump a:hover{color:var(--acc);border-color:var(--acc)}
+ main{max-width:900px;margin:0 auto;padding:10px 30px 60px}
+ section.qsection{margin-top:38px;scroll-margin-top:150px}
+ h2{font-size:18px;margin:0 0 4px}
+ .sdesc{margin:0 0 16px;color:var(--dim);font-size:13.5px}
+ ul.cards{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;scroll-margin-top:150px}
+ .chead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+ .qid{display:inline-block;font:600 12px ui-monospace,monospace;color:var(--acc);border:1px solid #5a3818;background:var(--acc-bg);border-radius:20px;padding:2px 10px;margin-bottom:8px}
+ .qtext{font-size:16px;font-weight:600;line-height:1.55}
+ .chips{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}
+ .chip{font-size:11.5px;padding:3px 10px;border-radius:20px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+ .chip-state.changed{color:var(--acc);border-color:#5a3818;background:var(--acc-bg)}
+ .chip-comment{color:var(--warn);border-color:#4a3d1c;background:#241f11}
+ .bg{margin:8px 0 0;font-size:12.5px;color:var(--dim)}
+ .materials{margin:6px 0 0;font-size:11.5px;color:#5f6878}
+ .materials code{color:var(--dim);background:#0c0f14;padding:1px 6px;border-radius:5px;word-break:break-all}
+ .opts{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+ label.opt{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:9px;cursor:pointer;font-size:13.5px}
+ label.opt:hover{border-color:#3a4152}
+ label.opt.rec{border-color:#5a3818}
+ label.opt input{margin-top:3px;flex:0 0 auto;accent-color:var(--acc)}
+ label.opt input:checked ~ .opttext{color:var(--fg)}
+ label.opt.selected{border-color:var(--acc);background:#1c140b}
+ .opttext{flex:1}
+ .rec-badge{display:inline-block;font-size:10.5px;font-weight:700;color:var(--acc);border:1px solid #5a3818;background:var(--acc-bg);border-radius:20px;padding:1px 8px;margin-left:8px;vertical-align:middle}
+ .recnote{margin:10px 0 0;font-size:12px;color:var(--warn)}
+ textarea.comment{margin-top:14px;width:100%;min-height:52px;background:#0c0f14;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:13px/1.5 inherit;resize:vertical}
+ textarea.comment::placeholder{color:#5f6878}
+ #summaryWrap{margin-top:50px;border-top:1px solid var(--line);padding-top:24px}
+ #summaryWrap h2{font-size:16px}
+ #summaryOutput{width:100%;min-height:260px;background:#0c0f14;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font:12.5px/1.6 ui-monospace,monospace;white-space:pre;resize:vertical}
+ #toast{position:fixed;bottom:24px;right:24px;background:var(--acc);color:#1a0f05;font-weight:600;font-size:13.5px;padding:12px 20px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s}
+ #toast.show{opacity:1}
+</style></head>
+<body>
+<header>
+ <h1>第16回裁定 質問シート(全51問)</h1>
+ <p class="sub">2026-07-16 / ihl-ver3 T-38 全機能実装完了ラン — 各問は推奨案が初期選択済みです。変更したい問だけラジオを選び直し、必要ならコメントを添えてください。</p>
+ <div class="toolbar">
+  <span class="progress">変更 <b class="chg" id="cChanged">0</b>件 / コメント <b class="cmt" id="cComment">0</b>件 / 全51問</span>
+  <button class="act" id="btnReset" type="button">全て推奨に戻す</button>
+  <button class="act primary" id="btnSummary" type="button">回答まとめを作成してコピー</button>
+ </div>
+ <nav class="jump"><a href="#sec-A">A</a><a href="#sec-B">B</a><a href="#sec-C">C</a><a href="#sec-D">D</a><a href="#sec-E">E</a><a href="#sec-F">F</a><a href="#sec-G">G</a><a href="#sec-H">H</a><a href="#sec-I">I</a></nav>
+</header>
+<main>
+<section class="qsection" id="sec-A">
+ <h2>A. 方向を決める(最重要)</h2>
+ <p class="sdesc">ラン全体の方向が変わる5問。特に Q-PAY-01 は元指示と推奨が異なるため明示裁定をお願いします。</p>
+ <ul class="cards">
+  <li class="card" id="card_Q-PAY-01">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-PAY-01</span>
+        <div class="qtext">GMOあおぞら→PayPay統一の実現方式をどれにするか。</div>
+        <p class="bg">Web一次情報調査の結論: (1)『PayPay』は別会社2つ — PayPay銀行(旧ジャパンネット銀行)とPayPay株式会社(QR決済/OPA)。(2)PayPay銀行には個人事業主が単独契約できるリアルタイム入金Webhookが確認できず(小口向け振込専用口座はAPI通知なし+新規契約停止中)、sunabar相当のサンドボックスも無く、API料金非公開・最短6〜7週の個別審査 = 現行のGMO入金照合(検証済)をPayPay銀行では再現できない。(3)PayPay決済(OPA)は個人事業主可・開発サンドボックスあり・手数料1.98%(取引額比例)・昆虫生体の直接禁止規定なし(昆虫店『極』『クワガタ横丁』の導入実例あり)。ただし C2C分配/生体審査承認/資金決済法該当性 の3点が未確認(P0)。</p>
+        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §3(PayPay調査要約)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-PAY-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-PAY-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-PAY-01" value="0" checked><span class="opttext">方式D: 決済のみPayPay追加・銀行はGMOあおぞら維持(非破壊・10年コスト最小) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-01" value="1"><span class="opttext">方式B: PayPay決済(OPA)へ一本化・銀行振込は廃止</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-01" value="2"><span class="opttext">方式A: PayPay銀行へ全面移行(調査上は実現困難)</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-01" value="3"><span class="opttext">現状維持: PayPay導入自体を見送り</span></label>
+    </div>
+    <p class="recnote">※元指示『あおぞらGMOやめます』と異なる推奨です。GMO口座を解約すると検証済みの入金照合基盤を失い、PayPay銀行側に個人事業主向けの代替がありません。ここだけは明示の裁定をお願いします。</p>
+    <textarea class="comment" id="cm_Q-PAY-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-PAY-02">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-PAY-02</span>
+        <div class="qtext">PayPay加盟店のP0未確認3点(①昆虫生体の審査承認 ②C2C分配=複数出品者の代金徴収・5%控除・分配の規約可否 ③資金決済法(資金移動業)該当性)の確認方法。問い合わせ送信は人間アクションです。</div>
+        <p class="bg">いずれの回答でも、確認が済むまでPayPay決済の本番接続には着手しません(設計+sandbox検証まで)。③は最終的に弁護士確認が推奨されています。</p>
+        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §3</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-PAY-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-PAY-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-PAY-02" value="0" checked><span class="opttext">AIが問い合わせ文面を起草→ユーザーが送信 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-02" value="1"><span class="opttext">ユーザーが後日自分で問い合わせ</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-02" value="2"><span class="opttext">確認は本番契約直前まで先送り(設計だけ進める)</span></label>
+    </div>
+    <p class="recnote">文面起草まで自走し、送信だけ人間ゲートに残すのが最速。</p>
+    <textarea class="comment" id="cm_Q-PAY-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-SCOPE-01">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-SCOPE-01</span>
+        <div class="qtext">今回ラン(T-38)の実装スコープをどこまでにするか。</div>
+        <p class="bg">全735要件の現状(Opus敵対検証済): 実装済57・部分71・設計のみ96・未着手277・制約/思想216(実装対象外)・hold14・人間ゲート2・棄却2。第1波の実装対象は残170件、第2波の実装対象は約173件(うち未着手126)。g08動画系(35件)はvideo-prepブランチ管轄のため本ランから除外します。</p>
+        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §2(インベントリ)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-SCOPE-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-SCOPE-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-SCOPE-01" value="0" checked><span class="opttext">第1波残170件を必達+第2波は余力でベストエフォート <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-SCOPE-01" value="1"><span class="opttext">第1波のみで完了</span></label>
+     <label class="opt"><input type="radio" name="Q-SCOPE-01" value="2"><span class="opttext">第1波+第2波の全実装対象を必達(18時間枠では未達リスクあり)</span></label>
+     <label class="opt"><input type="radio" name="Q-SCOPE-01" value="3"><span class="opttext">S/Aティアのみ優先</span></label>
+    </div>
+    <p class="recnote">第1波必達が『全部』の実質。第2波を必達にすると検証(批評家ゲート)が薄くなるリスク。</p>
+    <textarea class="comment" id="cm_Q-SCOPE-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-UI-01">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-UI-01</span>
+        <div class="qtext">ihl-ver2 の ihl-ui-catalog + ui-parts-lab-w2(D:\mockups の31枚を1:1実装済みのスタイル済みReact部品約30枚+civ.cssトークン=ver3の--civ-*の直接の祖先)を ver3 へ fork 移植し、全画面の見た目の正本にしてよいか。</div>
+        <p class="bg">調査の結論: mockup水準の視覚作り込みは ver2 側に完成品として既に存在する。ver3レンダラは語彙(table/badge/stepper等)を実装済みなので、残るのは視覚的な作り込み(スペーシング・階層・アイコン)を各screen-defへ移植する作業。reuse-first・フォーク文化(Component単位fork)に合致。</p>
+        <p class="materials">材料: <code>D:\claude\systems\ihl-ver2\packages\ihl-ui-catalog</code> <code>docs/planning/c7/ui-parity-map.md</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-UI-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-UI-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-UI-01" value="0" checked><span class="opttext">採用: ver2部品の視覚作り込みをver3へ移植して見た目正本にする <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-UI-01" value="1"><span class="opttext">不採用: ver3独自CSSを磨く</span></label>
+    </div>
+    <p class="recnote">自作の劣化コピー回避の最短距離。</p>
+    <textarea class="comment" id="cm_Q-UI-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-UI-02">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-UI-02</span>
+        <div class="qtext">指示にあった『clodedesign』は Anthropic Labs の Claude Design(claude.ai/design・ブラウザ上で複数ビジュアル案を対話生成→選択するツール)と特定しました。どう使いますか。</div>
+        <p class="bg">既製デザイン資産の置き場ではなくワークフローツールのため『丸ごと採用』はできません。ihl-ver3への反映はエクスポート/手動移植になります。</p>
+        <p class="materials">材料: <code>https://claude.com/product/design</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-UI-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-UI-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-UI-02" value="0" checked><span class="opttext">ihl-ui-catalog移植を主軸にし、Claude Designはユーザーが任意でキー画面の案出しに使う(採用案はD:\mockupsへ追加) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-UI-02" value="1"><span class="opttext">Claude Designでの案出しを本ランの必須工程にする(ユーザーのブラウザ操作が必要)</span></label>
+     <label class="opt"><input type="radio" name="Q-UI-02" value="2"><span class="opttext">使わない</span></label>
+    </div>
+    <p class="recnote">本ランを人間操作でブロックしない形が自走と両立。</p>
+    <textarea class="comment" id="cm_Q-UI-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-B">
+ <h2>B. アーキ整合・HOLD</h2>
+ <p class="sdesc">不変条項と衝突している設計論点(load-bearing矛盾)と、保留中の大型アーキ要件2件。</p>
+ <ul class="cards">
+  <li class="card" id="card_OQ-HOLD-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-HOLD-01</span>
+        <div class="qtext">V3-FND-13(World→FeatureNode→Kernel(MiniKernel)→Component→SubComponentの確定階層・画面概念廃止・Kernel UUIDルーティング・MiniKernel最大14種)をver3で採用するか。</div>
+        <p class="bg">registry上hold=true。conflict: IHLはMiniScreenKernel非採用(#39)で「画面廃止/Kernel UUIDルーティング」の適用可否が未決。レイヤー命名(K/B/F/A/C→V/P/G/K/B/Xなど)がver1内で複数回揺れ、ver2の01-要件体系との対応が未定義。FeatureNode数も12/25等で揺れている。ambiguity: World→FeatureNode→Kernel階層とC-USBをver3で継承するか要判断。現行ver3実装は実質「画面(ScreenDef)」概念で進んでおり、本要件を字義通り採用すると大規模なアーキテクチャ変更になる。</p>
+        <p class="materials">材料: <code>01-requirements/registry.json (id: V3-FND-13)</code> <code>02-design/constitution.md</code> <code>docs/architecture.md</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-HOLD-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-HOLD-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-HOLD-01" value="0" checked><span class="opttext">採用しない(現行ScreenDef/画面ベースのアーキテクチャを正とし、本要件はver1時代の未整理構想として棄却または対象外化) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-HOLD-01" value="1"><span class="opttext">部分採用(Kernel UUIDルーティングの思想だけ将来検討課題として残し、具体的な14種MiniKernel/FeatureNode階層は不採用)</span></label>
+     <label class="opt"><input type="radio" name="OQ-HOLD-01" value="2"><span class="opttext">全面採用してアーキテクチャを再設計(大規模差分・非推奨)</span></label>
+    </div>
+    <p class="recnote">不採用を推奨(C1〜C7で実装済みのScreenDefベースのアーキテクチャが既に動いており、いまさら画面概念を廃止するのは不変条項①=10年コスト最小・②=フォーク文化の少数固定骨格に反する後戻りコストが大きい。棄却または対象外化が妥当)</p>
+    <textarea class="comment" id="cm_OQ-HOLD-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-HOLD-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-HOLD-02</span>
+        <div class="qtext">V3-AIP-61(技術選定をdeep researchでゼロから行い設計・実装を作り直す。既存資産は参考資料程度に格下げ)は既に確定済み裁定と矛盾する。この要件をどう扱うか。</div>
+        <p class="bg">registry上hold=true・human_confirm=true。conflict: 既存資産(ver1/ver2)を『参考資料程度』に格下げしゼロから作り直す方針(グリーンフィールド)と、既存資産への最小差分統合という現方針DESIGN-science-os-integration(ブラウンフィールド)が対立。ただしstatement内には既に『【裁定確定】ver3は新リポジトリに新しいフォルダへクリーンなフォルダ設計で構築する。コードはゼロベース、データ・思想・要件は本リポジトリから継承』という追記があり、事実上はver3のrepo自体がこの裁定の実行結果(クリーンrepo・データ/思想/要件は継承)である可能性が高い。</p>
+        <p class="materials">材料: <code>01-requirements/registry.json (id: V3-AIP-61)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-HOLD-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-HOLD-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-HOLD-02" value="0" checked><span class="opttext">現行ver3 repoの存在自体をこの要件の充足完了とみなしclose(確定・hold解除) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-HOLD-02" value="1"><span class="opttext">『さらに深いdeep research(業界最高技術選定)』の未実施部分が残っているとみなし、追加調査タスクとして継続</span></label>
+    </div>
+    <p class="recnote">ver3 repo自体が充足結果とみなしclose推奨(データ/思想/要件は継承されており、技術選定はC1〜C6で個別裁定(GMO/Cloudflare Workers/R2等)を通じて実質完了している)</p>
+    <textarea class="comment" id="cm_OQ-HOLD-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-LB-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-LB-01</span>
+        <div class="qtext">[load-bearing矛盾] series改名(clutchレコードのseriesトークン差し替え)操作は、不変条項③(R2 append-only・UPDATE/DELETE禁止)とどう両立させるか。</div>
+        <p class="bg">独立批評家がqr-physical-label-opsクラスタを`still_shallow`判定した理由の1つ。設計文書は『リネームはclutchレコードのseriesトークンを差し替えるだけ』と記述しているが、これは他の全変異(訂正・是正・昇格)がappend-onlyパターン(新レコード追記+LWW投影)であるのに対し、seriesだけ実質UPDATE前提になっている点で正面から矛盾する。個体側の不変序数(seq,year,clutch_id)は焼き付け(不変)、series文字列はclutch側で可変という設計自体は正しいが、「可変」の実現方法がappend-onlyパターンから逸脱している。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1213(still_shallow表・qr-physical-label-ops②)</code> <code>docs/planning/c7/usecase-driven-design.md#L795-796(該当設計記述)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-LB-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-LB-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-LB-01" value="0" checked><span class="opttext">settingsクラスタのpref-setと同じLWW投影パターン(新clutchレコード追記+seriesは最新値を都度投影)に修正 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-LB-01" value="1"><span class="opttext">clutchレコードは例外的にUPDATE可能な非Truthテーブル(投影キャッシュ)と位置付けて割り切る</span></label>
+     <label class="opt"><input type="radio" name="OQ-LB-01" value="2"><span class="opttext">series改名機能自体を初期リリースから外し、常に既定自動導出値のみとする</span></label>
+    </div>
+    <p class="recnote">pref-set同様のLWW投影パターンへの修正を推奨(既に同一文書内でsettings/preferencesが確立した解法をそのまま流用でき、不変条項③との矛盾を構造的に消せる)</p>
+    <textarea class="comment" id="cm_OQ-LB-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-LB-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-LB-02</span>
+        <div class="qtext">[load-bearing矛盾] 環境テレメトリの「source-count最充足採用」(collectorの不完全bucketよりCSVの完全bucketを優先表示)は、全経路が課す「同一bucketキーへのput-if-absent」の上でどう実現するか。</div>
+        <p class="bg">独立批評家がmachines-environment-ioクラスタを`still_shallow`判定した理由の1つ。put-if-absentは先着1件のみを確定させ後着を弾く機構であり、「後着の重ね書き・snapshot比較の余地を残さない」。一方で設計は「各bucketに集約元件数(source-count)を保持し、read-back投影は同一bucketキーに重なったsnapshotのうちsource-count最大を採用」と要求しており、単純なput-if-absent(先着勝ち)ではこの重ね書き自体が起きない=物理的に実行不能な組み合わせ。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1212(still_shallow表・machines-environment-io①)</code> <code>docs/planning/c7/usecase-driven-design.md#L731,#L746(該当設計記述)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-LB-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-LB-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-LB-02" value="0" checked><span class="opttext">bucketキーにsource(collector/CSV)を含めて複数snapshotを共存させ、read-back時にsource-count最大を選ぶ投影に変更(put-if-absent自体は維持しつつキー設計を拡張) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-LB-02" value="1"><span class="opttext">source-count最充足の要求を撤回し、単純な先着優先(put-if-absent)で妥協する</span></label>
+     <label class="opt"><input type="radio" name="OQ-LB-02" value="2"><span class="opttext">put-if-absentでなく別の書き込み機構(条件付き上書き)を環境テレメトリにのみ導入する(他ドメインのappend-only原則からは例外化)</span></label>
+    </div>
+    <p class="recnote">bucketキーにsource種別を含める形でのキー設計拡張を推奨(append-only原則を破らずに複数snapshot共存を実現できる。CL-01由来のput-if-absent機構自体は変更不要)</p>
+    <textarea class="comment" id="cm_OQ-LB-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-LB-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-LB-03</span>
+        <div class="qtext">[load-bearing矛盾] BYOK鍵5本+振込口座番号のパスフレーズ暗号バンドルについて、パスフレーズを忘れる・全端末を同時紛失する場合の復旧をどう扱うか(復旧不能を仕様として受容するか)。</div>
+        <p class="bg">独立批評家がaccount-settings-privacyクラスタを`still_shallow`判定した理由の1つ。設計は『パスフレーズは本人しか知らない=忘れると復元不能』を明示しているが、これは最重要ペルソナ(菜緒・非技術者のset-and-forget)において『5鍵+口座が同時に恒久喪失し得る』ことを意味し、クラスタが殺すと宣言した『恐怖』の一種が復旧不能な形で残存している。zero-knowledge(サーバが中身を一切読めない)を守る限り、原理的にサーバ側からの救済は不可能。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1215(still_shallow表・account-settings-privacy①)</code> <code>docs/planning/c7/usecase-driven-design.md#L976(該当設計記述・パスフレーズ復元不能の明示)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-LB-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-LB-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-LB-03" value="0"><span class="opttext">復旧不能をゼロ知識の対価として明示的に受容し、初回設定時に強い警告(バックアップコード印刷等)を必須にする</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-LB-03" value="1" checked><span class="opttext">リカバリコード(オフライン保管用の1回限り復旧鍵)を別途発行する仕組みを追加する(セキュリティ設計の変更を伴う) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-LB-03" value="2"><span class="opttext">口座番号のみサーバ本人スコープTruthへの平文保持を将来解禁する道を残し、鍵と口座で復旧可能性を分離する(V3-SEC-06の再解釈が必要)</span></label>
+    </div>
+    <p class="recnote">リカバリコード発行方式を推奨(zero-knowledgeを崩さずに『本人が別途安全に保管する第2の鍵』で復旧不能問題を緩和できる。1Password/Bitwarden等の既製パターンと同型)</p>
+    <textarea class="comment" id="cm_OQ-LB-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-LB-04">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-LB-04</span>
+        <div class="qtext">[人間裁定に分離済み・未回答] パスフレーズ暗号バンドル(zero-knowledge blob)をサーバに置いてよいか、それとも端末間直接転送(QR/パスフレーズ)に限るか。</div>
+        <p class="bg">account-settings-privacyクラスタの設計自身が『真の新規事項』として人間裁定に明示的に分離した項目。V3-SEC-06(口座を一切保持しない)の“保持”に、IHLが復号鍵を持たない暗号化ciphertextが該当するかどうかの解釈次第で、UXが根本的に別物になる(サーバ経由なら端末を問わず復元可能・端末間転送のみなら旧端末が手元にないと復元不能)。現状bank/payout平文schemaはrepoに存在せず、既定は端末保持+暗号バンドルで出荷されている。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L972,#L976,#L998(『真の新規事項』明記箇所)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-LB-04">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-LB-04" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-LB-04" value="0" checked><span class="opttext">サーバにzero-knowledge blobとして保持を許可(復元性が高い。V3-SEC-06の“保持”はplaintextのみを指すと解釈) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-LB-04" value="1"><span class="opttext">端末間直接転送(QR/ファイル)のみに限定(サーバに一切データを置かない。より厳格だが旧端末紛失時に復元不能)</span></label>
+    </div>
+    <p class="recnote">サーバでのzero-knowledge blob保持を許可(暗号化されIHLが復号不能なciphertextは実質的に“保持”に当たらないという解釈は妥当で、菜緒ペルソナのset-and-forgetを大きく改善する)</p>
+    <textarea class="comment" id="cm_OQ-LB-04" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-C">
+ <h2>C. CL-07 サムネイル(4点)</h2>
+ <p class="sdesc">C3から持ち越しの凍結スキーマ裁定。材料: docs/planning/c3/cl-07-thumbnail-options.md</p>
+ <ul class="cards">
+  <li class="card" id="card_OQ-CL07-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-CL07-01</span>
+        <div class="qtext">[CL-07裁定4点-①] thumbnail形式をJPEGで確定してよいか。</div>
+        <p class="bg">ver2実装はPNG出力だが要件文(CL-07/FR-18-06)はJPEG規定。frozen schemaはconstを付けず未確定のままC3から持ち越されている。ver3はgreenfieldで守るべき本番thumbnail実体が存在しない。</p>
+        <p class="materials">材料: <code>docs/planning/c3/cl-07-thumbnail-options.md §3,§5-1</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-CL07-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-CL07-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-CL07-01" value="0" checked><span class="opttext">JPEG確定(推奨) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-CL07-01" value="1"><span class="opttext">PNG継続</span></label>
+    </div>
+    <p class="recnote">JPEG採用(PNG比で配信/保存コストが数倍小さく不変条項①=10年コスト最小に有利。要件文とも一致)</p>
+    <textarea class="comment" id="cm_OQ-CL07-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-CL07-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-CL07-02</span>
+        <div class="qtext">[CL-07裁定4点-②] 実装経路の第1手を(a) jSquash on Workersでよいか($0硬制約ならb) Cloudflare Images、d) VPS残置はfallbackとして残置承認)。</div>
+        <p class="bg">4候補(wasm on Workers/CF Images/client canvas/VPS残置)を6軸(機能適合/Workers制約/コスト/バイト級互換/裁定への影響/メンテリスク)で比較済み。経路選択は不可逆でなく後から差替可能。</p>
+        <p class="materials">材料: <code>docs/planning/c3/cl-07-thumbnail-options.md §1,§4</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-CL07-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-CL07-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-CL07-02" value="0" checked><span class="opttext">(a) jSquash on Workers(推奨・$600/10年) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-CL07-02" value="1"><span class="opttext">(b) Cloudflare Image Transformations($0硬制約時の代替)</span></label>
+     <label class="opt"><input type="radio" name="OQ-CL07-02" value="2"><span class="opttext">(d) VPS残置をfallbackとして文書に残す(承認のみ・第1推奨にはしない)</span></label>
+    </div>
+    <p class="recnote">(a) jSquash on Workersを第1推奨として承認(サーバ側決定論生成を維持でき、thumbnail_manifestモデルとズレない)</p>
+    <textarea class="comment" id="cm_OQ-CL07-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-CL07-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-CL07-03</span>
+        <div class="qtext">[CL-07裁定4点-③] 受け入れ条件を「バイト級互換」から「契約級互換」(①長辺512px等式 ②decode可能な正当画像 ③EXIF orientation視覚的正立 ④formatフィールド確定値一致)に読み替えてよいか。</div>
+        <p class="bg">バイト級互換はどの候補でも技術的に不可能(リサンプラ・エンコーダがライブラリごとに異なる)かつ不要(greenfieldで守るべき本番バイト列が存在しない)。この読み替え自体が裁定事項。</p>
+        <p class="materials">材料: <code>docs/planning/c3/cl-07-thumbnail-options.md §2</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-CL07-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-CL07-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-CL07-03" value="0" checked><span class="opttext">契約級互換に読み替え承認(推奨) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-CL07-03" value="1"><span class="opttext">バイト級互換を維持(事実上VPS Pillow一択に候補が潰れる)</span></label>
+    </div>
+    <p class="recnote">契約級互換への読み替えを承認(バイト級はEXIF追加時点でVPSですら不成立になる達成不能条件のため)</p>
+    <textarea class="comment" id="cm_OQ-CL07-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-CL07-04">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-CL07-04</span>
+        <div class="qtext">[CL-07裁定4点-④] EXIF transposeをver3の正しい挙動として採用してよいか(ver2実装は未適用)。</div>
+        <p class="bg">frozen schemaのdescriptionは『EXIF transpose適用』を謳うが、ver2実物はこれを一切呼んでいない(grep該当0件)。ver3でのEXIF transpose採用は互換破壊でなく要件(CL-07/FR-18-06)への追従=挙動改善。</p>
+        <p class="materials">材料: <code>docs/planning/c3/cl-07-thumbnail-options.md §0.1</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-CL07-04">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-CL07-04" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-CL07-04" value="0" checked><span class="opttext">採用(推奨)。frozen description の『実装済み』表現を訂正対象とする <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-CL07-04" value="1"><span class="opttext">ver2互換を優先しEXIF transpose非適用のまま踏襲</span></label>
+    </div>
+    <p class="recnote">採用(縦横逆転画像を正しく表示するための本来の要件で、ver2側に守るべき既存挙動が存在しない)</p>
+    <textarea class="comment" id="cm_OQ-CL07-04" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-D">
+ <h2>D. 市場・残route</h2>
+ <p class="sdesc">市場画面の正本反映・制裁パラメータと、cutover前に処置が必要なplanned残route。</p>
+ <ul class="cards">
+  <li class="card" id="card_OQ-MKT-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-MKT-01</span>
+        <div class="qtext">正本usecase-driven-design.md §3必須(行215)の文言を更新するか、裁定記録だけに留めるか。</div>
+        <p class="bg">現行正本の文言「相違・死着でreceive確定でなくdisputeへ分岐」を「重大相違(死着/性別/系統違い)=dispute強制・軽微な計測値相違=append-only相違記録つき受取確定(事後dispute化可)」に改める案。ワイヤーは3出口のまま(正本と実装の整合)。[minor7]</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L1285</code> <code>docs/planning/c7/usecase-driven-design.md §3 market L215付近</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-MKT-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-MKT-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-MKT-01" value="0" checked><span class="opttext">正本の文言を新しい3出口ルールに合わせて更新 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-MKT-01" value="1"><span class="opttext">正本は現状維持・裁定記録にのみ新ルールを残す</span></label>
+    </div>
+    <p class="recnote">正本を更新(実装と正本が食い違ったまま放置するとフォーク文化での参照時に混乱する)</p>
+    <textarea class="comment" id="cm_OQ-MKT-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-MKT-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-MKT-02</span>
+        <div class="qtext">成立方式2方式(既定=即決・承諾制オプトイン)と状態機械5脚(同時申込択一/24h自動辞退/48h自動キャンセル+再出品/申込中の表示継続/受取確定放置→自動good)を正本の収束フロー・状態機械へ反映するか。</div>
+        <p class="bg">market第4稿(批評家R4 major7件反映済み)で構造は解消済みだが、正本ドキュメントへの反映はまだ裁定事項として保留。[minor8][major1][major2][批評R4]</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L1286</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-MKT-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-MKT-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-MKT-02" value="0" checked><span class="opttext">正本へ反映 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-MKT-02" value="1"><span class="opttext">ワイヤーのみを正としてしばらく維持</span></label>
+    </div>
+    <p class="recnote">正本へ反映(実装フェーズの参照ズレを防ぐ)</p>
+    <textarea class="comment" id="cm_OQ-MKT-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-MKT-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-MKT-03</span>
+        <div class="qtext">no-payマーク(未入金放置の申込制限)のパラメータ承認: 仮既定「30日内2回で7日間申込不可」でよいか。</div>
+        <p class="bg">48h未入金→自動キャンセル+再出品+no-payマークという機構自体はワイヤーで確定済み。制裁ポリシーとして人間裁定が必要な数値パラメータのみ未確定。[major2脚③]</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L1155,#L1287</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-MKT-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-MKT-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-MKT-03" value="0" checked><span class="opttext">仮既定どおり承認(30日内2回で7日間) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-MKT-03" value="1"><span class="opttext">回数/日数を変更</span></label>
+     <label class="opt"><input type="radio" name="OQ-MKT-03" value="2"><span class="opttext">制限なし(no-payマークのみで制限は課さない)</span></label>
+    </div>
+    <p class="recnote">仮既定を承認(グリーフィング対策として妥当な軽さ)</p>
+    <textarea class="comment" id="cm_OQ-MKT-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-MKT-04">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-MKT-04</span>
+        <div class="qtext">猶予キャンセル(成立後60分)の回数上限パラメータ。</div>
+        <p class="bg">ワイヤーは回数表示のみを実装しており、上限・制限内容は未確定。例:30日内3回で即決申込前に警告/制限、などのグリーフィング防止ポリシーが人間裁定事項。[批評R4]</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L1288</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-MKT-04">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-MKT-04" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-MKT-04" value="0" checked><span class="opttext">例示どおり30日内3回で警告/制限 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-MKT-04" value="1"><span class="opttext">別の回数・期間で設定</span></label>
+     <label class="opt"><input type="radio" name="OQ-MKT-04" value="2"><span class="opttext">上限を設けず表示のみに留める</span></label>
+    </div>
+    <p class="recnote">例示値(30日内3回で警告/制限)をno-payマークと対に承認するのが運用上わかりやすい。</p>
+    <textarea class="comment" id="cm_OQ-MKT-04" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-ROUTE-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-ROUTE-01</span>
+        <div class="qtext">planned残route「onboarding系」2本(GET /api/v1/onboarding/status, POST /api/v1/onboarding/complete)を実装するか廃止するか。</div>
+        <p class="bg">cutoverリハーサル前に処置が必要な残route。旧APIではこれらのroute状態が未認証開放(P0所見)されている。現行ver3設計はauth-onboarding-localeクラスタで『必須は表示言語(locale)+@id(handle)の2ゲートのみ・onboardingComplete=trueをV3-I18-02/V3-AUT-08で管理』という別の完了管理方式に収束しており、この2 routeが新設計でも必要かは要確認。</p>
+        <p class="materials">材料: <code>docs/planning/c6/cutover-readiness.md#L34,#L38</code> <code>docs/planning/status.md#L40</code> <code>docs/planning/c7/usecase-driven-design.md §auth-onboarding-locale(L1036-1116)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-ROUTE-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-ROUTE-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-ROUTE-01" value="0"><span class="opttext">新設計(locale+handle 2ゲート)にこの2 routeを合わせて実装</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-ROUTE-01" value="1" checked><span class="opttext">新設計では不要と判断し廃止(旧ver2の概念の残骸として処理) <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">廃止を推奨(新設計はlocale+handle確定をPATCH /me/preferences等の既存機構で管理しており、専用onboarding/status・complete routeは重複実装になりうる。要再確認の上での廃止判断)</p>
+    <textarea class="comment" id="cm_OQ-ROUTE-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-ROUTE-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-ROUTE-02</span>
+        <div class="qtext">planned残route「gmo webhook系」6本(GET reconciliation/meta, GET transfer-code, GET va-deposit/unsent, POST expected-payment, POST va-deposit/subscribe, POST webhook)を実装するか廃止するか。</div>
+        <p class="bg">GMO本番契約・live昇格(人間ゲート・未実施)に紐づく実装。C4完了時点でGMO sunabar照合の契約は確定済み(接続層sunabar/live分離・名前照合ポーリング)だが、実際のroute実装(特にwebhook受信)は本番契約前提でplanned止まり。cutoverリハーサル前に実装するか、GMO本番契約後に着手する既定路線のままにするか。</p>
+        <p class="materials">材料: <code>docs/planning/c6/cutover-readiness.md#L80-85</code> <code>docs/planning/status.md#L40,#L56</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-ROUTE-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-ROUTE-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-ROUTE-02" value="0"><span class="opttext">cutoverリハーサル前に実装まで完了させる(本番契約が来たら即稼働できる状態にする)</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-ROUTE-02" value="1" checked><span class="opttext">GMO本番契約(人間ゲート)後に着手する既定路線を維持(現状のまま) <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">GMO本番契約後着手を維持(本番鍵投入前に実装しても実地検証できず、人間ゲート=金銭に紐づく機能を前倒しで作り込むリスクの方が大きい)</p>
+    <textarea class="comment" id="cm_OQ-ROUTE-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-ROUTE-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-ROUTE-03</span>
+        <div class="qtext">planned残route「market transfer/match」2本(GET /market/transfer/{listing_id}, POST /market/listings/{listing_id}/match)を実装するか廃止するか。</div>
+        <p class="bg">2026-07-15第15回裁定でV3-IND-35(割り出し予約システム・親個体♂♀/単価/匹数指定→割り出し後自動マッチング)が新規採番された。このmatch routeが予約自動マッチング機能の実装先になる可能性が高く、廃止でなく新要件に合わせた再設計が必要になった可能性がある。</p>
+        <p class="materials">材料: <code>docs/planning/c6/cutover-readiness.md#L58-59</code> <code>docs/planning/status.md#L40</code> <code>docs/planning/rulings/user-ruling-2026-07-15-round-15.md(V3-IND-35新規採番)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-ROUTE-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-ROUTE-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-ROUTE-03" value="0" checked><span class="opttext">V3-IND-35の自動マッチング機能の実装先としてこの2 routeを再設計・実装 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-ROUTE-03" value="1"><span class="opttext">V3-IND-35とは別に新routeを設計し、この2 routeは旧概念として廃止</span></label>
+    </div>
+    <p class="recnote">V3-IND-35の実装先として再設計を推奨(round-15裁定は第1波・S tierの優先度が高い新機能であり、既存plannedルートの名前・意図とも近い。ゼロから別routeを起こすより流用効率が良い)</p>
+    <textarea class="comment" id="cm_OQ-ROUTE-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-E">
+ <h2>E. 検索・観測・個体</h2>
+ <p class="sdesc">重要5画面ワイヤーの残りopen_questions。</p>
+ <ul class="cards">
+  <li class="card" id="card_OQ-IND-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-IND-01</span>
+        <div class="qtext">個体詳細のtriage判定(■要対応/▲様子見/●順調)の閾値既定を、テンプレのstage別設定として編集可能にするか、システム固定既定で開始するか。</div>
+        <p class="bg">判定式はユーザーの飼育方針に依存するため、固定にすると合わない飼育者が出る一方、初期実装は固定の方が単純。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L1675</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-IND-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-IND-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-IND-01" value="0"><span class="opttext">テンプレstage別に編集可能</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-IND-01" value="1" checked><span class="opttext">システム固定既定(将来編集可能に拡張) <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">初期はシステム固定既定で単純に開始し、テンプレstage別編集は第2波で拡張。</p>
+    <textarea class="comment" id="cm_OQ-IND-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-IND-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-IND-02</span>
+        <div class="qtext">個体詳細dueの範囲は、テンプレstage間隔由来の世話予定のみか、IoT環境逸脱(温度/湿度アラート)も■要対応dueに含めて〔本日due〕送り列に乗せるか。</div>
+        <p class="bg">2026-07-12フィードバック第1陣で「due/超過を■要対応(赤)にしない・■は異常専用」の確定裁定があるため、環境逸脱を■に含めるなら『異常』カテゴリとして扱う整合が必要。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L1676</code> <code>docs/planning/c7/wireframes-core5.md#L2097-2102(第1陣裁定=追い立てない温度感)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-IND-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-IND-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-IND-02" value="0"><span class="opttext">世話予定duesのみ(中立トーン「そろそろ」)</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-IND-02" value="1" checked><span class="opttext">IoT環境逸脱も■要対応に含める(異常カテゴリとして) <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">環境逸脱は『異常』カテゴリとして■要対応に含め、世話予定dueは中立トーン(第1陣裁定と整合)。</p>
+    <textarea class="comment" id="cm_OQ-IND-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-IND-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-IND-03</span>
+        <div class="qtext">QR/NFC直着のハード方式: スマホカメラのQR読取のみで開始するか、NFCタグ物理ラベルまで初期対応するか。</div>
+        <p class="bg">コストと運用に関わるため裁定要。qr-physical-label-opsクラスタは現状QRのみで設計されている。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L1678</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-IND-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-IND-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-IND-03" value="0" checked><span class="opttext">QR読取のみ(初期リリース) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-IND-03" value="1"><span class="opttext">NFCタグも初期対応</span></label>
+    </div>
+    <p class="recnote">QR読取のみ(NFCタグ購入・貼付の物理コストと運用複雑性が増すため。カメラQRで十分な代替になる)</p>
+    <textarea class="comment" id="cm_OQ-IND-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-OBS-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-OBS-01</span>
+        <div class="qtext">観測登録「取り消す」(ステージ後退・死亡取消)に遡及期限を設けるか。</div>
+        <p class="bg">F4/F5の取消操作は誤操作の実害が大きいイベント(ステージ後退・死亡取消)。直近保存分のみ即時取消可とし以前は個体詳細から手動記録のみとするか、無期限で許可するか未確定。[批評R4]で追加された論点。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L611</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-OBS-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-OBS-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-OBS-01" value="0" checked><span class="opttext">直近保存分のみ即時取消可・それ以前は個体詳細からの手動記録のみ <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-OBS-01" value="1"><span class="opttext">無期限で即時取消を許可</span></label>
+     <label class="opt"><input type="radio" name="OQ-OBS-01" value="2"><span class="opttext">件数閾値(例:直近N件 or 直近X時間)で線引き</span></label>
+    </div>
+    <p class="recnote">直近保存分のみ即時取消可(件数が積み上がるほど誤操作の実害が大きいイベントのため、無制限取消は事故コストが高い)</p>
+    <textarea class="comment" id="cm_OQ-OBS-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-OBS-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-OBS-02</span>
+        <div class="qtext">(メタ注記)観測登録の open_questions は画面一覧表で「3件」と記載されているが、本文に明記されているのは1件(OQ-OBS-01)のみ。フィードバック第1陣(commit e26e28f)で「通知手段」1件がクローズ済みと分かるが、残る3件目の内容がmarkdown本文に書き出されていない(見出し自体が「open_questions は StructuredOutput 参照」であり、生成時のworkflow構造化出力にのみ存在し本文に転記されなかった可能性)。</div>
+        <p class="bg">作成コミット6b0b045の時点から一貫してこの状態(通知手段を含め2件しか実体を確認できない)。データ欠落であり、新規の設計論点ではない。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L609-616</code> <code>git show 6b0b045:docs/planning/c7/wireframes-core5.md</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-OBS-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-OBS-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-OBS-02" value="0" checked><span class="opttext">3件目は失われたとみなし2件(1closed+1open)を正とする <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-OBS-02" value="1"><span class="opttext">元のworkflow構造化出力(ログ等)が別途保存されていないか確認し復元を試みる</span></label>
+    </div>
+    <p class="recnote">実害は小さいため2件を正としてクローズ扱いで進めてよい(復元コストが見合わない)</p>
+    <textarea class="comment" id="cm_OQ-OBS-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-SRCH-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-SRCH-01</span>
+        <div class="qtext">類似検索(バスケット/F3)の既定スコープは「在庫全体」か「現在のフィルタ内」か。</div>
+        <p class="bg">現行ワイヤーは「在庫全体」既定+トグルでフィルタ内に切替。フィルタ内既定の方が良い作業が支配的なら変更が必要。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L900</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-SRCH-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-SRCH-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-SRCH-01" value="0" checked><span class="opttext">在庫全体を既定(現行案) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-SRCH-01" value="1"><span class="opttext">フィルタ内を既定に変更</span></label>
+    </div>
+    <p class="recnote">フィルタ内はトグルで到達できるため、既定は探索範囲が最大の在庫全体が安全。</p>
+    <textarea class="comment" id="cm_OQ-SRCH-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-SRCH-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-SRCH-02</span>
+        <div class="qtext">バスケット出口[→血統照合(近交チェック)]の遷移先ビューをC7(本フェーズ)の産出対象に含めるか。</div>
+        <p class="bg">出口ボタン自体は検索画面(obs-navigator)の担当として確定済みだが、遷移先の血統照合ビューの実装帰属(このフェーズでやるか後続か)が未定。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L901</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-SRCH-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-SRCH-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-SRCH-02" value="0" checked><span class="opttext">C7で血統照合ビューまで産出 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-SRCH-02" value="1"><span class="opttext">出口ボタンのみC7・照合ビューは後続フェーズ</span></label>
+    </div>
+    <p class="recnote">本ランは全機能実装が目標のため血統照合ビューも産出対象に含める。</p>
+    <textarea class="comment" id="cm_OQ-SRCH-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-SRCH-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-SRCH-03</span>
+        <div class="qtext">保存検索の保存先は端末ローカルか、Truth(append-only設定record)か。</div>
+        <p class="bg">複数端末同期が必要かどうかで決まる。Truthを選ぶ場合は改名=新record追記・削除=論理無効化フラグで実現(UPDATE/DELETE不使用・不変条項③)し、UI操作は保存先に依らず同一にする制約付き[m13採用]。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L639,#L902</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-SRCH-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-SRCH-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-SRCH-03" value="0"><span class="opttext">端末ローカルのみ</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-SRCH-03" value="1" checked><span class="opttext">Truth(append-only・複数端末同期可) <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">account-settings-privacyクラスタのpref-set機構(LWW投影・append-only)と同一パターンで実装できるため、Truth保存を推奨(菜緒ペルソナの複数端末運用と整合)</p>
+    <textarea class="comment" id="cm_OQ-SRCH-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-SRCH-04">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-SRCH-04</span>
+        <div class="qtext">F1L(ライト層既定表示)の収束ピル「成虫のみ表示中 ✕」の表出しきい値(在庫何件からピルを出すか)。</div>
+        <p class="bg">m12コールドスタートの閾値(在庫&gt;20件)を流用するか、ライト層独自の閾値を新たに裁定するか。[批評R4]</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L903</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-SRCH-04">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-SRCH-04" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-SRCH-04" value="0" checked><span class="opttext">m12と同じ閾値(在庫&gt;20件)を流用 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-SRCH-04" value="1"><span class="opttext">ライト層独自の閾値を新設</span></label>
+    </div>
+    <p class="recnote">m12の閾値流用(二重定義を避け不変条項②のfork文化=少数固定骨格に整合)</p>
+    <textarea class="comment" id="cm_OQ-SRCH-04" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-F">
+ <h2>F. 知の広場</h2>
+ <p class="sdesc">昇格閾値・権限・票の重みなど統治パラメータ。</p>
+ <ul class="cards">
+  <li class="card" id="card_OQ-PLZ-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-PLZ-01</span>
+        <div class="qtext">知の広場スレの昇格閾値定数一式の確定: 「✔裏取り済み」昇格=実観測cite≥何件・追試≥何件か / 「⚠反証あり」=「再現せず」+cite≥何件か / 「未収束の論点」のstance母数閾値。</div>
+        <p class="bg">ワイヤーの例値(4/2/5/12)は仮置き。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L2059</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-PLZ-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-PLZ-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-PLZ-01" value="0" checked><span class="opttext">仮値(4/2/5/12)を承認 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-PLZ-01" value="1"><span class="opttext">個別に値を変更</span></label>
+     <label class="opt"><input type="radio" name="OQ-PLZ-01" value="2"><span class="opttext">コミュニティ規模に応じて可変にする</span></label>
+    </div>
+    <p class="recnote">仮値(4/2/5/12)で開始し運用データで調整。</p>
+    <textarea class="comment" id="cm_OQ-PLZ-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-PLZ-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-PLZ-02</span>
+        <div class="qtext">票の重み係数: 認定飼育者と一次観測者(観測cite添付・追試実施者)のそれぞれの係数値。</div>
+        <p class="bg">昇格判定=重み付き票・表示=生数+内訳、という機構自体はワイヤーで確定済み。係数の具体値のみ未確定。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L2060,#L1764</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-PLZ-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-PLZ-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-PLZ-02" value="0"><span class="opttext">係数を明示指定(例: 認定飼育者=2倍・一次観測者=1.5倍等)</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-PLZ-02" value="1" checked><span class="opttext">AIに設計を委任し初期値を試行運用で調整 <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">初期値は認定飼育者2.0倍・一次観測者1.5倍で開始し試行運用で調整。</p>
+    <textarea class="comment" id="cm_OQ-PLZ-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-PLZ-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-PLZ-03</span>
+        <div class="qtext">解決マーク([✔解決した]/[取り消す])の権限はスレ主のみか、認定飼育者にも開放するか。</div>
+        <p class="bg">権限範囲は知の広場の統治構造に関わる裁定事項。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L2061</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-PLZ-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-PLZ-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-PLZ-03" value="0" checked><span class="opttext">スレ主のみ <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-PLZ-03" value="1"><span class="opttext">スレ主+認定飼育者</span></label>
+    </div>
+    <p class="recnote">初期はスレ主のみ(荒れ防止)。後から開放は可逆。</p>
+    <textarea class="comment" id="cm_OQ-PLZ-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-PLZ-04">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-PLZ-04</span>
+        <div class="qtext">論点の昇格([⤴])・fork起票・論点切り出しの権限範囲、および遡及態度依頼の通知対象範囲(全返信者か当該返信者のみか)。</div>
+        <p class="bg">仮置き=⤴とfork起票はスレ主+認定飼育者、F2切り出しトグルは全員(自分の返信からのみ)。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L2062</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-PLZ-04">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-PLZ-04" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-PLZ-04" value="0" checked><span class="opttext">仮置きどおり承認 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-PLZ-04" value="1"><span class="opttext">権限範囲を変更</span></label>
+    </div>
+    <p class="recnote">仮置きを承認(スレ主+認定飼育者への限定は不変条項④=人間ゲート文化・過度な民主化による荒れを防ぐ設計思想と整合)</p>
+    <textarea class="comment" id="cm_OQ-PLZ-04" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-PLZ-05">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-PLZ-05</span>
+        <div class="qtext">カード発行の委譲: スレ主無応答N日で発行導線を認定飼育者/最多cite観測者のどちらへ(または両方へ)委譲するか、Nは何日か。</div>
+        <p class="bg">R4-4解消: 質問者が答えを得て離脱するQ&amp;Aの常態により、閾値到達済みスレが永久にカード化されず知見のプールが痩せる欠陥への対処。自動発行はしない(opt-in規律維持)。</p>
+        <p class="materials">材料: <code>docs/planning/c7/wireframes-core5.md#L2063,#L2007</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-PLZ-05">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-PLZ-05" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-PLZ-05" value="0"><span class="opttext">認定飼育者のみへ委譲</span></label>
+     <label class="opt"><input type="radio" name="OQ-PLZ-05" value="1"><span class="opttext">最多cite観測者のみへ委譲</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-PLZ-05" value="2" checked><span class="opttext">両方へ委譲 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-PLZ-05" value="3"><span class="opttext">Nの日数を別途指定</span></label>
+    </div>
+    <p class="recnote">両方へ委譲・N=14日を初期値に。</p>
+    <textarea class="comment" id="cm_OQ-PLZ-05" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-G">
+ <h2>G. 新規採番・オンボーディング</h2>
+ <p class="sdesc">新規要件IDの採番可否と認証まわりの新route。</p>
+ <ul class="cards">
+  <li class="card" id="card_OQ-NEWID-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-NEWID-01</span>
+        <div class="qtext">検索のグラフビュー+ホバー簡易カード(新規採番候補)を実装対象に追加してよいか。</div>
+        <p class="bg">近さ(画像類似/形質/血縁)のエンティティ紐づき図表示。ノードホバーで簡易ビュー・クリックで個体詳細へ。論文クラスタのギャップ可視化(3.6-5)と部品を共有できる可能性がある。まだ新規要件ID未採番。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1222</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-NEWID-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-NEWID-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-NEWID-01" value="0" checked><span class="opttext">新規ID採番して第1波/第2波へ組み込み <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-NEWID-01" value="1"><span class="opttext">見送り(将来検討)</span></label>
+    </div>
+    <p class="recnote">紐づき図はユーザー高評価軸。既製グラフレイアウト(graphify等)の活用を前提に採番して本ランに含める。</p>
+    <textarea class="comment" id="cm_OQ-NEWID-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-NEWID-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-NEWID-02</span>
+        <div class="qtext">SwitchBot CSV importer(新規採番候補)を実装対象に追加してよいか。</div>
+        <p class="bg">2026-07-12フィードバック第1陣で「環境データはCSVファースト」が確定裁定となったことに伴う具体機能。機器選択→CSV投入→期間重複はput-if-absent自動スキップ。machines-environment-ioクラスタの設計は完了しているが要件IDは未採番。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1223,#L698-770(machines-environment-ioクラスタ全体)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-NEWID-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-NEWID-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-NEWID-02" value="0" checked><span class="opttext">新規ID採番して実装 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-NEWID-02" value="1"><span class="opttext">見送り</span></label>
+    </div>
+    <p class="recnote">採番を推奨(CSVファースト裁定の実体化に必須で、既にwireframes/usecase設計は収束済み)</p>
+    <textarea class="comment" id="cm_OQ-NEWID-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-NEWID-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-NEWID-03</span>
+        <div class="qtext">Docker collectorの配布・設定設計(新規採番候補)を実装対象に追加してよいか。</div>
+        <p class="bg">任意レイヤーとしての配布場所(repo/イメージ)・.envへのSwitchBotキー格納手順・観測登録(棚join)との連携ドキュメント。既定はあくまでCSVファーストで、collectorは「あれば使う」任意機能。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1224,#L732,#L748</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-NEWID-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-NEWID-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-NEWID-03" value="0"><span class="opttext">新規ID採番して実装</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-NEWID-03" value="1" checked><span class="opttext">ドキュメントのみ整備しコード配布は見送り <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-NEWID-03" value="2"><span class="opttext">完全に見送り</span></label>
+    </div>
+    <p class="recnote">優先度低(第2波以降でよい。CSVファーストが既定のため必須ではない)</p>
+    <textarea class="comment" id="cm_OQ-NEWID-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-ONB-01">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-ONB-01</span>
+        <div class="qtext">国(country)の永続受け皿schema(仮 ihl.profile.country.v1)を新設し、国情報をUserプロフィールに永続保持してよいか。</div>
+        <p class="bg">V3-AUT-35は逐語で『国(country)は保持しない(FR-REG-06/06a・本人の葛藤を優先)。将来配慮目的で国情報が必要になった場合のみ再検討』+human_confirm:trueと明記。V3-I18-17のconflictフィールドも『国情報を何に使いどこまで保持するかは未裁定』と明記。ゆえに新schema新設は既存確定要件と正面衝突する裁定案件。既定は国を保持しなくてもオンボーディングは完全成立する。ただし2026-07-15第15回裁定でV3-GOV-35(違法出品ユーザー自治)向けに国選択が『内部属性(非表示)として必須化』される例外がV3-I18-02に追記済みで、状況が変化している可能性がある。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1113</code> <code>docs/planning/rulings/user-ruling-2026-07-15-round-15.md(V3-I18-02修正・V3-GOV-35拡張)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-ONB-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-ONB-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-ONB-01" value="0"><span class="opttext">永続受け皿schemaを新設(国際信頼スコア・文化タグ用途に活用)</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-ONB-01" value="1" checked><span class="opttext">新設せず、V3-GOV-35用途に限定した最小限の内部属性のみ(既存の例外条項の範囲内で運用) <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">第15回裁定でV3-GOV-35向けの国選択必須化が既に例外承認されているため、その運用に必要な最小限のフィールドのみ新設し、汎用の国際信頼スコア/文化タグ用途への拡張は別途裁定に回すのが穏当</p>
+    <textarea class="comment" id="cm_OQ-ONB-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-ONB-02">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-ONB-02</span>
+        <div class="qtext">handle-availability(入力中の可用性予告)routeを新設するか。</div>
+        <p class="bg">打鍵中にhandle→userIdの存在を照会して『使えそう/すでに使われています』を予告表示する新規API。一意性の権威的担保は確定時put-if-absent(409)で成立するため、advisoryが無くても動線は縮退成立する(UX向上の実装波であり必須ではない)。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1114,#L1067</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-ONB-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-ONB-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt"><input type="radio" name="OQ-ONB-02" value="0"><span class="opttext">新設する(UX向上)</span></label>
+     <label class="opt rec"><input type="radio" name="OQ-ONB-02" value="1" checked><span class="opttext">見送り(確定時409のみで運用) <span class="rec-badge">★推奨</span></span></label>
+    </div>
+    <p class="recnote">見送り推奨(確定時409で一意性は担保済み・実装コストに見合う優先度が低い。将来必要になれば追加できる)</p>
+    <textarea class="comment" id="cm_OQ-ONB-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_OQ-ONB-03">
+    <div class="chead">
+      <div>
+        <span class="qid">OQ-ONB-03</span>
+        <div class="qtext">数字コード(別端末フォールバック)のverify routeを新設するか。</div>
+        <p class="bg">magic-link発行時に同一OTPを数字コードとしても返し、code入力→検証する経路。現verifyはtoken前提ゆえ小さな新規追加で済む。別端末/webviewの『普遍の逃げ道』として送信成功画面と/loginの両方に入力欄を常設する設計。auth-onboarding-localeクラスタはこの項目自体をstill_shallow指摘②で『必須項目が未実装機構に依存する自己矛盾』と名指ししている。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md#L1115,#L1216(still_shallow②)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_OQ-ONB-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_OQ-ONB-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="OQ-ONB-03" value="0" checked><span class="opttext">新設する(推奨・別端末フォールバックの必須動線として) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="OQ-ONB-03" value="1"><span class="opttext">見送り(magic-linkのみで運用しフォールバックを持たない)</span></label>
+    </div>
+    <p class="recnote">新設を推奨(送信成功画面が『届かない全経路の受け皿』を謳う以上、数字コード経路が無いとその主張自体が成立しない設計上の必須ピース)</p>
+    <textarea class="comment" id="cm_OQ-ONB-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-H">
+ <h2>H. 要件改善バッチ(批評トップ10より)</h2>
+ <p class="sdesc">Opus批評家による要件定義の穴。10年運用の耐久性に直結。</p>
+ <ul class="cards">
+  <li class="card" id="card_Q-REQ-01">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-REQ-01</span>
+        <div class="qtext">Truth(R2)自体のバックアップ要件が存在しない(10年存続の最大穴)。バックアップ先をどこにするか。</div>
+        <p class="bg">現行要件は『投影を捨てTruthから再生成』のみで、Truth正本消失は救えない。かつDNS・R2・メールを単一Cloudflareアカウントに集約(V3-CST-04)しているため、アカウント凍結・侵害・誤削除でTruth全損。無料/低額の一度きりセットアップ=設備投資型で解決可能。</p>
+        <p class="materials">材料: <code>01-requirements/srs.md §5.3</code> <code>docs/planning/c8/PLAN-c8-full-run.md §4</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-REQ-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-REQ-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-REQ-01" value="0" checked><span class="opttext">別プロバイダ(Backblaze B2等)への複製+ローカルD:\バックアップへの定期pullの二重化 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-01" value="1"><span class="opttext">別Cloudflareアカウントへの複製</span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-01" value="2"><span class="opttext">ローカル定期pullのみ</span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-01" value="3"><span class="opttext">見送り</span></label>
+    </div>
+    <p class="recnote">同一プロバイダ内複製はアカウント凍結に無力なため二重化を推奨。</p>
+    <textarea class="comment" id="cm_Q-REQ-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-REQ-02">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-REQ-02</span>
+        <div class="qtext">『クラッチ=匿名プール(個体識別不能な幼虫のcount層)』を要件として新規採番し、V3-IND-02(全個体UID一貫識別)に但し書きを入れてよいか。</div>
+        <p class="bg">設計文書(usecase-driven-design.md §4.2)は最優先ペルソナ(100匹一括)の最重要オペとして二層アイデンティティ(匿名count層/識別individual層+昇格+attrition照合)を確定済みだが、srs.mdに該当要件IDが1件も無く、V3-IND-02と正面衝突したまま。</p>
+        <p class="materials">材料: <code>docs/planning/c7/usecase-driven-design.md L317-343</code> <code>01-requirements/srs.md §2.02</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-REQ-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-REQ-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-REQ-02" value="0" checked><span class="opttext">承認: 二層アイデンティティ/sample計測/昇格+attrition照合を新規採番し、V3-IND-02に『アドレスは個別容器分割/QR発行時に発生』の但し書き <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-02" value="1"><span class="opttext">見送り</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-REQ-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-REQ-03">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-REQ-03</span>
+        <div class="qtext">BAN/行政命令の即時失効とステートレスJWT(TTL30日・デニーリスト後付け)が未整合。失効方式をどれで確定するか。</div>
+        <p class="bg">純ステートレスのままではBAN済み・行政命令対象ユーザーの既発行トークンが最大30日有効=詐欺者を即座に締め出せない(V3-KRM-04/V3-GOV-09と衝突)。</p>
+        <p class="materials">材料: <code>01-requirements/srs.md V3-AUT-03/V3-KRM-04/V3-GOV-09</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-REQ-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-REQ-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-REQ-03" value="0" checked><span class="opttext">KVデニーリスト(BAN/失効者のみ格納・毎リクエスト照会)をMVP必須へ格上げ <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-03" value="1"><span class="opttext">毎リクエストのユーザー状態投影照合</span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-03" value="2"><span class="opttext">後付けのまま(第2波送り)</span></label>
+    </div>
+    <p class="recnote">デニーリストは対象者のみ格納で小さく、Workers KVで低コスト。</p>
+    <textarea class="comment" id="cm_Q-REQ-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-REQ-04">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-REQ-04</span>
+        <div class="qtext">料率5%の母数を『成約額(売上全体)』で固定し、商用3%・フォーク10%との重複計上不可を明文化してよいか。</div>
+        <p class="bg">round-15は率のみ5%に変更し、母数・重複計上・端数・月起算の下流が未確定のまま(registry.json ambiguityに残存)。srs §2.05ヘッダの旧8%残存は誤記のため裁定不要で自走修正します。コード側定数(economy-constants.ts=0.08)の5%追従も自走修正します。</p>
+        <p class="materials">材料: <code>01-requirements/srs.md §2.05</code> <code>apps/api/src/economy-constants.ts</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-REQ-04">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-REQ-04" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-REQ-04" value="0" checked><span class="opttext">承認: 母数=成約額・3%/10%との重複計上不可を明文化 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-04" value="1"><span class="opttext">母数を別の定義にする(コメント欄で指定)</span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-04" value="2"><span class="opttext">保留</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-REQ-04" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-REQ-05">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-REQ-05</span>
+        <div class="qtext">2FA(TOTP)の採否(V3-AUT-32で未裁定のまま滞留中)。</div>
+        <p class="bg">V3-AUT-01=マジックリンクのみと衝突懸念があり『別途裁定』のまま第2波に滞留。乗っ取り対策の設計が止まっている。</p>
+        <p class="materials">材料: <code>01-requirements/srs.md V3-AUT-32/V3-AUT-01</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-REQ-05">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-REQ-05" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-REQ-05" value="0" checked><span class="opttext">重要操作(メール変更・アカウント削除・大口取引)限定のopt-in TOTPとして第2波採番(V3-AUT-01と非衝突化を明文化) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-05" value="1"><span class="opttext">全面採用</span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-05" value="2"><span class="opttext">見送り(マジックリンクのみ継続)</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-REQ-05" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-REQ-06">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-REQ-06</span>
+        <div class="qtext">外部依存(決済=GMO/配送=日本郵便URL/メール=Resend/IoT=SwitchBot)の『交換可能な薄いアダプタ+依存ごとに縮退動作1行』のNFR新設を承認するか。</div>
+        <p class="bg">中核フローが単一外部プロバイダに固着しており、10年内の仕様変更・サービス廃止時の代替経路が要件に無い。PayPay移行検討そのものがこのリスクの実例。</p>
+        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §4</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-REQ-06">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-REQ-06" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-REQ-06" value="0" checked><span class="opttext">承認 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-06" value="1"><span class="opttext">決済のみ先行して他は見送り</span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-06" value="2"><span class="opttext">見送り</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-REQ-06" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-REQ-07">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-REQ-07</span>
+        <div class="qtext">批評トップ10のうち裁定不要と判定した4点を推奨どおり自走反映してよいか: ①書込系レート制限+ユーザー別クォータ ②バッチ/cron失敗の監視・ハートビート通知 ③『憲法』用語の分離+5%倫理宣言の正本パス確定 ④データエクスポート二層(事実CSV/画像分離)の採番+grilling確定事項→要件への環流CRフロー追加。</div>
+        <p class="bg">いずれも可逆な要件/設計追加で、批評家が『設計で追加可能・裁定不要』と判定した項目。まとめて自走に含めるかの確認のみ。</p>
+        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §4(批評トップ10)</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-REQ-07">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-REQ-07" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-REQ-07" value="0" checked><span class="opttext">一括承認 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-07" value="1"><span class="opttext">個別に確認したい(コメント欄で指定)</span></label>
+     <label class="opt"><input type="radio" name="Q-REQ-07" value="2"><span class="opttext">見送り</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-REQ-07" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<section class="qsection" id="sec-I">
+ <h2>I. 運用メタ</h2>
+ <p class="sdesc">本ランの進め方の確認2問。</p>
+ <ul class="cards">
+  <li class="card" id="card_Q-META-01">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-META-01</span>
+        <div class="qtext">質問シートの未回答項目は推奨案を採用して自走してよいか。</div>
+        <p class="bg">回答後は人間ゲート(公開・金銭・実鍵・物理・撤回台帳)以外ノンストップで完走します。</p>
+        
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-META-01">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-META-01" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-META-01" value="0" checked><span class="opttext">未回答=推奨案採用で自走 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-META-01" value="1"><span class="opttext">未回答項目は保留として人間ゲート扱い</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-META-01" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-META-02">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-META-02</span>
+        <div class="qtext">別Claudeセッションが実装中の V3-OBS-32(CSVインポート)とその周辺(machines-environment-ioクラスタ・device画面・tests/fixtures/csv-import-golden)には本ランでは触れない棲み分けでよいか。</div>
+        <p class="bg">同一ファイルの同時編集とmainへの競合コミットを避けるため。OQ-LB-02(put-if-absent vs source-count)の裁定結果は別セッションにも影響するため、裁定内容はコミットメッセージ経由で共有します。</p>
+        
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-META-02">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-META-02" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-META-02" value="0" checked><span class="opttext">触れない(棲み分け) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-META-02" value="1"><span class="opttext">本ランに統合する(別セッションの停止はユーザーが実施)</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-META-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+ </ul>
+</section>
+<div id="summaryWrap">
+ <h2>回答まとめ</h2>
+ <p class="sdesc">上のボタンでここに生成されクリップボードへコピーされます(コピーに失敗した場合は下のテキストを手動で選択してコピーしてください)。</p>
+ <textarea id="summaryOutput" readonly placeholder="[回答まとめを作成してコピー]を押すとここに出力されます"></textarea>
+</div>
+</main>
+<div id="toast"></div>
+<script id="qdata" type="application/json">
+{
+ "date": "2026-07-16",
+ "round": 16,
+ "sections": [
+  {
+   "key": "A",
+   "title": "A. 方向を決める(最重要)",
+   "desc": "ラン全体の方向が変わる5問。特に Q-PAY-01 は元指示と推奨が異なるため明示裁定をお願いします。"
+  },
+  {
+   "key": "B",
+   "title": "B. アーキ整合・HOLD",
+   "desc": "不変条項と衝突している設計論点(load-bearing矛盾)と、保留中の大型アーキ要件2件。"
+  },
+  {
+   "key": "C",
+   "title": "C. CL-07 サムネイル(4点)",
+   "desc": "C3から持ち越しの凍結スキーマ裁定。材料: docs/planning/c3/cl-07-thumbnail-options.md"
+  },
+  {
+   "key": "D",
+   "title": "D. 市場・残route",
+   "desc": "市場画面の正本反映・制裁パラメータと、cutover前に処置が必要なplanned残route。"
+  },
+  {
+   "key": "E",
+   "title": "E. 検索・観測・個体",
+   "desc": "重要5画面ワイヤーの残りopen_questions。"
+  },
+  {
+   "key": "F",
+   "title": "F. 知の広場",
+   "desc": "昇格閾値・権限・票の重みなど統治パラメータ。"
+  },
+  {
+   "key": "G",
+   "title": "G. 新規採番・オンボーディング",
+   "desc": "新規要件IDの採番可否と認証まわりの新route。"
+  },
+  {
+   "key": "H",
+   "title": "H. 要件改善バッチ(批評トップ10より)",
+   "desc": "Opus批評家による要件定義の穴。10年運用の耐久性に直結。"
+  },
+  {
+   "key": "I",
+   "title": "I. 運用メタ",
+   "desc": "本ランの進め方の確認2問。"
+  }
+ ],
+ "questions": [
+  {
+   "qid": "Q-PAY-01",
+   "section": "A",
+   "question": "GMOあおぞら→PayPay統一の実現方式をどれにするか。",
+   "background": "Web一次情報調査の結論: (1)『PayPay』は別会社2つ — PayPay銀行(旧ジャパンネット銀行)とPayPay株式会社(QR決済/OPA)。(2)PayPay銀行には個人事業主が単独契約できるリアルタイム入金Webhookが確認できず(小口向け振込専用口座はAPI通知なし+新規契約停止中)、sunabar相当のサンドボックスも無く、API料金非公開・最短6〜7週の個別審査 = 現行のGMO入金照合(検証済)をPayPay銀行では再現できない。(3)PayPay決済(OPA)は個人事業主可・開発サンドボックスあり・手数料1.98%(取引額比例)・昆虫生体の直接禁止規定なし(昆虫店『極』『クワガタ横丁』の導入実例あり)。ただし C2C分配/生体審査承認/資金決済法該当性 の3点が未確認(P0)。",
+   "options": [
+    "方式D: 決済のみPayPay追加・銀行はGMOあおぞら維持(非破壊・10年コスト最小)",
+    "方式B: PayPay決済(OPA)へ一本化・銀行振込は廃止",
+    "方式A: PayPay銀行へ全面移行(調査上は実現困難)",
+    "現状維持: PayPay導入自体を見送り"
+   ],
+   "rec": 0,
+   "rec_note": "※元指示『あおぞらGMOやめます』と異なる推奨です。GMO口座を解約すると検証済みの入金照合基盤を失い、PayPay銀行側に個人事業主向けの代替がありません。ここだけは明示の裁定をお願いします。",
+   "materials": [
+    "docs/planning/c8/PLAN-c8-full-run.md §3(PayPay調査要約)"
+   ]
+  },
+  {
+   "qid": "Q-PAY-02",
+   "section": "A",
+   "question": "PayPay加盟店のP0未確認3点(①昆虫生体の審査承認 ②C2C分配=複数出品者の代金徴収・5%控除・分配の規約可否 ③資金決済法(資金移動業)該当性)の確認方法。問い合わせ送信は人間アクションです。",
+   "background": "いずれの回答でも、確認が済むまでPayPay決済の本番接続には着手しません(設計+sandbox検証まで)。③は最終的に弁護士確認が推奨されています。",
+   "options": [
+    "AIが問い合わせ文面を起草→ユーザーが送信",
+    "ユーザーが後日自分で問い合わせ",
+    "確認は本番契約直前まで先送り(設計だけ進める)"
+   ],
+   "rec": 0,
+   "rec_note": "文面起草まで自走し、送信だけ人間ゲートに残すのが最速。",
+   "materials": [
+    "docs/planning/c8/PLAN-c8-full-run.md §3"
+   ]
+  },
+  {
+   "qid": "Q-SCOPE-01",
+   "section": "A",
+   "question": "今回ラン(T-38)の実装スコープをどこまでにするか。",
+   "background": "全735要件の現状(Opus敵対検証済): 実装済57・部分71・設計のみ96・未着手277・制約/思想216(実装対象外)・hold14・人間ゲート2・棄却2。第1波の実装対象は残170件、第2波の実装対象は約173件(うち未着手126)。g08動画系(35件)はvideo-prepブランチ管轄のため本ランから除外します。",
+   "options": [
+    "第1波残170件を必達+第2波は余力でベストエフォート",
+    "第1波のみで完了",
+    "第1波+第2波の全実装対象を必達(18時間枠では未達リスクあり)",
+    "S/Aティアのみ優先"
+   ],
+   "rec": 0,
+   "rec_note": "第1波必達が『全部』の実質。第2波を必達にすると検証(批評家ゲート)が薄くなるリスク。",
+   "materials": [
+    "docs/planning/c8/PLAN-c8-full-run.md §2(インベントリ)"
+   ]
+  },
+  {
+   "qid": "Q-UI-01",
+   "section": "A",
+   "question": "ihl-ver2 の ihl-ui-catalog + ui-parts-lab-w2(D:\\mockups の31枚を1:1実装済みのスタイル済みReact部品約30枚+civ.cssトークン=ver3の--civ-*の直接の祖先)を ver3 へ fork 移植し、全画面の見た目の正本にしてよいか。",
+   "background": "調査の結論: mockup水準の視覚作り込みは ver2 側に完成品として既に存在する。ver3レンダラは語彙(table/badge/stepper等)を実装済みなので、残るのは視覚的な作り込み(スペーシング・階層・アイコン)を各screen-defへ移植する作業。reuse-first・フォーク文化(Component単位fork)に合致。",
+   "options": [
+    "採用: ver2部品の視覚作り込みをver3へ移植して見た目正本にする",
+    "不採用: ver3独自CSSを磨く"
+   ],
+   "rec": 0,
+   "rec_note": "自作の劣化コピー回避の最短距離。",
+   "materials": [
+    "D:\\claude\\systems\\ihl-ver2\\packages\\ihl-ui-catalog",
+    "docs/planning/c7/ui-parity-map.md"
+   ]
+  },
+  {
+   "qid": "Q-UI-02",
+   "section": "A",
+   "question": "指示にあった『clodedesign』は Anthropic Labs の Claude Design(claude.ai/design・ブラウザ上で複数ビジュアル案を対話生成→選択するツール)と特定しました。どう使いますか。",
+   "background": "既製デザイン資産の置き場ではなくワークフローツールのため『丸ごと採用』はできません。ihl-ver3への反映はエクスポート/手動移植になります。",
+   "options": [
+    "ihl-ui-catalog移植を主軸にし、Claude Designはユーザーが任意でキー画面の案出しに使う(採用案はD:\\mockupsへ追加)",
+    "Claude Designでの案出しを本ランの必須工程にする(ユーザーのブラウザ操作が必要)",
+    "使わない"
+   ],
+   "rec": 0,
+   "rec_note": "本ランを人間操作でブロックしない形が自走と両立。",
+   "materials": [
+    "https://claude.com/product/design"
+   ]
+  },
+  {
+   "qid": "OQ-HOLD-01",
+   "section": "B",
+   "question": "V3-FND-13(World→FeatureNode→Kernel(MiniKernel)→Component→SubComponentの確定階層・画面概念廃止・Kernel UUIDルーティング・MiniKernel最大14種)をver3で採用するか。",
+   "background": "registry上hold=true。conflict: IHLはMiniScreenKernel非採用(#39)で「画面廃止/Kernel UUIDルーティング」の適用可否が未決。レイヤー命名(K/B/F/A/C→V/P/G/K/B/Xなど)がver1内で複数回揺れ、ver2の01-要件体系との対応が未定義。FeatureNode数も12/25等で揺れている。ambiguity: World→FeatureNode→Kernel階層とC-USBをver3で継承するか要判断。現行ver3実装は実質「画面(ScreenDef)」概念で進んでおり、本要件を字義通り採用すると大規模なアーキテクチャ変更になる。",
+   "options": [
+    "採用しない(現行ScreenDef/画面ベースのアーキテクチャを正とし、本要件はver1時代の未整理構想として棄却または対象外化)",
+    "部分採用(Kernel UUIDルーティングの思想だけ将来検討課題として残し、具体的な14種MiniKernel/FeatureNode階層は不採用)",
+    "全面採用してアーキテクチャを再設計(大規模差分・非推奨)"
+   ],
+   "rec": 0,
+   "rec_note": "不採用を推奨(C1〜C7で実装済みのScreenDefベースのアーキテクチャが既に動いており、いまさら画面概念を廃止するのは不変条項①=10年コスト最小・②=フォーク文化の少数固定骨格に反する後戻りコストが大きい。棄却または対象外化が妥当)",
+   "materials": [
+    "01-requirements/registry.json (id: V3-FND-13)",
+    "02-design/constitution.md",
+    "docs/architecture.md"
+   ]
+  },
+  {
+   "qid": "OQ-HOLD-02",
+   "section": "B",
+   "question": "V3-AIP-61(技術選定をdeep researchでゼロから行い設計・実装を作り直す。既存資産は参考資料程度に格下げ)は既に確定済み裁定と矛盾する。この要件をどう扱うか。",
+   "background": "registry上hold=true・human_confirm=true。conflict: 既存資産(ver1/ver2)を『参考資料程度』に格下げしゼロから作り直す方針(グリーンフィールド)と、既存資産への最小差分統合という現方針DESIGN-science-os-integration(ブラウンフィールド)が対立。ただしstatement内には既に『【裁定確定】ver3は新リポジトリに新しいフォルダへクリーンなフォルダ設計で構築する。コードはゼロベース、データ・思想・要件は本リポジトリから継承』という追記があり、事実上はver3のrepo自体がこの裁定の実行結果(クリーンrepo・データ/思想/要件は継承)である可能性が高い。",
+   "options": [
+    "現行ver3 repoの存在自体をこの要件の充足完了とみなしclose(確定・hold解除)",
+    "『さらに深いdeep research(業界最高技術選定)』の未実施部分が残っているとみなし、追加調査タスクとして継続"
+   ],
+   "rec": 0,
+   "rec_note": "ver3 repo自体が充足結果とみなしclose推奨(データ/思想/要件は継承されており、技術選定はC1〜C6で個別裁定(GMO/Cloudflare Workers/R2等)を通じて実質完了している)",
+   "materials": [
+    "01-requirements/registry.json (id: V3-AIP-61)"
+   ]
+  },
+  {
+   "qid": "OQ-LB-01",
+   "section": "B",
+   "question": "[load-bearing矛盾] series改名(clutchレコードのseriesトークン差し替え)操作は、不変条項③(R2 append-only・UPDATE/DELETE禁止)とどう両立させるか。",
+   "background": "独立批評家がqr-physical-label-opsクラスタを`still_shallow`判定した理由の1つ。設計文書は『リネームはclutchレコードのseriesトークンを差し替えるだけ』と記述しているが、これは他の全変異(訂正・是正・昇格)がappend-onlyパターン(新レコード追記+LWW投影)であるのに対し、seriesだけ実質UPDATE前提になっている点で正面から矛盾する。個体側の不変序数(seq,year,clutch_id)は焼き付け(不変)、series文字列はclutch側で可変という設計自体は正しいが、「可変」の実現方法がappend-onlyパターンから逸脱している。",
+   "options": [
+    "settingsクラスタのpref-setと同じLWW投影パターン(新clutchレコード追記+seriesは最新値を都度投影)に修正",
+    "clutchレコードは例外的にUPDATE可能な非Truthテーブル(投影キャッシュ)と位置付けて割り切る",
+    "series改名機能自体を初期リリースから外し、常に既定自動導出値のみとする"
+   ],
+   "rec": 0,
+   "rec_note": "pref-set同様のLWW投影パターンへの修正を推奨(既に同一文書内でsettings/preferencesが確立した解法をそのまま流用でき、不変条項③との矛盾を構造的に消せる)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1213(still_shallow表・qr-physical-label-ops②)",
+    "docs/planning/c7/usecase-driven-design.md#L795-796(該当設計記述)"
+   ]
+  },
+  {
+   "qid": "OQ-LB-02",
+   "section": "B",
+   "question": "[load-bearing矛盾] 環境テレメトリの「source-count最充足採用」(collectorの不完全bucketよりCSVの完全bucketを優先表示)は、全経路が課す「同一bucketキーへのput-if-absent」の上でどう実現するか。",
+   "background": "独立批評家がmachines-environment-ioクラスタを`still_shallow`判定した理由の1つ。put-if-absentは先着1件のみを確定させ後着を弾く機構であり、「後着の重ね書き・snapshot比較の余地を残さない」。一方で設計は「各bucketに集約元件数(source-count)を保持し、read-back投影は同一bucketキーに重なったsnapshotのうちsource-count最大を採用」と要求しており、単純なput-if-absent(先着勝ち)ではこの重ね書き自体が起きない=物理的に実行不能な組み合わせ。",
+   "options": [
+    "bucketキーにsource(collector/CSV)を含めて複数snapshotを共存させ、read-back時にsource-count最大を選ぶ投影に変更(put-if-absent自体は維持しつつキー設計を拡張)",
+    "source-count最充足の要求を撤回し、単純な先着優先(put-if-absent)で妥協する",
+    "put-if-absentでなく別の書き込み機構(条件付き上書き)を環境テレメトリにのみ導入する(他ドメインのappend-only原則からは例外化)"
+   ],
+   "rec": 0,
+   "rec_note": "bucketキーにsource種別を含める形でのキー設計拡張を推奨(append-only原則を破らずに複数snapshot共存を実現できる。CL-01由来のput-if-absent機構自体は変更不要)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1212(still_shallow表・machines-environment-io①)",
+    "docs/planning/c7/usecase-driven-design.md#L731,#L746(該当設計記述)"
+   ]
+  },
+  {
+   "qid": "OQ-LB-03",
+   "section": "B",
+   "question": "[load-bearing矛盾] BYOK鍵5本+振込口座番号のパスフレーズ暗号バンドルについて、パスフレーズを忘れる・全端末を同時紛失する場合の復旧をどう扱うか(復旧不能を仕様として受容するか)。",
+   "background": "独立批評家がaccount-settings-privacyクラスタを`still_shallow`判定した理由の1つ。設計は『パスフレーズは本人しか知らない=忘れると復元不能』を明示しているが、これは最重要ペルソナ(菜緒・非技術者のset-and-forget)において『5鍵+口座が同時に恒久喪失し得る』ことを意味し、クラスタが殺すと宣言した『恐怖』の一種が復旧不能な形で残存している。zero-knowledge(サーバが中身を一切読めない)を守る限り、原理的にサーバ側からの救済は不可能。",
+   "options": [
+    "復旧不能をゼロ知識の対価として明示的に受容し、初回設定時に強い警告(バックアップコード印刷等)を必須にする",
+    "リカバリコード(オフライン保管用の1回限り復旧鍵)を別途発行する仕組みを追加する(セキュリティ設計の変更を伴う)",
+    "口座番号のみサーバ本人スコープTruthへの平文保持を将来解禁する道を残し、鍵と口座で復旧可能性を分離する(V3-SEC-06の再解釈が必要)"
+   ],
+   "rec": 1,
+   "rec_note": "リカバリコード発行方式を推奨(zero-knowledgeを崩さずに『本人が別途安全に保管する第2の鍵』で復旧不能問題を緩和できる。1Password/Bitwarden等の既製パターンと同型)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1215(still_shallow表・account-settings-privacy①)",
+    "docs/planning/c7/usecase-driven-design.md#L976(該当設計記述・パスフレーズ復元不能の明示)"
+   ]
+  },
+  {
+   "qid": "OQ-LB-04",
+   "section": "B",
+   "question": "[人間裁定に分離済み・未回答] パスフレーズ暗号バンドル(zero-knowledge blob)をサーバに置いてよいか、それとも端末間直接転送(QR/パスフレーズ)に限るか。",
+   "background": "account-settings-privacyクラスタの設計自身が『真の新規事項』として人間裁定に明示的に分離した項目。V3-SEC-06(口座を一切保持しない)の“保持”に、IHLが復号鍵を持たない暗号化ciphertextが該当するかどうかの解釈次第で、UXが根本的に別物になる(サーバ経由なら端末を問わず復元可能・端末間転送のみなら旧端末が手元にないと復元不能)。現状bank/payout平文schemaはrepoに存在せず、既定は端末保持+暗号バンドルで出荷されている。",
+   "options": [
+    "サーバにzero-knowledge blobとして保持を許可(復元性が高い。V3-SEC-06の“保持”はplaintextのみを指すと解釈)",
+    "端末間直接転送(QR/ファイル)のみに限定(サーバに一切データを置かない。より厳格だが旧端末紛失時に復元不能)"
+   ],
+   "rec": 0,
+   "rec_note": "サーバでのzero-knowledge blob保持を許可(暗号化されIHLが復号不能なciphertextは実質的に“保持”に当たらないという解釈は妥当で、菜緒ペルソナのset-and-forgetを大きく改善する)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L972,#L976,#L998(『真の新規事項』明記箇所)"
+   ]
+  },
+  {
+   "qid": "OQ-CL07-01",
+   "section": "C",
+   "question": "[CL-07裁定4点-①] thumbnail形式をJPEGで確定してよいか。",
+   "background": "ver2実装はPNG出力だが要件文(CL-07/FR-18-06)はJPEG規定。frozen schemaはconstを付けず未確定のままC3から持ち越されている。ver3はgreenfieldで守るべき本番thumbnail実体が存在しない。",
+   "options": [
+    "JPEG確定(推奨)",
+    "PNG継続"
+   ],
+   "rec": 0,
+   "rec_note": "JPEG採用(PNG比で配信/保存コストが数倍小さく不変条項①=10年コスト最小に有利。要件文とも一致)",
+   "materials": [
+    "docs/planning/c3/cl-07-thumbnail-options.md §3,§5-1"
+   ]
+  },
+  {
+   "qid": "OQ-CL07-02",
+   "section": "C",
+   "question": "[CL-07裁定4点-②] 実装経路の第1手を(a) jSquash on Workersでよいか($0硬制約ならb) Cloudflare Images、d) VPS残置はfallbackとして残置承認)。",
+   "background": "4候補(wasm on Workers/CF Images/client canvas/VPS残置)を6軸(機能適合/Workers制約/コスト/バイト級互換/裁定への影響/メンテリスク)で比較済み。経路選択は不可逆でなく後から差替可能。",
+   "options": [
+    "(a) jSquash on Workers(推奨・$600/10年)",
+    "(b) Cloudflare Image Transformations($0硬制約時の代替)",
+    "(d) VPS残置をfallbackとして文書に残す(承認のみ・第1推奨にはしない)"
+   ],
+   "rec": 0,
+   "rec_note": "(a) jSquash on Workersを第1推奨として承認(サーバ側決定論生成を維持でき、thumbnail_manifestモデルとズレない)",
+   "materials": [
+    "docs/planning/c3/cl-07-thumbnail-options.md §1,§4"
+   ]
+  },
+  {
+   "qid": "OQ-CL07-03",
+   "section": "C",
+   "question": "[CL-07裁定4点-③] 受け入れ条件を「バイト級互換」から「契約級互換」(①長辺512px等式 ②decode可能な正当画像 ③EXIF orientation視覚的正立 ④formatフィールド確定値一致)に読み替えてよいか。",
+   "background": "バイト級互換はどの候補でも技術的に不可能(リサンプラ・エンコーダがライブラリごとに異なる)かつ不要(greenfieldで守るべき本番バイト列が存在しない)。この読み替え自体が裁定事項。",
+   "options": [
+    "契約級互換に読み替え承認(推奨)",
+    "バイト級互換を維持(事実上VPS Pillow一択に候補が潰れる)"
+   ],
+   "rec": 0,
+   "rec_note": "契約級互換への読み替えを承認(バイト級はEXIF追加時点でVPSですら不成立になる達成不能条件のため)",
+   "materials": [
+    "docs/planning/c3/cl-07-thumbnail-options.md §2"
+   ]
+  },
+  {
+   "qid": "OQ-CL07-04",
+   "section": "C",
+   "question": "[CL-07裁定4点-④] EXIF transposeをver3の正しい挙動として採用してよいか(ver2実装は未適用)。",
+   "background": "frozen schemaのdescriptionは『EXIF transpose適用』を謳うが、ver2実物はこれを一切呼んでいない(grep該当0件)。ver3でのEXIF transpose採用は互換破壊でなく要件(CL-07/FR-18-06)への追従=挙動改善。",
+   "options": [
+    "採用(推奨)。frozen description の『実装済み』表現を訂正対象とする",
+    "ver2互換を優先しEXIF transpose非適用のまま踏襲"
+   ],
+   "rec": 0,
+   "rec_note": "採用(縦横逆転画像を正しく表示するための本来の要件で、ver2側に守るべき既存挙動が存在しない)",
+   "materials": [
+    "docs/planning/c3/cl-07-thumbnail-options.md §0.1"
+   ]
+  },
+  {
+   "qid": "OQ-MKT-01",
+   "section": "D",
+   "question": "正本usecase-driven-design.md §3必須(行215)の文言を更新するか、裁定記録だけに留めるか。",
+   "background": "現行正本の文言「相違・死着でreceive確定でなくdisputeへ分岐」を「重大相違(死着/性別/系統違い)=dispute強制・軽微な計測値相違=append-only相違記録つき受取確定(事後dispute化可)」に改める案。ワイヤーは3出口のまま(正本と実装の整合)。[minor7]",
+   "options": [
+    "正本の文言を新しい3出口ルールに合わせて更新",
+    "正本は現状維持・裁定記録にのみ新ルールを残す"
+   ],
+   "rec": 0,
+   "rec_note": "正本を更新(実装と正本が食い違ったまま放置するとフォーク文化での参照時に混乱する)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L1285",
+    "docs/planning/c7/usecase-driven-design.md §3 market L215付近"
+   ]
+  },
+  {
+   "qid": "OQ-MKT-02",
+   "section": "D",
+   "question": "成立方式2方式(既定=即決・承諾制オプトイン)と状態機械5脚(同時申込択一/24h自動辞退/48h自動キャンセル+再出品/申込中の表示継続/受取確定放置→自動good)を正本の収束フロー・状態機械へ反映するか。",
+   "background": "market第4稿(批評家R4 major7件反映済み)で構造は解消済みだが、正本ドキュメントへの反映はまだ裁定事項として保留。[minor8][major1][major2][批評R4]",
+   "options": [
+    "正本へ反映",
+    "ワイヤーのみを正としてしばらく維持"
+   ],
+   "rec": 0,
+   "rec_note": "正本へ反映(実装フェーズの参照ズレを防ぐ)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L1286"
+   ]
+  },
+  {
+   "qid": "OQ-MKT-03",
+   "section": "D",
+   "question": "no-payマーク(未入金放置の申込制限)のパラメータ承認: 仮既定「30日内2回で7日間申込不可」でよいか。",
+   "background": "48h未入金→自動キャンセル+再出品+no-payマークという機構自体はワイヤーで確定済み。制裁ポリシーとして人間裁定が必要な数値パラメータのみ未確定。[major2脚③]",
+   "options": [
+    "仮既定どおり承認(30日内2回で7日間)",
+    "回数/日数を変更",
+    "制限なし(no-payマークのみで制限は課さない)"
+   ],
+   "rec": 0,
+   "rec_note": "仮既定を承認(グリーフィング対策として妥当な軽さ)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L1155,#L1287"
+   ]
+  },
+  {
+   "qid": "OQ-MKT-04",
+   "section": "D",
+   "question": "猶予キャンセル(成立後60分)の回数上限パラメータ。",
+   "background": "ワイヤーは回数表示のみを実装しており、上限・制限内容は未確定。例:30日内3回で即決申込前に警告/制限、などのグリーフィング防止ポリシーが人間裁定事項。[批評R4]",
+   "options": [
+    "例示どおり30日内3回で警告/制限",
+    "別の回数・期間で設定",
+    "上限を設けず表示のみに留める"
+   ],
+   "rec": 0,
+   "rec_note": "例示値(30日内3回で警告/制限)をno-payマークと対に承認するのが運用上わかりやすい。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L1288"
+   ]
+  },
+  {
+   "qid": "OQ-ROUTE-01",
+   "section": "D",
+   "question": "planned残route「onboarding系」2本(GET /api/v1/onboarding/status, POST /api/v1/onboarding/complete)を実装するか廃止するか。",
+   "background": "cutoverリハーサル前に処置が必要な残route。旧APIではこれらのroute状態が未認証開放(P0所見)されている。現行ver3設計はauth-onboarding-localeクラスタで『必須は表示言語(locale)+@id(handle)の2ゲートのみ・onboardingComplete=trueをV3-I18-02/V3-AUT-08で管理』という別の完了管理方式に収束しており、この2 routeが新設計でも必要かは要確認。",
+   "options": [
+    "新設計(locale+handle 2ゲート)にこの2 routeを合わせて実装",
+    "新設計では不要と判断し廃止(旧ver2の概念の残骸として処理)"
+   ],
+   "rec": 1,
+   "rec_note": "廃止を推奨(新設計はlocale+handle確定をPATCH /me/preferences等の既存機構で管理しており、専用onboarding/status・complete routeは重複実装になりうる。要再確認の上での廃止判断)",
+   "materials": [
+    "docs/planning/c6/cutover-readiness.md#L34,#L38",
+    "docs/planning/status.md#L40",
+    "docs/planning/c7/usecase-driven-design.md §auth-onboarding-locale(L1036-1116)"
+   ]
+  },
+  {
+   "qid": "OQ-ROUTE-02",
+   "section": "D",
+   "question": "planned残route「gmo webhook系」6本(GET reconciliation/meta, GET transfer-code, GET va-deposit/unsent, POST expected-payment, POST va-deposit/subscribe, POST webhook)を実装するか廃止するか。",
+   "background": "GMO本番契約・live昇格(人間ゲート・未実施)に紐づく実装。C4完了時点でGMO sunabar照合の契約は確定済み(接続層sunabar/live分離・名前照合ポーリング)だが、実際のroute実装(特にwebhook受信)は本番契約前提でplanned止まり。cutoverリハーサル前に実装するか、GMO本番契約後に着手する既定路線のままにするか。",
+   "options": [
+    "cutoverリハーサル前に実装まで完了させる(本番契約が来たら即稼働できる状態にする)",
+    "GMO本番契約(人間ゲート)後に着手する既定路線を維持(現状のまま)"
+   ],
+   "rec": 1,
+   "rec_note": "GMO本番契約後着手を維持(本番鍵投入前に実装しても実地検証できず、人間ゲート=金銭に紐づく機能を前倒しで作り込むリスクの方が大きい)",
+   "materials": [
+    "docs/planning/c6/cutover-readiness.md#L80-85",
+    "docs/planning/status.md#L40,#L56"
+   ]
+  },
+  {
+   "qid": "OQ-ROUTE-03",
+   "section": "D",
+   "question": "planned残route「market transfer/match」2本(GET /market/transfer/{listing_id}, POST /market/listings/{listing_id}/match)を実装するか廃止するか。",
+   "background": "2026-07-15第15回裁定でV3-IND-35(割り出し予約システム・親個体♂♀/単価/匹数指定→割り出し後自動マッチング)が新規採番された。このmatch routeが予約自動マッチング機能の実装先になる可能性が高く、廃止でなく新要件に合わせた再設計が必要になった可能性がある。",
+   "options": [
+    "V3-IND-35の自動マッチング機能の実装先としてこの2 routeを再設計・実装",
+    "V3-IND-35とは別に新routeを設計し、この2 routeは旧概念として廃止"
+   ],
+   "rec": 0,
+   "rec_note": "V3-IND-35の実装先として再設計を推奨(round-15裁定は第1波・S tierの優先度が高い新機能であり、既存plannedルートの名前・意図とも近い。ゼロから別routeを起こすより流用効率が良い)",
+   "materials": [
+    "docs/planning/c6/cutover-readiness.md#L58-59",
+    "docs/planning/status.md#L40",
+    "docs/planning/rulings/user-ruling-2026-07-15-round-15.md(V3-IND-35新規採番)"
+   ]
+  },
+  {
+   "qid": "OQ-IND-01",
+   "section": "E",
+   "question": "個体詳細のtriage判定(■要対応/▲様子見/●順調)の閾値既定を、テンプレのstage別設定として編集可能にするか、システム固定既定で開始するか。",
+   "background": "判定式はユーザーの飼育方針に依存するため、固定にすると合わない飼育者が出る一方、初期実装は固定の方が単純。",
+   "options": [
+    "テンプレstage別に編集可能",
+    "システム固定既定(将来編集可能に拡張)"
+   ],
+   "rec": 1,
+   "rec_note": "初期はシステム固定既定で単純に開始し、テンプレstage別編集は第2波で拡張。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L1675"
+   ]
+  },
+  {
+   "qid": "OQ-IND-02",
+   "section": "E",
+   "question": "個体詳細dueの範囲は、テンプレstage間隔由来の世話予定のみか、IoT環境逸脱(温度/湿度アラート)も■要対応dueに含めて〔本日due〕送り列に乗せるか。",
+   "background": "2026-07-12フィードバック第1陣で「due/超過を■要対応(赤)にしない・■は異常専用」の確定裁定があるため、環境逸脱を■に含めるなら『異常』カテゴリとして扱う整合が必要。",
+   "options": [
+    "世話予定duesのみ(中立トーン「そろそろ」)",
+    "IoT環境逸脱も■要対応に含める(異常カテゴリとして)"
+   ],
+   "rec": 1,
+   "rec_note": "環境逸脱は『異常』カテゴリとして■要対応に含め、世話予定dueは中立トーン(第1陣裁定と整合)。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L1676",
+    "docs/planning/c7/wireframes-core5.md#L2097-2102(第1陣裁定=追い立てない温度感)"
+   ]
+  },
+  {
+   "qid": "OQ-IND-03",
+   "section": "E",
+   "question": "QR/NFC直着のハード方式: スマホカメラのQR読取のみで開始するか、NFCタグ物理ラベルまで初期対応するか。",
+   "background": "コストと運用に関わるため裁定要。qr-physical-label-opsクラスタは現状QRのみで設計されている。",
+   "options": [
+    "QR読取のみ(初期リリース)",
+    "NFCタグも初期対応"
+   ],
+   "rec": 0,
+   "rec_note": "QR読取のみ(NFCタグ購入・貼付の物理コストと運用複雑性が増すため。カメラQRで十分な代替になる)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L1678"
+   ]
+  },
+  {
+   "qid": "OQ-OBS-01",
+   "section": "E",
+   "question": "観測登録「取り消す」(ステージ後退・死亡取消)に遡及期限を設けるか。",
+   "background": "F4/F5の取消操作は誤操作の実害が大きいイベント(ステージ後退・死亡取消)。直近保存分のみ即時取消可とし以前は個体詳細から手動記録のみとするか、無期限で許可するか未確定。[批評R4]で追加された論点。",
+   "options": [
+    "直近保存分のみ即時取消可・それ以前は個体詳細からの手動記録のみ",
+    "無期限で即時取消を許可",
+    "件数閾値(例:直近N件 or 直近X時間)で線引き"
+   ],
+   "rec": 0,
+   "rec_note": "直近保存分のみ即時取消可(件数が積み上がるほど誤操作の実害が大きいイベントのため、無制限取消は事故コストが高い)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L611"
+   ]
+  },
+  {
+   "qid": "OQ-OBS-02",
+   "section": "E",
+   "question": "(メタ注記)観測登録の open_questions は画面一覧表で「3件」と記載されているが、本文に明記されているのは1件(OQ-OBS-01)のみ。フィードバック第1陣(commit e26e28f)で「通知手段」1件がクローズ済みと分かるが、残る3件目の内容がmarkdown本文に書き出されていない(見出し自体が「open_questions は StructuredOutput 参照」であり、生成時のworkflow構造化出力にのみ存在し本文に転記されなかった可能性)。",
+   "background": "作成コミット6b0b045の時点から一貫してこの状態(通知手段を含め2件しか実体を確認できない)。データ欠落であり、新規の設計論点ではない。",
+   "options": [
+    "3件目は失われたとみなし2件(1closed+1open)を正とする",
+    "元のworkflow構造化出力(ログ等)が別途保存されていないか確認し復元を試みる"
+   ],
+   "rec": 0,
+   "rec_note": "実害は小さいため2件を正としてクローズ扱いで進めてよい(復元コストが見合わない)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L609-616",
+    "git show 6b0b045:docs/planning/c7/wireframes-core5.md"
+   ]
+  },
+  {
+   "qid": "OQ-SRCH-01",
+   "section": "E",
+   "question": "類似検索(バスケット/F3)の既定スコープは「在庫全体」か「現在のフィルタ内」か。",
+   "background": "現行ワイヤーは「在庫全体」既定+トグルでフィルタ内に切替。フィルタ内既定の方が良い作業が支配的なら変更が必要。",
+   "options": [
+    "在庫全体を既定(現行案)",
+    "フィルタ内を既定に変更"
+   ],
+   "rec": 0,
+   "rec_note": "フィルタ内はトグルで到達できるため、既定は探索範囲が最大の在庫全体が安全。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L900"
+   ]
+  },
+  {
+   "qid": "OQ-SRCH-02",
+   "section": "E",
+   "question": "バスケット出口[→血統照合(近交チェック)]の遷移先ビューをC7(本フェーズ)の産出対象に含めるか。",
+   "background": "出口ボタン自体は検索画面(obs-navigator)の担当として確定済みだが、遷移先の血統照合ビューの実装帰属(このフェーズでやるか後続か)が未定。",
+   "options": [
+    "C7で血統照合ビューまで産出",
+    "出口ボタンのみC7・照合ビューは後続フェーズ"
+   ],
+   "rec": 0,
+   "rec_note": "本ランは全機能実装が目標のため血統照合ビューも産出対象に含める。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L901"
+   ]
+  },
+  {
+   "qid": "OQ-SRCH-03",
+   "section": "E",
+   "question": "保存検索の保存先は端末ローカルか、Truth(append-only設定record)か。",
+   "background": "複数端末同期が必要かどうかで決まる。Truthを選ぶ場合は改名=新record追記・削除=論理無効化フラグで実現(UPDATE/DELETE不使用・不変条項③)し、UI操作は保存先に依らず同一にする制約付き[m13採用]。",
+   "options": [
+    "端末ローカルのみ",
+    "Truth(append-only・複数端末同期可)"
+   ],
+   "rec": 1,
+   "rec_note": "account-settings-privacyクラスタのpref-set機構(LWW投影・append-only)と同一パターンで実装できるため、Truth保存を推奨(菜緒ペルソナの複数端末運用と整合)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L639,#L902"
+   ]
+  },
+  {
+   "qid": "OQ-SRCH-04",
+   "section": "E",
+   "question": "F1L(ライト層既定表示)の収束ピル「成虫のみ表示中 ✕」の表出しきい値(在庫何件からピルを出すか)。",
+   "background": "m12コールドスタートの閾値(在庫>20件)を流用するか、ライト層独自の閾値を新たに裁定するか。[批評R4]",
+   "options": [
+    "m12と同じ閾値(在庫>20件)を流用",
+    "ライト層独自の閾値を新設"
+   ],
+   "rec": 0,
+   "rec_note": "m12の閾値流用(二重定義を避け不変条項②のfork文化=少数固定骨格に整合)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L903"
+   ]
+  },
+  {
+   "qid": "OQ-PLZ-01",
+   "section": "F",
+   "question": "知の広場スレの昇格閾値定数一式の確定: 「✔裏取り済み」昇格=実観測cite≥何件・追試≥何件か / 「⚠反証あり」=「再現せず」+cite≥何件か / 「未収束の論点」のstance母数閾値。",
+   "background": "ワイヤーの例値(4/2/5/12)は仮置き。",
+   "options": [
+    "仮値(4/2/5/12)を承認",
+    "個別に値を変更",
+    "コミュニティ規模に応じて可変にする"
+   ],
+   "rec": 0,
+   "rec_note": "仮値(4/2/5/12)で開始し運用データで調整。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L2059"
+   ]
+  },
+  {
+   "qid": "OQ-PLZ-02",
+   "section": "F",
+   "question": "票の重み係数: 認定飼育者と一次観測者(観測cite添付・追試実施者)のそれぞれの係数値。",
+   "background": "昇格判定=重み付き票・表示=生数+内訳、という機構自体はワイヤーで確定済み。係数の具体値のみ未確定。",
+   "options": [
+    "係数を明示指定(例: 認定飼育者=2倍・一次観測者=1.5倍等)",
+    "AIに設計を委任し初期値を試行運用で調整"
+   ],
+   "rec": 1,
+   "rec_note": "初期値は認定飼育者2.0倍・一次観測者1.5倍で開始し試行運用で調整。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L2060,#L1764"
+   ]
+  },
+  {
+   "qid": "OQ-PLZ-03",
+   "section": "F",
+   "question": "解決マーク([✔解決した]/[取り消す])の権限はスレ主のみか、認定飼育者にも開放するか。",
+   "background": "権限範囲は知の広場の統治構造に関わる裁定事項。",
+   "options": [
+    "スレ主のみ",
+    "スレ主+認定飼育者"
+   ],
+   "rec": 0,
+   "rec_note": "初期はスレ主のみ(荒れ防止)。後から開放は可逆。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L2061"
+   ]
+  },
+  {
+   "qid": "OQ-PLZ-04",
+   "section": "F",
+   "question": "論点の昇格([⤴])・fork起票・論点切り出しの権限範囲、および遡及態度依頼の通知対象範囲(全返信者か当該返信者のみか)。",
+   "background": "仮置き=⤴とfork起票はスレ主+認定飼育者、F2切り出しトグルは全員(自分の返信からのみ)。",
+   "options": [
+    "仮置きどおり承認",
+    "権限範囲を変更"
+   ],
+   "rec": 0,
+   "rec_note": "仮置きを承認(スレ主+認定飼育者への限定は不変条項④=人間ゲート文化・過度な民主化による荒れを防ぐ設計思想と整合)",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L2062"
+   ]
+  },
+  {
+   "qid": "OQ-PLZ-05",
+   "section": "F",
+   "question": "カード発行の委譲: スレ主無応答N日で発行導線を認定飼育者/最多cite観測者のどちらへ(または両方へ)委譲するか、Nは何日か。",
+   "background": "R4-4解消: 質問者が答えを得て離脱するQ&Aの常態により、閾値到達済みスレが永久にカード化されず知見のプールが痩せる欠陥への対処。自動発行はしない(opt-in規律維持)。",
+   "options": [
+    "認定飼育者のみへ委譲",
+    "最多cite観測者のみへ委譲",
+    "両方へ委譲",
+    "Nの日数を別途指定"
+   ],
+   "rec": 2,
+   "rec_note": "両方へ委譲・N=14日を初期値に。",
+   "materials": [
+    "docs/planning/c7/wireframes-core5.md#L2063,#L2007"
+   ]
+  },
+  {
+   "qid": "OQ-NEWID-01",
+   "section": "G",
+   "question": "検索のグラフビュー+ホバー簡易カード(新規採番候補)を実装対象に追加してよいか。",
+   "background": "近さ(画像類似/形質/血縁)のエンティティ紐づき図表示。ノードホバーで簡易ビュー・クリックで個体詳細へ。論文クラスタのギャップ可視化(3.6-5)と部品を共有できる可能性がある。まだ新規要件ID未採番。",
+   "options": [
+    "新規ID採番して第1波/第2波へ組み込み",
+    "見送り(将来検討)"
+   ],
+   "rec": 0,
+   "rec_note": "紐づき図はユーザー高評価軸。既製グラフレイアウト(graphify等)の活用を前提に採番して本ランに含める。",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1222"
+   ]
+  },
+  {
+   "qid": "OQ-NEWID-02",
+   "section": "G",
+   "question": "SwitchBot CSV importer(新規採番候補)を実装対象に追加してよいか。",
+   "background": "2026-07-12フィードバック第1陣で「環境データはCSVファースト」が確定裁定となったことに伴う具体機能。機器選択→CSV投入→期間重複はput-if-absent自動スキップ。machines-environment-ioクラスタの設計は完了しているが要件IDは未採番。",
+   "options": [
+    "新規ID採番して実装",
+    "見送り"
+   ],
+   "rec": 0,
+   "rec_note": "採番を推奨(CSVファースト裁定の実体化に必須で、既にwireframes/usecase設計は収束済み)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1223,#L698-770(machines-environment-ioクラスタ全体)"
+   ]
+  },
+  {
+   "qid": "OQ-NEWID-03",
+   "section": "G",
+   "question": "Docker collectorの配布・設定設計(新規採番候補)を実装対象に追加してよいか。",
+   "background": "任意レイヤーとしての配布場所(repo/イメージ)・.envへのSwitchBotキー格納手順・観測登録(棚join)との連携ドキュメント。既定はあくまでCSVファーストで、collectorは「あれば使う」任意機能。",
+   "options": [
+    "新規ID採番して実装",
+    "ドキュメントのみ整備しコード配布は見送り",
+    "完全に見送り"
+   ],
+   "rec": 1,
+   "rec_note": "優先度低(第2波以降でよい。CSVファーストが既定のため必須ではない)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1224,#L732,#L748"
+   ]
+  },
+  {
+   "qid": "OQ-ONB-01",
+   "section": "G",
+   "question": "国(country)の永続受け皿schema(仮 ihl.profile.country.v1)を新設し、国情報をUserプロフィールに永続保持してよいか。",
+   "background": "V3-AUT-35は逐語で『国(country)は保持しない(FR-REG-06/06a・本人の葛藤を優先)。将来配慮目的で国情報が必要になった場合のみ再検討』+human_confirm:trueと明記。V3-I18-17のconflictフィールドも『国情報を何に使いどこまで保持するかは未裁定』と明記。ゆえに新schema新設は既存確定要件と正面衝突する裁定案件。既定は国を保持しなくてもオンボーディングは完全成立する。ただし2026-07-15第15回裁定でV3-GOV-35(違法出品ユーザー自治)向けに国選択が『内部属性(非表示)として必須化』される例外がV3-I18-02に追記済みで、状況が変化している可能性がある。",
+   "options": [
+    "永続受け皿schemaを新設(国際信頼スコア・文化タグ用途に活用)",
+    "新設せず、V3-GOV-35用途に限定した最小限の内部属性のみ(既存の例外条項の範囲内で運用)"
+   ],
+   "rec": 1,
+   "rec_note": "第15回裁定でV3-GOV-35向けの国選択必須化が既に例外承認されているため、その運用に必要な最小限のフィールドのみ新設し、汎用の国際信頼スコア/文化タグ用途への拡張は別途裁定に回すのが穏当",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1113",
+    "docs/planning/rulings/user-ruling-2026-07-15-round-15.md(V3-I18-02修正・V3-GOV-35拡張)"
+   ]
+  },
+  {
+   "qid": "OQ-ONB-02",
+   "section": "G",
+   "question": "handle-availability(入力中の可用性予告)routeを新設するか。",
+   "background": "打鍵中にhandle→userIdの存在を照会して『使えそう/すでに使われています』を予告表示する新規API。一意性の権威的担保は確定時put-if-absent(409)で成立するため、advisoryが無くても動線は縮退成立する(UX向上の実装波であり必須ではない)。",
+   "options": [
+    "新設する(UX向上)",
+    "見送り(確定時409のみで運用)"
+   ],
+   "rec": 1,
+   "rec_note": "見送り推奨(確定時409で一意性は担保済み・実装コストに見合う優先度が低い。将来必要になれば追加できる)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1114,#L1067"
+   ]
+  },
+  {
+   "qid": "OQ-ONB-03",
+   "section": "G",
+   "question": "数字コード(別端末フォールバック)のverify routeを新設するか。",
+   "background": "magic-link発行時に同一OTPを数字コードとしても返し、code入力→検証する経路。現verifyはtoken前提ゆえ小さな新規追加で済む。別端末/webviewの『普遍の逃げ道』として送信成功画面と/loginの両方に入力欄を常設する設計。auth-onboarding-localeクラスタはこの項目自体をstill_shallow指摘②で『必須項目が未実装機構に依存する自己矛盾』と名指ししている。",
+   "options": [
+    "新設する(推奨・別端末フォールバックの必須動線として)",
+    "見送り(magic-linkのみで運用しフォールバックを持たない)"
+   ],
+   "rec": 0,
+   "rec_note": "新設を推奨(送信成功画面が『届かない全経路の受け皿』を謳う以上、数字コード経路が無いとその主張自体が成立しない設計上の必須ピース)",
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md#L1115,#L1216(still_shallow②)"
+   ]
+  },
+  {
+   "qid": "Q-REQ-01",
+   "section": "H",
+   "question": "Truth(R2)自体のバックアップ要件が存在しない(10年存続の最大穴)。バックアップ先をどこにするか。",
+   "background": "現行要件は『投影を捨てTruthから再生成』のみで、Truth正本消失は救えない。かつDNS・R2・メールを単一Cloudflareアカウントに集約(V3-CST-04)しているため、アカウント凍結・侵害・誤削除でTruth全損。無料/低額の一度きりセットアップ=設備投資型で解決可能。",
+   "options": [
+    "別プロバイダ(Backblaze B2等)への複製+ローカルD:\\バックアップへの定期pullの二重化",
+    "別Cloudflareアカウントへの複製",
+    "ローカル定期pullのみ",
+    "見送り"
+   ],
+   "rec": 0,
+   "rec_note": "同一プロバイダ内複製はアカウント凍結に無力なため二重化を推奨。",
+   "materials": [
+    "01-requirements/srs.md §5.3",
+    "docs/planning/c8/PLAN-c8-full-run.md §4"
+   ]
+  },
+  {
+   "qid": "Q-REQ-02",
+   "section": "H",
+   "question": "『クラッチ=匿名プール(個体識別不能な幼虫のcount層)』を要件として新規採番し、V3-IND-02(全個体UID一貫識別)に但し書きを入れてよいか。",
+   "background": "設計文書(usecase-driven-design.md §4.2)は最優先ペルソナ(100匹一括)の最重要オペとして二層アイデンティティ(匿名count層/識別individual層+昇格+attrition照合)を確定済みだが、srs.mdに該当要件IDが1件も無く、V3-IND-02と正面衝突したまま。",
+   "options": [
+    "承認: 二層アイデンティティ/sample計測/昇格+attrition照合を新規採番し、V3-IND-02に『アドレスは個別容器分割/QR発行時に発生』の但し書き",
+    "見送り"
+   ],
+   "rec": 0,
+   "materials": [
+    "docs/planning/c7/usecase-driven-design.md L317-343",
+    "01-requirements/srs.md §2.02"
+   ],
+   "rec_note": ""
+  },
+  {
+   "qid": "Q-REQ-03",
+   "section": "H",
+   "question": "BAN/行政命令の即時失効とステートレスJWT(TTL30日・デニーリスト後付け)が未整合。失効方式をどれで確定するか。",
+   "background": "純ステートレスのままではBAN済み・行政命令対象ユーザーの既発行トークンが最大30日有効=詐欺者を即座に締め出せない(V3-KRM-04/V3-GOV-09と衝突)。",
+   "options": [
+    "KVデニーリスト(BAN/失効者のみ格納・毎リクエスト照会)をMVP必須へ格上げ",
+    "毎リクエストのユーザー状態投影照合",
+    "後付けのまま(第2波送り)"
+   ],
+   "rec": 0,
+   "rec_note": "デニーリストは対象者のみ格納で小さく、Workers KVで低コスト。",
+   "materials": [
+    "01-requirements/srs.md V3-AUT-03/V3-KRM-04/V3-GOV-09"
+   ]
+  },
+  {
+   "qid": "Q-REQ-04",
+   "section": "H",
+   "question": "料率5%の母数を『成約額(売上全体)』で固定し、商用3%・フォーク10%との重複計上不可を明文化してよいか。",
+   "background": "round-15は率のみ5%に変更し、母数・重複計上・端数・月起算の下流が未確定のまま(registry.json ambiguityに残存)。srs §2.05ヘッダの旧8%残存は誤記のため裁定不要で自走修正します。コード側定数(economy-constants.ts=0.08)の5%追従も自走修正します。",
+   "options": [
+    "承認: 母数=成約額・3%/10%との重複計上不可を明文化",
+    "母数を別の定義にする(コメント欄で指定)",
+    "保留"
+   ],
+   "rec": 0,
+   "materials": [
+    "01-requirements/srs.md §2.05",
+    "apps/api/src/economy-constants.ts"
+   ],
+   "rec_note": ""
+  },
+  {
+   "qid": "Q-REQ-05",
+   "section": "H",
+   "question": "2FA(TOTP)の採否(V3-AUT-32で未裁定のまま滞留中)。",
+   "background": "V3-AUT-01=マジックリンクのみと衝突懸念があり『別途裁定』のまま第2波に滞留。乗っ取り対策の設計が止まっている。",
+   "options": [
+    "重要操作(メール変更・アカウント削除・大口取引)限定のopt-in TOTPとして第2波採番(V3-AUT-01と非衝突化を明文化)",
+    "全面採用",
+    "見送り(マジックリンクのみ継続)"
+   ],
+   "rec": 0,
+   "materials": [
+    "01-requirements/srs.md V3-AUT-32/V3-AUT-01"
+   ],
+   "rec_note": ""
+  },
+  {
+   "qid": "Q-REQ-06",
+   "section": "H",
+   "question": "外部依存(決済=GMO/配送=日本郵便URL/メール=Resend/IoT=SwitchBot)の『交換可能な薄いアダプタ+依存ごとに縮退動作1行』のNFR新設を承認するか。",
+   "background": "中核フローが単一外部プロバイダに固着しており、10年内の仕様変更・サービス廃止時の代替経路が要件に無い。PayPay移行検討そのものがこのリスクの実例。",
+   "options": [
+    "承認",
+    "決済のみ先行して他は見送り",
+    "見送り"
+   ],
+   "rec": 0,
+   "materials": [
+    "docs/planning/c8/PLAN-c8-full-run.md §4"
+   ],
+   "rec_note": ""
+  },
+  {
+   "qid": "Q-REQ-07",
+   "section": "H",
+   "question": "批評トップ10のうち裁定不要と判定した4点を推奨どおり自走反映してよいか: ①書込系レート制限+ユーザー別クォータ ②バッチ/cron失敗の監視・ハートビート通知 ③『憲法』用語の分離+5%倫理宣言の正本パス確定 ④データエクスポート二層(事実CSV/画像分離)の採番+grilling確定事項→要件への環流CRフロー追加。",
+   "background": "いずれも可逆な要件/設計追加で、批評家が『設計で追加可能・裁定不要』と判定した項目。まとめて自走に含めるかの確認のみ。",
+   "options": [
+    "一括承認",
+    "個別に確認したい(コメント欄で指定)",
+    "見送り"
+   ],
+   "rec": 0,
+   "materials": [
+    "docs/planning/c8/PLAN-c8-full-run.md §4(批評トップ10)"
+   ],
+   "rec_note": ""
+  },
+  {
+   "qid": "Q-META-01",
+   "section": "I",
+   "question": "質問シートの未回答項目は推奨案を採用して自走してよいか。",
+   "background": "回答後は人間ゲート(公開・金銭・実鍵・物理・撤回台帳)以外ノンストップで完走します。",
+   "options": [
+    "未回答=推奨案採用で自走",
+    "未回答項目は保留として人間ゲート扱い"
+   ],
+   "rec": 0,
+   "materials": [],
+   "rec_note": ""
+  },
+  {
+   "qid": "Q-META-02",
+   "section": "I",
+   "question": "別Claudeセッションが実装中の V3-OBS-32(CSVインポート)とその周辺(machines-environment-ioクラスタ・device画面・tests/fixtures/csv-import-golden)には本ランでは触れない棲み分けでよいか。",
+   "background": "同一ファイルの同時編集とmainへの競合コミットを避けるため。OQ-LB-02(put-if-absent vs source-count)の裁定結果は別セッションにも影響するため、裁定内容はコミットメッセージ経由で共有します。",
+   "options": [
+    "触れない(棲み分け)",
+    "本ランに統合する(別セッションの停止はユーザーが実施)"
+   ],
+   "rec": 0,
+   "materials": [],
+   "rec_note": ""
+  }
+ ]
+}
+</script>
+<script>
+(function(){
+  var DATA = JSON.parse(document.getElementById('qdata').textContent);
+  var questions = DATA.questions;
+  var totalQ = questions.length;
+
+  function state(q){
+    var checked = document.querySelector('input[name="' + q.qid + '"]:checked');
+    var idx = checked ? parseInt(checked.value, 10) : q.rec;
+    var comment = document.getElementById('cm_' + q.qid).value.trim();
+    return {idx: idx, changed: idx !== q.rec, comment: comment};
+  }
+
+  function updateCard(q){
+    var s = state(q);
+    var card = document.getElementById('card_' + q.qid);
+    var stateChip = document.getElementById('st_' + q.qid);
+    var commentChip = document.getElementById('cm-chip_' + q.qid);
+    stateChip.textContent = s.changed ? '変更' : '推奨どおり';
+    stateChip.classList.toggle('changed', s.changed);
+    commentChip.style.display = s.comment ? '' : 'none';
+    var labels = card.querySelectorAll('label.opt');
+    labels.forEach(function(l){ l.classList.toggle('selected', l.querySelector('input').checked); });
+  }
+
+  function updateProgress(){
+    var changed = 0, commented = 0;
+    questions.forEach(function(q){
+      var s = state(q);
+      if (s.changed) changed++;
+      if (s.comment) commented++;
+    });
+    document.getElementById('cChanged').textContent = changed;
+    document.getElementById('cComment').textContent = commented;
+  }
+
+  function refreshAll(){
+    questions.forEach(function(q){ updateCard(q); });
+    updateProgress();
+  }
+
+  document.querySelectorAll('input[type=radio]').forEach(function(r){
+    r.addEventListener('change', function(){
+      var q = questions.find(function(x){ return x.qid === r.name; });
+      updateCard(q);
+      updateProgress();
+    });
+  });
+  document.querySelectorAll('textarea.comment').forEach(function(t){
+    t.addEventListener('input', function(){
+      var qid = t.id.replace('cm_', '');
+      var q = questions.find(function(x){ return x.qid === qid; });
+      updateCard(q);
+      updateProgress();
+    });
+  });
+
+  document.getElementById('btnReset').addEventListener('click', function(){
+    questions.forEach(function(q){
+      var r = document.querySelector('input[name="' + q.qid + '"][value="' + q.rec + '"]');
+      if (r) r.checked = true;
+      document.getElementById('cm_' + q.qid).value = '';
+    });
+    refreshAll();
+    showToast('推奨案にリセットしました');
+  });
+
+  function buildSummary(){
+    var changedList = [];
+    var commentOnlyList = [];
+    var untouched = 0;
+    questions.forEach(function(q){
+      var s = state(q);
+      if (s.changed) {
+        changedList.push({q: q, s: s});
+      } else if (s.comment) {
+        commentOnlyList.push({q: q, s: s});
+      } else {
+        untouched++;
+      }
+    });
+
+    var lines = [];
+    lines.push('第16回裁定 回答 (' + DATA.date + ')');
+    lines.push('※無記載の質問は推奨案を採用');
+    lines.push('');
+
+    if (changedList.length === 0 && commentOnlyList.length === 0) {
+      lines.push('全' + totalQ + '問 推奨案で承認');
+      return lines.join('\n');
+    }
+
+    if (changedList.length > 0) {
+      lines.push('[変更あり]');
+      changedList.forEach(function(item){
+        var opt = item.q.options[item.s.idx];
+        lines.push(item.q.qid + ': ' + opt);
+        if (item.s.comment) lines.push('  コメント: ' + item.s.comment);
+      });
+      lines.push('');
+    }
+
+    if (commentOnlyList.length > 0) {
+      lines.push('[コメントのみ]');
+      commentOnlyList.forEach(function(item){
+        lines.push(item.q.qid + ': (推奨どおり) コメント: ' + item.s.comment);
+      });
+      lines.push('');
+    }
+
+    if (untouched > 0) {
+      lines.push('[推奨どおり] 残り' + untouched + '問すべて推奨案で承認');
+    }
+
+    while (lines.length && lines[lines.length - 1] === '') lines.pop();
+    return lines.join('\n');
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+  }
+
+  async function copyText(text){
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) { /* fall through to fallback */ }
+    try {
+      var ta = document.getElementById('summaryOutput');
+      ta.focus();
+      ta.select();
+      var ok = document.execCommand('copy');
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  document.getElementById('btnSummary').addEventListener('click', async function(){
+    var text = buildSummary();
+    var out = document.getElementById('summaryOutput');
+    out.value = text;
+    var ok = await copyText(text);
+    out.scrollIntoView({behavior: 'smooth', block: 'start'});
+    showToast(ok ? 'コピーしました' : 'コピーに失敗しました(下欄を手動選択してください)');
+  });
+
+  refreshAll();
+})();
+</script>
+</body></html>
