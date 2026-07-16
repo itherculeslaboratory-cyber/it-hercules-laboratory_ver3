@@ -1,7 +1,7 @@
 ---
 id: V3-STATUS
 title: 本番状態・直近タスク・人間ゲート
-date: "2026-07-11"
+date: "2026-07-17"
 status: draft
 ---
 
@@ -10,6 +10,10 @@ status: draft
 > 更新のたびに「今どこ / 次 / 人間ゲート」の 3 節を最新化する。設計正本の永久配置はしない（Working）。
 
 ## 今どこ
+
+**Phase C8 全機能実装完了ラン 進行中**（`docs/planning/c8/PLAN-c8-full-run.md`・台帳 T-38）。**第16回ユーザー裁定 反映完了**（2026-07-17 — `docs/planning/rulings/user-ruling-2026-07-17-round-16.md`）: 質問シート全49問クローズ、新規採番14件（決済P2P二方式 V3-MKT-62/63/65・クラッチ二層アイデンティティ V3-IND-36・magic-link数字コードverify V3-AUT-46・Truthバックアップ二重化 V3-CST-09 他）+ 既存18件patch（うち V3-FND-13 は確定→**棄却**・第1波→対象外で round-3 ruling_note を formalize、V3-AIP-61 は close/hold解除）。**決済方針が確定**: GMOあおぞら銀行は退役（個人事業主に本番API非提供・公式一次情報）、ユーザー間決済はP2Pユーザー選択二方式（①銀行振込直接・IHL非関与 ②PAY.JP Platformカード決済・5%自動控除）、IHL宛システム維持費徴収にPayPay OPAを追加、PayPay個人間送金機能は規約で利用禁止（PayPay残高規約第7条）。フォーク10%は金銭還元でなく貢献度(karma)分配と意味確定。PTチャージ（金銭でのPT購入）は廃止。総数 **735 → 749**（確定659/確定(修正)87/棄却3・保留0）。registry.json / srs.md（v1.9→**v1.10**）へ機械反映済み・検算恒等式2本とも実測一致。C8 レーン進捗は `docs/planning/c8/progress.md`（生成物・0/318 着手段階）。
+
+**Phase C7 完了**（2026-07-12 — `docs/planning/c7/`）。重要5画面ワイヤー（`wireframes-core5.md`）+ usecase-driven 設計 grilling（`usecase-driven-design.md`）+ 実画面検証（下記）。
 
 **Phase C6 完了(cutover 直前で停止 — 実施は人間ゲート)**(2026-07-11 — `docs/planning/c6/REPORT-ver3-phase-c6-2026-07-11.md`)。突合ハーネス(`scripts/reconcile-harness.mjs`・GET 限定強制・TC10)+66 route readiness 表+**staging 実機稼働**(`ihl-api-ver3-staging.…workers.dev`・dev R2・cron 無効・deny-by-default/dev token を実測)。**P0 所見: 旧 API は保護 route 12 本を未認証開放**(新側が正・`cutover-readiness.md` §3)。E2E 実走で結合実バグ(form→confirm 値引き継ぎ欠落)を検出し汎用 draft 機構で根治 → `npm run e2e` 3/3 green。批評家 FAIL 指摘(§0 過大主張)を反映して納品。**残る cutover 5 手順は全て人間ボタン**(`cutover-readiness.md` §4)。
 
@@ -30,16 +34,16 @@ status: draft
 
 ## 次（最優先）
 
-**C7 T1 完了(2026-07-12・実画面検証)**: 全 37 画面を実ブラウザ走査し、T1 で洗い出した 5 件(白画面クラッシュ3・カード非表示・per-thread 未産出)を**全て根治/産出 → 打鍵チェック前の既知画面欠落ゼロ**(V3-AIP-101 充足)。実測 = `docs/planning/c7/screen-verification-report.md`+`screens/*.png`+E2E 43 passed。**→ ユーザーの最終画面打鍵チェック依頼可**。
+**C8 全機能実装完了ラン（`docs/planning/c8/PLAN-c8-full-run.md`）**: 第1波残 170 件（partial 68 + design_only 46 + not_started 56）を必達、第2波 約173件はベストエフォート（Q-SCOPE-01・進捗機械追跡機構=`docs/planning/c8/progress.json`/`progress.md` で必須成果物化済み）。
 
-残りの C7:
-
-0. **【ユーザー】最終画面打鍵チェック**(screen-verification-report を見て実機確認)
-1. ~~全画面の実ブラウザ走査~~ **完了**(T1)
-2. **cutover 実行**(第13回裁定: 技術手順 1〜4 は AI・各不可逆ボタン直前一言報告・ユーザー在席時推奨。VPS 解約のみ人間)。P0(旧API未認証開放)は cutover 前倒しで自然解消と裁定済み
-3. planned 残 route(onboarding 2・gmo webhook 系・market transfer/match)の実装 or 廃止 → cutover リハーサル前に処置
-4. 余力枠: 動画システム準備(V3-VID-33/34)・家/研究所要件整理(平野さん向け)・技術記事/SNS パック(V3-AIP-102/103)・V3-OBS-72(研究室環境コンテキスト・第1波)
-5. 残人間ゲート: hold 2 件(V3-FND-13/V3-AIP-61)・GMO 本番契約・collector 実鍵・月次 cron 実デプロイ・公開の実施(/knowledge 公開含む)
+0. **決済スタック実装**: P2Pユーザー選択二方式（V3-MKT-62 銀行振込直接/PAY.JP Platform）+ 5%ゆる請求（V3-MKT-63）+ PayPay OPA連携 + プリペイド案内（V3-MKT-64）。GMO connector・gmo webhook route 6本は実装せず廃止（OQ-ROUTE-02）。旧 pt_topup（PTチャージ）コード削除。
+1. **machines-environment-io 統合**（別セッション成果を本ランへ統合済み・Q-META-02）: V3-OBS-32 汎用CSVインポート（機器選択→CSV→期間重複put-if-absent自動スキップ）+ series改名LWW投影 + source-count最充足のbucketキー拡張。
+2. **market 残route再設計**: onboarding系2route(status/complete)は廃止（locale+handle 2ゲート収束済）。market transfer/match 2routeはV3-IND-35（割り出し予約自動マッチング）の実装先として再設計。
+3. **重要5画面の残り2画面**（market-trade / knowledge-thread）を `docs/planning/c7/wireframes-core5.md` §3/§5 準拠で再構築（UIレーン先頭）。
+4. **UI方針**: usecase-driven（画面ごとに「なぜユーザーが来るか」から出発）× reuse-first（既製OSS/GitHub資産を広く収集してカスタマイズ・一から作らない）。ver2 `ihl-ui-catalog` の丸ごと移植は不採用。
+5. 余力枠: 動画システム準備(V3-VID-33/34)・技術記事/SNS パック(V3-AIP-102/103)・検索グラフビュー(V3-UIX-82)・写真解析/embedding実行場所設計(V3-AIP-104)。
+6. **cutover 実行**(第13回裁定: 技術手順 1〜4 は AI・各不可逆ボタン直前一言報告・ユーザー在席時推奨。VPS 解約のみ人間)。P0(旧API未認証開放)は cutover 前倒しで自然解消と裁定済み。
+7. 残人間ゲート: 下記表参照(hold 2 件 V3-FND-13/V3-AIP-61 は第16回裁定でクローズ済・もう残らない)。
 
 ### C3 からの持ち越し
 
@@ -51,11 +55,18 @@ status: draft
 | ゲート | 内容 | 状態 |
 |--------|------|------|
 | LICENSE 確定 | **Apache 2.0 に確定**(第12回裁定 2026-07-11・`rulings/user-ruling-2026-07-11-round-12.md`)。公開の実施は別ゲートのまま未 | 済 |
-| CL-07 裁定 4 点 | ①形式=JPEG確定 ②実装経路第1手=jSquash on Workers（$0硬制約なら CF Images） ③受け入れ条件をバイト級→契約級互換に読み替え ④EXIF transpose を ver3 の正しい挙動として採用（ver2 実装は未適用）。材料 `docs/planning/c3/cl-07-thumbnail-options.md` | 未 |
+| CL-07 裁定 4 点 | 第16回裁定で確定: ①形式=JPEG確定 ②実装経路第1手=jSquash on Workers（$0硬制約時のCF Images代替・VPS残置はfallback文書残置のみ） ③受け入れ条件を「契約級互換」に読み替え(バイト級互換は放棄) ④EXIF transpose を ver3 の正しい挙動として採用。**schemas/frozen の実変更は対応TC緑化を伴う実装フェーズで実施**（本裁定は記録のみ） | 済(設計) |
 | Resend DNS（CF トークン権限） | DNS 検証完了・`auth@it-hercules.uk` 実送信確認済（2026-07-11）。`RESEND_API_KEY` は D:\env\platform.env に格納済み | 済 |
-| GMO 本番契約・live 昇格 | 本番口座 API の live 接続・実入金照合（`GMO_CONNECTOR_MODE=live`）。**本番初入金時に C4 (ii) 残余 1 点（U-code の remarks 文字変換の有無）を確定し evidence §9 を追記**（第11回裁定・sandbox では検証手段なしと実機確定） | 未 |
+| GMO 本番契約・live 昇格 | **第16回裁定でゲート消滅**: 個人事業主に本番APIが提供されないため GMO あおぞら銀行 API を退役。決済照合は P2P二方式（V3-MKT-62/63）へ移行。C4 (ii) 残余1点（U-code remarks文字変換）は GMO 廃止に伴い確定不要化 | 消滅(退役) |
+| PAY.JP 本番アカウント申込 | 個人事業主・昆虫マーケット運営+システム維持費5%徴収の用途で申込。AI申込文面の起草までは自走可（Q-PAY-02推奨）・申込送信は人間 | 未 |
+| PayPay OPA 照会・並行申請 | 固定店舗なし個人事業主の契約可否・実料率・審査期間を照会のうえ並行申請。IHL宛システム維持費徴収へPayPay追加用途 | 未 |
+| 郵便局デジタルアドレス商用可否の裏取り | V3-MKT-20（匿名配送）が用いる外部URL中継方式の商用利用可否・一次情報の法務裏取り | 未 |
+| PTコイン前払式該当性の弁護士確認 | **第16回裁定で不要化**: PTチャージ（金銭でのPT購入）自体を廃止（Q-PAY-06）したため証拠金リスクが消滅し確認不要 | 消滅(廃止) |
+| PayPay銀行Open API照会 | **第16回裁定で不要化**: PTチャージ廃止+P2P銀行振込直接確定によりPayPay銀行(旧ジャパンネット銀行)API連携の必要性が消滅 | 消滅 |
 | collector ingest 実鍵投入 | `COLLECTOR_PRIVATE_KEY_PEM`（Ed25519 秘密鍵）生成・`COLLECTOR_PUBLIC_KEYS` 登録・本番 `INGEST_URL` 配線 | 未 |
+| Truthバックアップ先セットアップ | V3-CST-09: 別プロバイダ(Backblaze B2等)アカウント契約+ローカル`D:\バックアップ`定期pull。設備投資型で可逆operationとして進めてよいが、対外契約・課金開始のみ実行直前に一言報告 | 未 |
 | GOV-09 admin ゲート | **クローズ(2026-07-11)**: K2 実装済みの `requireRole("operator","admin")` を `POST /api/v1/gov/flags` に配線(fail-closed)。非 operator(DEV_TOKEN roles=[]/member セッション)→403+副作用ゼロの negative TC 3 本緑化(`tests/gov-flag.test.ts`)。統一ロール taxonomy の人間裁定は別途(この 2 role 名は運用者ゲートとして据置可能) | 済 |
 | 知の広場 HG-KN-01〜08 + 本採用 Go | **第13回裁定で確定**: 8 論点 = g1 推奨案どおり(包括承認)・**本採用 Go 承認**。PROTECTED 解除=一般公開のみ cutover 後に別途裁定 | 済(公開のみ未) |
+| hold 2 件(V3-FND-13/V3-AIP-61) | **第16回裁定でクローズ**: V3-FND-13(Kernel階層)=確定→**棄却**(現行ScreenDefベースV3-UIX-18を正・round-3 ruling_noteをformalize)・V3-AIP-61(グリーンフィールド)=close(hold解除・確定維持)。もう人間ゲートに残らない | 済 |
 | 月次経済 cron の実デプロイ | wrangler.toml `[triggers]` 配線+`config/consented-crons.json`(consented_by=pending-human-gate)まで済。デプロイ=常駐実行開始=人間ゲート | 未 |
 | 公開の実施 | repo / OSS スナップショットの実際の公開 | 未 |

@@ -384,7 +384,7 @@
  },
  {
   "id": "V3-AUT-01",
-  "statement": "認証はメール宛マジックリンク方式のみ（パスワードレス）とし、パスワード・OAuth/OIDC・SMS・TOTP・ソーシャル/SNS/電話ログインを意図的に非サポートとする。フローは「メール入力→リンク送信→トークン検証→セッション確立」の一本に固定する。",
+  "statement": "認証はメール宛マジックリンク方式のみ（パスワードレス）とし、パスワード・OAuth/OIDC・SMS・TOTP・ソーシャル/SNS/電話ログインを意図的に非サポートとする。フローは「メール入力→リンク送信→トークン検証→セッション確立」の一本に固定する。 重要操作(メール変更・削除・大口取引等)限定でopt-inのTOTPを二次確認として用いることは本条と非衝突とする(一次認証はmagic-link一本を維持・V3-AUT-32と役割分離。第16回裁定Q-REQ-05)。SMS・ソーシャル等の非サポートは変更しない。",
   "category": "認証/ユーザー",
   "kind": "制約",
   "scores": {
@@ -485,6 +485,12 @@
     "evidence": "KEEPノート「マジックリンク」: 「Supabase Authのような巨大システムは不要。Workers + R2だけで成立」",
     "trust": "中",
     "date": "2026-03-19"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "Q-REQ-05「opt-in TOTPとしてV3-AUT-01と非衝突化を明文化」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
@@ -496,7 +502,7 @@
   "ds": 5,
   "score_v2": 125,
   "tier_v2": "S",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第1波",
   "wave_why": "tier_v2=S/status_in_ver2=実装済み→第1波(desire台帳未掲載・実装実績/高tier)",
   "hold": false
@@ -1214,7 +1220,7 @@
  },
  {
   "id": "V3-MKT-10",
-  "statement": "取引成立時に売上5%を(旧8%から引き下げ)『システム維持費税』として売り手に負債計上し、発生から30日猶予後に支払えば同額を資本貢献度に1:1変換、猶予超過未払いはfee_unpaidとして取引成立月起算の月次Fibonacci Δcount(#08カルマ)を課す(全額消込月でその取引由来のΔcountを停止、他事由と加算=排他しない)。市場売上への任意振込方式で全額回収は狙わない。 意図: エスクロー無しの最安ランニングコスト設計・ヤフオク半額のインパクト・10年存続に必要な維持費確保が目的で利益最大化ではない。手数料でなく利益からの貢献還元という位置づけ。",
+  "statement": "取引成立時に売上5%を(旧8%から引き下げ)『システム維持費税』として売り手に負債計上し、発生から30日猶予後に支払えば同額を資本貢献度に1:1変換、猶予超過未払いはfee_unpaidとして取引成立月起算の月次Fibonacci Δcount(#08カルマ)を課す(全額消込月でその取引由来のΔcountを停止、他事由と加算=排他しない)。市場売上への任意振込方式で全額回収は狙わない。 意図: エスクロー無しの最安ランニングコスト設計・ヤフオク半額のインパクト・10年存続に必要な維持費確保が目的で利益最大化ではない。手数料でなく利益からの貢献還元という位置づけ。 母数は成約額(売上全体)であり、商用利用時のIT.Hercules.Laboratoryマーク使用料3%(V3-MKT-36層1)とは別軸で重複計上しない(第16回裁定Q-REQ-04で明文化)。",
   "category": "マーケット/経済",
   "kind": "機能要件",
   "scores": {
@@ -1334,11 +1340,17 @@
     "evidence": "「あと、8%から、5%に引き下げます。これも要件定義に範囲しておいて。意図としては、エクスクロー無しの、ランニングコスト、最安設計であることと、ヤフオクの半額ですよってわかりやすい、インパクトが欲しいから。あと、お金そんなに欲しいわけじゃなくて、システムが10年続くためのお金があればいいだけだから。」",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領6(Q-REQ-04)「商用3%はお金の話なので。あってますし、スムーズ。フォーク10%は貢献度の話です。」",
+    "trust": "高",
+    "date": "2026-07-17"
    }
   ],
   "superseded": "旧称『8%貢献費』(2026-06以前)→2026-07『システム維持費税』へ改称し争いフローと別軸の経済自動処理に整理 さらに2026-07-15裁定(第15回)で料率を8%→5%へ引き下げ(ヤフオク半額の分かりやすさ・エスクロー無し最安コスト・10年維持費目的を根拠)。",
   "conflict": null,
-  "ambiguity": "8% matched時のissueCoin要否(会計)・月起算のタイムゾーンは未確定(U-GMO-03)",
+  "ambiguity": "8% matched時のissueCoin要否(会計)・月起算のタイムゾーンは未確定(U-GMO-03) 母数=成約額・3%との重複計上不可は第16回裁定で確定(Q-REQ-04)。",
   "group": "g04-経済",
   "v1_score": 17,
   "v1_tier": "S",
@@ -3808,7 +3820,7 @@
  },
  {
   "id": "V3-MKT-14",
-  "statement": "GMOあおぞらネット銀行のVA入金Webhookを受信し署名検証(HMAC)のうえ振込者名の振込コードでユーザー/取引/支払種別を照合する。同一webhook再送の二重マッチを防ぐ冪等性(match_pending)を保証し、通知優先+障害時のみunsentlist取得でコスト最小化する。APIキー追加だけで動く形で口座開設前から仕組みを先行実装し、決済は独立#23画面ではなく取引Stage3へインライン統合する。 【裁定確定 2026-07-10】銀行連携は GMO あおぞらネット銀行 API を正式採用。開発キー(sandbox/sunabar 系)は格納済み(ユーザー申告)のため設計・sandbox 検証まで AI が進められる。人間ゲートは本番キー投入と実入金確認のみ。キーのコミットは絶対禁止。",
+  "statement": "【第16回裁定で退役】GMOあおぞらネット銀行のVA入金Webhook照合は、個人事業主に本番APIが提供されない(公式一次情報)ため退役する。決済照合はP2P二方式(銀行振込直接/PAY.JP Platformカード決済・§4 V3-MKT-62/63)へ移行し、gmo webhook route 6本は実装せず廃止する(OQ-ROUTE-02)。 旧: GMOあおぞらネット銀行のVA入金Webhookを受信し署名検証(HMAC)のうえ振込者名の振込コードでユーザー/取引/支払種別を照合する。同一webhook再送の二重マッチを防ぐ冪等性(match_pending)を保証し、通知優先+障害時のみunsentlist取得でコスト最小化する。APIキー追加だけで動く形で口座開設前から仕組みを先行実装し、決済は独立#23画面ではなく取引Stage3へインライン統合する。 【裁定確定 2026-07-10】銀行連携は GMO あおぞらネット銀行 API を正式採用。開発キー(sandbox/sunabar 系)は格納済み(ユーザー申告)のため設計・sandbox 検証まで AI が進められる。人間ゲートは本番キー投入と実入金確認のみ。キーのコミットは絶対禁止。",
   "category": "マーケット/経済",
   "kind": "機能要件",
   "scores": {
@@ -3916,9 +3928,15 @@
     "evidence": "2026-04-05「まだ開設完了しておりません…先に、こちらを作成する必要があります。出来るように仕組みだけ作っといて」",
     "trust": "中",
     "date": "2026-04-05"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領1「GMOあおぞら銀行をやめる理由は個人事業主には本番APIが提供されていないから…paypayにします」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
-  "superseded": null,
+  "superseded": "GMOあおぞらVA Webhook照合方式は2026-07-17第16回裁定で退役(個人事業主に本番API非提供)。決済はP2P二方式(V3-MKT-62/63)へ移行。",
   "conflict": null,
   "ambiguity": "GMO sunabarはWebhook未提供で本番webhook代替設計が未確定・正式schema/本番署名形式は人間ゲート(U-GMO-04/05)。PayPay案は手数料懸念で保留",
   "group": "g04-経済",
@@ -3927,7 +3945,7 @@
   "ds": 5,
   "score_v2": 80,
   "tier_v2": "S",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第1波",
   "wave_why": "tier_v2=S/status_in_ver2=実装済み→第1波(desire台帳未掲載・実装実績/高tier)",
   "hold": false,
@@ -7009,7 +7027,7 @@
  },
  {
   "id": "V3-MKT-12",
-  "statement": "振込コードはuserIdから決定的に生成(SHA-256→uint24先頭3バイト→Base36大文字→U-プレフィックス4-6文字、ゆらぎ耐性MAXで正規表現 U[\\-\\－][A-Z0-9]{4,6} 抽出)し、ユーザーごと1つの安定コードを5%維持費税・PT入金・P2P推奨で共用する。銀行APIがuserIdを返さない(名義+金額+日時のみ)制約下で、同一コード同額の複数pendingは振込日時優先+義務発生日以降で最古の未払いへFIFO消込する(振込の真偽は暴かず事実を並べるのみ)。",
+  "statement": "振込コードはuserIdから決定的に生成(SHA-256→uint24先頭3バイト→Base36大文字→U-プレフィックス4-6文字、ゆらぎ耐性MAXで正規表現 U[\\-\\－][A-Z0-9]{4,6} 抽出)し、ユーザーごと1つの安定コードを5%維持費税・P2P推奨で共用する(PTチャージ廃止によりPT入金用途は削除)。銀行APIがuserIdを返さない(名義+金額+日時のみ)制約下で、同一コード同額の複数pendingは振込日時優先+義務発生日以降で最古の未払いへFIFO消込する(振込の真偽は暴かず事実を並べるのみ)。",
   "category": "マーケット/経済",
   "kind": "機能要件",
   "scores": {
@@ -7091,6 +7109,12 @@
     "evidence": "round-15の5%統一の伝播(V3-MKT-11整合)",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領2④「PTはお金で買えない…ポイント制度の過去のやつは廃止」/ Q-PAY-06「廃止です。不要です」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
@@ -7109,7 +7133,7 @@
  },
  {
   "id": "V3-MKT-36",
-  "statement": "経済層を3層構造とする: (1)IT.Hercules.Laboratoryマーク商用利用時に売上3%を文明OSへ拠出(QRコードで生産者の顔が見える証明、観測に売値・売れた個数を必須)、(2)マーケット取引成立時の売上5%(システム維持費)積立(旧8%から引き下げ)、(3)フォーク収益発生時に収益10%を原作者(レイヤー0/1貢献者)へ還元。OSS(非商用)は経済圏外の公共財として還元不要・自由とする。",
+  "statement": "経済層を3層構造とする: (1)IT.Hercules.Laboratoryマーク商用利用時に売上3%を文明OSへ拠出(QRコードで生産者の顔が見える証明、観測に売値・売れた個数を必須)、(2)マーケット取引成立時の売上5%(システム維持費)積立(旧8%から引き下げ、母数=成約額)、(3)フォーク先ユーザーに付与される貢献度(karma/contribution)の約10%を、使用部品の作者・処理開発者・元テンプレートの作者へ分配する(金銭の還元ではない)。良いものを作った人が得をし、コピーしてパクられてもそのほうが得になるインセンティブ構造とする。OSS(非商用)は経済圏外の公共財として還元不要・自由とする。",
   "category": "マーケット/経済",
   "kind": "機能要件",
   "scores": {
@@ -7186,11 +7210,17 @@
     "evidence": "(V3-MKT-10と同一裁定の波及)「8%から、5%に引き下げます」",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領6(Q-REQ-04補足)「フォーク10%は貢献度の話です。このフォークされたユーザーDのテンプレートが使われたとして、それに使われている部品(コンポーネント)や、処理(技術者、開発者)、元テンプレートの人に、Dに付与される貢献度の10%くらい、入ってもいいよなって。そしたら、ほんとにいいものを作った人が得をする。インセンティブが高まる。コピーしてパクられてもそのほうが得ってなるようにしたい。」",
+    "trust": "高",
+    "date": "2026-07-17"
    }
   ],
   "superseded": null,
   "conflict": null,
-  "ambiguity": "3%が最終値か本人再検討中・5%(旧8%)の母数(売上全体か手数料相当か)・3%/10%との重複計上回避ルールが未確定",
+  "ambiguity": "3%が最終値か本人再検討中(未確定)。5%(旧8%)の母数=成約額であることはV3-MKT-10で明文化済み・フォーク10%は貢献度(karma)分配であり金銭でないため3%/5%との重複計上は原理的に発生しない(第16回裁定Q-REQ-04で解消)。",
   "group": "g04-経済",
   "v1_score": 14,
   "v1_tier": "A",
@@ -8729,6 +8759,12 @@
     "evidence": "世界法第10条『世界統合の法』(2026-03-20)『文明OSは統合された文明』",
     "trust": "中",
     "date": "2026-03-20"
+   },
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "OQ-HOLD-01「採用しない(現行ScreenDefを正とし棄却または対象外化)」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
@@ -8740,20 +8776,20 @@
   "ds": 5,
   "score_v2": 60,
   "tier_v2": "A",
-  "req_status": "確定",
+  "req_status": "棄却",
   "adjudication": {
-   "conclusion": "保留(根拠不足)",
-   "reason": "World→FeatureNode→Kernel階層・画面概念廃止・Kernel UUIDルーティングはver1/civ-os由来。IHLはMiniScreenKernel非採用(#39)、ver3現行はScreenDef/AppRoutes方式(V3-UIX-18/AIP-33)で『画面廃止』と真逆。レイヤー命名・FeatureNode数(12/25)も揺れ、本人も継承要判断。R4だとver3実装がScreenDefに傾くが断定材料不足。",
+   "conclusion": "棄却",
+   "reason": "World→FeatureNode→Kernel階層・画面概念廃止・Kernel UUIDルーティングはver1/civ-os由来。IHLはMiniScreenKernel非採用(#39)、ver3現行はScreenDef/AppRoutes方式(V3-UIX-18/AIP-33)で『画面廃止』と真逆。レイヤー命名・FeatureNode数(12/25)も揺れ、本人も継承要判断。R4だとver3実装がScreenDefに傾くが断定材料不足。 【第16回裁定で確定】round-3 ruling_note「Kernel UUIDルーティング棄却」を機械フィールドへformalize。現行ScreenDefベース(V3-UIX-18 SSOT承認済)を正とし、World→FeatureNode→Kernel階層・画面廃止・Kernel UUIDルーティングは不採用=棄却、wave=対象外。",
    "needs": "ver3が『画面廃止+Kernel UUIDルーティング』のマイクロカーネル階層を採るのか、現行のNext.js/ScreenDef/AppRoutes方式を正本とするのか——この一点が決まれば裁定可能。 V3-UIX-18でScreenDef SSOTが承認済みのためKernel化は棄却方向。",
    "rules": [
     "R4",
     "R5"
    ]
   },
-  "wave": "第1波",
-  "wave_why": "desireテーマ「コンポーネント文明/OSフォーク」既定=第1波(§2/§5)(保留のため仮置き。人間裁定確定後に再割当)",
-  "hold": true,
-  "ruling_note": "ユーザー裁定 2026-07-10(第3回): 「kernel化はその時の手段。よりよい手段があるなら不要」— Kernel UUIDルーティング棄却、Next.js/ScreenDef/AppRoutes方式で確定(保留解除)"
+  "wave": "対象外",
+  "wave_why": "req_status=棄却(第16回裁定OQ-HOLD-01でround-3 ruling_noteのKernel棄却をformalize)→対象外",
+  "hold": false,
+  "ruling_note": "ユーザー裁定 2026-07-10(第3回): 「kernel化はその時の手段。よりよい手段があるなら不要」— Kernel UUIDルーティング棄却、Next.js/ScreenDef/AppRoutes方式で確定(保留解除) / ユーザー裁定 2026-07-17(第16回・OQ-HOLD-01): 棄却をformalize(req_status=棄却・wave=対象外・hold=false)"
  },
  {
   "id": "V3-MKT-19",
@@ -10190,7 +10226,7 @@
  },
  {
   "id": "V3-IND-02",
-  "statement": "individual masterの保存先をIHL R2のindividualテーブル正本とし、civilization-osはindividual_id参照のみとする。individuals/papers等のテーブルは「事実」ではなく観測を受け止める識別用の足場であり成長データ等の中身は持たせない。個体は幼虫〜蛹〜成虫〜標本までUID(QR)で一貫識別し画像・数値・環境ログをすべてUIDに紐付ける。",
+  "statement": "individual masterの保存先をIHL R2のindividualテーブル正本とし、civilization-osはindividual_id参照のみとする。individuals/papers等のテーブルは「事実」ではなく観測を受け止める識別用の足場であり成長データ等の中身は持たせない。個体は幼虫〜蛹〜成虫〜標本までUID(QR)で一貫識別し画像・数値・環境ログをすべてUIDに紐付ける。 ただしアドレス(individual層のUID)は個別容器分割/QR発行時に発生し、それ以前の割り出し前幼虫は匿名count層(V3-IND-36)で扱う(第16回裁定Q-REQ-02)。",
   "category": "個体/ブリーディング",
   "kind": "制約",
   "scores": {
@@ -10236,6 +10272,12 @@
     "evidence": "3/8 4 2026-03-06「ダミー個体を1つ作る…現実との接続点」",
     "trust": "中",
     "date": "2026-03-06"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "Q-REQ-02「V3-IND-02に『アドレスは個別容器分割/QR発行時に発生』の但し書き」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
@@ -10247,7 +10289,7 @@
   "ds": 2,
   "score_v2": 50,
   "tier_v2": "A",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第1波",
   "wave_why": "tier_v2=A/status_in_ver2=部分→第1波(desire台帳未掲載・実装実績/高tier)",
   "hold": false
@@ -15733,7 +15775,7 @@
  },
  {
   "id": "V3-SEC-06",
-  "statement": "システムは個人情報・決済情報(氏名/住所/電話/クレカ/口座)を一切保持しない。決済(送金)はユーザー間の銀行振込に委ねOSは関与せず、取引成立時に売上の一定割合(例5%)を積み立て、ユーザーごとに一意の振込名義コードで突合・控除する。本人紐付けはX/Facebook等の外部連携経由に限定し個人情報を持ち込まない(守るべきものが無くセキュリティ負荷が本質的に低い)。",
+  "statement": "システムは個人情報・決済情報(氏名/住所/電話/クレカ/口座)の平文を一切保持しない(「保持しない」は平文のみを指し、IHLが復号不能なzero-knowledge blob(ciphertext)としてのサーバ保管は「保持」に当たらない・第16回裁定OQ-LB-04)。決済はP2Pユーザー選択二方式(①銀行振込直接・IHL非関与 ②PAY.JP Platformカード決済・テナント本人確認・§4 V3-MKT-62/63)に委ね、PAY.JP経由取引のみ売上の一定割合(5%)を積み立て、ユーザーごとに一意の振込名義コードで突合・控除する。本人紐付けはX/Facebook等の外部連携経由に限定し個人情報を持ち込まない。鍵バンドル等の暗号化blobの復旧はオフライン1回限りリカバリコード(§4 V3-SEC-57)で緩和する(守るべき平文が無くセキュリティ負荷が本質的に低い設計思想は維持)。",
   "category": "セキュリティ/法務",
   "kind": "制約",
   "scores": {
@@ -15792,11 +15834,17 @@
     "evidence": "round-15の5%統一の伝播(V3-MKT-11整合)",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "OQ-LB-04「サーバにzero-knowledge blobとして保持…復号不能ciphertextは保持に当たらない」/ 受領7(P2P二方式)",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
   "conflict": null,
-  "ambiguity": "振込名義コード突合の詳細はルール文書に未記載で追記が必要(138)。",
+  "ambiguity": "振込名義コード突合の詳細はルール文書に未記載で追記が必要(138)。zero-knowledge blob保管の暗号方式・リカバリコード発行フローの詳細はPhase実装で確定(V3-SEC-57)。",
   "group": "g05-ガバナンス法務",
   "v1_score": 16,
   "v1_tier": "A",
@@ -17521,6 +17569,12 @@
     "evidence": "2026-07-09T13:45 「技術選定をまずdeepresearch…設計を一から作り直して…実装も一から作り直す方が…画像と.envだけ残して他は参考資料程度」",
     "trust": "中",
     "date": "2026-07-09"
+   },
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "OQ-HOLD-02「現行ver3 repoの存在自体をこの要件の充足完了とみなしclose」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
@@ -17552,8 +17606,8 @@
   "tier_v2": "A",
   "req_status": "確定",
   "adjudication": {
-   "conclusion": "保留(根拠不足)",
-   "reason": "deep researchで技術選定しゼロから作り直す(グリーンフィールド)は2026-07-09の最新発言でR4なら優先方向だが、現方針DESIGN-science-os-integrationはブラウンフィールド最小差分統合で真逆、しかも『本人も未決』と明記。開発方式の根幹分岐を水増し承認せず保留する。",
+   "conclusion": "承認(close)",
+   "reason": "deep researchで技術選定しゼロから作り直す(グリーンフィールド)は2026-07-09の最新発言でR4なら優先方向だが、現方針DESIGN-science-os-integrationはブラウンフィールド最小差分統合で真逆、しかも『本人も未決』と明記。開発方式の根幹分岐を水増し承認せず保留する。 【第16回裁定で確定】現ver3 repo自体がグリーンフィールド構築の充足結果とみなしclose(hold解除)。round-2/3 ruling_noteの保留解除をformalize。req_status=確定 維持。",
    "needs": "ver3を『技術選定deep research→設計/実装をゼロから作り直す(グリーンフィールド)』で進めるか、『既存ver1/ver2資産への最小差分統合(ブラウンフィールド)』で進めるか——本人がこの開発方式を確定すれば裁定可能。",
    "rules": [
     "R4",
@@ -17562,8 +17616,8 @@
   },
   "wave": "第1波",
   "wave_why": "tier_v2=A/status_in_ver2=不明→第1波(desire台帳未掲載・実装実績/高tier)(保留のため仮置き。人間裁定確定後に再割当) / ユーザー裁定 2026-07-10(第2回): 新repo方式で確定(保留解除)",
-  "hold": true,
-  "ruling_note": "ユーザー裁定 2026-07-10(第2回): 新repo方式で確定(保留解除) / ユーザー裁定 2026-07-10(第3回): 「グリーンフィールドで進める」— グリーンフィールド確定(第2回の新repo方針と整合・保留解除)"
+  "hold": false,
+  "ruling_note": "ユーザー裁定 2026-07-10(第2回): 新repo方式で確定(保留解除) / ユーザー裁定 2026-07-10(第3回): 「グリーンフィールドで進める」— グリーンフィールド確定(第2回の新repo方針と整合・保留解除) / ユーザー裁定 2026-07-17(第16回・OQ-HOLD-02): close確定・hold解除をformalize"
  },
  {
   "id": "V3-AIP-68",
@@ -21757,7 +21811,7 @@
  },
  {
   "id": "V3-I18-02",
-  "statement": "新規登録/オンボーディングで表示言語(locale)を必須選択させ、国籍・国コードは不要(任意化または廃止)とする。locale未設定のままonboardingComplete:trueにしてはならず、Accept-Languageは初期値の提案に留め無断確定しない。 ただし違法出品ユーザー自治(V3-GOV-35)の同国内指摘グルーピングに用いるため、所属国(内部属性・UI上は非表示)は必須選択とする。UI演出としての国旗表示・国籍による機能制限を廃止する方針(本条の主旨)は変えず、ガバナンス目的の内部データとしてのみ必須化する例外を設ける。",
+  "statement": "新規登録/オンボーディングで表示言語(locale)を必須選択させ、国籍・国コードは不要(任意化または廃止)とする。locale未設定のままonboardingComplete:trueにしてはならず、Accept-Languageは初期値の提案に留め無断確定しない。 ただし違法出品ユーザー自治(V3-GOV-35)の同国内指摘グルーピングに用いるため、所属国(内部属性・UI上は非表示)は必須選択とする。UI演出としての国旗表示・国籍による機能制限を廃止する方針(本条の主旨)は変えず、ガバナンス目的の内部データとしてのみ必須化する例外を設ける。 種言語(locale)は居住国より優先する主たる文化圏属性であり、所属国(内部必須属性・UI非表示)の用途は違法出品ユーザー自治(V3-GOV-35)の同国内指摘グルーピングに加え、規制/合法性の国別フィルタリング・行政介入権のスコープ判定にも用いる(第16回裁定・受領5)。",
   "category": "翻訳/i18n",
   "kind": "機能要件",
   "scores": {
@@ -21807,6 +21861,12 @@
     "evidence": "「だから、最初に所属している国を選ぶので、同じ国同士のユーザーで指摘しあって」(V3-GOV-35の前提設計)",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領5「どの言語文化圏にいるかのほうが影響受けそう」+「行政介入…国でフィルタリング」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": "旧civ-os(legacy)は国+言語必須だったが、IHL rebuildでは表示言語のみ必須・国籍不要に変更(FR-REG-06/06a)。",
@@ -24360,7 +24420,7 @@
  },
  {
   "id": "V3-MKT-15",
-  "statement": "GMO本番決済(実入金・本番証跡・Q四半期照合レビュー)はAIが完走できない恒久的な人間ゲートとし、エージェントが勝手にチェックを[x]にすることを禁止する。APIキー(GMO_AOZORA_CLIENT_ID/SECRET)は本番前にsunabarで手動検証し、鍵はローカル.env/運用Secretsのみに投入しコミット・R2・ログに一切残さない。 【裁定確定 2026-07-10】銀行連携は GMO あおぞらネット銀行 API を正式採用。開発キー(sandbox/sunabar 系)は格納済み(ユーザー申告)のため設計・sandbox 検証まで AI が進められる。人間ゲートは本番キー投入と実入金確認のみ。キーのコミットは絶対禁止。",
+  "statement": "【第16回裁定で読み替え】GMOあおぞら退役に伴い、本条の人間ゲートはPAY.JP本番アカウント申込およびPayPay OPA照会・並行申請の人間ゲートへ読み替える。本番決済(実入金・本番証跡・四半期照合レビュー)はAIが完走できない恒久的な人間ゲートとし、エージェントが勝手にチェックを[x]にすることを禁止する。APIキー(PAY.JP/PayPay)は本番前にsandbox/テスト環境で手動検証し、鍵はローカル.env/運用Secretsのみに投入しコミット・R2・ログに一切残さない。 旧: GMO本番決済(実入金・本番証跡・Q四半期照合レビュー)はAIが完走できない恒久的な人間ゲートとし、エージェントが勝手にチェックを[x]にすることを禁止する。APIキー(GMO_AOZORA_CLIENT_ID/SECRET)は本番前にsunabarで手動検証し、鍵はローカル.env/運用Secretsのみに投入しコミット・R2・ログに一切残さない。 【裁定確定 2026-07-10】銀行連携は GMO あおぞらネット銀行 API を正式採用。開発キー(sandbox/sunabar 系)は格納済み(ユーザー申告)のため設計・sandbox 検証まで AI が進められる。人間ゲートは本番キー投入と実入金確認のみ。キーのコミットは絶対禁止。",
   "category": "マーケット/経済",
   "kind": "制約",
   "scores": {
@@ -24412,6 +24472,12 @@
     "evidence": "ノート2026-04-10: 「ルール上、エージェントはこれを 勝手に [x] にしてはいけない」",
     "trust": "中",
     "date": "2026-04-10"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領1(GMO退役)/ 受領7③「PayPay OPA…並行申請」",
+    "trust": "高",
+    "date": "2026-07-17"
    }
   ],
   "superseded": null,
@@ -24423,7 +24489,7 @@
   "ds": 3,
   "score_v2": 27,
   "tier_v2": "B",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第1波",
   "wave_why": "desireテーマ「自然淘汰経済」既定=第1波(§2/§5)",
   "hold": false,
@@ -26544,7 +26610,7 @@
  },
  {
   "id": "V3-MKT-11",
-  "statement": "マーケットの「システム維持費」(旧称:手数料。悪印象回避+利益からの貢献還元という意図で改称)は国内主要オークション(ヤフオク落札システム利用料8.8〜10%)より常に低く保つことを倫理宣言(憲法)として掲げ、5%で運用する(旧8%から引き下げ、ヤフオクのおよそ半額)。安さは外部取引へ逃げる経済的インセンティブを消すためであり、テンプレ争い・スナイプ入札等の軽微問題はシステムで対処せずユーザー間指摘に委ねる。",
+  "statement": "マーケットの「システム維持費」(旧称:手数料。悪印象回避+利益からの貢献還元という意図で改称)は国内主要オークション(ヤフオク落札システム利用料8.8〜10%)より常に低く保つことを倫理宣言(憲法)として掲げ、5%で運用する(旧8%から引き下げ、ヤフオクのおよそ半額)。安さは外部取引へ逃げる経済的インセンティブを消すためであり、テンプレ争い・スナイプ入札等の軽微問題はシステムで対処せずユーザー間指摘に委ねる。 ここでいう「憲法」は本条の5%倫理宣言(倫理憲章)を指し、設計憲法(`02-design/constitution.md` C1〜C6)とは別物である(用語混同を避けるため第16回裁定で明記)。",
   "category": "マーケット/経済",
   "kind": "制約",
   "scores": {
@@ -26602,6 +26668,12 @@
     "evidence": "「チケットって表現正しくないです。実態は、マーケット機能の、ヤフオクでいう、手数料なのですが、手数料、なんであんな持っていくねん！って気分悪いので、表現がこれも正しくないなと。なので、「システム維持費」で統一してください。」",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "Q-REQ-07③『憲法』用語の分離+5%倫理宣言の正本パス確定",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": "旧称『マーケット手数料』(2026-07以前)→2026-07-15『システム維持費』へ改称、料率も8%→5%へ引き下げ。",
@@ -29673,7 +29745,7 @@
  },
  {
   "id": "V3-AUT-03",
-  "statement": "ver3のセッションは署名付きステートレストークン(HMAC/JWT系・サーバ側セッションストアなし)を正とする(2026-07-10 第6回裁定でopaque+サーバ側ストア方式から変更)。平文トークンのlocalStorage直置きは引き続き禁止し、保持方法はHttpOnly Cookie等の安全な手段をC2設計で確定する。失効は短めTTL(30日目安)+マジックリンク再ログインで担保し、強制失効が要件化した場合はKVデニーリスト等を後付けする。actor_id導出(CL-03凍結・sha256系)は不変とする。",
+  "statement": "ver3のセッションは署名付きステートレストークン(HMAC/JWT系・サーバ側セッションストアなし)を正とする(2026-07-10 第6回裁定でopaque+サーバ側ストア方式から変更)。平文トークンのlocalStorage直置きは引き続き禁止し、保持方法はHttpOnly Cookie等の安全な手段をC2設計で確定する。失効は短めTTL(30日目安)+マジックリンク再ログインで担保し、強制失効はKVデニーリスト(BAN/失効者のみ格納・毎リクエスト照会・Workers KV低コスト)をMVP必須として実装する(V3-KRM-04のBAN・V3-GOV-09の行政命令失効と整合)。actor_id導出(CL-03凍結・sha256系)は不変とする。",
   "category": "認証/ユーザー",
   "kind": "制約",
   "scores": {
@@ -29719,6 +29791,12 @@
     "evidence": "第6回裁定①「Aでいいです。そんなにログインとかをめんどくさくしてほしくないって思いあるので。」(案A=署名付きステートレス。R3/R4適用・修正承認)",
     "trust": "高",
     "date": "2026-07-10"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "Q-REQ-03「KVデニーリストをMVP必須へ格上げ…対象者のみ格納で小さくWorkers KVで低コスト」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
@@ -36465,7 +36543,7 @@
  },
  {
   "id": "V3-AUT-32",
-  "statement": "乗っ取り対策として弱い秘密の質問は採用せず、バックアップメール・端末信頼・ログイン履歴・異常ログイン警告で本人性を担保し、メール変更・削除・大きな取引等の重要操作時のみ二段階確認を追加する。TOTP/2FAはV3-AUT-01との整合を確認のうえopt-inで導入するか否かを別途裁定する。",
+  "statement": "乗っ取り対策として弱い秘密の質問は採用せず、バックアップメール・端末信頼・ログイン履歴・異常ログイン警告で本人性を担保し、メール変更・削除・大きな取引等の重要操作時のみ二段階確認を追加する。TOTP/2FAは重要操作限定のopt-inとして確定する(第16回裁定Q-REQ-05・一次認証magic-link/二次確認opt-in TOTPで役割分離しV3-AUT-01と非衝突)。",
   "category": "認証/ユーザー",
   "kind": "非機能要件",
   "scores": {
@@ -36511,10 +36589,16 @@
     "evidence": "KEEP『詐欺師、ハッカー対策』2026-03-16『パスワードなし（Magic Linkのみ）＝アカウント奪取がほぼ不可能』",
     "trust": "中",
     "date": "2026-03-16"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "Q-REQ-05「重要操作限定のopt-in TOTPとして第2波採番」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
-  "conflict": "V3-AUT-01は「TOTP非サポート」を明言するが、本エントリ(会話ログ)はTOTP/2FAを任意オプションとして提案。TOTP/バックアップメールを実装するかは人間裁定待ち。",
+  "conflict": "V3-AUT-01の「TOTP非サポート」は一次認証(SMS/ソーシャル等)を指し、本条の重要操作限定opt-in TOTP(二次確認)とは役割分離のため非衝突(第16回裁定Q-REQ-05で解消)。",
   "ambiguity": null,
   "group": "g06-認証多言語",
   "v1_score": 10,
@@ -36865,7 +36949,7 @@
  },
  {
   "id": "V3-I18-17",
-  "statement": "国籍によってUIを分けず全ユーザー共通のデフォルトUIとし、国旗はデフォルト非表示・任意ON、国籍の代わりに行動傾向を表す「文化タグ」(複数選択可)をプロフィール/検索/文化差ガイドに用い、国籍情報は翻訳・通関・送料・言語判定・違法出品ユーザー自治(V3-GOV-35)の同国内指摘グルーピングなど内部データとしてのみ使用する。",
+  "statement": "国籍によってUIを分けず全ユーザー共通のデフォルトUIとし、国旗はデフォルト非表示・任意ON、国籍の代わりに行動傾向を表す「文化タグ」(複数選択可)をプロフィール/検索/文化差ガイドに用い、国籍情報は翻訳・通関・送料・言語判定・違法出品ユーザー自治(V3-GOV-35)の同国内指摘グルーピング・規制/合法性の国別フィルタリング・行政介入権のスコープ判定など内部データとしてのみ使用する。",
   "category": "翻訳/i18n",
   "kind": "思想",
   "scores": {
@@ -36947,10 +37031,16 @@
     "evidence": "「だから、最初に所属している国を選ぶので、同じ国同士のユーザーで指摘しあって」",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領5(規制/行政介入の国別フィルタ)",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
-  "conflict": "国籍/国情報の扱い: 本エントリは「国籍の代わりに文化タグ」を推すが、V3-AUT-35は国(country)をUserに持たせ、V3-I18-02は国籍不要。国情報を何に使いどこまで保持するかは未裁定。",
+  "conflict": "国情報を何に使いどこまで保持するかは第16回裁定(受領5・V3-AUT-35/I18-02)で確定: 表示は文化タグ・言語のみで国旗任意、国籍は規制/合法性フィルタ・行政介入スコープ判定用の内部属性としてのみ保持する。",
   "ambiguity": "showFlagのデフォルト適用範囲(プロフィール/カード/オファー全画面共通か)",
   "group": "g06-認証多言語",
   "v1_score": 12,
@@ -47027,7 +47117,7 @@
  },
  {
   "id": "V3-OBS-32",
-  "statement": "デバイス測定データのCSVインポート機能を提供する。SwitchBot限定ではなく汎用フォーマット/汎用列マッピングに対応し、重複行を挿入しないappend/diff方式(device_id, bucket_tsで重複排除)、上限は200,000行/16MB(Hub2年分でも余裕)とする。",
+  "statement": "デバイス測定データのCSVインポート機能を提供する。SwitchBot限定ではなく汎用フォーマット/汎用列マッピングに対応し、重複行を挿入しないappend/diff方式(device_id, bucket_tsで重複排除)、上限は200,000行/16MB(Hub2年分でも余裕)とする。 SwitchBot向け具体設計として、機器選択→CSV投入→期間重複はput-if-absentで自動スキップし、観測登録(棚join)と連携する(第16回裁定OQ-NEWID-02。SwitchBot専用importerは新規採番せず本要件へ統合)。",
   "category": "観測",
   "kind": "機能要件",
   "scores": {
@@ -47065,18 +47155,24 @@
     "evidence": "composer 0d51fa86 2026-06-25: 「16MB is not that big」",
     "trust": "中",
     "date": "2026-06-25"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "OQ-NEWID-02「機器選択→CSV投入→期間重複はput-if-absent自動スキップ…設計は完了しているが要件IDは未採番」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
   "conflict": null,
-  "ambiguity": "SwitchBot以外の汎用列マッピングをver1/ver2どちらでやるか未決",
+  "ambiguity": "SwitchBot以外の汎用列マッピングをver1/ver2どちらでやるか未決(SwitchBot向け具体設計=機器選択→CSV→期間重複put-if-absentスキップは第16回裁定で統合済み。汎用列マッピングの実装層(ver1/ver2)は引き続き未決)",
   "group": "g02-観測個体",
   "v1_score": 11,
   "v1_tier": "B",
   "ds": 1,
   "score_v2": 6,
   "tier_v2": "C",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第1波",
   "wave_why": "tier_v2=C/status_in_ver2=ver2踏襲→第1波(desire台帳未掲載・実装実績/高tier)",
   "hold": false
@@ -49793,7 +49889,7 @@
  },
  {
   "id": "V3-CST-07",
-  "statement": "事業運営はGMO青空銀行の個人事業主口座+クレジットカードで領収書を整え、借金不要・低ランニングコストで運営する。APIは研究目的のみ無料開放し商用利用は禁止、出品者取り分をヤフオク等より高く(システム維持費を低く。旧称:手数料)設定し、動的データ(観測継続・取引履歴)で競合へのデータコピーを無意味化する。",
+  "statement": "【第16回裁定で退役】GMO青空銀行の個人事業主口座API本番連携は退役する(個人事業主に本番APIが提供されないため・公式一次情報)。事業運営口座(領収書用)は任意の銀行でよい。クレジットカードで領収書を整え、借金不要・低ランニングコストで運営する。APIは研究目的のみ無料開放し商用利用は禁止、出品者取り分をヤフオク等より高く(システム維持費5%を低く。旧称:手数料)設定し、動的データ(観測継続・取引履歴)で競合へのデータコピーを無意味化する。",
   "category": "コスト/運用",
   "kind": "制約",
   "scores": {
@@ -49839,11 +49935,17 @@
     "evidence": "「なので、「システム維持費」で統一してください」「8%から、5%に引き下げます」",
     "trust": "高",
     "date": "2026-07-15"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領1「個人事業主には本番APIは提供されていない…手数料も高い」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
   "conflict": null,
-  "ambiguity": "手数料の具体的%は未決定のまま会話終了 率はV3-MKT-10/11で5%(旧8%)に確定(2026-07-15第15回裁定)。",
+  "ambiguity": "手数料の具体的%は未決定のまま会話終了 率はV3-MKT-10/11で5%(旧8%)に確定(2026-07-15第15回裁定)。 GMO青空銀行の個人事業主API本番連携は個人事業主に非提供のため2026-07-17第16回裁定で退役、事業口座は任意銀行でよい。",
   "group": "g01-基盤コスト",
   "v1_score": 8,
   "v1_tier": "C",
@@ -50534,7 +50636,7 @@
  },
  {
   "id": "V3-AUT-35",
-  "statement": "User に表示言語(language)を持たせ、Accept-Language から自動推定し初回ログイン時に1回だけ確認する(入力負担ゼロ)。国(country)は保持しない(FR-REG-06/06a・本人の葛藤を優先)。将来 配慮目的で国情報が必要になった場合のみ再検討。",
+  "statement": "User に表示言語(language)を持たせ、Accept-Language から自動推定し初回ログイン時に1回だけ確認する(入力負担ゼロ)。表示用の国(country)は保持しない(FR-REG-06/06a・本人の葛藤を優先)。ただし国籍は、規制/合法性の国別フィルタリングおよび行政介入権のスコープ判定に用いる内部必須属性(UI非表示)として保持する(第16回裁定・V3-I18-02/I18-17と整合)。",
   "category": "認証/ユーザー",
   "kind": "機能要件",
   "scores": {
@@ -50572,10 +50674,16 @@
     "evidence": "KEEP(元の思想)2026-03-19『初回ログイン時に1回だけ聞く/国はIPから推定/言語はブラウザから推定→確認するだけ』",
     "trust": "中",
     "date": "2026-03-19"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md",
+    "evidence": "受領5「国によって規制やruleが違う…行政介入権利とか国でフィルタリングしたい…だから国籍選択は欲しい」",
+    "trust": "高",
+    "date": "2026-07-16"
    }
   ],
   "superseded": null,
-  "conflict": "国保持の要否: 本エントリ(行157/158,ver1)は国+言語を持たせるが、高信頼のFR-REG-06/06a(行29,2026-06-07)は「表示言語は必須・国籍・国コードは不要」。ver3は言語のみ必須を採る方向だが国情報保持の可否は未裁定。",
+  "conflict": "国保持の要否: 本エントリ(行157/158,ver1)は国+言語を持たせるが、高信頼のFR-REG-06/06a(行29,2026-06-07)は「表示言語は必須・国籍・国コードは不要」——表示用途は不要で確定。ただし規制/合法性フィルタ・行政介入スコープの内部用途に限り国籍を保持することが第16回裁定(受領5)で確定(V3-I18-02/I18-17と整合)。",
   "ambiguity": "国・言語を持たせること自体にユーザーが葛藤(「あんまりしたくない」)を表明",
   "group": "g06-認証多言語",
   "v1_score": 11,
@@ -50596,7 +50704,8 @@
   "original_statement": "Userに国(country)と言語(language)を持たせ(差別でなく配慮・相互理解のための文化データ)、国はIP、言語はAccept-Languageから自動推定し、初回ログイン時に1回だけ確認させる(入力負担ゼロ)。",
   "wave": "対象外",
   "wave_why": "tier_v2=C・status_in_ver2=未実装/不明→対象外(desire台帳未掲載・実績/根拠薄)",
-  "hold": false
+  "hold": false,
+  "ruling_note": "ユーザー裁定 2026-07-17(第16回・受領5): 国籍を規制/行政介入スコープ用の内部必須属性として保持確定"
  },
  {
   "id": "V3-AUT-36",
@@ -55465,6 +55574,734 @@
   "req_status": "確定",
   "wave": "第1波",
   "wave_why": "desireテーマ「自然淘汰経済」既定=第1波(§2/§5)、本人が明言する核心欲求(R3欲求ドリブン)",
+  "hold": false
+ },
+ {
+  "id": "V3-IND-36",
+  "statement": "割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sample抽出計測で全体を推定する。個別容器への分割またはQR発行のタイミングでindividual層へ昇格し(アドレス=UIDの発生タイミング)、それ以前は個体を特定しない。count層の減少数とindividual層の増加数をattrition照合で突合し、水増し・行方不明を検出する。最優先ペルソナ(100匹一括飼育)の割り出し前後の最重要オペレーションであり、個体識別の負荷を割り出し後まで遅延させることで運用コストを最小化する。",
+  "category": "個体/ブリーディング",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 5,
+    "why": "誤カウント/水増し防止・最優先ペルソナ最重要オペ"
+   },
+   "ui": {
+    "v": 4,
+    "why": "割り出しを行う全飼育者+担当者へ影響"
+   },
+   "dep": {
+    "v": 3,
+    "why": "個体/観測/カルマ/マーケットに接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "二層昇格+attrition照合の設計"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "Q-REQ-02「二層アイデンティティ(匿名count層/識別individual層+昇格+attrition照合)…最優先ペルソナの最重要オペ」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g02-観測個体",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 5,
+  "score_v2": 100,
+  "tier_v2": "S",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "最優先ペルソナ(100匹一括)の最重要オペ・設計収束済",
+  "hold": false
+ },
+ {
+  "id": "V3-MKT-62",
+  "statement": "P2P決済ユーザー選択制: 買主→売主決済を取引ごとに①銀行振込(既定・無料・IHL非関与・本人確認なし)②PAY.JP Platformカード決済(オプション・テナント本人確認・5%自動控除)から選択できる。IHLは決済代行せず、売り=マッチング成立・情報の透明性・観測データ引継ぎとする。",
+  "category": "マーケット/経済",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 5,
+    "why": "決済核心・マーケット成立の前提"
+   },
+   "ui": {
+    "v": 4,
+    "why": "取引する全ユーザー"
+   },
+   "dep": {
+    "v": 4,
+    "why": "マーケット成立・fee徴収・PAY.JP/銀行連携が依存"
+   },
+   "diff": {
+    "v": 3,
+    "why": "二方式実装+選択UI"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-answers-raw.md",
+    "evidence": "受領7「両方作ってみて、最後ユーザーが選ぶ…選択肢は多いほうがいい」「ユーザー間は好きな銀行同士で勝手にやって」+ 受領4 Q-PAY-05a「IHL非関与…売りはマッチング/透明性/観測データ引継ぎ」",
+    "trust": "高",
+    "date": "2026-07-17"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g04-経済",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 5,
+  "score_v2": 100,
+  "tier_v2": "S",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "決済核心・マーケット成立の前提",
+  "hold": false
+ },
+ {
+  "id": "V3-MKT-63",
+  "statement": "5%システム維持費ゆる請求徴収: 取引完了後「計算して振り込んでね」方式でゆるく請求し、取り逃しを許容する(厳格強制せず負担金額と楽さを最優先)。PAY.JP Platform経由取引のみ5%を自動控除する。PayPay OPA承認後は支払手段にPayPayを追加する。振込名義コード(V3-MKT-12)で照合する。",
+  "category": "マーケット/経済",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "10年運営原資の徴収方式"
+   },
+   "ui": {
+    "v": 3,
+    "why": "PAY.JP経由取引ユーザー"
+   },
+   "dep": {
+    "v": 3,
+    "why": "V3-MKT-62/PAY.JP連携に依存"
+   },
+   "diff": {
+    "v": 2,
+    "why": "ゆる請求ロジック"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-answers-raw.md",
+    "evidence": "受領7「取引成立して全部うまくいった後に計算して振り込んでねぇ…正直取り逃してもいい…負担金額と楽さが最優先」「paypayもやっとこうよ」",
+    "trust": "高",
+    "date": "2026-07-17"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g04-経済",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 4,
+  "score_v2": 48,
+  "tier_v2": "A",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "維持費徴収の実装方針・10年運営原資",
+  "hold": false
+ },
+ {
+  "id": "V3-MKT-64",
+  "statement": "カード非保有ユーザー向けプリペイドカード案内: PAY.JP Platform選択かつクレカ非保有ユーザーへ、バンドルカード等プリペイド(3DS対応・PAY.JP公式対応例)取得を案内する非強制ガイダンスを提供する。",
+  "category": "マーケット/経済",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 2,
+    "why": "補助導線・必須ではない"
+   },
+   "ui": {
+    "v": 2,
+    "why": "クレカ非保有ユーザーのみ"
+   },
+   "dep": {
+    "v": 1,
+    "why": "V3-MKT-62への付加案内"
+   },
+   "diff": {
+    "v": 1,
+    "why": "案内文言の表示のみ"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-answers-raw.md",
+    "evidence": "受領7(チャット)「クレカ無いユーザーはバンドルカード作ればいいでしょう？これで行けるくない？」",
+    "trust": "高",
+    "date": "2026-07-17"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g04-経済",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 2,
+  "score_v2": 9,
+  "tier_v2": "C",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "補助導線・必須ではない",
+  "hold": false
+ },
+ {
+  "id": "V3-MKT-65",
+  "statement": "P2P送金アプリの取引利用禁止の規約明記: ユーザー間代金決済にPayPay送金等P2P個人間送金機能を用いることを規約で明示禁止する(PayPay残高規約第7条・公式ヘルプb0861準拠)。ユーザー間は銀行振込のみとし(PayPalは要調査)、IHL宛徴収のPayPay(OPA商用契約)は本条の対象外とする。",
+  "category": "マーケット/経済",
+  "kind": "制約",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "法務規約・違反時アカウント停止リスク回避"
+   },
+   "ui": {
+    "v": 2,
+    "why": "規約を読む全ユーザー"
+   },
+   "dep": {
+    "v": 2,
+    "why": "利用規約・V3-MKT-62と整合"
+   },
+   "diff": {
+    "v": 1,
+    "why": "規約文言の追加"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-answers-raw.md",
+    "evidence": "受領2②「1.ユーザー間は銀行で相互で振り込んで…paypayはだめだよってちゃんと明記しましょう」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g04-経済",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "法務規約・違反時アカウント停止リスク回避",
+  "hold": false
+ },
+ {
+  "id": "V3-AUT-46",
+  "statement": "magic-link数字コードフォールバック: magic-link発行時に同一OTPを数字コードとしても返し、別端末/webviewでcode入力→検証するverify経路を新設する。送信成功画面と/loginに入力欄を常設する。一次認証はmagic-link一本を維持しV3-AUT-01と非衝突(SMS/TOTPでなくメールOTPの別提示)とする。",
+  "category": "認証/ユーザー",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "送信成功画面の受け皿の必須ピース"
+   },
+   "ui": {
+    "v": 4,
+    "why": "magic-link未達ユーザー全員"
+   },
+   "dep": {
+    "v": 3,
+    "why": "認証フロー(V3-AUT-01)に接続"
+   },
+   "diff": {
+    "v": 2,
+    "why": "OTP再提示+verify routeの実装"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "OQ-ONB-03「数字コード…別端末/webviewの普遍の逃げ道…送信成功画面と/loginの両方に入力欄常設」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g06-認証多言語",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 4,
+  "score_v2": 48,
+  "tier_v2": "A",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "送信成功画面の「届かない全経路の受け皿」の必須ピース(still_shallow②)",
+  "hold": false
+ },
+ {
+  "id": "V3-SEC-57",
+  "statement": "鍵バンドルのサーバzero-knowledge保管+オフラインリカバリコード: BYOK鍵5本+振込口座のパスフレーズ暗号バンドルをIHLが復号不能なzero-knowledge blob(ciphertext)としてサーバ保管を許可する(V3-SEC-06「保持しない」=平文のみと解釈)。加えてオフライン1回限りリカバリコードを発行し、パスフレーズ忘却・全端末同時紛失時の復旧不能を緩和する(1Password/Bitwarden型)。",
+  "category": "セキュリティ/法務",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "非技術者ペルソナの復旧性向上"
+   },
+   "ui": {
+    "v": 2,
+    "why": "鍵バンドル利用ユーザー"
+   },
+   "dep": {
+    "v": 2,
+    "why": "V3-SEC-06/BYOK鍵に依存"
+   },
+   "diff": {
+    "v": 3,
+    "why": "zero-knowledge blob+リカバリコード発行"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "OQ-LB-03「リカバリコード(オフライン保管用1回限り復旧鍵)」+ OQ-LB-04「サーバにzero-knowledge blobとして保持…復号不能ciphertextは保持に当たらない」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g05-ガバナンス法務",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "account-settings-privacy の復旧性向上(菜緒=非技術者ペルソナ set-and-forget)",
+  "hold": false
+ },
+ {
+  "id": "V3-CST-09",
+  "statement": "Truth(R2)バックアップ二重化: Truth正本を別プロバイダ(Backblaze B2等)へ複製+ローカルD:\\バックアップへ定期pullで二重化し、単一Cloudflareアカウント集約(V3-CST-04)のアカウント凍結/侵害/誤削除によるTruth全損を防ぐ。設備投資型(一度きりセットアップ)。",
+  "category": "コスト/運用",
+  "kind": "非機能要件",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "10年存続の最大穴・Truth全損防止"
+   },
+   "ui": {
+    "v": 1,
+    "why": "運用者のみ"
+   },
+   "dep": {
+    "v": 2,
+    "why": "V3-CST-04と関連"
+   },
+   "diff": {
+    "v": 2,
+    "why": "別プロバイダ複製+定期pullの設備投資"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "Q-REQ-01「別プロバイダ(Backblaze B2等)複製+ローカルD:\\バックアップへの定期pull二重化」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g01-基盤コスト",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 4,
+  "score_v2": 48,
+  "tier_v2": "A",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "10年存続の最大穴・Truth消失は回復不能",
+  "hold": false
+ },
+ {
+  "id": "V3-SEC-58",
+  "statement": "書込系レート制限+ユーザー別クォータ: R2書込経路にレート制限とユーザー別クォータを課し、濫用・暴走書込によるコスト膨張とTruth汚染を防ぐ。",
+  "category": "セキュリティ/法務",
+  "kind": "非機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "濫用防止・コスト膨張抑止"
+   },
+   "ui": {
+    "v": 2,
+    "why": "全書込ユーザー"
+   },
+   "dep": {
+    "v": 2,
+    "why": "R2書込経路全体に関わる"
+   },
+   "diff": {
+    "v": 2,
+    "why": "レート制限+クォータ実装"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "Q-REQ-07①「書込系レート制限+ユーザー別クォータ」(批評トップ10・裁定不要判定)",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g05-ガバナンス法務",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "批評家「設計追加可能・裁定不要」・耐久性ハードニング",
+  "hold": false
+ },
+ {
+  "id": "V3-FND-34",
+  "statement": "バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバッチ/cronの成否をハートビートで監視し失敗・無音を通知する。無人運用の10年信頼性担保。",
+  "category": "基盤/インフラ",
+  "kind": "非機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "無人運用10年の信頼性担保"
+   },
+   "ui": {
+    "v": 1,
+    "why": "運用者のみ"
+   },
+   "dep": {
+    "v": 2,
+    "why": "cron/バッチ全体"
+   },
+   "diff": {
+    "v": 2,
+    "why": "ハートビート監視の実装"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "Q-REQ-07②「バッチ/cron失敗の監視・ハートビート通知」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g01-基盤コスト",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "批評家「設計追加可能・裁定不要」",
+  "hold": false
+ },
+ {
+  "id": "V3-OBS-73",
+  "statement": "データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像分離)でエクスポート可能にし、grillingで確定した事項を要件へ環流させるCRフローを設ける。データ可搬性・ロックイン回避。",
+  "category": "観測",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "データ可搬性・ロックイン回避"
+   },
+   "ui": {
+    "v": 2,
+    "why": "エクスポート利用ユーザー"
+   },
+   "dep": {
+    "v": 2,
+    "why": "要件CRフローは運用プロセス全体に波及"
+   },
+   "diff": {
+    "v": 2,
+    "why": "二層エクスポート+CRフローの実装"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "Q-REQ-07④「データエクスポート二層(事実CSV/画像分離)の採番+grilling確定事項→要件への環流CRフロー」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g02-観測個体",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "批評家「設計追加可能・裁定不要」・フォーク文化の可搬性",
+  "hold": false
+ },
+ {
+  "id": "V3-FND-35",
+  "statement": "外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配送(日本郵便URL)・メール(Resend)・IoT(SwitchBot)を交換可能な薄いアダプタで包み、依存ごとに縮退動作(フォールバック)を1行で定義する。10年内のサービス廃止・仕様変更に耐える(PayPay移行がこのリスクの実例)。",
+  "category": "基盤/インフラ",
+  "kind": "非機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "10年内の外部サービス廃止・仕様変更に耐える"
+   },
+   "ui": {
+    "v": 1,
+    "why": "裏方・全ユーザーへ間接影響"
+   },
+   "dep": {
+    "v": 3,
+    "why": "決済/配送/メール/IoT全アダプタが対象"
+   },
+   "diff": {
+    "v": 2,
+    "why": "薄いアダプタ+縮退動作定義"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "Q-REQ-06「外部依存の交換可能な薄いアダプタ+依存ごとに縮退動作1行のNFR…PayPay移行検討がこのリスクの実例」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g01-基盤コスト",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "中核フローの単一プロバイダ固着解消・10年耐久",
+  "hold": false
+ },
+ {
+  "id": "V3-UIX-82",
+  "statement": "検索グラフビュー+ホバー簡易カード: 近さ(画像類似/形質/血縁)のエンティティ紐づきをグラフ図表示し、ノードホバーで簡易ビュー・クリックで個体詳細へ遷移する。既製グラフレイアウト(graphify等)を活用し、論文クラスタのギャップ可視化と部品を共有する。",
+  "category": "UI/UX",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "紐づき図はユーザー高評価軸"
+   },
+   "ui": {
+    "v": 3,
+    "why": "検索・観測を使う全ユーザー"
+   },
+   "dep": {
+    "v": 2,
+    "why": "類似検索/血統照合ビューに依存"
+   },
+   "diff": {
+    "v": 2,
+    "why": "既製グラフレイアウト活用"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-question-sheet.md",
+    "evidence": "OQ-NEWID-01「近さ(画像類似/形質/血縁)のエンティティ紐づき図…ノードホバーで簡易ビュー・クリックで個体詳細」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g07-UIUX",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "紐づき図はユーザー高評価軸だがビジュアライズ層=BE拡張",
+  "hold": false
+ },
+ {
+  "id": "V3-AIP-104",
+  "statement": "写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedding計算資源はユーザー側負担を原則とし、第一選択=スマホ内完結、収まらない高度解析のみDocker(任意レイヤー)へ段階委譲する。Docker collectorの主用途を再定義(SwitchBot収集は従・写真解析が主)。V3-AIP-40(BYOK)と同型のBYOC。",
+  "category": "AI運用/開発プロセス",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "計算資源のユーザー負担で運営コスト最小化"
+   },
+   "ui": {
+    "v": 2,
+    "why": "高度解析を使うユーザー"
+   },
+   "dep": {
+    "v": 2,
+    "why": "Docker collector/撮影解析フローに依存"
+   },
+   "diff": {
+    "v": 2,
+    "why": "段階委譲の設計"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/round-16-answers-raw.md",
+    "evidence": "受領5「Dockerは写真を撮った後embeddingや写真解析処理…計算資源はユーザーの方で担保…スマホで済むなら最高。さらに高度な解析…収まらないならDocker」",
+    "trust": "高",
+    "date": "2026-07-16"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g09-AIプロセス",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "高度解析/Docker委譲は将来層・スマホ基本は既存撮影で担保",
   "hold": false
  }
 ]
