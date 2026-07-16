@@ -56,9 +56,10 @@ export const MARKET_EDGES: Record<string, Partial<Record<MarketKind, string>>> =
   // ship_link は round-15裁定 V3-MKT-20(匿名配送=外部URL中継)の同型副次イベント
   // (入金確認後、matched/shipped のどちらでも売り手が中継 URL を送れる)。
   // cancel は猶予キャンセル(60分・買い手)/48h no-pay 自動キャンセル(系統
-  // actor)の到達点(V3-MKT-01 状態機械5脚③・批評R4)。
+  // actor)の到達点(V3-MKT-01 状態機械5脚③・批評R4)。pay_declare/pay_confirm は
+  // shipped からも許可(出荷後の遅延入金確認・c8 market-trade E2E で発見)。
   matched: { ship: "shipped", cancel: "cancelled", pay_declare: "matched", pay_confirm: "matched", ship_link: "matched" },
-  shipped: { receive: "received", rate: "rated", ship_link: "shipped" },
+  shipped: { receive: "received", rate: "rated", ship_link: "shipped", pay_declare: "shipped", pay_confirm: "shipped" },
   received: { rate: "sold" },
   rated: { receive: "sold" },
   sold: { transfer: "sold" },

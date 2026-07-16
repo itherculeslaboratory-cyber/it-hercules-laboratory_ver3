@@ -16,6 +16,7 @@ const SCREEN_IDS = [
   "cross",
   "data-descriptor",
   "device",
+  "dispute",
   "economy-status",
   "home",
   "individual-detail",

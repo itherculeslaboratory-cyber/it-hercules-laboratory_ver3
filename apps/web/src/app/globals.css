@@ -128,6 +128,11 @@ body {
   font-size: var(--civ-fs-2);
   color: var(--civ-text);
   margin: 0;
+  /* c8 screenshot gate (390px): a long unbroken token (e.g. a raw actor_id
+   * hash interpolated into a plain text/bind_text template) overflowed the
+   * viewport instead of wrapping. Normal prose already wraps at spaces, so
+   * this only changes behaviour for tokens with no natural break point. */
+  overflow-wrap: anywhere;
 }
 .civ-text[data-muted="true"] {
   color: var(--civ-text-muted);
@@ -473,6 +478,10 @@ body {
 }
 
 /* multi-column data table (§2-1) */
+.civ-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
 .civ-table {
   width: 100%;
   border-collapse: collapse;
@@ -964,4 +973,52 @@ body {
 }
 .civ-sticky-bar .civ-button {
   flex: 1;
+}
+
+/* =============================================================================
+ * c8 knowledge-thread(ui-asset-catalog.md 【最優先2】) — thread-posts 専用
+ * ノード: per-post avatar/handle/body/引用badge/相談室導線。既存トークンのみ
+ * (raw hex 禁止・check-ui-tokens GATE)。
+ * ========================================================================== */
+.civ-thread-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.civ-thread-posts-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.civ-thread-post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.civ-thread-post {
+  gap: 6px;
+}
+.civ-thread-post-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.civ-avatar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--civ-surface-2);
+  border: 1px solid var(--civ-border);
+  color: var(--civ-text);
+  font-size: var(--civ-fs-2);
+  flex-shrink: 0;
+}
+.civ-thread-post-actor {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
 }

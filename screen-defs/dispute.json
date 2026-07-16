@@ -1,0 +1,104 @@
+{
+  "screen_id": "dispute",
+  "route": "/dispute",
+  "title": "紛争相談室",
+  "layout": "standard",
+  "notes": "c8(ui-asset-catalog.md 【最優先1/2】gap#1)新規screen-def。GOV-01 二人部屋(opener/respondent の2名限定・無応答14日で expired 表示)。market-trade の F4検品3出口(相違/死着)と knowledge-thread の投稿単位相談室の両方から navigate で着地する共用画面。respondent_id/category/subject_type/subject_id は呼び出し元の実データを query で渡す(市場は買い手/出品者どちらが respondent かをレンダラのロール判定手段(when)無しには自動選別できないため、候補として提示し本人が確認/修正する=捏造しない縮退)。dispute_id 未指定=新規開始フォーム、指定時=進行状況(いずれもレンダラに条件表示(when)が無いため常設 — c8-ui-asset-catalog.md 記載のP0共通ギャップ)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "紛争相談室", "level": 1 } },
+            { "id": "intro", "type": "text", "props": { "text": "当事者2名だけの部屋です。dispute_id が未指定なら下の「新しく開く」から開始し、既存の相談は上の「進行状況」に表示されます。", "muted": true } },
+
+            { "id": "progress-title", "type": "heading", "props": { "text": "進行状況", "level": 2 } },
+            {
+              "id": "dispute-detail",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/gov/disputes/{{params.dispute_id}}",
+                "bind_text": "状態 {{status}}・カテゴリ {{category}}・開始 {{opened_at}}・期限切れ {{expired}}",
+                "empty_text": "dispute_id が指定されていません。下のフォームから新しく開いてください。"
+              }
+            },
+            {
+              "id": "messages",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/gov/disputes/{{params.dispute_id}}",
+                "bind_items": "data.messages.messages",
+                "item_text": "{{actor_id}}: {{body}}",
+                "empty_text": "まだ発言がありません。"
+              }
+            },
+            {
+              "id": "message-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/gov/disputes/{{params.dispute_id}}/messages" },
+              "children": [
+                { "id": "message-body", "type": "field", "props": { "name": "body", "label": "発言", "variant": "textarea", "required": true } },
+                { "id": "message-submit", "type": "button", "props": { "type": "submit", "label": "発言する", "variant": "primary" } }
+              ]
+            },
+            {
+              "id": "close-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/gov/disputes/{{params.dispute_id}}/close" },
+              "children": [
+                { "id": "close-title", "type": "field", "props": { "name": "title", "label": "判例タイトル", "variant": "text", "required": true } },
+                { "id": "close-summary", "type": "field", "props": { "name": "summary", "label": "決着の要約(判例として公開されます・LLM生成なし)", "variant": "textarea", "required": true } },
+                { "id": "close-submit", "type": "button", "props": { "type": "submit", "label": "決着させる", "variant": "secondary" } }
+              ]
+            },
+
+            { "id": "open-title", "type": "heading", "props": { "text": "新しく相談室を開く", "level": 2 } },
+            {
+              "id": "open-hint",
+              "type": "text",
+              "props": { "text": "相手方候補(呼び出し元から渡された実データ): {{params.respondent_id}}", "muted": true }
+            },
+            {
+              "id": "open-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/gov/disputes" },
+              "children": [
+                { "id": "open-respondent", "type": "field", "props": { "name": "respondent_id", "label": "相手方の actor ID(候補を確認・修正可)", "variant": "text", "required": true, "default": "{{params.respondent_id}}" } },
+                {
+                  "id": "open-category",
+                  "type": "field",
+                  "props": {
+                    "name": "category",
+                    "label": "カテゴリ",
+                    "variant": "select",
+                    "required": true,
+                    "placeholder": "カテゴリを選ぶ",
+                    "options": [
+                      { "value": "market", "label": "市場" },
+                      { "value": "board", "label": "知の広場" },
+                      { "value": "bugfix", "label": "不具合" }
+                    ]
+                  }
+                },
+                { "id": "open-subject-type", "type": "field", "props": { "name": "subject_ref.type", "variant": "hidden", "default": "{{params.subject_type}}" } },
+                { "id": "open-subject-id", "type": "field", "props": { "name": "subject_ref.id", "variant": "hidden", "default": "{{params.subject_id}}" } },
+                { "id": "open-submit", "type": "button", "props": { "type": "submit", "label": "相談室を開く", "variant": "primary" } }
+              ]
+            },
+
+            { "id": "back-home", "type": "link", "props": { "label": "ホームへ戻る", "href": "/" } }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "message-form", "to_screen_id": "dispute", "label": "発言後に再読込" },
+    { "from": "close-form", "to_screen_id": "dispute", "label": "決着後に再読込" },
+    { "from": "open-form", "to_screen_id": "dispute", "label": "開始後に再読込(dispute_id付き)" }
+  ]
+}
