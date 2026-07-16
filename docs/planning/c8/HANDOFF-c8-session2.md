@@ -52,6 +52,19 @@ status: active
 - 既知の罠: 0バイト文字化けファイルがワーカーBash事故でrepo直下に生まれる(lint赤の原因・都度削除でよい)・`.gitattributes`でeol=lf強制済み・`.claude/`はvitest/lint走査から除外済み
 - Fable=指揮・設計・最終レビューのみ。実装/調査はsonnet・批評統合はopus。ユーザー向け文書に架空ペルソナ名を出さない・専門用語は初出1行説明・質問は推奨付き一括
 
+## §7 完走の定義(セッション2以降のDoD — ここまで自走で到達したら「完成」と報告する)
+
+以下の状態を「AI側の完走」と定義する。ここまで**ユーザー入力なしで自走**する(質問が生まれたら止まらずためて一括提示・未回答は推奨採用=Q-META-01準拠):
+
+1. progress.json の required 全件が **done / in_progress(残余理由をnoteに明記) / blocked(人間ゲートor照会待ちを明記)** のいずれかに分類され、todo が0件
+2. lint・unitテスト・E2E・pytest 全緑+独立批評家(opus)PASS
+3. UI磨き第2弾(受領10の必須3点+4〜7)実装済み・全画面スクショ+ui-reviewシート新版を提示(**採点はユーザー**)
+4. tc-coverage-c8.md・status.md・進捗レポートが最新
+5. 人間ゲート・照会待ち項目が「何を・どうすれば解除か」付きで一覧化されている
+
+**AIが構造的に完成させられないもの(ユーザーの担当・これはDoD外)**: UI採点ループ(60点→上への品質判定)・照会返答の貼り付け・PAY.JP/PayPay本番申込・実鍵/KV/バックアップ先の投入契約・cutover実行・公開・最終打鍵チェック。
+分量所感: required残(約121件+UI第2弾)は1セッションで終わらない可能性がある。その場合も progress.md が常に現在地を示し、本HANDOFFを更新して次スレへ継げばよい(同じ一文で再開可能)。
+
 ## §6 参照索引
 
 - 計画: `docs/planning/c8/PLAN-c8-full-run.md` / 進捗: `progress.md` / UI正本: `ui-asset-catalog.md` / スクショ: `screens/`+`ui-review.html`
