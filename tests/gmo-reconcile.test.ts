@@ -1,11 +1,13 @@
-// C4 §2 GMO sunabar 照合 TC (design-c4 §2 / CL-11 / V3-AUT-17).
+// C4 §2 GMO sunabar 照合 TC (design-c4 §2 / CL-11 / V3-AUT-17)。
+// retired 2026-07-17 round-16: gmo-routes は index.ts から非マウント(gmo-routes.ts 冒頭
+// コメント参照)。本ファイルは接続層/照合ジョブの単体 TC として残置(HTTP route 依存は排し、
+// TruthStore 直接 append + 関数呼び出しへ変更 — GMO退役に伴う調整)。
 // 依頼人名→U-XXXX 抽出の照合エッジ(前方一致・全角混在・コード不在)+ 照合ジョブ
 // (突合→台帳append)+ 冪等(同一 itemKey 二重=put-if-absent 409)+ 本人スコープ投影 +
 // live コネクタ throw + sunabar 生レスポンスの防御的パース。実 sunabar 疎通/擬似入金
 // の実測は docs/planning/c4/sunabar-e2e-evidence.md(擬似入金=金銭=人間ゲート)。
 import { describe, expect, it } from "vitest";
-import app from "../apps/api/src/index";
-import { TruthStore, deriveActorId, deriveTransferCode } from "@ihl/truth";
+import { TruthStore, deriveActorId, deriveTransferCode, ulid } from "@ihl/truth";
 import {
   extractTransferCode,
   parseTransactions,
@@ -18,9 +20,8 @@ import {
   projectReconciliation,
   EXPECTED_TYPE,
 } from "../apps/api/src/gmo-routes";
-import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
+import { FakeR2Bucket } from "./helpers";
 
-const AUTH = { Authorization: `Bearer ${DEV_TOKEN}`, "content-type": "application/json" };
 const DEV_ACTOR = await deriveActorId("dev@ihl.local");
 const CODE = await deriveTransferCode(DEV_ACTOR); // 本人の振込コード U-XXXX
 
@@ -44,16 +45,21 @@ function dep(itemKey: string, applicantName: string, amount = 1000): DepositTran
   return { itemKey, applicantName, amount, transactionDate: "2026-07-11" };
 }
 
-// 期待入金を DEV_ACTOR で登録し bucket を返す(route も同時に検証)。
+// 期待入金を DEV_ACTOR で登録し bucket を返す(route 非マウントのため TruthStore へ直接 append
+// — gmo-accrual.test.ts の seed() と同型)。
 async function seedExpected(): Promise<FakeR2Bucket> {
   const bucket = new FakeR2Bucket();
-  const res = await app.request(
-    "/api/v1/gmo/expected-payment",
-    { method: "POST", headers: AUTH, body: JSON.stringify({ amount: 1000 }) },
-    makeEnv(bucket),
-  );
-  expect(res.status).toBe(201);
-  expect((await res.json()).transfer_code).toBe(CODE);
+  const s = new TruthStore(bucket);
+  const res = await s.putEvent({
+    specversion: "1.0",
+    id: ulid(),
+    source: "apps/api",
+    type: EXPECTED_TYPE,
+    time: new Date().toISOString(),
+    provenance: { generator_kind: "human", actor_id: DEV_ACTOR },
+    data: { actor_id: DEV_ACTOR, transfer_code: CODE, amount: 1000, schema_version: 1 },
+  });
+  expect(res.status).toBe("inserted");
   return bucket;
 }
 
@@ -74,17 +80,8 @@ describe("依頼人名→振込コード抽出(design-c4 §2 照合エッジ)", 
   });
 });
 
-describe("GET /api/v1/gmo/transfer-code(本人・凍結 deriveTransferCode)", () => {
-  it("認証なし → 401", async () => {
-    const res = await app.request("/api/v1/gmo/transfer-code", {}, makeEnv());
-    expect(res.status).toBe(401);
-  });
-  it("セッション principal の U-XXXX を返す", async () => {
-    const res = await app.request("/api/v1/gmo/transfer-code", { headers: AUTH }, makeEnv());
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ transfer_code: CODE });
-  });
-});
+// GET /api/v1/gmo/transfer-code route は retired(非マウント) — 凍結 deriveTransferCode
+// 自体の TC は tests/cl-11-transfer-code.test.ts が担保(ここでの重複route TCは削除)。
 
 describe("照合ジョブ reconcileOnce → 台帳 append(冪等)", () => {
   it("前方一致で一致 → 台帳 append・本人投影に残高反映", async () => {
@@ -157,17 +154,8 @@ describe("照合ジョブ reconcileOnce → 台帳 append(冪等)", () => {
   });
 });
 
-describe("GET /api/v1/gmo/reconciliation/meta(本人投影)", () => {
-  it("照合後、本人 meta に確認入金が反映される", async () => {
-    const bucket = await seedExpected();
-    await reconcileOnce(new TruthStore(bucket), fakeConnector([dep("K6", `${CODE} ﾃｽﾄ`, 2000)]));
-    const res = await app.request("/api/v1/gmo/reconciliation/meta", { headers: AUTH }, makeEnv(bucket));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { matched_count: number; confirmed_total: number };
-    expect(body.matched_count).toBe(1);
-    expect(body.confirmed_total).toBe(2000);
-  });
-});
+// GET /api/v1/gmo/reconciliation/meta route は retired(非マウント) — projectReconciliation
+// 自体の投影 TC は上の「照合ジョブ reconcileOnce」ブロックで直接呼び出し済み(重複route TC削除)。
 
 describe("接続層分離(GMO_CONNECTOR_MODE)", () => {
   it("live は人間ゲートまで明示 throw", async () => {

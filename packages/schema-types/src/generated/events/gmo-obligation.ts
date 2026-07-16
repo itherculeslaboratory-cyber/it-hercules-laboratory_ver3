@@ -5,7 +5,7 @@
 // regenerate: node scripts/codegen-schemas.mjs
 
 /**
- * GMO 振込義務台帳の append-only イベント（5% 税 / PT チャージ / P2P を 1 安定コードで共用）。Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json。reconcileOnce が due_date 昇順で FIFO 消込（義務発生日以降の最古未払いへ・V3-MKT-12）。
+ * 義務台帳の append-only イベント（5% 税 / P2P を 1 安定コードで共用）。Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json。GMO route 自体は retired（round-16・gmo-routes.ts 冒頭コメント参照）だが本イベント型は fee-routes.ts（PAY.JP 決済）が継承し読み書きする（型リネーム禁止・新イベント型は append の原則）。reconcileOnce（GMO 照合・非マウント）は due_date 昇順で FIFO 消込（義務発生日以降の最古未払いへ・V3-MKT-12）。pt_topup（現金→PT チャージ）は round-16 裁定で廃止（V3-MKT-38「プラチナは金銭購入不可」が正）— enum から削除済み。
  */
 export interface GmoObligation {
   /**
@@ -25,9 +25,9 @@ export interface GmoObligation {
    */
   amount: number;
   /**
-   * 義務種別（維持費税 / PT チャージ / P2P）。
+   * 義務種別（維持費税 / P2P）。pt_topup（PT チャージ）は round-16 裁定で廃止済み（V3-MKT-38）。
    */
-  obligation_kind: "fee_tax" | "pt_topup" | "p2p";
+  obligation_kind: "fee_tax" | "p2p";
   /**
    * 義務発生日（RFC3339・FIFO 消込の起算・昇順整列キー）。
    */

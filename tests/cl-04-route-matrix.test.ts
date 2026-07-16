@@ -1,8 +1,9 @@
-// CL-04: 66-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 60-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
-//   (iii) row count === 66 (57 + 9 FND-18/FND-21 source/ai routes, design-k7)
+//   (iii) row count === 60 (66 - 6 GMO rows retired round-16 / L-PAY GMO 退役
+//        infra-route-052..057・PAY.JP の新規 route は本表未追従・fee-routes.test.ts で別途保護確認)
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -33,9 +34,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (66 rows)", () => {
-  it("has exactly 66 route rows", () => {
-    expect(rows.length).toBe(66);
+describe("CL-04 route matrix (60 rows)", () => {
+  it("has exactly 60 route rows", () => {
+    expect(rows.length).toBe(60);
   });
 
   it("access column is only public|protected", () => {

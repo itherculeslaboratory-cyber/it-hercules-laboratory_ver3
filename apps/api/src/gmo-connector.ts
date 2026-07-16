@@ -1,3 +1,9 @@
+// retired 2026-07-17 round-16(個人事業主に GMO あおぞらネット銀行の本番 API が提供されない
+// ことが公式確認済み・docs/planning/b2-research/research-paypay-unification.md 付録A)。
+// 決済は PAY.JP(payjp-connector.ts)へ移行。本ファイルは route 非マウント後も旧イベント
+// (ihl.gmo.expected_payment.v1 / ihl.gmo.reconciliation.v1)の読み取り互換・単体 TC 維持の
+// ため残置(丸ごと削除しない)。新規の決済導線からは呼ばない。
+//
 // GMO sunabar 照合コネクタ(design-c4 §2 / CL-11 / research-gmo-aozora-api §1 Phase 1).
 // 接続層を差し替え可能に分離: GMO_CONNECTOR_MODE=sunabar(無料 sandbox・審査なし)
 // / live(本番口座 API — 人間ゲート: GMO 本番契約・実鍵投入・live 昇格までは明示 throw)。

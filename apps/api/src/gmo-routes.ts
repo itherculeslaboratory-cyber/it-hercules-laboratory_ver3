@@ -1,3 +1,10 @@
+// retired 2026-07-17 round-16(個人事業主に GMO あおぞらネット銀行の本番 API が提供されない
+// ことが公式確認済み)。routes は index.ts から非マウント(GMO退役・最小)。決済は
+// PAY.JP(payjp-connector.ts / fee-routes.ts)へ移行 — fee-routes.ts は本ファイルの義務台帳
+// (OBLIGATION_TYPE / toObligation)をそのまま継承する(型リネーム禁止・新イベント型は
+// append・schemas/frozen と旧イベント型は不触)。本ファイルは読み取り互換・接続層/照合ジョブ
+// 単体 TC(gmo-fifo/gmo-accrual/gmo-reconcile 等)維持のため残置(丸ごと削除しない)。
+//
 // GMO sunabar 照合(design-c4 §2 / CL-11 / V3-MKT-14). 名前照合ポーリング(Phase 1)。
 // 期待入金イベント(human append)→ 単発照合ジョブ(明細 poll → 依頼人名から U-XXXX
 // 抽出 → 期待と突合)→ 一致で照合台帳 append(itemKey で put-if-absent = 二重 409)。
@@ -53,7 +60,8 @@ function agentEnvelope(type: string, id: string, data: Record<string, unknown>) 
 
 // itemKey を Truth キーへ埋める前の無害化(prefix 破壊・パス注入の防止)。
 // sunabar の itemKey は数値/英数だが、外部由来値なので許容集合に閉じる。
-function safeKeyPart(s: string): string {
+// export: fee-routes.ts の charge_id/obligation_id キー化でも再利用(reuse-first)。
+export function safeKeyPart(s: string): string {
   return s.replace(/[^A-Za-z0-9_-]/g, "_");
 }
 
@@ -66,7 +74,8 @@ export interface ReconcileResult {
 }
 
 // 義務台帳の1件(FIFO 消込の対象。同一 code 同額の複数 pending を due_date 昇順に消す)。
-interface ObligationRec {
+// export: fee-routes.ts(PAY.JP 5%請求フロー)が義務台帳をそのまま継承して読むために再利用。
+export interface ObligationRec {
   obligation_id: string;
   actor_id: string;
   transfer_code: string;
@@ -75,7 +84,7 @@ interface ObligationRec {
   due_date: string; // RFC3339(消込は date 部で入金日と比較)
 }
 
-function toObligation(d: Record<string, unknown>): ObligationRec | null {
+export function toObligation(d: Record<string, unknown>): ObligationRec | null {
   if (
     typeof d.obligation_id === "string" &&
     typeof d.actor_id === "string" &&

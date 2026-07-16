@@ -53,12 +53,6 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/theme-packs,VPS,Workers,W2,infra-route-049,protected,implemented,ihl.theme.pack.v1 append(fork=parent_pack_id)・C5 K4・design-k4 §1.1
 —,GET,/api/v1/settings,VPS,Workers,W2,infra-route-050,protected,implemented,043 と同一 handler(重複行)・C5 K4・design-k4 §1.1
 —,PATCH,/api/v1/me/preferences,VPS,Workers,W2,infra-route-051,protected,implemented,044 と同一 handler(重複行)・C5 K4・design-k4 §1.1
-—,GET,/api/v1/gmo/reconciliation/meta,VPS,Workers,W2,infra-route-052,protected,planned,
-—,GET,/api/v1/gmo/transfer-code,VPS,Workers,W2,infra-route-053,protected,planned,
-—,GET,/api/v1/gmo/va-deposit/unsent,VPS,Workers,W2,infra-route-054,protected,planned,
-—,POST,/api/v1/gmo/expected-payment,VPS,Workers,W2,infra-route-055,protected,planned,
-—,POST,/api/v1/gmo/va-deposit/subscribe,VPS,Workers,W2,infra-route-056,protected,planned,
-—,POST,/api/v1/gmo/webhook,VPS,Workers,W2,infra-route-057,protected,planned,
 —,POST,/api/v1/placements,VPS,Workers,W2,infra-route-058,protected,implemented,置き場所登録(C5 K7・design-k7 §1.1・V3-FND-18・put-if-absent INSERT ONLY・actor_id=session)
 —,GET,/api/v1/placements,VPS,Workers,W2,infra-route-059,protected,implemented,置き場所 本人スコープ一覧投影(C5 K7・design-k7 §1.1・prefix scan 都度再計算)
 —,POST,/api/v1/device-bindings,VPS,Workers,W2,infra-route-060,protected,implemented,機器バインド開始(C5 K7・design-k7 §1.1・未終了 dup→409・start=新 INSERT)
