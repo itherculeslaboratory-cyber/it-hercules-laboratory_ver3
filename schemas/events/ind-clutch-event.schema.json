@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.it-hercules.uk/events/ind-clutch-event.schema.json",
   "title": "Individual Clutch Event data (ihl.ind.clutch_event.v1)",
-  "description": "クラッチ append-only イベント ihl.ind.clutch_event.v1 の data 部（匹数照合・減耗照合・昇格）。Truth キー truth/ihl.ind.clutch_event.v1/<clutch_id>-<event_id>.json。current_count は clutch.initial_count → 最新 recount を基点に、以降の attrition/promote の death_count を差し引いて都度再計算する（常駐カウンタなし・不変条項①）。",
-  "x_ihl_req": "V3-IND-02",
+  "description": "クラッチ append-only イベント ihl.ind.clutch_event.v1 の data 部（匹数照合・減耗照合・昇格）。Truth キー truth/ihl.ind.clutch_event.v1/<clutch_id>-<event_id>.json。current_count は clutch.initial_count → 最新 recount を基点に、以降の attrition/promote の death_count を差し引いて都度再計算する（常駐カウンタなし・不変条項①）。recount の expected_before/discrepancy は count層とindividual層のattrition照合で水増し・行方不明を検出する（V3-IND-36）。",
+  "x_ihl_req": "V3-IND-02 / V3-IND-36",
   "x_ihl_source": "docs/planning/c7/wireframes-core5.md §F4",
   "type": "object",
   "required": ["event_id", "clutch_id", "kind", "at", "actor_id", "created_at"],
@@ -37,6 +37,15 @@
       "type": "integer",
       "minimum": 0,
       "description": "attrition/promote 時の死亡照合数（current_count から差し引く）。"
+    },
+    "expected_before": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "recount 時、この recount 適用前の投影 current_count（直前の基点+以降の attrition/promote 差引済み・監査用）。kind=recount のみ設定。"
+    },
+    "discrepancy": {
+      "type": "integer",
+      "description": "recount 時の counted − expected_before（V3-IND-36 attrition 照合の検出値）。正=水増し疑い（想定より多い）／負=行方不明疑い（想定より少ない・未記録の減耗）。kind=recount のみ設定。"
     },
     "promoted_individual_ids": {
       "type": "array",

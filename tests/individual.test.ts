@@ -155,6 +155,30 @@ describe("IND-04 改名(projectName・当時名再現)", () => {
     expect(at1.name).toBe("n1");
   });
 
+  it("同一 created_at の複数改名は envelope id(ULID)昇順で tie-break され、挿入順によらず決定論的に1つへ定まる", async () => {
+    const { env, bucket } = ctx();
+    const id = await createInd(env);
+    const s = new TruthStore(bucket);
+    const mk = (evId: string, name: string) => ({
+      specversion: "1.0",
+      id: evId,
+      source: "apps/api",
+      type: "ihl.ind.name_event.v1",
+      time: T1,
+      dataschema: "schemas/events/ind-name-event.schema.json",
+      provenance: { generator_kind: "human", actor_id: DEV_ACTOR },
+      data: { individual_id: id, name, actor_id: DEV_ACTOR, created_at: T1 },
+    });
+    // write the LEXICOGRAPHICALLY SMALLER envelope id LAST — if tie-break were
+    // "insertion order" this would win, but projectName ties on envelope.id
+    // ascending (a.ev.localeCompare(b.ev)), so the LARGER id must win regardless
+    // of write order (projectName.ts comment: "name events share a ms").
+    await s.putEventAt(`truth/ihl.ind.name_event.v1/${id}-k2.json`, mk("01ZZZZZZZZZZZZZZZZZZZZZZZZ", "large-id-name"));
+    await s.putEventAt(`truth/ihl.ind.name_event.v1/${id}-k1.json`, mk("01AAAAAAAAAAAAAAAAAAAAAAAA", "small-id-name"));
+    expect(await projectName(s, id)).toBe("large-id-name");
+    expect(await projectName(s, id, T1)).toBe("large-id-name"); // at=T1 includes both (created_at <= at)
+  });
+
   it("brand_template active=false 後も過去 name_event は再現できる", async () => {
     const { env, bucket } = ctx();
     const id = await createInd(env);
@@ -481,6 +505,161 @@ describe("V3-AIP-101 GET /individuals?q= (観測登録スライス1 F1 検索)",
     const rowWithout = body.individuals.find((i) => i.individual_id === withoutPhoto)!;
     expect(rowWith.thumbnail_path).toBe(`/api/v1/observation/${captureId}/thumbnail/${photo_id}`);
     expect(rowWithout.thumbnail_path).toBeNull();
+  });
+});
+
+describe("V3-IND-14 個体一覧A1: species/stage/status フィルタ + sort/order", () => {
+  it("life_status: 既定=larva、eclosion後=alive、pupa molt後=pupa、death後=dead、specimen後=specimen", async () => {
+    const { env } = ctx();
+    const larva = await createInd(env, { local_label_text: "LARVA" });
+    const adult = await createInd(env, { local_label_text: "ADULT" });
+    await post(`/api/v1/individuals/${adult}/life-events`, { kind: "eclosion", at: "2026-06-01T00:00:00Z" }, env);
+    const pupa = await createInd(env, { local_label_text: "PUPA" });
+    await post(`/api/v1/individuals/${pupa}/life-events`, { kind: "molt", at: "2026-06-01T00:00:00Z", detail: { to_stage: "pupa" } }, env);
+    const dead = await createInd(env, { local_label_text: "DEAD" });
+    await post(`/api/v1/individuals/${dead}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    const specimen = await createInd(env, { local_label_text: "SPECIMEN" });
+    await post(`/api/v1/individuals/${specimen}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    await post(`/api/v1/individuals/${specimen}/life-events`, { kind: "specimen", at: "2026-06-02T00:00:00Z" }, env);
+
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; life_status: string }[];
+    };
+    const byId = new Map(body.individuals.map((i) => [i.individual_id, i.life_status]));
+    expect(byId.get(larva)).toBe("larva");
+    expect(byId.get(adult)).toBe("alive");
+    expect(byId.get(pupa)).toBe("pupa");
+    expect(byId.get(dead)).toBe("dead");
+    expect(byId.get(specimen)).toBe("specimen");
+  });
+
+  it("survival_correction (最新) は死亡を打ち消し生存側の判定へ戻す", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, {});
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "survival_correction", at: "2026-06-02T00:00:00Z" }, env);
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; life_status: string }[];
+    };
+    expect(body.individuals.find((i) => i.individual_id === id)!.life_status).toBe("larva");
+  });
+
+  it("?species= は完全一致(大小無視)、?stage= はコード値完全一致", async () => {
+    const { env } = ctx();
+    const herc = await createInd(env, { local_label_text: "H1", species: "Dynastes hercules" });
+    await createInd(env, { local_label_text: "H2", species: "Extatosoma tiaratum" });
+    const stagedId = await createInd(env, { local_label_text: "H3", species: "Dynastes hercules" });
+    await post(`/api/v1/individuals/${stagedId}/life-events`, { kind: "molt", at: "2026-06-01T00:00:00Z", detail: { to_stage: "third_late" } }, env);
+
+    const bySpecies = (await (await get("/api/v1/individuals?species=dynastes%20hercules", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(bySpecies.individuals.map((i) => i.individual_id).sort()).toEqual([herc, stagedId].sort());
+
+    const byStage = (await (await get("/api/v1/individuals?stage=third_late", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(byStage.individuals.map((i) => i.individual_id)).toEqual([stagedId]);
+  });
+
+  it("?status=dead は死亡個体のみ返す(生存個体を除外)", async () => {
+    const { env } = ctx();
+    const alive = await createInd(env, { local_label_text: "ALIVE" });
+    const dead = await createInd(env, { local_label_text: "DEAD" });
+    await post(`/api/v1/individuals/${dead}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    const body = (await (await get("/api/v1/individuals?status=dead", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(body.individuals.map((i) => i.individual_id)).toEqual([dead]);
+    void alive;
+  });
+
+  it("?sort=latest_weight_g&order=asc は体重昇順、null は方向によらず末尾", async () => {
+    const { env } = ctx();
+    const heavy = await createInd(env, { local_label_text: "HEAVY" });
+    await post("/api/v1/observation/captures", { domain: "biology", subject_ref: `individual/${heavy}`, measurements: [{ item: "weight", kind: "number", value: 90, unit: "g" }] }, env);
+    const light = await createInd(env, { local_label_text: "LIGHT" });
+    await post("/api/v1/observation/captures", { domain: "biology", subject_ref: `individual/${light}`, measurements: [{ item: "weight", kind: "number", value: 30, unit: "g" }] }, env);
+    const noWeight = await createInd(env, { local_label_text: "NO-WEIGHT" });
+
+    const asc = (await (await get("/api/v1/individuals?sort=latest_weight_g&order=asc", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(asc.individuals.map((i) => i.individual_id)).toEqual([light, heavy, noWeight]);
+
+    const desc = (await (await get("/api/v1/individuals?sort=latest_weight_g", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(desc.individuals.map((i) => i.individual_id)).toEqual([heavy, light, noWeight]);
+  });
+
+  it("次の予定(next_observation_at)は直近 schedule から返り、未知の sort 値は既定(individual_id 昇順)へフォールバック", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, {});
+    const res = await post("/api/v1/observation/schedule", { individual_id: id, stage: "first_to_second" }, env);
+    expect(res.status).toBe(201);
+    const body = (await (await get("/api/v1/individuals?sort=not_a_real_field", env)).json()) as {
+      individuals: { individual_id: string; next_observation_at: string | null }[];
+    };
+    const row = body.individuals.find((i) => i.individual_id === id)!;
+    expect(row.next_observation_at).not.toBeNull();
+    expect(body.individuals.map((i) => i.individual_id)).toEqual(
+      body.individuals.map((i) => i.individual_id).slice().sort(),
+    );
+  });
+});
+
+describe("V3-OBS-73 データエクスポート二層(facts.csv / photos.csv)", () => {
+  it("facts.csv: 本人個体の構造化事実を返し、他 actor の個体は含まない", async () => {
+    const { env, bucket } = ctx();
+    const id = await createInd(env, { local_label_text: "DHH-24-090", species: "Dynastes hercules" });
+    const s = new TruthStore(bucket);
+    const otherId = ulid();
+    await s.putEventAt(
+      `truth/ihl.ind.master.v1/${otherId}.json`,
+      envOf("ihl.ind.master.v1", "schemas/events/ind-master.schema.json", {
+        individual_id: otherId,
+        actor_id: "someone-else",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+    );
+    const res = await get("/api/v1/export/facts.csv", env);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/csv");
+    const csv = await res.text();
+    expect(csv.split("\r\n")[0]).toBe("individual_id,label,species,name,birth_or_hatch_date,source_type,created_at");
+    expect(csv).toContain(id);
+    expect(csv).toContain("DHH-24-090");
+    expect(csv).not.toContain(otherId);
+  });
+
+  it("photos.csv: 本人個体の写真参照のみを含み、バイナリ本体は含まない(media_key/sha256のみ)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "DHH-24-091" });
+    const cap = await post("/api/v1/observation/captures", { domain: "biology", subject_ref: `individual/${id}` }, env);
+    const captureId = ((await cap.json()) as { capture_id: string }).capture_id;
+    const fd = new FormData();
+    fd.append("capture_id", captureId);
+    fd.append("file", new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" }), "p.png");
+    const up = await app.request("/api/v1/observation/upload", { method: "POST", headers: AUTH, body: fd }, env);
+    const { photo_id } = (await up.json()) as { photo_id: string };
+
+    const res = await get("/api/v1/export/photos.csv", env);
+    const csv = await res.text();
+    const header = csv.split("\r\n")[0];
+    expect(header).toBe("photo_id,capture_id,individual_id,media_key,content_type,size_bytes,sha256");
+    expect(csv).toContain(photo_id);
+    expect(csv).toContain(id);
+    // no raw image bytes in a text/csv payload — just refs.
+    expect(csv).not.toMatch(/[\x00-\x08]/); // no binary control bytes leaked through
+  });
+
+  it("空データでもヘッダのみの CSV を返す(空状態でも壊れない)", async () => {
+    const { env } = ctx();
+    const facts = await (await get("/api/v1/export/facts.csv", env)).text();
+    expect(facts).toBe("individual_id,label,species,name,birth_or_hatch_date,source_type,created_at\r\n");
+    const photos = await (await get("/api/v1/export/photos.csv", env)).text();
+    expect(photos).toBe("photo_id,capture_id,individual_id,media_key,content_type,size_bytes,sha256\r\n");
   });
 });
 

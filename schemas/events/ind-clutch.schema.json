@@ -3,7 +3,7 @@
   "$id": "https://schemas.it-hercules.uk/events/ind-clutch.schema.json",
   "title": "Individual Clutch data (ihl.ind.clutch.v1)",
   "description": "クラッチ（匿名プール・count層）登録イベント ihl.ind.clutch.v1 の data 部。Truth キー truth/ihl.ind.clutch.v1/<clutch_id>.json。個体IDは未発行（個別容器分割/QR発行の瞬間=昇格イベントで初めて発生）。current_count は clutch-event の投影で都度再計算（常駐カウンタなし・不変条項①）。",
-  "x_ihl_req": "V3-IND-02",
+  "x_ihl_req": "V3-IND-02 / V3-IND-36",
   "x_ihl_source": "docs/planning/c7/wireframes-core5.md §F3/F4",
   "type": "object",
   "required": ["clutch_id", "actor_id", "harvested_at", "initial_count", "created_at"],
