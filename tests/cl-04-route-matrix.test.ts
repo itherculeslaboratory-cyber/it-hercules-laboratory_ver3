@@ -1,9 +1,11 @@
-// CL-04: 68-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 66-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
-//   (iii) row count === 68 (57 + 9 FND-18/FND-21 source/ai routes, design-k7 +
-//        2 V3-OBS-32 CSV import routes, infra-route-067/068)
+//   (iii) row count === 66 (55 + 9 FND-18/FND-21 source/ai routes, design-k7 +
+//        2 V3-OBS-32 CSV import routes, infra-route-067/068; base was 57 until
+//        round-16 OQ-ROUTE-01 removed the 2 planned onboarding rows that were
+//        never implemented — infra-route-006/010)
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -34,9 +36,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (68 rows)", () => {
-  it("has exactly 68 route rows", () => {
-    expect(rows.length).toBe(68);
+describe("CL-04 route matrix (66 rows)", () => {
+  it("has exactly 66 route rows", () => {
+    expect(rows.length).toBe(66);
   });
 
   it("access column is only public|protected", () => {

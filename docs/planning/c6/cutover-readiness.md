@@ -31,11 +31,11 @@ status: active
 | 3 | POST | /api/v1/auth/register | merged | —(書込系・片系切替=cutover) | —(書込系・片系切替=cutover) | cutover 手順対象 |
 | 4 | POST | /api/v1/auth/verify | implemented | —(書込系・片系切替=cutover) | —(書込系・片系切替=cutover) | cutover 手順対象 |
 | 5 | GET | /api/v1/auth/session(重複行) | implemented | diff (401/200) | diff (401/200) | 🟡 差分要確認 |
-| 6 | GET | /api/v1/onboarding/status | planned | diff (200/401) | old-only (200/404) | 🔴→🟢 旧が未認証開放(P0所見)・新は正しく401 |
+| 6 | GET | /api/v1/onboarding/status | planned | diff (200/401) | old-only (200/404) | 🔴→🟢 旧が未認証開放(P0所見)・新は正しく401。**round-16で廃止**(OQ-ROUTE-01・実装無しのまま route-matrix/route-matrix.csv から削除。この表は実測時点のスナップショットとして残置) |
 | 7 | POST | /api/v1/auth/magic-link(重複行) | implemented | —(書込系・片系切替=cutover) | —(書込系・片系切替=cutover) | cutover 手順対象 |
 | 8 | POST | /api/v1/auth/register(重複行) | merged | —(書込系・片系切替=cutover) | —(書込系・片系切替=cutover) | cutover 手順対象 |
 | 9 | POST | /api/v1/auth/verify(重複行) | implemented | —(書込系・片系切替=cutover) | —(書込系・片系切替=cutover) | cutover 手順対象 |
-| 10 | POST | /api/v1/onboarding/complete | planned | —(書込系・片系切替=cutover) | —(書込系・片系切替=cutover) | cutover 手順対象 |
+| 10 | POST | /api/v1/onboarding/complete | planned | —(書込系・片系切替=cutover) | —(書込系・片系切替=cutover) | cutover 手順対象。**round-16で廃止**(OQ-ROUTE-01・実装無しのまま route-matrix.csv から削除) |
 | 11 | GET | /api/v1/home/summary | implemented | diff (200/401) | diff (200/200) | 🔴→🟢 旧が未認証開放(P0所見)・新は正しく401 |
 | 12 | GET | /api/v1/observation/{capture_id} | implemented | skipped_param (-/-) | skipped_param (-/-) | 🟡 param 供給で再走 |
 | 13 | GET | /api/v1/observation/{capture_id}/image | implemented | skipped_param (-/-) | skipped_param (-/-) | 🟡 param 供給で再走 |
@@ -97,7 +97,7 @@ status: active
 
 | 分類 | 件数 | 内容 | 処置 |
 |------|------|------|------|
-| 旧の未認証開放(🔴→🟢) | 12 | 旧 API で無認証 200(実データ)を返す保護 route。dev 認証走で分離(批評家指摘反映): **9 本は新側で保護+実装済み**(home/summary・market/listings・me/preferences・me/settings・settings×2・theme-packs・gmo/reconciliation/meta・gmo/transfer-code = 無認証 401/dev 認証 200)・**3 本は新側 404**(onboarding/status=planned 未実装・board/categories と component-board=/plaza/* へ移設) | 新側が正 — cutover で自然是正。planned の onboarding/status は cutover 前に実装 or 廃止を裁定。**旧側の即時是正(VPS 変更)は本番操作のため人間裁定**(それまで本番の当該データは露出継続と認識せよ) |
+| 旧の未認証開放(🔴→🟢) | 12 | 旧 API で無認証 200(実データ)を返す保護 route。dev 認証走で分離(批評家指摘反映): **9 本は新側で保護+実装済み**(home/summary・market/listings・me/preferences・me/settings・settings×2・theme-packs・gmo/reconciliation/meta・gmo/transfer-code = 無認証 401/dev 認証 200)・**3 本は新側 404**(onboarding/status=planned 未実装・board/categories と component-board=/plaza/* へ移設) | 新側が正 — cutover で自然是正。**onboarding/status・onboarding/complete は round-16(OQ-ROUTE-01)で廃止裁定済み**(実装せず route-matrix.csv から削除・上表 #6/#10 参照)。**旧側の即時是正(VPS 変更)は本番操作のため人間裁定**(それまで本番の当該データは露出継続と認識せよ) |
 | /auth/session 仕様差(🟡) | 2 | 旧 401 / 新 200(新は public route として未ログイン状態を 200 で返す C2 設計・route-matrix access=public と整合) | 新設計を正とし whitelist 登録済み扱い(裁定不要と判断・異議あれば第13回で) |
 | gmo/va-deposit/unsent(🟡) | 1 | 旧 503(旧側エラー)/ 新 401(正常な保護) | 旧側の既存障害 — 新側は正常。cutover で解消 |
 | param 供給待ち(🟡) | 9 | {capture_id} 等の path param route。実 ID を旧本番から読むには本番データ参照が要る | cutover リハーサル時に `--params` で実 ID を与えて再走(手順 §4-2) |

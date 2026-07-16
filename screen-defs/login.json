@@ -3,6 +3,7 @@
   "route": "/login",
   "title": "ログイン",
   "layout": "standard",
+  "notes": "V3-AUT-46(round-16 OQ-ONB-03): magic-link と同一OTPの数字コードで検証する code-form を /login にも常設する(送信成功画面 login-sent.json と同じフォーム=「届かない全経路の受け皿」文言と整合)。一次認証は magic-link 一本のまま(V3-AUT-01 と非衝突)。",
   "nodes": [
     {
       "id": "shell",
@@ -25,6 +26,21 @@
               ]
             },
             {
+              "id": "code-lead",
+              "type": "text",
+              "props": { "text_key": "login.code-lead.text", "text": "リンクを開けない場合は、届いた数字コードでもログインできます。", "muted": true }
+            },
+            {
+              "id": "code-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/auth/verify-code", "body_from": "code-form" },
+              "children": [
+                { "id": "code-email", "type": "field", "props": { "variant": "text", "name": "email", "label_key": "login.code-email.label", "label": "メールアドレス", "placeholder": "you@example.com", "required": true } },
+                { "id": "code", "type": "field", "props": { "variant": "text", "name": "code", "label_key": "login.code.label", "label": "数字コード(6桁)", "placeholder": "123456", "required": true } },
+                { "id": "code-submit", "type": "button", "props": { "label_key": "login.code-submit.label", "label": "コードでログイン", "variant": "secondary", "type": "submit" } }
+              ]
+            },
+            {
               "id": "dev-login",
               "type": "button",
               "props": { "label_key": "login.dev-login.label", "label": "開発トークンでログイン", "variant": "secondary" },
@@ -36,6 +52,8 @@
     }
   ],
   "transitions": [
+    { "from": "magic-form", "to_screen_id": "login-sent", "label": "送信後に送信成功画面へ" },
+    { "from": "code-form", "to_screen_id": "home", "label": "コード検証成功後にホームへ" },
     { "from": "dev-login", "to_screen_id": "home", "label": "開発トークン認証後にホームへ" }
   ]
 }

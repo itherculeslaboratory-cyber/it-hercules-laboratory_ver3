@@ -1,5 +1,8 @@
 # INFRA-ROUTE-MATRIX ver3 — CL-04 公開/保護 照合表
-# source: ihl-ver2/docs/registry/INFRA-ROUTE-MATRIX-v1.csv (57 rows) + access/ver3_status/ver3_note
+# source: ihl-ver2/docs/registry/INFRA-ROUTE-MATRIX-v1.csv (57 rows, then -2 after
+#   round-16 OQ-ROUTE-01 removed the 2 planned-and-never-implemented onboarding rows
+#   infra-route-006 GET /api/v1/onboarding/status・infra-route-010 POST
+#   /api/v1/onboarding/complete → 55 rows) + access/ver3_status/ver3_note
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
 —,GET,/api/v1/auth/session,VPS,Workers,W2,infra-route-001,public,implemented,
@@ -7,11 +10,9 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/auth/register,VPS,Workers,W2,infra-route-003,protected,merged,magic-link に統合（第6回裁定・独立 route なし）
 —,POST,/api/v1/auth/verify,VPS,Workers,W2,infra-route-004,public,implemented,
 —,GET,/api/v1/auth/session,VPS,Workers,W2,infra-route-005,public,implemented,
-—,GET,/api/v1/onboarding/status,VPS,Workers,W2,infra-route-006,protected,planned,
 —,POST,/api/v1/auth/magic-link,VPS,Workers,W2,infra-route-007,public,implemented,
 —,POST,/api/v1/auth/register,VPS,Workers,W2,infra-route-008,protected,merged,magic-link に統合（第6回裁定・独立 route なし）
 —,POST,/api/v1/auth/verify,VPS,Workers,W2,infra-route-009,public,implemented,
-—,POST,/api/v1/onboarding/complete,VPS,Workers,W2,infra-route-010,protected,planned,
 —,GET,/api/v1/home/summary,VPS,Workers,W2,infra-route-011,protected,implemented,今日の要約 近接/超過/観測中 投影(C5 K1・design-k1 §1.1)
 —,GET,/api/v1/observation/{capture_id},VPS,Workers,W2,infra-route-012,protected,implemented,観測詳細投影(既存 reuse・design-k1 §1.1)
 —,GET,/api/v1/observation/{capture_id}/image,VPS,Workers,W2,infra-route-013,protected,implemented,画像は /image/{photo_id} で配信・512px サムネ /thumbnail/{photo_id} 追加(OBS-23)

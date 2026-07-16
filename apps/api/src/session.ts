@@ -104,3 +104,39 @@ export async function verifySessionToken(token: string, secret: string): Promise
   if (!p || "purpose" in p || typeof p.sub !== "string") return null;
   return p as SessionPayload;
 }
+
+// ── V3-AUT-46 数字コード(magic-link と同一OTPの別提示・round-16 OQ-ONB-03)─────────
+// 別途トークンを発行/保存せず、magic token と同じ (email, iat, secret) から決定論的に
+// 6 桁コードを導出する — サーバは何も追加保存しない(NO server store の不変条項①のまま)。
+// 「同一OTP」= magic-link 発行時の iat をそのままコード導出にも使うことで満たす。
+export const NUMERIC_CODE_DIGITS = 6;
+const CODE_MODULUS = 10 ** NUMERIC_CODE_DIGITS;
+
+async function hmacDigest(input: string, secret: string): Promise<Uint8Array> {
+  const key = await hmacKey(secret);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(input)));
+}
+
+/** email+iat から決定論的に6桁コードを導出(先頭0埋め)。 */
+export async function issueNumericCode(email: string, iat: number, secret: string): Promise<string> {
+  const digest = await hmacDigest(`code|${email}|${iat}`, secret);
+  const view = new DataView(digest.buffer, digest.byteOffset, digest.byteLength);
+  return String(view.getUint32(0) % CODE_MODULUS).padStart(NUMERIC_CODE_DIGITS, "0");
+}
+
+/**
+ * (email, code) から一致する iat を MAGIC_TTL 窓内で逆引きする。トークン実体はサーバに
+ * 保存しないため、有効期間内の候補 iat(最大 MAGIC_TTL+1 個・15分=900回程度の HMAC)を
+ * 総当りして一致を探す — 軽量(数十 ms オーダー)かつ状態を持たない。一致なしは null。
+ */
+export async function findMatchingIat(
+  email: string,
+  code: string,
+  secret: string,
+  nowSeconds: number = Math.floor(Date.now() / 1000),
+): Promise<number | null> {
+  for (let iat = nowSeconds; iat >= nowSeconds - MAGIC_TTL; iat--) {
+    if ((await issueNumericCode(email, iat, secret)) === code) return iat;
+  }
+  return null;
+}

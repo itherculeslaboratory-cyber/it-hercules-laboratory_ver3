@@ -7,6 +7,7 @@ import { sourceRoutes } from "./source-routes";
 import { aiRoutes } from "./ai-kernel";
 import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
+import { isDenylisted } from "./denylist";
 import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
 import { envImportRoutes } from "./env-import-routes";
@@ -56,6 +57,10 @@ const PUBLIC_ROUTES = [
   "/health",
   "/api/v1/auth/magic-link",
   "/api/v1/auth/verify",
+  // V3-AUT-46(round-16 OQ-ONB-03): magic-link と同一OTPの数字コード verify。email+code
+  // 自体が資格情報(magic token と同格)なので public — 中身のワンタイム性/試行回数制限は
+  // route 内(auth-routes.ts)で担保する。
+  "/api/v1/auth/verify-code",
   "/api/v1/auth/session",
   // dev-only 1-click login (§1.4 V3-AUT-05). Self-gates on DEV_TOKEN: 404 in
   // prod where DEV_TOKEN is unset, so exposing the path adds no prod surface.
@@ -112,6 +117,9 @@ app.onError((err, c) => {
 });
 
 // Auth middleware (§1.5). Order: PUBLIC → Cookie → Bearer session → Bearer DEV_TOKEN → 401.
+// V3-AUT-03(round-16 Q-REQ-03): cookie/bearer セッションは denylist(KV)も毎リクエスト
+// 照会する — iat < 失効時刻なら 401(既発行トークンの唯一の強制失効経路)。DEV_TOKEN
+// 経路は対象外(既存契約通り・per-request BAN 判定もしない後波扱い)。
 app.use("*", async (c, next) => {
   if (PUBLIC_ROUTES.includes(c.req.path)) return next();
 
@@ -126,6 +134,9 @@ app.use("*", async (c, next) => {
   if (cookieTok && secret) {
     const p = await verifySessionToken(cookieTok, secret);
     if (p) {
+      if (await isDenylisted(c.env.AUTH_DENYLIST, p.sub, p.iat)) {
+        return c.json({ error: "SESSION_REVOKED" }, 401);
+      }
       c.set("actorId", p.sub);
       c.set("roles", rolesOf(p));
       return next();
@@ -139,6 +150,9 @@ app.use("*", async (c, next) => {
     if (bearer.startsWith("v1.") && secret) {
       const p = await verifySessionToken(bearer, secret);
       if (p) {
+        if (await isDenylisted(c.env.AUTH_DENYLIST, p.sub, p.iat)) {
+          return c.json({ error: "SESSION_REVOKED" }, 401);
+        }
         c.set("actorId", p.sub);
         c.set("roles", rolesOf(p));
         return next();

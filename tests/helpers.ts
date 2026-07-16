@@ -6,6 +6,7 @@ import {
   type R2ListResult,
   type R2PutOptions,
 } from "@ihl/truth";
+import { memoryKV } from "../apps/api/src/kv";
 
 /**
  * In-memory R2 fake. Conditional-put semantics MIRROR THE LIVE EVIDENCE
@@ -71,8 +72,19 @@ export const AUTH_HEADERS = {
   "content-type": "application/json",
 };
 
+// AUTH_DENYLIST/AUTH_CODE_STATE: 「ローカルはメモリ実装」(round-16 Q-REQ-03)を
+// テストでも実際に踏む — 未バインド(undefined)だと denylist/verify-code のワンタイム性
+// 判定コードパスが素通りしてしまい、TC が本番挙動を検証できなくなるため既定で渡す。
+// makeEnv() を呼ぶたびに新しい memoryKV() インスタンス(=FakeR2Bucket と同じくテスト間で
+// 独立)なのでテスト間リークはない。
 export function makeEnv(bucket: FakeR2Bucket = new FakeR2Bucket()) {
-  return { DEV_TOKEN, SESSION_SECRET, TRUTH: bucket };
+  return {
+    DEV_TOKEN,
+    SESSION_SECRET,
+    TRUTH: bucket,
+    AUTH_DENYLIST: memoryKV(),
+    AUTH_CODE_STATE: memoryKV(),
+  };
 }
 
 /** Minimal valid event envelope per schemas/events/envelope.schema.json. */

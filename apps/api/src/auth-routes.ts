@@ -2,11 +2,15 @@ import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { TruthStore, deriveActorId } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import type { KVNamespaceLite } from "./kv";
 import { isBanned } from "./ledger-routes";
 import { sendMagicLink } from "./mail";
 import {
+  MAGIC_TTL,
   SESSION_TTL,
+  findMatchingIat,
   issueMagicToken,
+  issueNumericCode,
   issueSessionToken,
   verifyMagicToken,
   verifySessionToken,
@@ -25,6 +29,8 @@ function bearerToken(auth: string | undefined): string {
 export const authRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // POST /magic-link (公開): email → magic token → mail. 202 { sent:true }.
+// V3-AUT-46: 同じ iat から数字コード(6桁)も導出し、リンクと併せて送る(別端末/webview
+// でリンクを開けない場合の受け皿)。
 authRoutes.post("/magic-link", async (c) => {
   const body = (await c.req.json().catch(() => null)) as { email?: unknown } | null;
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
@@ -32,9 +38,14 @@ authRoutes.post("/magic-link", async (c) => {
   }
   const email = normalizeEmail(body.email);
   const token = await issueMagicToken(email, c.env.SESSION_SECRET);
-  await sendMagicLink(c.env, email, token);
+  const minted = await verifyMagicToken(token, c.env.SESSION_SECRET); // 直後の検証=常に非null
+  const code = await issueNumericCode(email, minted!.iat, c.env.SESSION_SECRET);
+  await sendMagicLink(c.env, email, token, code);
   const res: Record<string, unknown> = { sent: true };
-  if (c.env.IHL_DEV_EXPOSE_MAGIC_TOKEN === "1") res.dev_magic_token = token;
+  if (c.env.IHL_DEV_EXPOSE_MAGIC_TOKEN === "1") {
+    res.dev_magic_token = token;
+    res.dev_numeric_code = code;
+  }
   return c.json(res, 202);
 });
 
@@ -48,6 +59,79 @@ authRoutes.post("/verify", async (c) => {
   if (!payload) return c.json({ error: "INVALID_TOKEN" }, 401);
   const actorId = await deriveActorId(payload.email); // email already normalized at magic-link entry
   // KRM-04: 永久 BAN は session 発行前に弾く（ログイン時のみ判定＝毎リクエスト走査回避）。
+  if (await isBanned(new TruthStore(c.env.TRUTH), actorId)) {
+    return c.json({ error: "BANNED" }, 403);
+  }
+  const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
+  setCookie(c, "ihl_session", session, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: SESSION_TTL,
+  });
+  return c.json({ actor_id: actorId });
+});
+
+// ── V3-AUT-46 数字コード verify(round-16 OQ-ONB-03)────────────────────────
+// magic-link と同一 OTP の別提示: email+code → session。ワンタイム性(消費済み iat
+// を記録)・試行回数制限(V3-SEC-14 のログイン系レート制限=濫用を短く止める思想に整合。
+// 6桁=10^6空間の総当り対策としてリンクより厳しい回数で止める)・期限は magic-link と
+// 同一(findMatchingIat が MAGIC_TTL 窓内の iat しか照合しない)。
+const CODE_MAX_ATTEMPTS = 5;
+interface CodeState {
+  attempts: number;
+  consumed: number[]; // 消費済み iat(ワンタイム性)
+}
+
+function codeStateKey(email: string): string {
+  return `code-state:${email}`;
+}
+
+async function readCodeState(kv: KVNamespaceLite, email: string): Promise<CodeState> {
+  const raw = await kv.get(codeStateKey(email));
+  if (!raw) return { attempts: 0, consumed: [] };
+  try {
+    const parsed = JSON.parse(raw) as Partial<CodeState>;
+    return {
+      attempts: typeof parsed.attempts === "number" ? parsed.attempts : 0,
+      consumed: Array.isArray(parsed.consumed)
+        ? parsed.consumed.filter((x): x is number => typeof x === "number")
+        : [],
+    };
+  } catch {
+    return { attempts: 0, consumed: [] };
+  }
+}
+
+async function writeCodeState(kv: KVNamespaceLite, email: string, state: CodeState): Promise<void> {
+  await kv.put(codeStateKey(email), JSON.stringify(state), { expirationTtl: MAGIC_TTL });
+}
+
+// POST /verify-code (公開): { email, code } → session token + Set-Cookie. { actor_id }.
+authRoutes.post("/verify-code", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { email?: unknown; code?: unknown } | null;
+  if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
+    return c.json({ error: "INVALID_EMAIL" }, 400);
+  }
+  if (typeof body.code !== "string" || !/^\d{6}$/.test(body.code)) {
+    return c.json({ error: "INVALID_CODE" }, 400);
+  }
+  const email = normalizeEmail(body.email);
+  const kv = c.env.AUTH_CODE_STATE;
+  const state = kv ? await readCodeState(kv, email) : { attempts: 0, consumed: [] };
+  if (state.attempts >= CODE_MAX_ATTEMPTS) {
+    return c.json({ error: "TOO_MANY_ATTEMPTS" }, 429);
+  }
+  const iat = await findMatchingIat(email, body.code, c.env.SESSION_SECRET);
+  const alreadyUsed = iat !== null && state.consumed.includes(iat);
+  if (iat === null || alreadyUsed) {
+    if (kv) await writeCodeState(kv, email, { attempts: state.attempts + 1, consumed: state.consumed });
+    return c.json({ error: "INVALID_CODE" }, 401);
+  }
+  if (kv) await writeCodeState(kv, email, { attempts: 0, consumed: [...state.consumed, iat] });
+  const actorId = await deriveActorId(email);
+  // KRM-04: /verify と同じ BAN ゲート(session 発行前に弾く)。
   if (await isBanned(new TruthStore(c.env.TRUTH), actorId)) {
     return c.json({ error: "BANNED" }, 403);
   }

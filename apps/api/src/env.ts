@@ -1,10 +1,19 @@
 import type { R2BucketLite } from "@ihl/truth";
+import type { KVNamespaceLite } from "./kv";
 
 // Shared Worker binding + context-variable types (index.ts + auth-routes.ts).
 export type Bindings = {
   DEV_TOKEN: string;
   TRUTH: R2BucketLite;
   SESSION_SECRET: string;
+  // 失効 denylist(V3-AUT-03・round-16 Q-REQ-03 MVP必須格上げ)。userId→失効時刻(epoch秒)。
+  // Workers KV Binding が正(本番は未整備 — 実 namespace 作成は人間/インフラ側の一度きり
+  // 設備投資として後続波・wrangler.toml に kv_namespaces 未追加)。未バインド時は
+  // denylist.ts の revokeActor/isDenylisted が no-op フォールバック(機能degrade・落ちない)。
+  AUTH_DENYLIST?: KVNamespaceLite;
+  // 数字コード verify(V3-AUT-46・round-16 OQ-ONB-03)の試行回数/消費済み iat 状態。
+  // 同上のフォールバック規約(未バインド=試行制限/ワンタイム性が働かない degrade)。
+  AUTH_CODE_STATE?: KVNamespaceLite;
   // Optional — mail send is skipped (dev fallback) when RESEND_API_KEY absent.
   RESEND_API_KEY?: string;
   MAIL_FROM?: string;
