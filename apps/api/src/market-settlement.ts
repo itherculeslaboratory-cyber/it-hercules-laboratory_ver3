@@ -117,11 +117,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface Settlement {
   settled: boolean;
   settled_at?: string;
-  fee_unpaid_started_at?: string; // 8% 維持費税の未払い起算=成立時刻(MKT-04/10)
+  fee_unpaid_started_at?: string; // 5%(round-15で8%から引き下げ) 維持費税の未払い起算=成立時刻(MKT-04/10)
   auto_good_due: boolean; // 配送+30日 無評価 → cron が自動 good を append すべき(MKT-04・実 append は P6)
 }
 
-/** 成立=受取申告(receive)かつ評価確定(rate)。成立後に 8% fee の未払いが起算し、
+/** 成立=受取申告(receive)かつ評価確定(rate)。成立後に 5% fee の未払いが起算し、
  * tax_pay で消える。auto_good_due は「配送(ship)から 30 日 無評価」の境界判定のみ
  * (実際の自動 good append は cron=P6)。now を注入して境界をテストする(純関数)。 */
 export function projectSettlement(events: TxnEvent[], now: Date): Settlement {
@@ -172,7 +172,7 @@ export function projectOwnershipLineage(events: TxnEvent[]): { chain: LineageLin
 
 export interface Fees {
   civilization: number; // 3% 文明拠出
-  maintenance_tax: number; // 8% 維持費税
+  maintenance_tax: number; // 5% 維持費税(round-15で8%から引き下げ)
   fork_rebate: number; // 10% 原作者還元(fork 由来のみ)
 }
 

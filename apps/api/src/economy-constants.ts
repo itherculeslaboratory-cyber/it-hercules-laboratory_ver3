@@ -12,9 +12,9 @@ export const KARMA_VALUE_INITIAL = 0;
 export const MONTHLY_RECOVERY = 10;
 export const RECOVERY_BASE_DAY = 25;
 
-// V3-SEC-06: 決済 8% 積立。accrued_total = round(confirmed_total * rate)。
+// V3-SEC-06: 決済 5%(round-15で8%から引き下げ) 積立。accrued_total = round(confirmed_total * rate)。
 // 純関数・都度再計算(常駐 DB 禁止)。較正は V3-GOV-17 管理 GUI(後波)。
-export const SETTLEMENT_ACCRUAL_RATE = 0.08;
+export const SETTLEMENT_ACCRUAL_RATE = 0.05;
 
 // V3-KRM-02 検算アンカー(確定): カルマカウント 0→5 で -12、5→10 で -131。
 // = Σ Fib(n)(n=1..5)=1+1+2+3+5=12 / Σ Fib(n)(n=6..10)=8+13+21+34+55=131。
@@ -28,7 +28,7 @@ export const FIB_PENALTY_ANCHOR_5_10 = 131;
 // resolvePolicyInt 経由で参照(V3-KRM-16)。定数はスナップショットで凍結。
 
 export const INDULGENCE_INITIAL_PRICE_PT = 1; // V3-KRM-05 初回1PT (=fib(1))
-export const FEE_MAINTENANCE_TAX_RATE = 0.08; // V3-MKT-10/36 維持費税
+export const FEE_MAINTENANCE_TAX_RATE = 0.05; // V3-MKT-10/36 維持費税(round-15で8%から引き下げ)
 export const FEE_COMMERCIAL_RATE = 0.03; // V3-MKT-36 文明拠出
 export const FEE_FORK_REVENUE_RATE = 0.1; // V3-MKT-36 原作者還元
 export const UPSTREAM_PERCENT = 0.1; // V3-KRM-11 祖先重み配分

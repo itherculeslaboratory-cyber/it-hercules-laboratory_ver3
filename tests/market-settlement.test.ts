@@ -1,5 +1,5 @@
 // MKT-04 / MKT-10 決済投影の純関数 TC。成立=受取申告(receive)かつ評価確定(rate)、
-// 8% 維持費税の未払いは成立後起算、配送(ship)+30 日 無評価の自動 good 境界(29/30/31
+// 5%(round-15で8%から引き下げ) 維持費税の未払いは成立後起算、配送(ship)+30 日 無評価の自動 good 境界(29/30/31
 // 日を now 注入で検証)。自動 good の実 append と月次 Δcount 累積は cron=P6(design-k3
 // §2.6・分離)。ここは純投影の境界のみ。
 import { describe, expect, it } from "vitest";
@@ -33,7 +33,7 @@ describe("MKT-04 成立=receive かつ rate", () => {
     );
     expect(both.settled).toBe(true);
     expect(both.settled_at).toBe("2026-07-11T00:02:00Z"); // receive/rate の遅い方
-    expect(both.fee_unpaid_started_at).toBe("2026-07-11T00:02:00Z"); // 8% fee は成立後起算
+    expect(both.fee_unpaid_started_at).toBe("2026-07-11T00:02:00Z"); // 5% fee は成立後起算
   });
 
   it("tax_pay(全額消込)で未払い起算が停止する", () => {
@@ -68,10 +68,10 @@ describe("MKT-04 自動 good 境界(配送 + 30 日 無評価)", () => {
   });
 });
 
-describe("MKT-10 8% 維持費税負債額", () => {
-  it("成立取引の税は総額の 8%", () => {
+describe("MKT-10 5% 維持費税負債額", () => {
+  it("成立取引の税は総額の 5%", () => {
     const tax = computeFees(50000, { commercial: true, forked: false }).maintenance_tax;
     expect(tax).toBe(Math.round(50000 * FEE_MAINTENANCE_TAX_RATE));
-    expect(tax).toBe(4000);
+    expect(tax).toBe(2500);
   });
 });

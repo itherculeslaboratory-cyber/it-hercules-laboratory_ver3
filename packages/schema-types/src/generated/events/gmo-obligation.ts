@@ -5,7 +5,7 @@
 // regenerate: node scripts/codegen-schemas.mjs
 
 /**
- * GMO 振込義務台帳の append-only イベント（8% 税 / PT チャージ / P2P を 1 安定コードで共用）。Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json。reconcileOnce が due_date 昇順で FIFO 消込（義務発生日以降の最古未払いへ・V3-MKT-12）。
+ * GMO 振込義務台帳の append-only イベント（5% 税 / PT チャージ / P2P を 1 安定コードで共用）。Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json。reconcileOnce が due_date 昇順で FIFO 消込（義務発生日以降の最古未払いへ・V3-MKT-12）。
  */
 export interface GmoObligation {
   /**
@@ -17,7 +17,7 @@ export interface GmoObligation {
    */
   actor_id: string;
   /**
-   * 安定振込コード（deriveTransferCode 由来・8%税/PT/P2P で共用）。
+   * 安定振込コード（deriveTransferCode 由来・5%税/PT/P2P で共用）。
    */
   transfer_code: string;
   /**

@@ -96,7 +96,7 @@ function toObligation(d: Record<string, unknown>): ObligationRec | null {
 }
 
 // 期待入金 + 義務台帳の code→actor 表を作り、poll した各入金の依頼人名から U-XXXX を
-// 抽出して突合。1 安定コードを 8% 税/PT/P2P で共用(MKT-12)。義務がある入金は義務発生日
+// 抽出して突合。1 安定コードを 5%(round-15で8%から引き下げ) 税/PT/P2P で共用(MKT-12)。義務がある入金は義務発生日
 // 以降で最古の未払いへ FIFO 消込し reconciliation に obligation_ref を刻む。一致は itemKey
 // キーで append(同一明細の二重 append は storage 層 409=obligation の二重消込も防ぐ)。
 export async function reconcileOnce(
@@ -211,7 +211,7 @@ export interface ReconciliationMeta {
   last_reconciled_at: string | null; // 系の最終照合成立時刻(スカラー)
   matched_count: number; // 本人の照合済 件数
   confirmed_total: number; // 本人の確認入金 合計(円)
-  accrued_total: number; // V3-SEC-06 8% 積立(round(confirmed_total*rate)・都度再計算)
+  accrued_total: number; // V3-SEC-06 5%(round-15で8%から引き下げ) 積立(round(confirmed_total*rate)・都度再計算)
   confirmed_deposits: {
     item_key: string;
     amount: number;

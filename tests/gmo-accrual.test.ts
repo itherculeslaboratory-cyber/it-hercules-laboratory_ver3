@@ -1,5 +1,5 @@
-// C5 K2 V3-SEC-06: 8% 積立投影 TC (design-c5-k2 §1.2/§1.5/§3).
-// projectReconciliation の返り値に accrued_total = round(confirmed_total * 0.08) が
+// C5 K2 V3-SEC-06: 5%(round-15で8%から引き下げ) 積立投影 TC (design-c5-k2 §1.2/§1.5/§3).
+// projectReconciliation の返り値に accrued_total = round(confirmed_total * 0.05) が
 // 都度再計算で載ることを担保(端数丸め含む)。既存 gmo-reconcile.test.ts は台帳 append
 // を担保(不変)。ここは投影の派生値だけを検証する。
 import { describe, expect, it } from "vitest";
@@ -34,37 +34,37 @@ async function seed(bucket: FakeR2Bucket) {
   return s;
 }
 
-describe("V3-SEC-06 8% accrual projection (projectReconciliation.accrued_total)", () => {
-  it("rate constant is 0.08", () => {
-    expect(SETTLEMENT_ACCRUAL_RATE).toBe(0.08);
+describe("V3-SEC-06 5% accrual projection (projectReconciliation.accrued_total)", () => {
+  it("rate constant is 0.05", () => {
+    expect(SETTLEMENT_ACCRUAL_RATE).toBe(0.05);
   });
 
-  it("exact multiple: 1500 -> 120", async () => {
+  it("exact multiple: 1500 -> 75", async () => {
     const bucket = new FakeR2Bucket();
     const s = await seed(bucket);
     await reconcileOnce(s, fakeConnector([dep("A1", 1500)]));
     const meta = await projectReconciliation(s, DEV_ACTOR);
     expect(meta.confirmed_total).toBe(1500);
-    expect(meta.accrued_total).toBe(120);
+    expect(meta.accrued_total).toBe(75);
     expect(meta.accrued_total).toBe(Math.round(1500 * SETTLEMENT_ACCRUAL_RATE));
   });
 
-  it("rounds fractional accrual: 1234 * 0.08 = 98.72 -> 99", async () => {
+  it("rounds fractional accrual: 1234 * 0.05 = 61.7 -> 62", async () => {
     const bucket = new FakeR2Bucket();
     const s = await seed(bucket);
     await reconcileOnce(s, fakeConnector([dep("A2", 1234)]));
     const meta = await projectReconciliation(s, DEV_ACTOR);
     expect(meta.confirmed_total).toBe(1234);
-    expect(meta.accrued_total).toBe(99);
+    expect(meta.accrued_total).toBe(62);
   });
 
-  it("sums deposits before accruing: 1234 + 6 = 1240 -> round(99.2) = 99", async () => {
+  it("sums deposits before accruing: 1234 + 6 = 1240 -> round(62.0) = 62", async () => {
     const bucket = new FakeR2Bucket();
     const s = await seed(bucket);
     await reconcileOnce(s, fakeConnector([dep("A3", 1234), dep("A4", 6)]));
     const meta = await projectReconciliation(s, DEV_ACTOR);
     expect(meta.confirmed_total).toBe(1240);
-    expect(meta.accrued_total).toBe(99);
+    expect(meta.accrued_total).toBe(62);
   });
 
   it("no deposits -> accrued_total 0", async () => {

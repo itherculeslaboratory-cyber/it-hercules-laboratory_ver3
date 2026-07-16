@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.it-hercules.uk/events/gmo-obligation.schema.json",
   "title": "GMO payment obligation event (ihl.gmo.obligation.v1)",
-  "description": "GMO 振込義務台帳の append-only イベント（8% 税 / PT チャージ / P2P を 1 安定コードで共用）。Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json。reconcileOnce が due_date 昇順で FIFO 消込（義務発生日以降の最古未払いへ・V3-MKT-12）。",
+  "description": "GMO 振込義務台帳の append-only イベント（5% 税 / PT チャージ / P2P を 1 安定コードで共用）。Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json。reconcileOnce が due_date 昇順で FIFO 消込（義務発生日以降の最古未払いへ・V3-MKT-12）。",
   "x_ihl_req": "V3-MKT-12",
   "x_ihl_source": "docs/planning/c5/design-k3.md §2.1",
   "type": "object",
@@ -21,7 +21,7 @@
     "transfer_code": {
       "type": "string",
       "minLength": 1,
-      "description": "安定振込コード（deriveTransferCode 由来・8%税/PT/P2P で共用）。"
+      "description": "安定振込コード（deriveTransferCode 由来・5%税/PT/P2P で共用）。"
     },
     "amount": {
       "type": "integer",

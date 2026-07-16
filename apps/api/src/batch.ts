@@ -239,7 +239,7 @@ export async function mktAutoGoodRatings(s: TruthStore, now: Date): Promise<void
 }
 
 // ── MKT-10 fee_unpaid 成立月起算 月次 Fibonacci Δcount ────────────────────
-// 成立(settled)かつ 8% 維持費税 未消込(fee_unpaid_started_at 有)の listing に、月
+// 成立(settled)かつ 5%(round-15で8%から引き下げ) 維持費税 未消込(fee_unpaid_started_at 有)の listing に、月
 // 境界を跨ぐごと 1 段の Fibonacci Δcount を出品者へ課す(grantKarmaCountIncrease
 // reason 'fee_unpaid' 再利用)。tax_pay 消込で fee_unpaid_started_at が消え Δcount 停止。
 // deterministic な fee_unpaid marker(listing, 当月)を marker-first で put-if-absent し、
