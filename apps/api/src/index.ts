@@ -14,6 +14,8 @@ import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
 import { gmoRoutes } from "./gmo-routes";
 import { marketRoutes } from "./market-routes";
+import { marketReservationRoutes } from "./market-reservation-routes";
+import { marketBlockRoutes } from "./market-block-routes";
 import { plazaRoutes } from "./plaza-routes";
 import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
@@ -200,8 +202,20 @@ app.route("/api/v1", gmoRoutes);
 
 // Market skeleton (design-c4 §3 / V3-MKT-01): POST /market/listings(出品)・
 // GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
-// 取引遷移(match/transition)・決済連動は C4 対象外。
+// 状態機械5脚+成立2方式+round-16決済裁定(pay_declare/pay_confirm/cancel)は
+// market-settlement.ts/market-routes.ts に実装(C8 レーンL1)。
 app.route("/api/v1", marketRoutes);
+
+// V3-IND-35 割り出し予約(round-15新規・第1波S tier / round-16 OQ-ROUTE-03 実装先):
+// POST /market/reservations(+GET)・POST /market/listings/{id}/match(自動マッチング)・
+// GET /market/transfer/{id}(確認画面)・POST /market/reservations/{id}/confirm|decline。
+// 全て保護・確認されなかった予約者はカルマ-1(read-time 自己修復・cron 非依存)。
+app.route("/api/v1", marketReservationRoutes);
+
+// V3-MKT-61 ブロックユーザーとは取引不可(round-15新規): POST/GET /market/blocks +
+// isBlockedPair 投影(market-routes/market-reservation-routes の取引ガードから参照)。
+// 掲示板/議論は不干渉(plaza/gov には配線しない)。全て保護。
+app.route("/api/v1", marketBlockRoutes);
 
 // Plaza / 知の広場書込 (design-c5.md §K6 §2.1 slot033-036 / V3-BBS-01/03/05/10/20/29/36):
 // POST posts/stances/forks/signals/summaries + 決定論投影(thread/consensus/fork-rank/

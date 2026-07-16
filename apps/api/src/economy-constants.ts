@@ -50,3 +50,33 @@ export const RANKING_WEIGHTS = {
 } as const; // V3-MKT-22
 export const INTL_TRUST_MIN = 0; // V3-KRM-21
 export const INTL_TRUST_MAX = 100; // V3-KRM-21
+
+// ─── round-16 裁定(D節 OQ-MKT-01〜04・決済裁定受領7)市場状態機械パラメータ ─────
+// V3-MKT-01/02 成立2方式+状態機械5脚+P2P決済(銀行振込既定・IHL非関与)。数値は全て
+// ここだけを直す(V3-GOV-17 将来調整 GUI 化を見越し集約・ハードコード散在禁止)。
+
+// [批評R4 major2脚②] 承諾制の要承諾オファーへの応答期限(無応答=全件自動辞退・
+// 出品は継続)。read-time 判定(cron 不要): now - offer.created_at >= この時間で期限切れ。
+export const OFFER_RESPONSE_HOURS = 24;
+
+// [OQ-MKT-03 ★推奨承認] 48h 未入金→自動キャンセル+再出品+no-pay マーク。
+export const NO_PAY_CANCEL_HOURS = 48;
+// [OQ-MKT-03 ★推奨承認] no-pay マーク: 30 日内 2 回で 7 日間、即決/承諾制の新規申込を制限。
+export const NO_PAY_LIMIT_COUNT = 2;
+export const NO_PAY_LIMIT_WINDOW_DAYS = 30;
+export const NO_PAY_RESTRICT_DAYS = 7;
+
+// [批評R4 猶予キャンセル] 成立後 60 分は買い手が無料でキャンセル可能。
+export const GRACE_CANCEL_MINUTES = 60;
+// [OQ-MKT-04 ★推奨承認] 猶予キャンセル 30 日内 3 回で警告/制限。
+// ponytail: 制限日数の具体値はワイヤー未確定(open_questions 4「制限内容」は人間裁定
+// 対象のまま)。no-pay と同じ制限形状(7 日間の新規申込停止)を暫定既定として適用 —
+// 差し替えが要るなら NO_PAY_RESTRICT_DAYS と分離してこの定数だけを直せばよい。
+export const GRACE_CANCEL_LIMIT_COUNT = 3;
+export const GRACE_CANCEL_LIMIT_WINDOW_DAYS = 30;
+export const GRACE_CANCEL_RESTRICT_DAYS = 7;
+
+// V3-IND-35 割り出し予約: 単価高い順の確認画面のタイムアウト。registry.json
+// V3-IND-35.ambiguity「確認画面のタイムアウト仕様は詳細設計で確定要」への暫定既定
+// (ponytail: OFFER_RESPONSE_HOURS と同じ 24h を流用・人間裁定で差し替え可)。
+export const RESERVATION_CONFIRM_WINDOW_HOURS = 24;

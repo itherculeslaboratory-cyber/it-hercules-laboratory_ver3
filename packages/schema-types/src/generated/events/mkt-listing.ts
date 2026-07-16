@@ -33,6 +33,26 @@ export interface MktListing {
    */
   lang?: string;
   /**
+   * 定価出品（list_fixed）の成立方式（round-16 OQ-MKT-02）。instant=即決（既定・省略時は instant 扱い・申込確定=即成立）／consent=承諾制（オプトイン・買い手の offer/love_letter を出品者が 24h 以内に承諾して初めて成立）。
+   */
+  accept_mode?: "instant" | "consent";
+  /**
+   * V3-IND-35 割り出し予約: 対象の父個体 individual_id（♂・任意）。この listing を「予約 listing」化する（reservation_sire_id/dam_id のいずれかが有れば予約対象）。
+   */
+  reservation_sire_id?: string;
+  /**
+   * V3-IND-35 割り出し予約: 対象の母個体 individual_id（♀・任意）。
+   */
+  reservation_dam_id?: string;
+  /**
+   * V3-IND-35: 出品側が事前設定する応募単位の最小匹数（この匹数未満の予約は自動マッチング対象外・任意）。
+   */
+  reservation_min_apply_count?: number;
+  /**
+   * V3-IND-35: 出品側が事前設定する応募単位の最大匹数（この匹数超の予約は自動マッチング対象外・任意）。
+   */
+  reservation_max_apply_count?: number;
+  /**
    * 出品時刻。
    */
   created_at?: string;

@@ -21,7 +21,7 @@ export interface MktTransactionEvent {
    */
   actor_id: string;
   /**
-   * 取引アクション種別（許可辺 MARKET_EDGES 外の遷移は route が 409）。
+   * 取引アクション種別（許可辺 MARKET_EDGES 外の遷移は route が 409）。pay_declare/pay_confirm は round-16 決済裁定（銀行振込既定・IHL非関与）の状態遷移で、tax_* 同様 listing state を動かさない経済副次イベント（買主:振込済み申告→売主:入金確認、を都度投影で表示する）。cancel は matched→cancelled の許可辺（猶予キャンセル/48h no-pay 自動キャンセル）。
    */
   kind:
     | "list_fixed"
@@ -40,7 +40,10 @@ export interface MktTransactionEvent {
     | "transfer"
     | "tax_debt"
     | "tax_pay"
-    | "fee_unpaid";
+    | "fee_unpaid"
+    | "pay_declare"
+    | "pay_confirm"
+    | "cancel";
   /**
    * 相手方 actor_id（offer/match/transfer 等・任意）。
    */

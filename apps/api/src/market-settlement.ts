@@ -7,12 +7,16 @@ import {
   FEE_MAINTENANCE_TAX_RATE,
   FEE_FORK_REVENUE_RATE,
   AUTO_GOOD_RATING_DAYS,
+  OFFER_RESPONSE_HOURS,
+  NO_PAY_CANCEL_HOURS,
+  GRACE_CANCEL_MINUTES,
 } from "./economy-constants";
 
 export type MarketKind =
   | "list_fixed" | "list_auction" | "list_lottery" | "list_platinum"
   | "offer" | "love_letter" | "bid" | "match" | "ship" | "receive"
-  | "rate" | "settle" | "delist" | "transfer" | "tax_debt" | "tax_pay" | "fee_unpaid";
+  | "rate" | "settle" | "delist" | "transfer" | "tax_debt" | "tax_pay" | "fee_unpaid"
+  | "pay_declare" | "pay_confirm" | "cancel";
 
 /** ihl.mkt.transaction_event.v1 の data。route は listing 単位に prefix-scan して渡す。 */
 export interface TxnEvent {
@@ -43,12 +47,18 @@ export const MARKET_EDGES: Record<string, Partial<Record<MarketKind, string>>> =
   listed_lottery: { match: "matched", delist: "delisted" },
   listed_platinum: { match: "matched", delist: "delisted" },
   offer_pending: { offer: "offer_pending", love_letter: "offer_pending", match: "matched", delist: "delisted" },
-  matched: { ship: "shipped" },
+  // round-16 決済裁定(受領7): 銀行振込既定・IHL非関与。pay_declare/pay_confirm は
+  // tax_* と同型の経済副次イベント(下の非辺 continue で状態を動かさない)— 支払い
+  // 確認は「matched のまま ship 可能」(非エスクロー=IHL は出荷タイミングを強制
+  // しない)。cancel は猶予キャンセル(60分・買い手)/48h no-pay 自動キャンセル(系統
+  // actor)の到達点(V3-MKT-01 状態機械5脚③・批評R4)。
+  matched: { ship: "shipped", cancel: "cancelled" },
   shipped: { receive: "received", rate: "rated" },
   received: { rate: "sold" },
   rated: { receive: "sold" },
   sold: { transfer: "sold" },
   delisted: {},
+  cancelled: {},
 };
 
 const STAGE2 = new Set(["matched", "shipped", "received", "rated", "sold"]);
@@ -149,6 +159,52 @@ export function projectSettlement(events: TxnEvent[], now: Date): Settlement {
     fee_unpaid_started_at: settled && !taxPaid ? settledAt : undefined,
     auto_good_due: autoGoodDue,
   };
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+export interface PaymentStatus {
+  method: "bank_transfer"; // 将来 PAY.JP カードオプション追加時に拡張(round-16 決済裁定・本波は銀行振込のみ)
+  declared_at?: string; // 買主:振込済み申告(pay_declare)
+  confirmed_at?: string; // 売主:入金確認(pay_confirm)
+}
+
+/** round-16 決済裁定(受領7): P2P=銀行振込既定・IHL非関与(「振込自動検知」前提は廃止)。
+ * pay_declare/pay_confirm は tax_* と同型の listing state を動かさない経済副次イベント
+ * (MARKET_EDGES 非辺)。都度投影する(常駐 DB 禁止・不変条項①)。 */
+export function projectPayment(events: TxnEvent[]): PaymentStatus {
+  const first = (kind: MarketKind): string | undefined =>
+    sortEvents(events.filter((e) => e.kind === kind))[0]?.created_at;
+  return { method: "bank_transfer", declared_at: first("pay_declare"), confirmed_at: first("pay_confirm") };
+}
+
+/** 状態機械5脚③(48h 未入金→自動キャンセル+再出品+no-pay マーク・批評R4脚③)。matched の
+ * まま NO_PAY_CANCEL_HOURS 経過し pay_confirm がまだ無いなら due=true。read-time 判定
+ * (cron 不要): state が matched を離れる(ship/cancel 済み)と自動的に対象外になる。 */
+export function isNoPayCancelDue(events: TxnEvent[], now: Date): boolean {
+  const listingId = events[0]?.listing_id;
+  if (!listingId) return false;
+  const cur = reduceMarket(listingId, events);
+  if (cur.state !== "matched") return false;
+  if (events.some((e) => e.kind === "pay_confirm")) return false; // 入金確認済みは対象外
+  const matchedAt = sortEvents(events.filter((e) => e.kind === "match"))[0]?.created_at;
+  if (!matchedAt) return false;
+  return now.getTime() - new Date(matchedAt).getTime() >= NO_PAY_CANCEL_HOURS * HOUR_MS;
+}
+
+/** 猶予キャンセル(成立後 GRACE_CANCEL_MINUTES は買い手が無条件・無料でキャンセル可能・
+ * 批評R4)の残窓。窓が閉じた後の相手承認制キャンセル依頼フローは本波対象外(残課題)。 */
+export function isGraceCancelWindowOpen(events: TxnEvent[], now: Date): boolean {
+  const matchedAt = sortEvents(events.filter((e) => e.kind === "match"))[0]?.created_at;
+  if (!matchedAt) return false;
+  return now.getTime() - new Date(matchedAt).getTime() < GRACE_CANCEL_MINUTES * MINUTE_MS;
+}
+
+/** 状態機械5脚②(承諾制オファーへの無応答=自動辞退・24h)の read-time 判定。offer/
+ * love_letter イベント単体の created_at を渡す(呼び出し側で対象オファーを特定)。 */
+export function isOfferExpired(offerCreatedAt: string, now: Date): boolean {
+  return now.getTime() - new Date(offerCreatedAt).getTime() >= OFFER_RESPONSE_HOURS * HOUR_MS;
 }
 
 export interface LineageLink {
