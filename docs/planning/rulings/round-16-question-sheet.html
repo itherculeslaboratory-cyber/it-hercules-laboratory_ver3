@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
-<title>第16回裁定 質問シート(全52問)</title>
+<title>第16回裁定 質問シート(全49問)</title>
 <style>
  :root{--bg:#0f1216;--card:#171b22;--line:#272d38;--fg:#e7e9ee;--dim:#8a93a3;--acc:#ff7a1a;--acc-bg:#2a1a0e;--ok:#3fb950;--warn:#d9a53b;}
  *{box-sizing:border-box}
@@ -56,10 +56,10 @@
 </style></head>
 <body>
 <header>
- <h1>第16回裁定 質問シート(全52問)</h1>
+ <h1>第16回裁定 質問シート(全49問)</h1>
  <p class="sub">2026-07-16 / ihl-ver3 T-38 全機能実装完了ラン — 各問は推奨案が初期選択済みです。変更したい問だけラジオを選び直し、必要ならコメントを添えてください。</p>
  <div class="toolbar">
-  <span class="progress">変更 <b class="chg" id="cChanged">0</b>件 / コメント <b class="cmt" id="cComment">0</b>件 / 全52問</span>
+  <span class="progress">変更 <b class="chg" id="cChanged">0</b>件 / コメント <b class="cmt" id="cComment">0</b>件 / 全49問</span>
   <button class="act" id="btnReset" type="button">全て推奨に戻す</button>
   <button class="act primary" id="btnSummary" type="button">回答まとめを作成してコピー</button>
  </div>
@@ -68,15 +68,15 @@
 <main>
 <section class="qsection" id="sec-A">
  <h2>A. 方向を決める(最重要)</h2>
- <p class="sdesc">回答済み3問を除去済み: Q-PAY-01(PayPay統一で確定)・Q-PAY-05(P2P=買主→売主は銀行振込直接・IHL非関与・P2P送金機能の使用禁止を規約明記)・Q-PAY-06(PTチャージ=廃止・pt_topupコード削除)。残りは決済2問+既存3問。</p>
+ <p class="sdesc">回答済み6問を除去済み(Q-PAY-01/05/06・Q-SCOPE-01・Q-UI-01/02 — 原本は docs/planning/rulings/round-16-answers-raw.md)。残りは決済の最終方針2問+撤回承認1問。</p>
  <ul class="cards">
   <li class="card" id="card_Q-PAY-02">
     <div class="chead">
       <div>
         <span class="qid">Q-PAY-02</span>
-        <div class="qtext">決済まわりの外部アクション(人間)の最終リスト: ①PAY.JP本番アカウント申込(個人事業主・業態=昆虫マーケット運営+システム維持費5%徴収) ②PayPay OPAへの照会+並行申請(固定店舗なし個人事業主の契約可否・実料率1.98%か3.8%か・審査期間の確認)。</div>
-        <p class="bg">横断調査の結果、前回リストのうちPayPay銀行Open API照会とPTコイン前払式該当性の弁護士確認は不要になりました(P2P=銀行直接で確定・PTチャージ廃止のため)。</p>
-        <p class="materials">材料: <code>docs/planning/b2-research/research-payment-service-scan.md</code> </p>
+        <div class="qtext">決済まわりの外部アクション(人間)の最終リスト: ①PAY.JP営業への照会(a.個人事業主でもPlatform契約できるか b.Payouts型テナントの本人確認要件 c.昆虫許可条項がテナント規約にも引き継がれるか d.Platformプランの料率・月額の見積り) ②資金移動業に該当しないことの確認(弁護士またはPAY.JP法務。『IHLは資金に触れずPAY.JPが仲介する』構造の法的裏取り) ③PayPay OPA並行申請(するなら)。</div>
+        <p class="bg">①②はPAY.JP Platform統一(Q-PAY-03の案X)の前提ゲート。回答が出るまで統一の実装には着手しません(通常契約での5%徴収とsandbox検証は先行可)。</p>
+        <p class="materials">材料: <code>docs/planning/b2-research/research-payjp-platform.md</code> </p>
       </div>
       <div class="chips">
         <span class="chip chip-state" id="st_Q-PAY-02">推奨どおり</span>
@@ -84,11 +84,11 @@
       </div>
     </div>
     <div class="opts">
-     <label class="opt rec"><input type="radio" name="Q-PAY-02" value="0" checked><span class="opttext">AIが申込・照会の文面/入力内容を起草→ユーザーが送信・申込 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt rec"><input type="radio" name="Q-PAY-02" value="0" checked><span class="opttext">AIが照会・申込の文面/入力内容を全部起草→ユーザーが送信 <span class="rec-badge">★推奨</span></span></label>
      <label class="opt"><input type="radio" name="Q-PAY-02" value="1"><span class="opttext">ユーザーが後日自分で対応</span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-02" value="2"><span class="opttext">本番契約直前まで先送り(設計+sandboxだけ進める)</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-02" value="2"><span class="opttext">本番契約直前まで先送り</span></label>
     </div>
-    <p class="recnote">起草まで自走し、送信・申込だけ人間ゲートに残すのが最速。</p>
+    <p class="recnote">起草まで自走し、送信だけ人間ゲートに残すのが最速。</p>
     <textarea class="comment" id="cm_Q-PAY-02" placeholder="変更・条件・補足があれば"></textarea>
   </li>
 
@@ -96,9 +96,9 @@
     <div class="chead">
       <div>
         <span class="qid">Q-PAY-03</span>
-        <div class="qtext">IHL徴収層(5%システム維持費)の決済サービスの最終選定。</div>
-        <p class="bg">横断調査の結論(5軸=①支払者が自動で分かる ②ランニング最小 ③規約を誠意をもって説明できる ④個人事業主で今すぐ契約可 ⑤10年存続): 本命=PAY.JP(3.3%・月額0円・禁止商材規定が『昆虫のうち適法に販売できるものは認める』と名指しで許可=規約適合が全候補中最強・決済ID+Webhookで自動照合)。次善=KOMOJU(3.5%・即日契約・昆虫規約は要最終確認)。PayPay OPA直接(料率1.98%は要確認・審査約2ヶ月・固定店舗なし個人事業主の可否未確認)は並行申請にすれば『私の方へはPayPayで』の希望を後から反映可能。Stripe=禁止業種(動物・Connect外C2C)明記で除外。PayPal Business=固定40円/件が少額徴収で実質7〜17%になり不利。</p>
-        <p class="materials">材料: <code>docs/planning/b2-research/research-payment-service-scan.md §B,§C</code> </p>
+        <div class="qtext">決済構成の最終方針。「PAY.JPで統一で良くない?」への調査回答: 統一は条件付きで可能です(PAY.JP Platform Payouts型=個人間C2C専用設計・売主は一般個人のままテナントになれて個別審査不要・あなたは資金に一切触れずPAY.JPが分配・5%は決済時に自動天引き)。</div>
+        <p class="bg">案X(統一)の利点: 5%の取りっぱぐれが原理的にゼロになり、未払い督促・カルマ罰・月次請求の機構が丸ごと不要化。売主の口座番号はPAY.JP側で預かるため端末金庫問題(OQ-LB-03/04)も縮小。GMO自動検知の破綻も同時解消。トレードオフ: 買主はカード必須(振込派の排除リスク・コンビニ払い可否は未確認)・売主の手取りが目減り(決済手数料3.3%目安※Platform料率は個別見積り+振込250円/回→まとめ振込で緩和)・前提ゲート2件(Q-PAY-02の①②)が未確認。ゲートがNOなら案Yへ後退(そこで統一はあきらめるのが妥当)。他社は全滅(Stripe=動物禁止・KOMOJU=生体禁止・fincode Platform=法人限定)のため、統一できるのは実質PAY.JP一択。※この案Xを採用する場合、先に回答済みのQ-PAY-05(ユーザー間=銀行振込直接)は上書きされます。</p>
+        <p class="materials">材料: <code>docs/planning/b2-research/research-payjp-platform.md §B,§C</code> </p>
       </div>
       <div class="chips">
         <span class="chip chip-state" id="st_Q-PAY-03">推奨どおり</span>
@@ -106,12 +106,11 @@
       </div>
     </div>
     <div class="opts">
-     <label class="opt rec"><input type="radio" name="Q-PAY-03" value="0" checked><span class="opttext">PAY.JPで即立ち上げ + PayPay OPAを並行申請(承認後にPayPay併用または主副入替) <span class="rec-badge">★推奨</span></span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-03" value="1"><span class="opttext">PAY.JP単独(PayPay申請はしない)</span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-03" value="2"><span class="opttext">KOMOJUで即立ち上げ + PayPay OPA並行申請</span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-03" value="3"><span class="opttext">PayPay OPA単独(審査約2ヶ月を待ってからローンチ)</span></label>
+     <label class="opt rec"><input type="radio" name="Q-PAY-03" value="0" checked><span class="opttext">案X志向: Platform統一を第一候補とし、前提ゲート2件を先に潰す。並行して通常契約の5%徴収を先行立ち上げ(どちらに転んでも無駄にならない) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-03" value="1"><span class="opttext">案Y確定: ユーザー間=銀行振込のまま・PAY.JPは5%徴収のみ(統一はしない)</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-03" value="2"><span class="opttext">案Z: 併存=取引ごとに銀行振込/カードを選択(調査結論は非推奨・状態機械と経理の二重保守)</span></label>
     </div>
-    <p class="recnote">PAY.JPは昆虫を名指しで許可する唯一の候補。PayPayの希望は並行申請で温存できる。</p>
+    <p class="recnote">ゲート回答が出るまで実装は案X/Y共通部分(5%徴収・PAY.JPアダプタ)だけ進めるので手戻りなし。</p>
     <textarea class="comment" id="cm_Q-PAY-03" placeholder="変更・条件・補足があれば"></textarea>
   </li>
 
@@ -134,72 +133,6 @@
     </div>
     
     <textarea class="comment" id="cm_Q-PAY-04" placeholder="変更・条件・補足があれば"></textarea>
-  </li>
-
-  <li class="card" id="card_Q-SCOPE-01">
-    <div class="chead">
-      <div>
-        <span class="qid">Q-SCOPE-01</span>
-        <div class="qtext">今回ラン(T-38)の実装スコープをどこまでにするか。</div>
-        <p class="bg">全735要件の現状(Opus敵対検証済): 実装済57・部分71・設計のみ96・未着手277・制約/思想216(実装対象外)・hold14・人間ゲート2・棄却2。第1波の実装対象は残170件、第2波の実装対象は約173件(うち未着手126)。g08動画系(35件)はvideo-prepブランチ管轄のため本ランから除外します。</p>
-        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §2(インベントリ)</code> </p>
-      </div>
-      <div class="chips">
-        <span class="chip chip-state" id="st_Q-SCOPE-01">推奨どおり</span>
-        <span class="chip chip-comment" id="cm-chip_Q-SCOPE-01" style="display:none">+コメント</span>
-      </div>
-    </div>
-    <div class="opts">
-     <label class="opt rec"><input type="radio" name="Q-SCOPE-01" value="0" checked><span class="opttext">第1波残170件を必達+第2波は余力でベストエフォート <span class="rec-badge">★推奨</span></span></label>
-     <label class="opt"><input type="radio" name="Q-SCOPE-01" value="1"><span class="opttext">第1波のみで完了</span></label>
-     <label class="opt"><input type="radio" name="Q-SCOPE-01" value="2"><span class="opttext">第1波+第2波の全実装対象を必達(18時間枠では未達リスクあり)</span></label>
-     <label class="opt"><input type="radio" name="Q-SCOPE-01" value="3"><span class="opttext">S/Aティアのみ優先</span></label>
-    </div>
-    <p class="recnote">第1波必達が『全部』の実質。第2波を必達にすると検証(批評家ゲート)が薄くなるリスク。</p>
-    <textarea class="comment" id="cm_Q-SCOPE-01" placeholder="変更・条件・補足があれば"></textarea>
-  </li>
-
-  <li class="card" id="card_Q-UI-01">
-    <div class="chead">
-      <div>
-        <span class="qid">Q-UI-01</span>
-        <div class="qtext">ihl-ver2 の ihl-ui-catalog + ui-parts-lab-w2(D:\mockups の31枚を1:1実装済みのスタイル済みReact部品約30枚+civ.cssトークン=ver3の--civ-*の直接の祖先)を ver3 へ fork 移植し、全画面の見た目の正本にしてよいか。</div>
-        <p class="bg">調査の結論: mockup水準の視覚作り込みは ver2 側に完成品として既に存在する。ver3レンダラは語彙(table/badge/stepper等)を実装済みなので、残るのは視覚的な作り込み(スペーシング・階層・アイコン)を各screen-defへ移植する作業。reuse-first・フォーク文化(Component単位fork)に合致。</p>
-        <p class="materials">材料: <code>D:\claude\systems\ihl-ver2\packages\ihl-ui-catalog</code> <code>docs/planning/c7/ui-parity-map.md</code> </p>
-      </div>
-      <div class="chips">
-        <span class="chip chip-state" id="st_Q-UI-01">推奨どおり</span>
-        <span class="chip chip-comment" id="cm-chip_Q-UI-01" style="display:none">+コメント</span>
-      </div>
-    </div>
-    <div class="opts">
-     <label class="opt rec"><input type="radio" name="Q-UI-01" value="0" checked><span class="opttext">採用: ver2部品の視覚作り込みをver3へ移植して見た目正本にする <span class="rec-badge">★推奨</span></span></label>
-     <label class="opt"><input type="radio" name="Q-UI-01" value="1"><span class="opttext">不採用: ver3独自CSSを磨く</span></label>
-    </div>
-    <p class="recnote">自作の劣化コピー回避の最短距離。</p>
-    <textarea class="comment" id="cm_Q-UI-01" placeholder="変更・条件・補足があれば"></textarea>
-  </li>
-
-  <li class="card" id="card_Q-UI-02">
-    <div class="chead">
-      <div>
-        <span class="qid">Q-UI-02</span>
-        <div class="qtext">指示にあった『clodedesign』は Anthropic Labs の Claude Design(claude.ai/design・ブラウザ上で複数ビジュアル案を対話生成→選択するツール)と特定しました。どう使いますか。</div>
-        <p class="bg">既製デザイン資産の置き場ではなくワークフローツールのため『丸ごと採用』はできません。ihl-ver3への反映はエクスポート/手動移植になります。</p>
-        <p class="materials">材料: <code>https://claude.com/product/design</code> </p>
-      </div>
-      <div class="chips">
-        <span class="chip chip-state" id="st_Q-UI-02">推奨どおり</span>
-        <span class="chip chip-comment" id="cm-chip_Q-UI-02" style="display:none">+コメント</span>
-      </div>
-    </div>
-    <div class="opts">
-     <label class="opt rec"><input type="radio" name="Q-UI-02" value="0" checked><span class="opttext">ihl-ui-catalog移植を主軸にし、Claude Designはユーザーが任意でキー画面の案出しに使う(採用案はD:\mockupsへ追加) <span class="rec-badge">★推奨</span></span></label>
-     <label class="opt"><input type="radio" name="Q-UI-02" value="1"><span class="opttext">Claude Designでの案出しを本ランの必須工程にする(ユーザーのブラウザ操作が必要)</span></label>
-     <label class="opt"><input type="radio" name="Q-UI-02" value="2"><span class="opttext">使わない</span></label>
-    </div>
-    <p class="recnote">本ランを人間操作でブロックしない形が自走と両立。</p>
-    <textarea class="comment" id="cm_Q-UI-02" placeholder="変更・条件・補足があれば"></textarea>
   </li>
 
  </ul>
@@ -1252,7 +1185,7 @@
   {
    "key": "A",
    "title": "A. 方向を決める(最重要)",
-   "desc": "回答済み3問を除去済み: Q-PAY-01(PayPay統一で確定)・Q-PAY-05(P2P=買主→売主は銀行振込直接・IHL非関与・P2P送金機能の使用禁止を規約明記)・Q-PAY-06(PTチャージ=廃止・pt_topupコード削除)。残りは決済2問+既存3問。"
+   "desc": "回答済み6問を除去済み(Q-PAY-01/05/06・Q-SCOPE-01・Q-UI-01/02 — 原本は docs/planning/rulings/round-16-answers-raw.md)。残りは決済の最終方針2問+撤回承認1問。"
   },
   {
    "key": "B",
@@ -1299,34 +1232,33 @@
   {
    "qid": "Q-PAY-02",
    "section": "A",
-   "question": "決済まわりの外部アクション(人間)の最終リスト: ①PAY.JP本番アカウント申込(個人事業主・業態=昆虫マーケット運営+システム維持費5%徴収) ②PayPay OPAへの照会+並行申請(固定店舗なし個人事業主の契約可否・実料率1.98%か3.8%か・審査期間の確認)。",
-   "background": "横断調査の結果、前回リストのうちPayPay銀行Open API照会とPTコイン前払式該当性の弁護士確認は不要になりました(P2P=銀行直接で確定・PTチャージ廃止のため)。",
+   "question": "決済まわりの外部アクション(人間)の最終リスト: ①PAY.JP営業への照会(a.個人事業主でもPlatform契約できるか b.Payouts型テナントの本人確認要件 c.昆虫許可条項がテナント規約にも引き継がれるか d.Platformプランの料率・月額の見積り) ②資金移動業に該当しないことの確認(弁護士またはPAY.JP法務。『IHLは資金に触れずPAY.JPが仲介する』構造の法的裏取り) ③PayPay OPA並行申請(するなら)。",
+   "background": "①②はPAY.JP Platform統一(Q-PAY-03の案X)の前提ゲート。回答が出るまで統一の実装には着手しません(通常契約での5%徴収とsandbox検証は先行可)。",
    "options": [
-    "AIが申込・照会の文面/入力内容を起草→ユーザーが送信・申込",
+    "AIが照会・申込の文面/入力内容を全部起草→ユーザーが送信",
     "ユーザーが後日自分で対応",
-    "本番契約直前まで先送り(設計+sandboxだけ進める)"
+    "本番契約直前まで先送り"
    ],
    "rec": 0,
-   "rec_note": "起草まで自走し、送信・申込だけ人間ゲートに残すのが最速。",
+   "rec_note": "起草まで自走し、送信だけ人間ゲートに残すのが最速。",
    "materials": [
-    "docs/planning/b2-research/research-payment-service-scan.md"
+    "docs/planning/b2-research/research-payjp-platform.md"
    ]
   },
   {
    "qid": "Q-PAY-03",
    "section": "A",
-   "question": "IHL徴収層(5%システム維持費)の決済サービスの最終選定。",
-   "background": "横断調査の結論(5軸=①支払者が自動で分かる ②ランニング最小 ③規約を誠意をもって説明できる ④個人事業主で今すぐ契約可 ⑤10年存続): 本命=PAY.JP(3.3%・月額0円・禁止商材規定が『昆虫のうち適法に販売できるものは認める』と名指しで許可=規約適合が全候補中最強・決済ID+Webhookで自動照合)。次善=KOMOJU(3.5%・即日契約・昆虫規約は要最終確認)。PayPay OPA直接(料率1.98%は要確認・審査約2ヶ月・固定店舗なし個人事業主の可否未確認)は並行申請にすれば『私の方へはPayPayで』の希望を後から反映可能。Stripe=禁止業種(動物・Connect外C2C)明記で除外。PayPal Business=固定40円/件が少額徴収で実質7〜17%になり不利。",
+   "question": "決済構成の最終方針。「PAY.JPで統一で良くない?」への調査回答: 統一は条件付きで可能です(PAY.JP Platform Payouts型=個人間C2C専用設計・売主は一般個人のままテナントになれて個別審査不要・あなたは資金に一切触れずPAY.JPが分配・5%は決済時に自動天引き)。",
+   "background": "案X(統一)の利点: 5%の取りっぱぐれが原理的にゼロになり、未払い督促・カルマ罰・月次請求の機構が丸ごと不要化。売主の口座番号はPAY.JP側で預かるため端末金庫問題(OQ-LB-03/04)も縮小。GMO自動検知の破綻も同時解消。トレードオフ: 買主はカード必須(振込派の排除リスク・コンビニ払い可否は未確認)・売主の手取りが目減り(決済手数料3.3%目安※Platform料率は個別見積り+振込250円/回→まとめ振込で緩和)・前提ゲート2件(Q-PAY-02の①②)が未確認。ゲートがNOなら案Yへ後退(そこで統一はあきらめるのが妥当)。他社は全滅(Stripe=動物禁止・KOMOJU=生体禁止・fincode Platform=法人限定)のため、統一できるのは実質PAY.JP一択。※この案Xを採用する場合、先に回答済みのQ-PAY-05(ユーザー間=銀行振込直接)は上書きされます。",
    "options": [
-    "PAY.JPで即立ち上げ + PayPay OPAを並行申請(承認後にPayPay併用または主副入替)",
-    "PAY.JP単独(PayPay申請はしない)",
-    "KOMOJUで即立ち上げ + PayPay OPA並行申請",
-    "PayPay OPA単独(審査約2ヶ月を待ってからローンチ)"
+    "案X志向: Platform統一を第一候補とし、前提ゲート2件を先に潰す。並行して通常契約の5%徴収を先行立ち上げ(どちらに転んでも無駄にならない)",
+    "案Y確定: ユーザー間=銀行振込のまま・PAY.JPは5%徴収のみ(統一はしない)",
+    "案Z: 併存=取引ごとに銀行振込/カードを選択(調査結論は非推奨・状態機械と経理の二重保守)"
    ],
    "rec": 0,
-   "rec_note": "PAY.JPは昆虫を名指しで許可する唯一の候補。PayPayの希望は並行申請で温存できる。",
+   "rec_note": "ゲート回答が出るまで実装は案X/Y共通部分(5%徴収・PAY.JPアダプタ)だけ進めるので手戻りなし。",
    "materials": [
-    "docs/planning/b2-research/research-payment-service-scan.md §B,§C"
+    "docs/planning/b2-research/research-payjp-platform.md §B,§C"
    ]
   },
   {
@@ -1343,55 +1275,6 @@
    "materials": [
     "docs/planning/b2-research/research-paypay-unification.md 付録(P2P規約)",
     "docs/planning/rulings/user-ruling-2026-07-15-round-15.md L77"
-   ]
-  },
-  {
-   "qid": "Q-SCOPE-01",
-   "section": "A",
-   "question": "今回ラン(T-38)の実装スコープをどこまでにするか。",
-   "background": "全735要件の現状(Opus敵対検証済): 実装済57・部分71・設計のみ96・未着手277・制約/思想216(実装対象外)・hold14・人間ゲート2・棄却2。第1波の実装対象は残170件、第2波の実装対象は約173件(うち未着手126)。g08動画系(35件)はvideo-prepブランチ管轄のため本ランから除外します。",
-   "options": [
-    "第1波残170件を必達+第2波は余力でベストエフォート",
-    "第1波のみで完了",
-    "第1波+第2波の全実装対象を必達(18時間枠では未達リスクあり)",
-    "S/Aティアのみ優先"
-   ],
-   "rec": 0,
-   "rec_note": "第1波必達が『全部』の実質。第2波を必達にすると検証(批評家ゲート)が薄くなるリスク。",
-   "materials": [
-    "docs/planning/c8/PLAN-c8-full-run.md §2(インベントリ)"
-   ]
-  },
-  {
-   "qid": "Q-UI-01",
-   "section": "A",
-   "question": "ihl-ver2 の ihl-ui-catalog + ui-parts-lab-w2(D:\\mockups の31枚を1:1実装済みのスタイル済みReact部品約30枚+civ.cssトークン=ver3の--civ-*の直接の祖先)を ver3 へ fork 移植し、全画面の見た目の正本にしてよいか。",
-   "background": "調査の結論: mockup水準の視覚作り込みは ver2 側に完成品として既に存在する。ver3レンダラは語彙(table/badge/stepper等)を実装済みなので、残るのは視覚的な作り込み(スペーシング・階層・アイコン)を各screen-defへ移植する作業。reuse-first・フォーク文化(Component単位fork)に合致。",
-   "options": [
-    "採用: ver2部品の視覚作り込みをver3へ移植して見た目正本にする",
-    "不採用: ver3独自CSSを磨く"
-   ],
-   "rec": 0,
-   "rec_note": "自作の劣化コピー回避の最短距離。",
-   "materials": [
-    "D:\\claude\\systems\\ihl-ver2\\packages\\ihl-ui-catalog",
-    "docs/planning/c7/ui-parity-map.md"
-   ]
-  },
-  {
-   "qid": "Q-UI-02",
-   "section": "A",
-   "question": "指示にあった『clodedesign』は Anthropic Labs の Claude Design(claude.ai/design・ブラウザ上で複数ビジュアル案を対話生成→選択するツール)と特定しました。どう使いますか。",
-   "background": "既製デザイン資産の置き場ではなくワークフローツールのため『丸ごと採用』はできません。ihl-ver3への反映はエクスポート/手動移植になります。",
-   "options": [
-    "ihl-ui-catalog移植を主軸にし、Claude Designはユーザーが任意でキー画面の案出しに使う(採用案はD:\\mockupsへ追加)",
-    "Claude Designでの案出しを本ランの必須工程にする(ユーザーのブラウザ操作が必要)",
-    "使わない"
-   ],
-   "rec": 0,
-   "rec_note": "本ランを人間操作でブロックしない形が自走と両立。",
-   "materials": [
-    "https://claude.com/product/design"
    ]
   },
   {
