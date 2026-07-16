@@ -31,8 +31,8 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/observation/upload,VPS,Workers,W2,infra-route-027,protected,implemented,撮影時 photo_conditions 自動埋込(既存 reuse・OBS-28)
 —,GET,/api/v1/market/listings,VPS,Workers,W2,infra-route-028,protected,implemented,一覧投影(design-c4 §3・V3-MKT-01 出品/閲覧まで)
 —,GET,/api/v1/market/listings/{listing_id},VPS,Workers,W2,infra-route-029,protected,implemented,詳細投影(design-c4 §3・POST /market/listings 出品も同波・ver2 matrix 未登録の ver3 新規 route)
-—,GET,/api/v1/market/transfer/{listing_id},VPS,Workers,W2,infra-route-030,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)
-—,POST,/api/v1/market/listings/{listing_id}/match,VPS,Workers,W2,infra-route-031,protected,planned,取引遷移/決済は C4 対象外(V3-MKT-01 は出品/閲覧まで)
+—,GET,/api/v1/market/transfer/{listing_id},VPS,Workers,W2,infra-route-030,protected,implemented,OQ-ROUTE-03(round-16★推奨)実装先=V3-IND-35割り出し予約マッチング確認画面(出品者全件/買い手本人分のみ)
+—,POST,/api/v1/market/listings/{listing_id}/match,VPS,Workers,W2,infra-route-031,protected,implemented,OQ-ROUTE-03(round-16★推奨)実装先=V3-IND-35割り出し予約の単価降順自動マッチング(出品者のみ・harvested_count指定)
 —,POST,/api/v1/market/listings/{listing_id}/transition,VPS,Workers,W2,infra-route-032,protected,implemented,取引状態機械の許可辺遷移(C5 K3・design-k3 §2.2・V3-MKT-02 reduceMarket・不正遷移 409)
 —,GET,/api/v1/board/{category}/threads,VPS,Workers,W2,infra-route-033,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・ver3 実体 GET /api/v1/plaza/channels/{channel}/threads(board/{category}→/plaza/channels)・旧パスは deny-by-default 401 据置
 —,GET,/api/v1/board/categories,VPS,Workers,W2,infra-route-034,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・板は board_kind enum(guide/complaint/improvement)で投影・旧パスは deny-by-default 401 据置
