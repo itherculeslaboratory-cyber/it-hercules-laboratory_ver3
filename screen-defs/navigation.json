@@ -47,7 +47,8 @@
     "knowledge-paper",
     "knowledge-github",
     "ai-profile-settings",
-    "knowledge-thread"
+    "knowledge-thread",
+    "dispute"
   ],
   "edges": [
     {
@@ -389,6 +390,41 @@
       "from": "obs-register-done",
       "to": "home",
       "label": "完了"
+    },
+    {
+      "from": "market-trade",
+      "to": "market-trade",
+      "label": "取引アクション後に再読込(出品公開/申込/振込申告/入金確認/発送/受取確定)"
+    },
+    {
+      "from": "market-trade",
+      "to": "dispute",
+      "label": "相違・死着を相談室へ(F4検品3出口)"
+    },
+    {
+      "from": "knowledge-thread",
+      "to": "knowledge-thread",
+      "label": "返信後に再読込"
+    },
+    {
+      "from": "knowledge-thread",
+      "to": "dispute",
+      "label": "投稿を相談室へ(Polis対立の裁判2room)"
+    },
+    {
+      "from": "dispute",
+      "to": "dispute",
+      "label": "開始/発言/決着後に再読込"
+    },
+    {
+      "from": "dispute",
+      "to": "market-trade",
+      "label": "取引へ戻る"
+    },
+    {
+      "from": "dispute",
+      "to": "knowledge-thread",
+      "label": "スレへ戻る"
     }
   ]
 }
