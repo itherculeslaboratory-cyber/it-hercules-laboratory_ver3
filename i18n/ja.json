@@ -104,7 +104,7 @@
   "knowledge-thread.consensus-title.text": "合意の可視化",
   "knowledge-thread.stance-title.text": "賛否を投じる",
   "knowledge-thread.stance-statement.label": "対象の投稿 ID",
-  "knowledge-thread.stance-value.label": "賛否（agree / disagree / pass）",
+  "knowledge-thread.stance-value.label": "賛否",
   "knowledge-thread.back-board.label": "掲示板へ戻る",
   "knowledge-board.open-thread.label": "スレッドを開く"
 }
