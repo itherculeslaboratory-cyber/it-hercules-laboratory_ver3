@@ -793,19 +793,6 @@
     "note": ""
   },
   {
-    "id": "V3-IND-35",
-    "title": "割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ…",
-    "cluster": "g02-観測個体",
-    "wave": "第1波",
-    "tier": "S",
-    "lane": "L4-obs",
-    "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
-  },
-  {
     "id": "V3-KRM-03",
     "title": "毎月25日(クレジット締め日同型)を基準日に、カルマカウント≥1ならcount-…",
     "cluster": "g04-経済",
@@ -1467,10 +1454,12 @@
     "tier": "C",
     "lane": "CSV",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "9eeea25"
+    ],
     "tc": [],
-    "note": ""
+    "note": "V3-OBS-32 環境データCSVインポート実装(汎用列マッピング+put-if-absent冪等+telemetryソースキー拡張・route infra-route-067/068)。"
   },
   {
     "id": "V3-OBS-43",
@@ -4132,6 +4121,222 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-35",
+    "title": "割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "done",
+    "commits": [
+      "b5fd006"
+    ],
+    "tc": [],
+    "note": "割り出し予約(POST/GET reservations)+自動マッチング+確認/辞退route実装(OQ-ROUTE-03実装先)。"
+  },
+  {
+    "id": "V3-MKT-61",
+    "title": "ブロックしたユーザーとは金銭・成体・標本の取引(オファー送信・購入確定・予約マッ…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "done",
+    "commits": [
+      "3d21ba6"
+    ],
+    "tc": [],
+    "note": "ブロックユーザー取引ガード(isBlockedPair)実装。market-routes/market-reservation-routesの取引成立系アクションから参照。"
+  },
+  {
+    "id": "V3-MKT-62",
+    "title": "P2P決済ユーザー選択制: 買主→売主決済を取引ごとに①銀行振込(既定・無料・I…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "in_progress",
+    "commits": [
+      "5d11d74"
+    ],
+    "tc": [],
+    "note": "銀行振込既定路線(pay_declare/pay_confirm状態機械)は実装済。PAY.JP Platformカード決済の選択肢・5%自動控除は未実装 — partialのまま。"
+  },
+  {
+    "id": "V3-MKT-63",
+    "title": "5%システム維持費ゆる請求徴収: 取引完了後「計算して振り込んでね」方式でゆるく…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "in_progress",
+    "commits": [
+      "5d11d74"
+    ],
+    "tc": [],
+    "note": "買主pay_declare→売主pay_confirmの申告/確認フロー(ゆる請求の骨格)は実装済。PAY.JP経由5%自動控除・PayPay併用は未実装 — partialのまま。"
+  },
+  {
+    "id": "V3-MKT-64",
+    "title": "カード非保有ユーザー向けプリペイドカード案内: PAY.JP Platform選…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-65",
+    "title": "P2P送金アプリの取引利用禁止の規約明記: ユーザー間代金決済にPayPay送金…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-104",
+    "title": "写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedd…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-46",
+    "title": "magic-link数字コードフォールバック: magic-link発行時に同一…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-CST-09",
+    "title": "Truth(R2)バックアップ二重化: Truth正本を別プロバイダ(Backb…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-34",
+    "title": "バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバ…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-35",
+    "title": "外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-36",
+    "title": "割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-73",
+    "title": "データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-57",
+    "title": "鍵バンドルのサーバzero-knowledge保管+オフラインリカバリコード: …",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-58",
+    "title": "書込系レート制限+ユーザー別クォータ: R2書込経路にレート制限とユーザー別クォ…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-82",
+    "title": "検索グラフビュー+ホバー簡易カード: 近さ(画像類似/形質/血縁)のエンティティ…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "required",
     "status": "todo",
     "commits": [],
     "tc": [],

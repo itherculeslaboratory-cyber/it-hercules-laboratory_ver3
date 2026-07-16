@@ -10,29 +10,29 @@
 
 ## サマリー
 
-- 全体: ░░░░░░░░░░░░░░░░░░░░ 0%（0/318）
-- 第1波必達(required): ░░░░░░░░░░░░░░░░░░░░ 0%（0/168）
+- 全体: ░░░░░░░░░░░░░░░░░░░░ 1%（3/333）
+- 第1波必達(required): ░░░░░░░░░░░░░░░░░░░░ 2%（3/183）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 0%（0/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 316 |
-| 着手中(in_progress) | 2 |
-| 完了(done) | 0 |
+| 未着手(todo) | 326 |
+| 着手中(in_progress) | 4 |
+| 完了(done) | 3 |
 | 検証済(verified) | 0 |
 
 ## lane 別内訳
 
 | lane | 進捗 |
 |---|---|
-| CSV | ░░░░░░░░░░░░░░░░░░░░ 0%（0/1） |
-| L1/PAY | ░░░░░░░░░░░░░░░░░░░░ 0%（0/56） |
-| L3/L4-auth | ░░░░░░░░░░░░░░░░░░░░ 0%（0/26） |
-| L4 | ░░░░░░░░░░░░░░░░░░░░ 0%（0/47） |
-| L4-gov | ░░░░░░░░░░░░░░░░░░░░ 0%（0/33） |
+| CSV | ████████████████████ 100%（1/1） |
+| L1/PAY | ░░░░░░░░░░░░░░░░░░░░ 2%（1/61） |
+| L3/L4-auth | ░░░░░░░░░░░░░░░░░░░░ 0%（0/27） |
+| L4 | ░░░░░░░░░░░░░░░░░░░░ 0%（0/51） |
+| L4-gov | ░░░░░░░░░░░░░░░░░░░░ 0%（0/35） |
 | L4-knowledge | ░░░░░░░░░░░░░░░░░░░░ 0%（0/54） |
-| L4-obs | ░░░░░░░░░░░░░░░░░░░░ 0%（0/63） |
-| L6-ui | ░░░░░░░░░░░░░░░░░░░░ 0%（0/38） |
+| L4-obs | ░░░░░░░░░░░░░░░░░░░░ 2%（1/65） |
+| L6-ui | ░░░░░░░░░░░░░░░░░░░░ 0%（0/39） |
 
 ## lane 別明細
 
@@ -40,7 +40,7 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-OBS-32 | デバイス測定データのCSVインポート機能を提供する。SwitchBot限定ではな… | required | todo | — |
+| V3-OBS-32 | デバイス測定データのCSVインポート機能を提供する。SwitchBot限定ではな… | required | done | 9eeea25 |
 
 ### L1/PAY
 
@@ -80,6 +80,11 @@
 | V3-MKT-45 | 研究成果(projectId)に紐づく商品を出品し外部EC(BASE/Shopi… | required | todo | — |
 | V3-MKT-47 | Docker観測拡張をフォーク管理(parent_extension_id/li… | required | todo | — |
 | V3-MKT-49 | ランニングコスト(R2・さくらVPS等)をAPIで取得して透明に表示する。ただし… | required | todo | — |
+| V3-MKT-61 | ブロックしたユーザーとは金銭・成体・標本の取引(オファー送信・購入確定・予約マッ… | required | done | 3d21ba6 |
+| V3-MKT-62 | P2P決済ユーザー選択制: 買主→売主決済を取引ごとに①銀行振込(既定・無料・I… | required | in_progress | 5d11d74 |
+| V3-MKT-63 | 5%システム維持費ゆる請求徴収: 取引完了後「計算して振り込んでね」方式でゆるく… | required | in_progress | 5d11d74 |
+| V3-MKT-64 | カード非保有ユーザー向けプリペイドカード案内: PAY.JP Platform選… | required | todo | — |
+| V3-MKT-65 | P2P送金アプリの取引利用禁止の規約明記: ユーザー間代金決済にPayPay送金… | required | todo | — |
 | V3-KRM-09 | 指摘の二者が1ヶ月以内に合意しなければ強制クローズとし、未解決強制クローズをユー… | best-effort | todo | — |
 | V3-KRM-14 | 貢献度を『直接貢献』(論文投稿・生体登録・記事・アフィリエイト等、例paper5… | best-effort | todo | — |
 | V3-KRM-15 | embedding空間の密度や視点タグ(failure_case/ethics/… | best-effort | todo | — |
@@ -118,6 +123,7 @@
 | V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | required | todo | — |
 | V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | todo | — |
 | V3-AUT-20 | APIエラーは機械可読なerrorコードで返し、クライアントはそれをユーザー向け… | required | todo | — |
+| V3-AUT-46 | magic-link数字コードフォールバック: magic-link発行時に同一… | required | todo | — |
 | V3-I18-01 | 翻訳/i18n(#21)の横断機能を認証・UI・掲示板・裁判・マーケット・カルマ… | required | todo | — |
 | V3-I18-02 | 新規登録/オンボーディングで表示言語(locale)を必須選択させ、国籍・国コー… | required | todo | — |
 | V3-I18-03 | 表示言語(locale)を設定/プロフィールからいつでも変更でき、保存成功後は製… | required | todo | — |
@@ -139,6 +145,7 @@
 | id | title | scope | status | commits |
 |---|---|---|---|---|
 | V3-AIP-07 | FR/NFRの100%をRTM行に紐づけreq_id↔test_case_idを… | required | todo | — |
+| V3-AIP-104 | 写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedd… | required | todo | — |
 | V3-AIP-22 | GitHub ActionsでpytestとApps/webのtest/buil… | required | todo | — |
 | V3-AIP-23 | CONTRIBUTINGのcloneパスをrepoルート相対に統一しdesign… | required | todo | — |
 | V3-AIP-28 | 成果物はスコアカードで加重機械採点する(例: STRUCTURAL25%・DES… | required | todo | — |
@@ -158,6 +165,7 @@
 | V3-AIP-98 | 夜間限定の自動運転(V3-AIP-96)を時間帯予約式スケジューラへ拡張し、夜間… | required | todo | — |
 | V3-CST-01 | 10年間ユーザーが増えなくてもコストを賄える構造を最優先とし、ユーザー数に比例し… | required | todo | — |
 | V3-CST-02 | Sakura VPS(サーバー費)+Cloudflare R2(ストレージ費)等… | required | todo | — |
+| V3-CST-09 | Truth(R2)バックアップ二重化: Truth正本を別プロバイダ(Backb… | required | todo | — |
 | V3-FND-01 | R2/Truth への書き込みは INSERT ONLY(append-only… | required | todo | — |
 | V3-FND-02 | 永続正本は Cloudflare R2 のみとし、常駐DB(Postgres/S… | required | todo | — |
 | V3-FND-03 | システムを「個体の一生と再解析可能性を守るファイルベース研究データレイク」として… | required | todo | — |
@@ -168,6 +176,8 @@
 | V3-FND-18 | データ取得元管理を Placement/DeviceBinding/Occupa… | required | todo | — |
 | V3-FND-20 | WASM(Extism/Spin)ドライバで中間APIサーバーを不要化し、既存フ… | required | todo | — |
 | V3-FND-21 | AI呼び出しを集約する AI Kernel(A90)を新設し全機能のAI利用(翻… | required | todo | — |
+| V3-FND-34 | バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバ… | required | todo | — |
+| V3-FND-35 | 外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配… | required | todo | — |
 | V3-AIP-100 | 使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)が… | best-effort | todo | — |
 | V3-AIP-102 | 技術記事投稿パック: システム案・思想を複数技術サイトへ投稿できる「コピペ完結」… | best-effort | todo | — |
 | V3-AIP-103 | マルチ SNS 自動投稿オーケストレーション: 1 コンテンツを Instagr… | best-effort | todo | — |
@@ -200,6 +210,8 @@
 | V3-SEC-42 | 画像・解析データにSHA-256(元画像・ROIマスク・解析結果JSON)/Me… | required | todo | — |
 | V3-SEC-45 | ユーザーコード/ドライバー実行はサンドボックス境界(Extism/Docker/… | required | todo | — |
 | V3-SEC-56 | 出品状態書込・テンプレ公開・GMO等は認可(requireMarketListi… | required | todo | — |
+| V3-SEC-57 | 鍵バンドルのサーバzero-knowledge保管+オフラインリカバリコード: … | required | todo | — |
+| V3-SEC-58 | 書込系レート制限+ユーザー別クォータ: R2書込経路にレート制限とユーザー別クォ… | required | todo | — |
 | V3-GOV-02 | 争い入口を一本化し、単一のdispute-roomコンポーネントがanchor_… | best-effort | todo | — |
 | V3-GOV-03 | 指摘の仕様: 入口は指摘のみ(通報UIを置かない)、タグ+理由テキストを必須。同… | best-effort | todo | — |
 | V3-GOV-05 | 合意時は削除せずR2 append-onlyで新版を追加し、被指摘側の修正提案→… | best-effort | todo | — |
@@ -295,7 +307,8 @@
 | V3-IND-15 | 生体カード(種・形態・サイズ・特徴・QRコード)を生成し、印刷用テンプレートをf… | required | todo | — |
 | V3-IND-20 | スケジュール(飼育タスク)ノードを個体・観測テンプレに紐付け、AIが種族・成長ス… | required | todo | — |
 | V3-IND-34 | 血統管理は複数系統(A:体格重視、C:色重視等)を並行してインライン累代させ、理… | required | todo | — |
-| V3-IND-35 | 割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ… | required | todo | — |
+| V3-IND-35 | 割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ… | required | done | b5fd006 |
+| V3-IND-36 | 割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl… | required | todo | — |
 | V3-OBS-02 | 観測対象ナビゲータはテキストのみ(画像・サムネイル非表示)で、学名検索・アキネー… | required | todo | — |
 | V3-OBS-06 | 全ての計測・特徴値にvalue_origin(direct_observed/i… | required | todo | — |
 | V3-OBS-07 | 観測の信頼度モデルを設け、自動取得>手入力>後日編集の順で信頼度を明示スコア化し… | required | todo | — |
@@ -323,6 +336,7 @@
 | V3-OBS-61 | 観測入力を自然言語のフリーテキスト欄1つ+「解析する」ボタンで受け付け、日付・個… | required | todo | — |
 | V3-OBS-62 | 観測フローを固定順で定義する: userId/auth→種族確定(taxonom… | required | todo | — |
 | V3-OBS-72 | 研究室環境コンテキストの紐付け: 部屋・棚の配置、エアコン等の空調環境、センサー… | required | todo | — |
+| V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | todo | — |
 | V3-IND-03 | 観測登録時に個体をindividual_id+display_nameで扱い、ユ… | best-effort | todo | — |
 | V3-IND-05 | 血統(親子)表示で最良個体のみ次世代シリーズ名(例「玉」→「王」)へ昇格させる仕… | best-effort | todo | — |
 | V3-IND-06 | 親表示はハイブリッド(Q7 C): truthはADR-H-11のparent_… | best-effort | todo | — |
@@ -368,6 +382,7 @@
 | V3-UIX-68 | マイページはシンプルにし、透明性の文化としてその人の作品を相手のマイページで全て… | required | todo | — |
 | V3-UIX-80 | 取引前PII設定(局留め受取・配送先・銀行振込口座)が未完の場合、取引フロー内で… | required | todo | — |
 | V3-UIX-81 | ScreenDef Renderer の共通層で WCAG 2.2 AA 相当の… | required | todo | — |
+| V3-UIX-82 | 検索グラフビュー+ホバー簡易カード: 近さ(画像類似/形質/血縁)のエンティティ… | required | todo | — |
 | V3-UIX-09 | UIビルダーはWeb版を簡易版(forkテンプレ/ボタン宣言的操作)、Docke… | best-effort | todo | — |
 | V3-UIX-10 | 任意の編集可能画面から『この画面を編集』でUIビルダーを開き、現在の画面を対象に… | best-effort | todo | — |
 | V3-UIX-11 | UIビルダーのパネル(Canvas/LayerPanel/Inspector/T… | best-effort | todo | — |
