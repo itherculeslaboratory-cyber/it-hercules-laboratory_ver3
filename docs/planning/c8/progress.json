@@ -72,10 +72,12 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "124027b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。"
   },
   {
     "id": "V3-AIP-49",
@@ -85,10 +87,12 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "124027b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "E2E(Playwright)実UI+実バックエンド統合テストをapps/web/e2e/ledger.spec.ts+market.spec.tsに実装(V3-AIP-49/C7-T1タグ)、backend unit(tests/*.test.ts 約120ファイル)+frontend unit(renderer.test.tsx等)も並行整備済み。「新機能追加時の既存回帰率0%を受入」という運用ルール自体は継続的実践であり一度の完成物ではないため部分実装のまま。本番コード(R2)を差し替えずローカルメモリで統合テストする仕組み・機能別E2E条件分岐網羅設計書の整備状況は本エントリでは未確認。"
   },
   {
     "id": "V3-AIP-50",
@@ -98,10 +102,12 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "124027b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "JSON画面定義からのテスト自動生成(DSL→テストケース、Renderer→スナップショット)をscripts/gen-screendef-snapshots.mjs+apps/web/src/renderer/screendef-snapshots.test.tsxとして実装(全screen-defを描画しheading存在を検証)。TC: 同ファイル describe(\"ScreenDef snapshots — every screen-def renders (V3-AIP-50)\")。「要件→TC表→pytestの正統な流れ」の全機能への体系適用・機能別の読みやすいE2E設計書の網羅整備は未確認。"
   },
   {
     "id": "V3-AIP-57",
@@ -241,10 +247,12 @@
     "tier": "S",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "1409b6b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "magic-link専用authフロー(パスワード/OAuth/SMS/TOTP非搭載)を実装。apps/api/src/auth-routes.ts POST /auth/magic-link+POST /auth/verify(email→token→session一本)。TC: tests/auth.test.ts describe(\"C2 auth — magic-link + verify\")ほかV3-AUT-01/03/05/17を包括検証。重要操作限定opt-in TOTP二次確認(V3-AUT-32)は別要件・本エントリでは未確認。"
   },
   {
     "id": "V3-AUT-03",
@@ -269,10 +277,12 @@
     "tier": "A",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "4295494"
+    ],
     "tc": [],
-    "note": ""
+    "note": "renderer.tsx reactive submit gate(consent checkbox未同意/email未入力でsubmit disabled)を実装。apps/web/src/renderer/renderer.tsx(V3-AUT-06コメント3箇所)。TC: apps/web/src/renderer/renderer.test.tsx describe(\"Renderer — terms consent checkbox reactive submit (V3-AUT-06)\")。screen-defs/login.jsonのフォームで実利用。"
   },
   {
     "id": "V3-AUT-08",
@@ -321,10 +331,12 @@
     "tier": "A",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "4295494"
+    ],
     "tc": [],
-    "note": ""
+    "note": "navigation.jsonにlogin→country-select→language-select→terms→homeのオンボーディング遷移を明示定義しGATEで構造検証。screen-defs/navigation.json edges。TC: tests/check-navigation.test.ts describe(\"V3-AUT-11 checkNavigation(structure + completeness)\")。"
   },
   {
     "id": "V3-AUT-12",
@@ -473,10 +485,12 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "8fbcc49"
+    ],
     "tc": [],
-    "note": ""
+    "note": "R2/Truth書込みはpackages/truth/src/store.ts putEvent/putEventAt/putBlobが全てonlyIf:{etagDoesNotMatch:\"*\"}のput-if-absentで統一実装、衝突は409(UPDATE/DELETE経路自体が存在しない)。観測/カルマ/プラチナ/経済/掲示板/fork registry等全ドメインが同一TruthStoreを経由するため一律適用。TC: tests/cl-01-insert-only.test.ts describe(\"CL-01 insert-only (store level)\"/\"(HTTP level)\")でstore層+HTTP層の409を検証。"
   },
   {
     "id": "V3-FND-02",
@@ -512,10 +526,12 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "8271f49"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Command→純粋関数Reducer(Kernel)をpackages/truth/src/kernel.ts reduce()として実装。IO/副作用ゼロ、OCC(prevSnapshotVersion一致)衝突検出、timestamp単調増加、record/rootノード削除禁止。TC: tests/fnd-04-kernel.test.ts describe(\"FND-04 kernel reduce\")(決定論/conflict/monotonic/delete-forbiddenの4テスト)。"
   },
   {
     "id": "V3-FND-05",
@@ -525,10 +541,12 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "8271f49"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Genesis Hash+ハッシュチェーン(prev_hash/event_hash=SHA-256)をpackages/truth/src/hash-chain.ts eventHash/verifyChain/worldHashとして実装。worldHashは全ノードハッシュのMerkle集約でorder-independent、EMPTY_WORLD_HASHセンチネルもSHA-256(\"\")にpin。TC: tests/fnd-05-hash-chain.test.ts describe(\"FND-05 hash chain\")(正常チェーン検証/改竄検知/順序非依存/空世界センチネルの4テスト)。"
   },
   {
     "id": "V3-FND-12",
@@ -564,10 +582,12 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "9eeea25"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Placement/DeviceBinding/Occupancy/TelemetryIngestの4概念をapps/api/src/source-routes.ts+route-matrix infra-route-058〜065として実装(route-matrix.csv上でimplemented確認)。ローカルcollector Ed25519署名(tests/collector-ingest.test.ts, tests/derive-collector-pubkey.test.ts)経由でサーバ側秘密鍵常時pollを回避。TC: tests/fnd-18-source.test.ts describe(\"FND-18 telemetry bucketize (pure)\"/\"telemetry ingest route (idempotent merge)\"/\"device binding lifecycle\"/\"placement + occupancy INSERT (put-if-absent)\")。"
   },
   {
     "id": "V3-FND-20",
@@ -590,10 +610,12 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "8271f49"
+    ],
     "tc": [],
-    "note": ""
+    "note": "AI Kernel(A90)をPOST /api/v1/ai/{task}として実装(route-matrix infra-route-066・status=implemented・AI_DISABLED既定501・不変条項①のLLM OFF既定に整合・未知task404)。TC: tests/fnd-21-ai-kernel.test.ts describe(\"FND-21 A90 AI task route\")。LLMClient/Storage抽象化・LocalAI既定/クラウド切替の内部実装深度は未確認。"
   },
   {
     "id": "V3-GOV-07",
@@ -836,10 +858,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "039a4c5"
+    ],
     "tc": [],
-    "note": ""
+    "note": "毎月25日基準の月次カルマ救済cronをapps/api/src/batch.ts+economy-constants.tsに実装(count≥1ならcount-1、count=0完遂月のみ+10上限100、能動回復不可)。TC: tests/karma-recovery.test.ts describe(\"KRM-03 monthly karma recovery cron\")。"
   },
   {
     "id": "V3-KRM-04",
@@ -849,10 +873,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "karma_value≤-100永久BAN・R2データ保持・免罪符で解除不可をapps/api/src/ledger-routes.ts isBanned()+auth-routes.tsログインゲートに実装。TC: tests/karma-ban.test.ts describe(\"KRM-04 isBanned（karma_value ≤ -100）\"/\"KRM-04 login（session発行）時のBANゲート\"/\"KRM-04 BANは可逆・R2保持・免罪符で解けない\")。"
   },
   {
     "id": "V3-KRM-05",
@@ -862,10 +888,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "免罪符(プラチナコインショップ)をindulgenceStage純関数(Fibonacci段階・購入毎+1・暦月毎-1)+GET/POST /shop/indulgenceとして実装(1購入=カルマカウント-1のみ)。TC: tests/indulgence-shop.test.ts。名称は「免罪符ショップ」でなく「プラチナコインショップ」に統一。"
   },
   {
     "id": "V3-KRM-06",
@@ -888,10 +916,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "3軸貢献度(research/capital/development)をprojectContribution()で実装、PT残高は非公開(本人のみ)で軸に非影響な独立台帳として分離。TC: tests/contribution.test.ts describe(\"KRM-10 3 軸貢献度投影 projectContribution\"/\"KRM-10 概念別台帳の独立（PT 非公開・軸非影響）\")。Pay-to-Win禁止の明示的ガード実装は未確認。"
   },
   {
     "id": "V3-KRM-11",
@@ -901,10 +931,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "applyContributionDelta(祖先へupstreamPercent既定10%配分・純関数reducer)+mintFromScore(contributionPerPlatinum既定100毎PT鋳造・端数繰越)+cron-batch.tsの月次fork/vote還元10%リベートを実装。TC: tests/contribution.test.ts describe(\"KRM-11 依存グラフ配分 applyContributionDelta\")+tests/cron-batch.test.ts describe(\"KRM-11 fork/vote platinum rebate to upstream author (10%)\")。称号閾値(economy-constants.ts CONTRIBUTION_TITLE_THRESHOLD=10000)は定数実装のみでGUI変更可能かは未確認。"
   },
   {
     "id": "V3-KRM-12",
@@ -940,10 +972,12 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "9229c57"
+    ],
     "tc": [],
-    "note": ""
+    "note": "全付与イベント(karma/pt/contribution)はTruthStore経由append-only(schemas/frozen/ledger-entry.schema.jsonの凍結理由がCL-12/V3-KRM-19と明記)。称号はcontribution.tsでscore≥閾値の投影導出のみ(別途mutableな付与イベントを持たないため audit ログの懸念自体が発生しない)。取引不履行(fee_unpaid)によるカルマ減算+公開イベント記録はapps/api/src/batch.ts mktFeeUnpaidPenalty()で実装。TC: tests/cl-01-insert-only.test.ts(append-only基盤)+tests/cron-batch.test.ts describe(\"MKT-10 fee_unpaid monthly Fibonacci penalty\")(不履行→karma_count/value減算を検証)。"
   },
   {
     "id": "V3-KRM-20",
@@ -953,10 +987,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "projectSocialEval実装(layer0-3のみ集計・layer4除外・自己評価(rater===author)除外・公式ランキング配列は生成せず統計countsのみ返却)。TC: tests/social-eval.test.ts describe(\"KRM-20 projectSocialEval（統計のみ）\")4テスト+POST/GETルートTC。"
   },
   {
     "id": "V3-KRM-21",
@@ -966,10 +1002,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "プロフィールでKarma/Contribution/Market3指標を個別返却(research_scoreはcontribution.axes.research配下で独立4番目にしない)、public_safetyフィールド(取引実績/カルマ/悪いレビュー/公開ONの不服申立)は非公開設定不可、国際信頼スコアintl_trust(0-100)はカルマと別指標算出(karma 0→50、下限0クランプ確認済み)。TC: tests/profile.test.ts describe(\"KRM-21 canSetPrivate（public_safety は非公開設定拒否）\"/\"KRM-21 projectProfile（3 指標個別・研究スコアは Contribution 配下）\")。"
   },
   {
     "id": "V3-KRM-24",
@@ -979,10 +1017,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "改善案rank状態機械(minor→beginner→popular→recommended→official・fork時rank=beginner自動+forked_from連結)+hypothesis収束(trust=支持/(支持+否定)、閾値0.6以上supported/0.4以下rejected+低支持archived)を実装。official/recommendedへのクライアント直接rank_changeは403(プラチナ投票閾値経路限定=別ID KRM-25側)。TC: tests/proposal.test.ts describe(\"KRM-24 create + fork\"/\"KRM-24 rank 昇格遷移\"/\"KRM-24 hypothesis 収束（trust=支持/(支持+否定)）\")。IT.Hercules.Laboratoryマーク表示・社会機能(いいね/プラチナ/お気に入り/作者フォロー)付与は本ファイルでは未確認。"
   },
   {
     "id": "V3-KRM-28",
@@ -1018,10 +1058,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Listing状態機械(unlisted→listed_*→sold/delisted/offer_*)をreduceMarket純関数+許可辺のみ遷移route(不正遷移409)として実装。TC: tests/market-state-machine.test.ts describe(\"MKT-02 reduceMarket 純関数\"/\"MKT-02 route: 許可辺と不正遷移 409\")+\"MKT-01 非エスクロー=資金非預り invariant\"。route-matrix infra-route-032 status=implemented。"
   },
   {
     "id": "V3-MKT-03",
@@ -1044,10 +1086,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "取引成立=配送完了確認(受取申告)かつ評価確定で定義(単独では成立しない)、配送完了+30日無評価で自動good評価。TC: tests/market-settlement.test.ts describe(\"MKT-04 成立=receive かつ rate\"/\"MKT-04 自動 good 境界(配送 + 30 日 無評価)\")+tests/cron-batch.test.ts describe(\"MKT-04 auto-good rating after ship + 30 days with no rating\")。5%(旧8%)fee_unpaid起算は成立後のみ(MKT-10と結合実装済み)。"
   },
   {
     "id": "V3-MKT-05",
@@ -1141,10 +1185,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "テンプレマーケット(論文/UIスキン/グラフ/重み設定/AI設定パック/プロンプト)をRANKING_WEIGHTS(40/20/20/10/10)+rankTemplates(forked_fromで系譜連結、forkグラフ由来forks数で降順整列)+POST/GET /market/templates・/forkルートとして実装。TC: tests/market-template.test.ts describe(\"MKT-22 rankingScore 重み 40/20/20/10/10\"/\"MKT-22 rankTemplates fork グラフ由来 forks + 降順整列\")+ルートTC。累計コイン閾値超での公式昇格は別要件(KRM-24/25のrank_change gate)側に依存し本ファイル内では未確認。"
   },
   {
     "id": "V3-MKT-23",
@@ -1154,10 +1200,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "出品黄金フローautofill(個体ID選択→{{var}}テンプレ穴埋め+観測引用+推奨価格自動算出)をbuildListingDraft()+POST /market/listings/draftとして実装。TC: tests/market-pricing.test.ts describe(\"MKT-23 buildListingDraft 黄金フロー autofill\"/\"pricing routes\")。テストで確認できるのは個体1件の観測(size/bloodline/weight)+comparablesのみで、要件が挙げる親個体画像・成長履歴・温度/重量ログ全期間・類似個体価格・過去取引履歴の自動引用の網羅性は未確認(cited_observationsは現在観測1件のみ)。"
   },
   {
     "id": "V3-MKT-25",
@@ -1180,10 +1228,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
     "tc": [],
-    "note": ""
+    "note": "ADR-H-08良い/普通/悪い件数モデルをprojectRating+POST /market/ratings(bad理由必須)+GET公開評価+低評価フィルタ(悪い評価≥5 or カルマ≤0 or 評価平均≤2★)として実装。TC: tests/market-rating.test.ts describe(\"MKT-27 projectRating 件数モデル\"/\"MKT-27 lowRatingFlag 低評価フィルタ\"/ルートTC)。カルマ・好み学習とは独立ドメイン(LOW_RATING_*定数はフィルタ条件として参照するのみで統合はしない)。"
   },
   {
     "id": "V3-MKT-29",
@@ -1757,10 +1807,12 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "33b8a6d"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Wikidata Q番号↔専門API(GBIF/NCBI/ICD-11/HuggingFace等)対応をtruth/canonical/mapping_event(append-only・qid__target_db複合キー・DOMAIN_API_MAPオフライン表でdomain妥当性検証)+category親子木として実装。TC: tests/research-canonical.test.ts describe(\"PPR-13 canonical mapping append-only + DOMAIN_API_MAP validation\"/\"PPR-13 category parent-child tree (domain required)\")。世界接続層3要素(Wikidata正規ID・使用時発行の内部Index・専門APIマッピング仕様)のうち「使用時発行の内部Index」の実装は未確認。"
   },
   {
     "id": "V3-PPR-16",
@@ -1770,10 +1822,12 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
     "tc": [],
-    "note": ""
+    "note": "projectId中心のプロジェクトハブをbestVersion決定論的選定(バージョン単位観測集約)+projectHub(project_idで紐づくcontent/citations/versions集約)として実装(100番台分離モジュール project-routes.ts)。TC: tests/project-hub.test.ts describe(\"PPR-16 bestVersion deterministic selection from per-version observation aggregation\"/\"PPR-16 projectHub aggregates by project_id (only tied content/citations/versions)\")。"
   },
   {
     "id": "V3-PPR-17",
@@ -1783,10 +1837,12 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
     "tc": [],
-    "note": ""
+    "note": "研究課題ツリー自動生成(generateTaskNodes決定論的ヒューリスティクス)+毎朝6時「文明研究新聞」生成route(newspaper generation)+手動タスクrouteを実装。TC: tests/research-agent-batch.test.ts describe(\"PPR-17 generateTaskNodes deterministic + heuristics\"/\"PPR-17 newspaper generation + routes\"/\"PPR-17 manual task route (POST/GET /research/tasks)\")。研究プログラム(goals/milestones/dependencies)側の詳細実装は未深掘り。"
   },
   {
     "id": "V3-PPR-18",
@@ -1796,10 +1852,12 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
     "tc": [],
-    "note": ""
+    "note": "観測データのCitation Entity自動生成append-only+貢献ポイント付与(懲罰的karmaなし)を実装。TC: tests/project-hub.test.ts describe(\"PPR-18 citation append-only + platinum reward (no punitive karma)\")。マッチした観測データの自動グラフ追加・相関係数自動算出は未確認。"
   },
   {
     "id": "V3-PPR-20",
@@ -1874,10 +1932,12 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "9229c57"
+    ],
     "tc": [],
-    "note": ""
+    "note": "利用規約同意記録をschemas/frozen/consent-record.schema.json(INSERT ONLY・複数同意=別ファイル)として実装。TC: tests/cl-05-consent.test.ts describe(\"CL-05 consent record shape\"/\"CL-05 consent append-only behaviour\")。screen-defs/terms.jsonで規約画面自体は存在するが、未認証アクセス許可の確認・オンボーディングAPI側のMUST_AGREE_TO_TERMS検証コードはgrep該当0件(apps/api配下に見当たらず) — 同意記録の永続化のみ確認、API側の必須検証ゲートは未実装。"
   },
   {
     "id": "V3-SEC-41",
@@ -2095,10 +2155,12 @@
     "tier": "A",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "f565128"
+    ],
     "tc": [],
-    "note": ""
+    "note": "ScreenDef Renderer共通CSS層でWCAG2.2 AA相当を一括担保: 7状態(default/hover/focus-visible/active/disabled/loading/error)を.civ-interactiveに実装、prefers-reduced-motionで全アニメーション停止、--civ-tap(44px相当)タップターゲット、aria-disabled/aria-busy/aria-invalid連動。コントラストAAはscripts/check-contrast.mjsがtokens.generated.cssの全text/bg組を4.5:1でGATE。TC: apps/web/src/renderer/renderer.test.tsx describe(\"Renderer — button state + keyboard (V3-UIX-81)\")。個別画面でなくRenderer/CSS層で一括担保という設計方針にも合致。"
   },
   {
     "id": "V3-WIK-01",
@@ -2108,10 +2170,12 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
     "tc": [],
-    "note": ""
+    "note": "日次蒸留バッチ(distillWiki決定論的階層構造)をLLM OFF既定でスキップする実装(不変条項①整合)。schemas/events/wiki-node.schema.json x_ihl_req=V3-WIK-01。TC: tests/research-agent-batch.test.ts describe(\"WIK-01 distillWiki deterministic hierarchy + LLM OFF skip\")。"
   },
   {
     "id": "V3-WIK-03",
@@ -2177,10 +2241,12 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
     "tc": [],
-    "note": ""
+    "note": "記事/ブログ/論文を共通CMS基盤(content_type enum・v1はCreate/Readのみ)として実装、INSERT ONLYでR2 world/research/content/へ保存。TC: tests/research-content.test.ts describe(\"WIK-16 content INSERT ONLY + content_type enum\")。論文引用(cited_paper_ids)/観測引用(cited_session_ids)はWIK-13/14/17側で同ファイル内に併せて実装確認済み。"
   },
   {
     "id": "V3-WIK-17",
