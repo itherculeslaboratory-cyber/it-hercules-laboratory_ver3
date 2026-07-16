@@ -52,8 +52,15 @@ export const MARKET_EDGES: Record<string, Partial<Record<MarketKind, string>>> =
   // 確認は「matched のまま ship 可能」(非エスクロー=IHL は出荷タイミングを強制
   // しない)。cancel は猶予キャンセル(60分・買い手)/48h no-pay 自動キャンセル(系統
   // actor)の到達点(V3-MKT-01 状態機械5脚③・批評R4)。
-  matched: { ship: "shipped", cancel: "cancelled" },
-  shipped: { receive: "received", rate: "rated" },
+  // pay_declare/pay_confirm are self-loops (state doesn't move — reduceMarket's
+  // `state = next` becomes a no-op) purely so the route's isAllowedEdge WRITE
+  // gate lets them through at all. Without an entry here they fall through to
+  // "not an edge" -> 409 ILLEGAL_TRANSITION, contradicting the round-16 intent
+  // documented above (c8 market-trade E2E caught this: pay_declare/pay_confirm
+  // could never actually be posted). Allowed from both matched (the common
+  // case) and shipped (a late payment confirmation after dispatch).
+  matched: { ship: "shipped", cancel: "cancelled", pay_declare: "matched", pay_confirm: "matched" },
+  shipped: { receive: "received", rate: "rated", pay_declare: "shipped", pay_confirm: "shipped" },
   received: { rate: "sold" },
   rated: { receive: "sold" },
   sold: { transfer: "sold" },
