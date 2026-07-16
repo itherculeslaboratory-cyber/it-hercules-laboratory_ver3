@@ -87,6 +87,7 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await expect(indLink).toHaveAttribute("href", `/s/individual-detail?id=${bareId}`);
   await indLink.click();
   await expect(page.getByRole("heading", { name: "個体の詳細" })).toBeVisible();
+  await page.waitForLoadState("networkidle"); // profile fetch gate (see step 2)
   // individual-detail's species badge comes from the individual MASTER record
   // (profile.species), not the capture's species_candidate — and this subject_ref
   // was never explicitly registered via POST /individuals, so no master exists
@@ -130,6 +131,7 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
 
   // 9. the individual history now shows BOTH captures — persisted in real Truth.
   await page.goto(`${WEB}/s/individual-detail?id=${bareId}`);
+  await page.waitForLoadState("networkidle"); // profile fetch gate (see step 2)
   const timeline = page.locator(".civ-timeline");
   await expect(timeline.getByText("65")).toBeVisible();
   await expect(timeline.getByText("32")).toBeVisible();
