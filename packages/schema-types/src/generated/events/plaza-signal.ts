@@ -5,7 +5,7 @@
 // regenerate: node scripts/codegen-schemas.mjs
 
 /**
- * 自然淘汰シグナルイベント ihl.plaza.signal.v1 の data 部（BBS-03/GOV-23）。Truth キー truth/ihl.plaza.signal.v1/<target_type>/<target_id>/<signal_id>.json に append-only。projectRanking が RANKING_WEIGHTS で like/use/retain を加重合算し都度ランキング投影（利用率→ランキング・GOV-23 自然淘汰）。
+ * 自然淘汰シグナルイベント ihl.plaza.signal.v1 の data 部（BBS-03/GOV-23）。Truth キー truth/ihl.plaza.signal.v1/<target_type>/<target_id>/<signal_id>.json に append-only。projectRanking が RANKING_WEIGHTS で like/use/retain を加重合算し都度ランキング投影（利用率→ランキング・GOV-23 自然淘汰）。retry_reproduced/retry_not_reproduced は知の広場スレの追試チップ(target_type="plaza_thread"・target_id=thread_id)専用で、projectPromotionStatus が OQ-PLZ-01 昇格閾値の判定に用いる（round-16 裁定）。
  */
 export interface PlazaSignal {
   /**
@@ -25,9 +25,9 @@ export interface PlazaSignal {
    */
   target_id: string;
   /**
-   * シグナル種別（いいね/利用/継続・RANKING_WEIGHTS で加重）。
+   * シグナル種別（いいね/利用/継続・RANKING_WEIGHTS で加重。retry_reproduced/retry_not_reproduced=知の広場スレの追試「再現/再現せず」・OQ-PLZ-01 昇格判定専用でランキングには加重しない）。
    */
-  signal: "like" | "use" | "retain";
+  signal: "like" | "use" | "retain" | "retry_reproduced" | "retry_not_reproduced";
   /**
    * シグナル時刻（RFC3339）。
    */

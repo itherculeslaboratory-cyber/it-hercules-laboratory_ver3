@@ -43,3 +43,6 @@ export const RESEARCH_LLM_MODE_DEFAULT = "off";
 
 // PPR-03: Phase1 LaTeX 禁止(JSON/YAML 節 + プレビューのみ)。\ と $ を混入させない。
 export const LATEX_FORBIDDEN = /[\\$]/;
+
+// WIK-13: embedding 類似検索(4本柱の1つ)の一致しきい値(cosine類似度・CL-08 384次元L2正規化)。
+export const EMBEDDING_SIMILARITY_MIN = 0.7;

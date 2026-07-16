@@ -10,15 +10,15 @@
 
 ## サマリー
 
-- 全体: █░░░░░░░░░░░░░░░░░░░ 4%（13/333）
-- 第1波必達(required): █░░░░░░░░░░░░░░░░░░░ 5%（10/183）
+- 全体: █░░░░░░░░░░░░░░░░░░░ 5%（16/334）
+- 第1波必達(required): █░░░░░░░░░░░░░░░░░░░ 7%（13/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 311 |
-| 着手中(in_progress) | 9 |
-| 完了(done) | 13 |
+| 未着手(todo) | 306 |
+| 着手中(in_progress) | 12 |
+| 完了(done) | 16 |
 | 検証済(verified) | 0 |
 
 ## lane 別内訳
@@ -30,8 +30,8 @@
 | L3/L4-auth | █░░░░░░░░░░░░░░░░░░░ 7%（2/27） |
 | L4 | ░░░░░░░░░░░░░░░░░░░░ 0%（0/51） |
 | L4-gov | █░░░░░░░░░░░░░░░░░░░ 3%（1/35） |
-| L4-knowledge | ░░░░░░░░░░░░░░░░░░░░ 0%（0/54） |
-| L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/65） |
+| L4-knowledge | █░░░░░░░░░░░░░░░░░░░ 6%（3/54） |
+| L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/66） |
 | L6-ui | ░░░░░░░░░░░░░░░░░░░░ 0%（0/39） |
 
 ## lane 別明細
@@ -240,13 +240,13 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-BBS-03 | 全ファイル・全コンポーネント・全画面テンプレートに『説明掲示板(使い方)・愚痴掲… | required | todo | — |
-| V3-BBS-05 | 掲示板スレ・投稿は上書き・削除せず、訂正は追記セクションで行う(INSERT O… | required | todo | — |
+| V3-BBS-03 | 全ファイル・全コンポーネント・全画面テンプレートに『説明掲示板(使い方)・愚痴掲… | required | in_progress | e61f50b, 0bf56a8 |
+| V3-BBS-05 | 掲示板スレ・投稿は上書き・削除せず、訂正は追記セクションで行う(INSERT O… | required | done | e61f50b, 0bf56a8 |
 | V3-BBS-14 | 掲示板への改善要求はvoteable(積み投票/プラチナコイン)方式で扱い、AI… | required | todo | — |
 | V3-BBS-28 | 公開Q&A・称賛・未出品オファー・ラブレター一括募集などのEngagement(… | required | todo | — |
-| V3-PPR-01 | 論文照合(Paper Match)機能: 論文が要求する条件P(JSON)とユー… | required | todo | — |
+| V3-PPR-01 | 論文照合(Paper Match)機能: 論文が要求する条件P(JSON)とユー… | required | done | 0bf56a8 |
 | V3-PPR-02 | 論文の条件P(P⇒Qの前提)のJSON Schemaを単一正本としてファイル化し… | required | todo | — |
-| V3-PPR-03 | 論文をPaperSectionsV1の6節(目的/仮説/条件/検証/現在のフェー… | required | todo | — |
+| V3-PPR-03 | 論文をPaperSectionsV1の6節(目的/仮説/条件/検証/現在のフェー… | required | in_progress | 0bf56a8 |
 | V3-PPR-06 | 論文全文(sections+conditions+tags)をembedding… | required | todo | — |
 | V3-PPR-07 | 研究の空白領域を、観測データの4象限モデル(P∧Q=n11/P∧¬Q=n10/¬… | required | todo | — |
 | V3-PPR-09 | 全派生成果物にrun_id・model_name/version・input_h… | required | todo | — |
@@ -262,7 +262,7 @@
 | V3-WIK-03 | 検索は決定論の梯子(キーワード抽出→index.mdスコアリングでファイルを開か… | required | todo | — |
 | V3-WIK-04 | 決定論ingest CLI(tools/knowledge_ingest.py)… | required | todo | — |
 | V3-WIK-07 | 月次Lint(矛盾・孤立ページ・古い記述・リンク切れ)を実行しlog.mdに記録… | required | todo | — |
-| V3-WIK-13 | 統合検索を全文/タグ/ユーザー/ノードの4本柱で提供し、投稿(ノード)作成時にR… | required | todo | — |
+| V3-WIK-13 | 統合検索を全文/タグ/ユーザー/ノードの4本柱で提供し、投稿(ノード)作成時にR… | required | done | 0bf56a8 |
 | V3-WIK-16 | 記事・ブログ機能を論文(#09)とほぼ同じ共通CMS基盤で提供する。記事とブログ… | required | todo | — |
 | V3-WIK-17 | 会話ログ・AIチャット・観測データ・行動履歴を『共有』ボタン1タップ(PWA共有… | required | todo | — |
 | V3-WIK-20 | 設計書・コード・掲示板・修整理由・世界観・動画/記事メタ・フォーク系統・種(血統… | required | todo | — |
@@ -306,6 +306,7 @@
 | V3-IND-13 | 個体詳細(A2)を「個体のホーム画面」とし、観測(最新観測・履歴・成長曲線グラフ… | required | in_progress | e61f50b |
 | V3-IND-15 | 生体カード(種・形態・サイズ・特徴・QRコード)を生成し、印刷用テンプレートをf… | required | in_progress | e61f50b |
 | V3-IND-20 | スケジュール(飼育タスク)ノードを個体・観測テンプレに紐付け、AIが種族・成長ス… | required | todo | — |
+| V3-IND-21 | 個体・血統情報の登録数と実在数を照合できる透明性プラットフォームを作り水増… | required | in_progress | e61f50b |
 | V3-IND-34 | 血統管理は複数系統(A:体格重視、C:色重視等)を並行してインライン累代させ、理… | required | todo | — |
 | V3-IND-35 | 割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ… | required | done | b5fd006 |
 | V3-IND-36 | 割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl… | required | done | 65d7a00 |

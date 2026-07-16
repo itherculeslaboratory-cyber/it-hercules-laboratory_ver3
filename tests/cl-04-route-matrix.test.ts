@@ -1,8 +1,8 @@
-// CL-04: 70-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 71-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
-//   (iii) row count === 70. Lineage: base 68 (route-matrix.csv header comment) →
+//   (iii) row count === 71. Lineage: base 68 (route-matrix.csv header comment) →
 //        L-PAY レーン(round-16)が -6 GMO retired + 3 PAY.JP 新規 route(infra-route-
 //        069..071: POST /fees/{obligation_id}/invoice・POST /fees/payjp-webhook
 //        [PUBLIC]・GET /me/fees) = 65 → 認証レーン(round-16 OQ-ROUTE-01/V3-AUT-46)
@@ -11,7 +11,9 @@
 //        市場フォローレーン(round-15拡張 V3-GOV-35 違法出品ユーザー自治)が +6
 //        route(infra-route-073..078・全 protected: POST .../flags・POST
 //        .../gov-stop・GET .../flag-status ×2・GET .../misban-reversal・POST
-//        .../misban-reversal/execute)= 70。
+//        .../misban-reversal/execute)= 70 → 知の広場レーン(round-16 OQ-PLZ-03)が
+//        +1 route(infra-route-079: POST /plaza/threads/{thread_id}/resolution・
+//        protected)= 71。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -42,9 +44,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (70 rows)", () => {
-  it("has exactly 70 route rows", () => {
-    expect(rows.length).toBe(70);
+describe("CL-04 route matrix (71 rows)", () => {
+  it("has exactly 71 route rows", () => {
+    expect(rows.length).toBe(71);
   });
 
   it("access column is only public|protected", () => {

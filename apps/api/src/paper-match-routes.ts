@@ -6,10 +6,12 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { LATEX_FORBIDDEN } from "./research-constants";
+import { makeLLMClient, AiDisabledError } from "./ai-kernel";
 import {
   matchConditions,
   autoFillDescriptor,
   gapAnalysis,
+  hintsForMissing,
   type ConditionsP,
   type ObservationJson,
   type NeighborPaper,
@@ -47,13 +49,19 @@ function envelope(actorId: string, data: Record<string, unknown>) {
 function stripLatex(v: unknown): string {
   return String(v ?? "").replace(/[\\$]/g, "");
 }
-// LLM OFF 既定の静的ヒント 1 行（§6・不足キーがあれば列挙、無ければ空文字）。
-function staticHint(missing: string[]): string {
-  return missing.length ? `未充足の必須条件: ${missing.join(", ")}` : "";
+// LLM OFF 既定の静的ヒント 1 行（§6・サーバ側RAG参照=決定論の推奨レンジ合成のみ。
+// センサー設置法/類似観測の自然文生成はしない・不足キーが無ければ空文字）。
+function staticHint(missing: string[], conditions: ConditionsP): string {
+  if (!missing.length) return "";
+  const parts = hintsForMissing(conditions, missing).map((h) => (h.range ? `${h.key}（推奨レンジ: ${h.range}）` : h.key));
+  return `未充足の必須条件: ${parts.join(", ")}`;
 }
 
 // POST /research/paper-match — 条件P × 観測の照合 + Data Descriptor 自動充填（PPR-01/30）。
 // content_id 指定時はその paper の conditions/sections/claims を土台にし、body の同名キーで上書き可能。
+// llm_advice=true の明示トグル時のみ AI Kernel(A90・makeLLMClient)を呼ぶ（既定 OFF・§6 人間ゲート）。
+// 実鍵未配線(IHL_AI_PROVIDER 未設定)なら AiDisabledError → llm_advice は null のまま返す
+// （fabrication しない・FND-21 と同じ「実際に無効」な状態・未実装プレースホルダーではない）。
 paperMatchRoutes.post("/research/paper-match", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   let paper: Record<string, unknown> = {};
@@ -70,7 +78,22 @@ paperMatchRoutes.post("/research/paper-match", async (c) => {
     | undefined;
   const match = matchConditions(conditions, observation);
   const descriptor = autoFillDescriptor({ sections, conditions, claims }, observation);
-  return c.json({ match, descriptor, hint: staticHint(match.missing) });
+
+  let llm_advice: string | null = null;
+  if (body.llm_advice === true) {
+    try {
+      const { text } = await makeLLMClient(c.env).complete({
+        task: "generate",
+        input: { missing: match.missing, conditions },
+      });
+      llm_advice = text;
+    } catch (e) {
+      if (!(e instanceof AiDisabledError)) throw e;
+      // AI_DISABLED既定(§6人間ゲート・実鍵未配線) — llm_advice は null のまま返す。
+    }
+  }
+
+  return c.json({ match, descriptor, hint: staticHint(match.missing, conditions), hints: hintsForMissing(conditions, match.missing), llm_advice });
 });
 
 // POST /research/gap — 全種族横断のギャップ抽出（PPR-06）。neighbors はオフライン生成ベクトルを

@@ -5,7 +5,7 @@
 // gapAnalysis: injected fixed vectors -> neighbour diff axis -> stable missing_perspectives
 // (all-species, no species filter) + data_gap key diff, vector-absent -> data_gap only.
 import { describe, expect, it } from "vitest";
-import { matchConditions, autoFillDescriptor, gapAnalysis } from "../apps/api/src/paper-match";
+import { matchConditions, autoFillDescriptor, gapAnalysis, hintsForMissing, computeSectionsCompleteness } from "../apps/api/src/paper-match";
 import app from "../apps/api/src/index";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
 
@@ -52,6 +52,54 @@ describe("PPR-01 matchConditions classification + match_rate", () => {
     const r = matchConditions({ a: { required: false } }, {});
     expect(r.required_count).toBe(0);
     expect(r.match_rate).toBe(1);
+  });
+});
+
+describe("PPR-01 hintsForMissing — deterministic RAG-style range hints (no LLM)", () => {
+  const conditions = {
+    temp: { min: 25, max: 30, required: true, unit: "C" },
+    humidity: { min: 40, required: true },
+    ph: { eq: 7, required: true },
+    density: { required: true }, // no min/max/eq -> no range synthesizable
+  };
+
+  it("synthesizes a range string from min/max/unit", () => {
+    const hints = hintsForMissing(conditions, ["temp"]);
+    expect(hints).toEqual([{ key: "temp", range: "25以上・30以下C" }]);
+  });
+
+  it("min-only and eq-only conditions still produce a range", () => {
+    expect(hintsForMissing(conditions, ["humidity"])[0].range).toBe("40以上");
+    expect(hintsForMissing(conditions, ["ph"])[0].range).toBe("7");
+  });
+
+  it("a condition with no min/max/eq omits range (no fabricated hint)", () => {
+    expect(hintsForMissing(conditions, ["density"])[0]).toEqual({ key: "density" });
+  });
+
+  it("preserves the order of the missing[] input", () => {
+    expect(hintsForMissing(conditions, ["ph", "temp"]).map((h) => h.key)).toEqual(["ph", "temp"]);
+  });
+});
+
+describe("PPR-03 computeSectionsCompleteness — PAPER_SECTIONS-driven projection skeleton", () => {
+  it("all 6 sections filled -> 100", () => {
+    const sections = Object.fromEntries(
+      ["purpose", "hypothesis", "conditions", "verification", "phase", "gap"].map((k) => [k, { filled: true, text: "x" }]),
+    );
+    expect(computeSectionsCompleteness(sections)).toBe(100);
+  });
+
+  it("3 of 6 filled -> 50", () => {
+    const sections = {
+      purpose: { filled: true, text: "" }, hypothesis: { filled: true, text: "" }, conditions: { filled: true, text: "" },
+      verification: { filled: false, text: "" }, phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+    };
+    expect(computeSectionsCompleteness(sections)).toBe(50);
+  });
+
+  it("undefined sections -> 0 (no crash on non-paper content)", () => {
+    expect(computeSectionsCompleteness(undefined)).toBe(0);
   });
 });
 
@@ -145,6 +193,36 @@ describe("paper-match routes wiring (protected, append-only hypothesis)", () => 
     const body = (await res.json()) as { match: { violated: string[] }; hint: string };
     expect(body.match.violated).toEqual(["temp"]);
     expect(typeof body.hint).toBe("string");
+  });
+
+  it("hint text includes the recommended range for a missing key with min/max (V3-PPR-01 RAG hint)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/paper-match", {
+      conditions: { humidity: { min: 40, max: 70, required: true, unit: "%" } },
+      observation: {},
+    });
+    const body = (await res.json()) as { hint: string; hints: Array<{ key: string; range?: string }> };
+    expect(body.hint).toContain("推奨レンジ");
+    expect(body.hints).toEqual([{ key: "humidity", range: "40以上・70以下%" }]);
+  });
+
+  it("llm_advice is null when not requested (LLM stays off by default)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/paper-match", {
+      conditions: { temp: { required: true } }, observation: {},
+    });
+    const body = (await res.json()) as { llm_advice: string | null };
+    expect(body.llm_advice).toBeNull();
+  });
+
+  it("llm_advice stays null (AI_DISABLED) even when explicitly requested — no fabricated answer, no real key wired", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/paper-match", {
+      conditions: { temp: { required: true } }, observation: {}, llm_advice: true,
+    });
+    expect(res.status).toBe(200); // the route itself doesn't fail; AI Kernel absorbs AiDisabledError
+    const body = (await res.json()) as { llm_advice: string | null };
+    expect(body.llm_advice).toBeNull();
   });
 
   it("POST /research/gap returns data_gap for a paper without vectors", async () => {

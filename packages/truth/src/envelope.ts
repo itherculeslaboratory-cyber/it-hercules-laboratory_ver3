@@ -77,6 +77,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "plaza-fork": "plazaFork",
   "plaza-signal": "plazaSignal",
   "plaza-summary": "plazaSummary",
+  // round-16 裁定(OQ-PLZ-03)知の広場スレ解決マーク。
+  "plaza-resolution": "plazaResolution",
   "gov-vote": "govVote",
   "gov-dispute": "govDispute",
   "gov-precedent": "govPrecedent",
@@ -189,6 +191,9 @@ const EVENT_NAMES = new Set([
   "plaza-fork",
   "plaza-signal",
   "plaza-summary",
+  // round-16 裁定(OQ-PLZ-03) — data validation MUST fire or putEvent stores
+  // unchecked data at 201 permanently (Truth is INSERT ONLY, unfixable).
+  "plaza-resolution",
   "gov-vote",
   "gov-dispute",
   "gov-precedent",

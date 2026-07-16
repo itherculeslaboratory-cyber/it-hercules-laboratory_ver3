@@ -56,6 +56,7 @@ export * from "./events/occupancy";
 export * from "./events/placement";
 export * from "./events/plaza-fork";
 export type { PlazaPost } from "./events/plaza-post";
+export * from "./events/plaza-resolution";
 export * from "./events/plaza-signal";
 export * from "./events/plaza-stance";
 export * from "./events/plaza-summary";

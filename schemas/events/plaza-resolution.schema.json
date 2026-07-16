@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/plaza-resolution.schema.json",
+  "title": "Plaza thread resolution data (ihl.plaza.resolution.v1)",
+  "description": "スレの解決マーク（[✔解決した]/[取り消す]）イベント ihl.plaza.resolution.v1 の data 部（BBS-05・OQ-PLZ-03）。Truth キー truth/ihl.plaza.resolution.v1/<thread_id>/<resolution_id>.json に append-only。取消は新イベント（action=unresolve）を追記する supersede パターンで表現し、元イベントは UPDATE/DELETE しない。権限はスレ主のみ（root post の actor_id と一致・route 側で強制）。",
+  "x_ihl_req": "V3-BBS-05",
+  "x_ihl_source": "docs/planning/c7/wireframes-core5.md §F3 / docs/planning/rulings/user-ruling-2026-07-17-round-16.md §3-F OQ-PLZ-03",
+  "type": "object",
+  "required": ["resolution_id", "actor_id", "thread_id", "action", "created_at", "schema_version"],
+  "properties": {
+    "resolution_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "解決マークの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "マーク実行者の actor_id（スレ主のみ・route 側で強制・V3-AUT-17）。"
+    },
+    "thread_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象スレッドキー。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["resolve", "unresolve"],
+      "description": "解決/取消（取消は新イベントの追記・BBS-05・元イベントは不変）。"
+    },
+    "note": {
+      "type": "string",
+      "description": "結論候補ゼロで解決した際の任意の結び1行（F3・未入力可）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "マーク時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -386,10 +386,13 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "e61f50b",
+      "0bf56a8"
+    ],
     "tc": [],
-    "note": ""
+    "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。"
   },
   {
     "id": "V3-BBS-05",
@@ -399,10 +402,16 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "e61f50b",
+      "0bf56a8"
+    ],
+    "tc": [
+      "tests/plaza-posts.test.ts",
+      "tests/plaza-resolution.test.ts"
+    ],
+    "note": "INSERT ONLY append(putEventAt)+projectThread materialized view+correction_of追記畳込+cite欠落tombstone(cite_ref自体は削除しない)+reply_to/mentions/tags/cite_refsのチャネル分離を実装・テスト済み(apps/api/src/plaza-routes.ts)。今回の統合でresolutionイベント(OQ-PLZ-03)もsupersedeパターンで同型実装。"
   },
   {
     "id": "V3-BBS-14",
@@ -790,6 +799,21 @@
     "commits": [],
     "tc": [],
     "note": ""
+  },
+  {
+    "id": "V3-IND-21",
+    "title": "個体・血統情報の登録数と実在数を照合できる透明性プラットフォームを作り水増…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "in_progress",
+    "commits": [
+      "e61f50b"
+    ],
+    "tc": [],
+    "note": "projectAuthenticity+TC実装済み・market-listing照合のみ未"
   },
   {
     "id": "V3-IND-34",
@@ -1634,10 +1658,14 @@
     "tier": "S",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "0bf56a8"
+    ],
+    "tc": [
+      "tests/paper-match.test.ts"
+    ],
+    "note": "matchConditions(required key×min/max/eq/unit照合)+hintsForMissing(決定論の推奨レンジ合成・RAG参照の最小実装)+POST /research/paper-match(hint/hints併記)+llm_advice opt-inトグル(既定OFF・ai-kernel makeLLMClient再利用・AiDisabledErrorはnullで返す)+POST /research/content/:id/hypothesis(仮説append)を実装(apps/api/src/paper-match.ts/paper-match-routes.ts)。"
   },
   {
     "id": "V3-PPR-02",
@@ -1660,10 +1688,14 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "in_progress",
+    "commits": [
+      "0bf56a8"
+    ],
+    "tc": [
+      "tests/paper-sections.test.ts"
+    ],
+    "note": "design_onlyの投影骨格のみ実装: computeSectionsCompleteness(PAPER_SECTIONS filled件数から0-100算出)+GET /research/content/:idでsections_completeness_pctを併記(書込時completeness_pctは不変のまま)。テスト自体がdescribe名で\"design_only skeleton\"と明示。未了: 書込側のsections検証拡張・自然文投影は対象外。"
   },
   {
     "id": "V3-PPR-06",
@@ -2128,10 +2160,14 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "0bf56a8"
+    ],
+    "tc": [
+      "tests/research-content.test.ts"
+    ],
+    "note": "unifiedSearch(4本柱: fulltext/tag/user/node)は実装済み・prefix scan投影のため『投稿=即検索可能』(R2専用索引を持たず追記自体が索引更新・不変条項①)。今回embedding pillar(query_vector+content_vectors注入・cosineSimilarity再利用・gapAnalysisと同型)を配線し死んでいたquery_vectorフィールドを接続(apps/api/src/research-content-routes.ts)。"
   },
   {
     "id": "V3-WIK-16",

@@ -6,7 +6,9 @@
 #   L-PAY レーン(main)が -6 GMO retired + 3 PAY.JP 新規で 65 行に、round-16 認証レーン
 #   が上記 -2 onboarding + 1 verify-code(infra-route-072・PUBLIC)を統合マージ(65-2+1)
 #   → 64 rows、市場フォローレーン(round-15拡張 V3-GOV-35)が違法出品ユーザー自治の
-#   新規 6 route(infra-route-073..078・全 protected)を追加 → 70 rows。
+#   新規 6 route(infra-route-073..078・全 protected)を追加 → 70 rows、知の広場レーン
+#   (round-16 OQ-PLZ-03)がスレ解決マーク新規 1 route(infra-route-079・protected)を
+#   追加 → 71 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -80,3 +82,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/fees/{obligation_id}/invoice,VPS,Workers,W2,infra-route-069,protected,implemented,L-PAY PAY.JP 5%請求発行(round-16裁定・本人スコープ・義務台帳obligation_id直読み・GMO U-code照合廃止)
 —,POST,/api/v1/fees/payjp-webhook,VPS,Workers,W2,infra-route-070,public,implemented,L-PAY PAY.JP webhook 受領(PUBLIC・自己ゲート=charge id再照会・GET /v1/charges/:idで確認できた事実のみ信頼)
 —,GET,/api/v1/me/fees,VPS,Workers,W2,infra-route-071,protected,implemented,L-PAY 本人の未払い/支払い済み投影(round-16裁定・期限超過の自動ペナルティは発火させない・既存カルマ機構は不接続)
+—,POST,/api/v1/plaza/threads/{thread_id}/resolution,VPS,Workers,W2,infra-route-079,protected,implemented,知の広場スレ解決マーク(round-16裁定OQ-PLZ-03)・権限=スレ主のみ・append-only supersedeパターン(resolution_id ULID昇順の最後が現在値)

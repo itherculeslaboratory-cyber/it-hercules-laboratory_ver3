@@ -16,6 +16,10 @@ import {
   DIVISIVE_MIN_SIDE_RATIO,
   SUMMARY_BLOCK_SIZE,
   RANKING_WEIGHTS,
+  PLZ_VERIFIED_CITE_MIN,
+  PLZ_VERIFIED_RETRY_MIN,
+  PLZ_REFUTED_RETRY_MIN,
+  PLZ_UNRESOLVED_STANCE_MIN,
 } from "./plaza-constants";
 
 const POST_TYPE = "ihl.plaza.post.v1";
@@ -28,6 +32,8 @@ const SIGNAL_TYPE = "ihl.plaza.signal.v1";
 const SIGNAL_SCHEMA = "schemas/events/plaza-signal.schema.json";
 const SUMMARY_TYPE = "ihl.plaza.summary.v1";
 const SUMMARY_SCHEMA = "schemas/events/plaza-summary.schema.json";
+const RESOLUTION_TYPE = "ihl.plaza.resolution.v1";
+const RESOLUTION_SCHEMA = "schemas/events/plaza-resolution.schema.json";
 // gov.vote は K6-gov 側が書き込む。投影は読み取りだけ参照(fork ランク昇降/ランキング)。
 const VOTE_TYPE = "ihl.gov.vote.v1";
 const SCHEMA_VERSION = "1";
@@ -189,11 +195,18 @@ export async function projectThread(s: TruthStore, threadId: string) {
   return { thread_id: threadId, channel: str(posts[0].channel), topic: str(posts[0].topic), posts, tombstones };
 }
 
-// GET /plaza/threads/:thread_id — スレ投影(404 or view)。
+// GET /plaza/threads/:thread_id — スレ投影(404 or view)。resolution(OQ-PLZ-03)・
+// promotion(OQ-PLZ-01)を同梱(バインド用データ・レンダラ側の追加実装は L6 レーン)。
 plazaRoutes.get("/plaza/threads/:thread_id", async (c) => {
-  const view = await projectThread(store(c), c.req.param("thread_id"));
+  const threadId = c.req.param("thread_id");
+  const s = store(c);
+  const view = await projectThread(s, threadId);
   if (!view) return c.json({ error: "NOT_FOUND" }, 404);
-  return c.json(view);
+  const [resolution, promotion] = await Promise.all([
+    projectResolution(s, threadId),
+    projectPromotionStatus(s, threadId),
+  ]);
+  return c.json({ ...view, resolution, promotion });
 });
 
 // projectChannelThreads — channel 内スレ一覧(thread ごと集約 + board_kind グルーピング・
@@ -260,7 +273,15 @@ plazaRoutes.post("/plaza/stances", async (c) => {
 // projectConsensus — statement ごとに stance を scan → actor ごと最新 ULID を latest として
 // 採用(append-only 上書き)→ agree/disagree/pass 計数。consensus/divisive は純算術閾値
 // (§2.5・クラスタリング/LLM なし=同入力同出力)。per-statement 配列を返す(批評家#2)。
-export async function projectConsensus(s: TruthStore, statementIds: string[]) {
+// actorWeights(OQ-PLZ-02・round-16裁定)は actor_id→重み係数の対応表を呼び手が注入する
+// 設計(認定飼育者2.0/一次観測者1.5の初期値・plaza-constants.ts)。未指定 actor は既定 1 票
+// (省略時=空map=全員1票=既存呼び出しと完全後方互換)。identity/certification の正本は
+// 未着手のため actor_id→role の解決は本関数の対象外(呼び手が role map を用意する)。
+export async function projectConsensus(
+  s: TruthStore,
+  statementIds: string[],
+  actorWeights: Record<string, number> = {},
+) {
   const out: { statement_id: string; agree: number; disagree: number; pass: number; consensus: boolean; divisive: boolean }[] = [];
   for (const sid of statementIds) {
     const stances = (await s.listEvents(`truth/${STANCE_TYPE}/${sid}/`)).map(dataOf);
@@ -270,10 +291,11 @@ export async function projectConsensus(s: TruthStore, statementIds: string[]) {
       if (!prev || str(st.stance_id) > str(prev.stance_id)) latest.set(str(st.actor_id), st);
     }
     let agree = 0, disagree = 0, pass = 0;
-    for (const st of latest.values()) {
-      if (st.value === "agree") agree += 1;
-      else if (st.value === "disagree") disagree += 1;
-      else if (st.value === "pass") pass += 1;
+    for (const [actor, st] of latest) {
+      const w = actorWeights[actor] ?? 1;
+      if (st.value === "agree") agree += w;
+      else if (st.value === "disagree") disagree += w;
+      else if (st.value === "pass") pass += w;
     }
     const decisive = agree + disagree;
     const consensus = decisive >= CONSENSUS_MIN_VOTES && agree / decisive >= CONSENSUS_AGREE_RATIO;
@@ -281,6 +303,95 @@ export async function projectConsensus(s: TruthStore, statementIds: string[]) {
     out.push({ statement_id: sid, agree, disagree, pass, consensus, divisive });
   }
   return out;
+}
+
+// ── 解決マーク(BBS-05・OQ-PLZ-03)───────────────────────────────────────
+// projectResolution — スレの解決マーク投影。取消は新イベント(action=unresolve)の追記
+// (append-only・supersedeパターン)で表現し、resolution_id(ULID)昇順の最後を現在値とする。
+export async function projectResolution(s: TruthStore, threadId: string) {
+  const events = (await s.listEvents(`truth/${RESOLUTION_TYPE}/${threadId}/`))
+    .map(dataOf)
+    .sort((a, b) => (str(a.resolution_id) < str(b.resolution_id) ? -1 : 1));
+  const latest = events[events.length - 1];
+  const resolved = latest?.action === "resolve";
+  return {
+    resolved,
+    resolved_at: resolved ? str(latest!.created_at) : undefined,
+    note: resolved && typeof latest!.note === "string" ? latest!.note : undefined,
+  };
+}
+
+// POST /plaza/threads/:thread_id/resolution — [✔解決した]/[取り消す](OQ-PLZ-03: 権限は
+// スレ主のみ・root post=thread_id と同じ post_id の actor_id と一致必須)。append-only
+// (取消は unresolve イベントの追記・元イベントは不変)。
+plazaRoutes.post("/plaza/threads/:thread_id/resolution", async (c) => {
+  const threadId = c.req.param("thread_id");
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const action = body?.action === "unresolve" ? "unresolve" : body?.action === "resolve" ? "resolve" : "";
+  if (!action) return c.json({ error: "INVALID_RESOLUTION", details: ["action must be resolve|unresolve"] }, 400);
+
+  const s = store(c);
+  const view = await projectThread(s, threadId);
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  const actorId = c.get("actorId");
+  const rootPost = view.posts.find((p) => str(p.post_id) === threadId);
+  const ownerId = str(rootPost?.actor_id);
+  if (!ownerId || ownerId !== actorId) return c.json({ error: "FORBIDDEN", details: ["thread owner only"] }, 403);
+
+  const resolutionId = str(body?.resolution_id) || ulid();
+  const data: Record<string, unknown> = {
+    resolution_id: resolutionId,
+    actor_id: actorId,
+    thread_id: threadId,
+    action,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (action === "resolve" && typeof body?.note === "string" && body.note) data.note = body.note;
+  const key = `truth/${RESOLUTION_TYPE}/${threadId}/${resolutionId}.json`;
+  const res = await s.putEventAt(key, envelope(RESOLUTION_TYPE, RESOLUTION_SCHEMA, resolutionId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_RESOLUTION", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_RESOLUTION", key: res.key }, 409);
+  return c.json({ resolution_id: resolutionId, action }, 201);
+});
+
+// ── 昇格ステータス(OQ-PLZ-01・仮値4/2/5/12・round-16裁定)──────────────────
+// projectPromotionStatus — 実観測cite件数(post.cite_refs type=observation の重複無し件数)・
+// 追試件数(ihl.plaza.signal.v1・target_type="plaza_thread"・signal=retry_reproduced/
+// retry_not_reproduced)・stance母数(projectConsensus)から昇格状態を算術判定する。
+// 「⚠反証あり」は自動判定してよい降格方向(§F3 設計注記)のため verified より優先する。
+// 認定飼育者/一次観測者の重み付き票(OQ-PLZ-02)は identity/certification の正本が未着手の
+// ため本関数には未算入(projectConsensus の actorWeights 引数で個別に対応可能)。
+export type PromotionStatus = "verified" | "refuted" | "unresolved" | "open";
+export interface PromotionResult {
+  status: PromotionStatus;
+  cite_count: number;
+  retry_reproduced: number;
+  retry_not_reproduced: number;
+  stance_total: number;
+}
+
+export async function projectPromotionStatus(s: TruthStore, threadId: string): Promise<PromotionResult> {
+  const posts = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf).filter((d) => d.thread_id === threadId);
+  const citeSet = new Set<string>();
+  for (const p of posts) {
+    for (const ref of (p.cite_refs as CiteRef[] | undefined) ?? []) {
+      if (ref.type === "observation") citeSet.add(ref.id);
+    }
+  }
+  const signals = (await s.listEvents(`truth/${SIGNAL_TYPE}/plaza_thread/${threadId}/`)).map(dataOf);
+  const reproduced = signals.filter((sg) => sg.signal === "retry_reproduced").length;
+  const notReproduced = signals.filter((sg) => sg.signal === "retry_not_reproduced").length;
+
+  const statementIds = posts.map((p) => str(p.post_id));
+  const consensus = await projectConsensus(s, statementIds);
+  const stanceTotal = consensus.reduce((sum, row) => sum + row.agree + row.disagree + row.pass, 0);
+
+  const verified = citeSet.size >= PLZ_VERIFIED_CITE_MIN && reproduced >= PLZ_VERIFIED_RETRY_MIN;
+  const refuted = notReproduced >= PLZ_REFUTED_RETRY_MIN;
+  const unresolved = !verified && !refuted && stanceTotal >= PLZ_UNRESOLVED_STANCE_MIN;
+  const status: PromotionStatus = refuted ? "refuted" : verified ? "verified" : unresolved ? "unresolved" : "open";
+  return { status, cite_count: citeSet.size, retry_reproduced: reproduced, retry_not_reproduced: notReproduced, stance_total: stanceTotal };
 }
 
 // GET /plaza/threads/:thread_id/consensus — スレ内 post_id を statement_ids として収集し
