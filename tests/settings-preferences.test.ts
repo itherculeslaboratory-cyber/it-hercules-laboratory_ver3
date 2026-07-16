@@ -54,6 +54,7 @@ describe("UIX-16 選好 append + LWW 投影", () => {
       theme_pack_id: "minimal-light",
       template_id: "default",
       reduced_motion_override: "system",
+      country: "",
     });
   });
 
@@ -86,5 +87,16 @@ describe("UIX-16/I18-08 負の validation(write-time 検証配線・批評家修
     const env = makeEnv(new FakeR2Bucket());
     const r = await patchPrefs(env, await authOf("alice"), { locale: "ja", bogus_key: 1 });
     expect(r.status).toBe(400);
+  });
+
+  // round-16(V3-AUT-35/I18-02): 国籍は内部必須属性(UI非表示)・pref-set 経路で保持。
+  it("country は ISO 3166-1 alpha-2 形式のみ許可(小文字/3文字は400)", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("carol");
+    expect((await patchPrefs(env, h, { country: "jp" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { country: "JPN" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { country: "JP" })).status).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.country).toBe("JP");
   });
 });

@@ -33,6 +33,10 @@ export interface PrefSet {
    */
   reduced_motion_override?: "system" | "reduce" | "no-preference";
   /**
+   * 所属国(ISO 3166-1 alpha-2・任意・round-16裁定 V3-AUT-35/I18-02: UI非表示の内部属性。用途は規制/合法性の国別フィルタリング・行政介入スコープ(V3-GOV-35)・翻訳/通関/送料判定(V3-I18-17)に限定。国際信頼スコア等への汎用拡張は未裁定=対象外)。
+   */
+  country?: string;
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;

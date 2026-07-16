@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-listing-flag.schema.json",
+  "title": "Market listing illegal-listing flag (ihl.mkt.listing_flag.v1)",
+  "description": "違法/規約違反疑いの出品への指摘イベント(V3-GOV-35・round-15拡張)。Truth キー truth/ihl.mkt.listing_flag.v1/<listing_id>/<flag_id>.json に append-only。scope=user は同国ユーザー間限定(route が判定)・5件以上の active flag(action=flag が最新の (actor,listing) ペア数)で非表示。scope=government は operator/admin ロール限定(requireRole)で近似範囲(同一出品者の全出品)をまるごと停止する。action=withdraw で本人の指摘を LWW 撤回できる(market-block と同型)。",
+  "x_ihl_req": "V3-GOV-35",
+  "x_ihl_source": "docs/planning/rulings/user-ruling-2026-07-15-round-15.md #6-9",
+  "type": "object",
+  "required": ["flag_id", "actor_id", "listing_id", "target_owner", "action", "created_at", "schema_version"],
+  "properties": {
+    "flag_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "指摘イベントの一意キー(ULID)。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "指摘した本人の actor_id(セッション principal 強制・V3-AUT-17)。"
+    },
+    "listing_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "指摘対象の出品 listing_id。"
+    },
+    "target_owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象出品の出品者 actor_id(既存の指摘カルマΔcountルールの対象)。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["flag", "withdraw"],
+      "description": "指摘 or 本人による撤回(LWW・market-block と同型)。"
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["user", "government"],
+      "description": "user=通常ユーザー指摘(同国間のみ・route が判定)/ government=国やそれに準ずる立場からの指摘(requireRole operator/admin・近似範囲まるごと停止)。省略時 user。"
+    },
+    "reason": {
+      "type": "string",
+      "description": "理由(任意)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻(RFC3339)。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

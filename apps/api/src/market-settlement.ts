@@ -16,7 +16,7 @@ export type MarketKind =
   | "list_fixed" | "list_auction" | "list_lottery" | "list_platinum"
   | "offer" | "love_letter" | "bid" | "match" | "ship" | "receive"
   | "rate" | "settle" | "delist" | "transfer" | "tax_debt" | "tax_pay" | "fee_unpaid"
-  | "pay_declare" | "pay_confirm" | "cancel";
+  | "pay_declare" | "pay_confirm" | "cancel" | "ship_link";
 
 /** ihl.mkt.transaction_event.v1 の data。route は listing 単位に prefix-scan して渡す。 */
 export interface TxnEvent {
@@ -48,12 +48,17 @@ export const MARKET_EDGES: Record<string, Partial<Record<MarketKind, string>>> =
   listed_platinum: { match: "matched", delist: "delisted" },
   offer_pending: { offer: "offer_pending", love_letter: "offer_pending", match: "matched", delist: "delisted" },
   // round-16 決済裁定(受領7): 銀行振込既定・IHL非関与。pay_declare/pay_confirm は
-  // tax_* と同型の経済副次イベント(下の非辺 continue で状態を動かさない)— 支払い
-  // 確認は「matched のまま ship 可能」(非エスクロー=IHL は出荷タイミングを強制
-  // しない)。cancel は猶予キャンセル(60分・買い手)/48h no-pay 自動キャンセル(系統
+  // tax_* と同型の経済副次イベント。listing state を動かさない意図だが isAllowedEdge
+  // は MARKET_EDGES に無い kind を一律 409 にする route ガードのため、副次イベントも
+  // 自己ループ(同じ state を指す辺)として登録しないと POST /transition から到達
+  // 不能になる(発見した既存ギャップの root-cause fix。tax_debt/tax_pay/fee_unpaid は
+  // TRANSITION_KINDS に無く本 route から発行しないため未登録のまま=対象外)。
+  // ship_link は round-15裁定 V3-MKT-20(匿名配送=外部URL中継)の同型副次イベント
+  // (入金確認後、matched/shipped のどちらでも売り手が中継 URL を送れる)。
+  // cancel は猶予キャンセル(60分・買い手)/48h no-pay 自動キャンセル(系統
   // actor)の到達点(V3-MKT-01 状態機械5脚③・批評R4)。
-  matched: { ship: "shipped", cancel: "cancelled" },
-  shipped: { receive: "received", rate: "rated" },
+  matched: { ship: "shipped", cancel: "cancelled", pay_declare: "matched", pay_confirm: "matched", ship_link: "matched" },
+  shipped: { receive: "received", rate: "rated", ship_link: "shipped" },
   received: { rate: "sold" },
   rated: { receive: "sold" },
   sold: { transfer: "sold" },
@@ -166,17 +171,58 @@ const MINUTE_MS = 60 * 1000;
 
 export interface PaymentStatus {
   method: "bank_transfer"; // 将来 PAY.JP カードオプション追加時に拡張(round-16 決済裁定・本波は銀行振込のみ)
-  declared_at?: string; // 買主:振込済み申告(pay_declare)
-  confirmed_at?: string; // 売主:入金確認(pay_confirm)
+  declared_at?: string; // 買主:振込済み申告(pay_declare・最初の申告時刻)
+  confirmed_at?: string; // 売主:入金確認(pay_confirm・最初の確認時刻)
+  declared_amount?: number; // V3-MKT-13: 買主の直近自己申告額(最新の pay_declare.amount)
+  confirmed_amount?: number; // V3-MKT-13: 売主の直近確認額(最新の pay_confirm.amount)
+  mismatch?: "partial" | "over"; // V3-MKT-13: 直近 pay_confirm の金額相違自己申告(省略=一致・自動制裁なし)
 }
 
 /** round-16 決済裁定(受領7): P2P=銀行振込既定・IHL非関与(「振込自動検知」前提は廃止)。
  * pay_declare/pay_confirm は tax_* と同型の listing state を動かさない経済副次イベント
- * (MARKET_EDGES 非辺)。都度投影する(常駐 DB 禁止・不変条項①)。 */
+ * (MARKET_EDGES 上は自己ループ)。都度投影する(常駐 DB 禁止・不変条項①)。
+ * round-15裁定 V3-MKT-13: 銀行振込 P2P では売主の自己申告確認になったため、pay_confirm
+ * に「金額相違」自己申告(payload.mismatch=partial|over)を許す。部分入金(partial)は
+ * 義務が消えない(残債の再申告=買主が追加の pay_declare を再度行う想定)、過入金(over)は
+ * 前払いクレジット扱いの記録のみ(返金・自動充当・自動制裁は行わない=ゆる運用)。 */
 export function projectPayment(events: TxnEvent[]): PaymentStatus {
-  const first = (kind: MarketKind): string | undefined =>
-    sortEvents(events.filter((e) => e.kind === kind))[0]?.created_at;
-  return { method: "bank_transfer", declared_at: first("pay_declare"), confirmed_at: first("pay_confirm") };
+  const of = (kind: MarketKind) => sortEvents(events.filter((e) => e.kind === kind));
+  const firstDeclare = of("pay_declare")[0];
+  const firstConfirm = of("pay_confirm")[0];
+  const declares = of("pay_declare");
+  const confirms = of("pay_confirm");
+  const lastDeclare = declares[declares.length - 1];
+  const lastConfirm = confirms[confirms.length - 1];
+  const mismatchRaw = (lastConfirm?.payload as { mismatch?: unknown } | undefined)?.mismatch;
+  return {
+    method: "bank_transfer",
+    declared_at: firstDeclare?.created_at,
+    confirmed_at: firstConfirm?.created_at,
+    declared_amount: lastDeclare?.amount,
+    confirmed_amount: lastConfirm?.amount,
+    mismatch: mismatchRaw === "partial" || mismatchRaw === "over" ? mismatchRaw : undefined,
+  };
+}
+
+export interface ShippingLink {
+  url?: string; // V3-MKT-20: 外部住所入力 URL(日本郵便『ゆうパックスマホ割』等)。内容の適法性は未検証(round-16裁定・断定しない)
+  posted_by?: string;
+  posted_at?: string;
+}
+
+/** V3-MKT-20(round-15裁定・匿名配送=外部URL中継): システムは住所を一切保持せず、
+ * 売り手が中継する外部URLを relay するだけ(ihl.mkt.transaction_event.v1 kind=ship_link
+ * の payload.external_shipping_url)。都度投影・最新の1件を採用(直近の再送で更新可能)。 */
+export function projectShippingLink(events: TxnEvent[]): ShippingLink {
+  const links = sortEvents(events.filter((e) => e.kind === "ship_link"));
+  const last = links[links.length - 1];
+  if (!last) return {};
+  const urlRaw = (last.payload as { external_shipping_url?: unknown } | undefined)?.external_shipping_url;
+  return {
+    url: typeof urlRaw === "string" ? urlRaw : undefined,
+    posted_by: last.actor_id,
+    posted_at: last.created_at,
+  };
 }
 
 /** 状態機械5脚③(48h 未入金→自動キャンセル+再出品+no-pay マーク・批評R4脚③)。matched の

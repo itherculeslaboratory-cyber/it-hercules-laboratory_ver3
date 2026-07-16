@@ -49,6 +49,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "mkt-block": "mktBlock",
   "mkt-reservation": "mktReservation",
   "mkt-reservation-event": "mktReservationEvent",
+  // round-15拡張(V3-GOV-35違法出品ユーザー自治)
+  "mkt-listing-flag": "mktListingFlag",
   "social-eval": "socialEval",
   "social-platinum-vote": "socialPlatinumVote",
   "research-proposal": "researchProposal",
@@ -158,6 +160,7 @@ const EVENT_NAMES = new Set([
   "mkt-block",
   "mkt-reservation",
   "mkt-reservation-event",
+  "mkt-listing-flag",
   "social-eval",
   "social-platinum-vote",
   "research-proposal",

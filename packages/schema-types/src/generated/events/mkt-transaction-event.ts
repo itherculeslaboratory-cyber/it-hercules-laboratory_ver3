@@ -21,7 +21,7 @@ export interface MktTransactionEvent {
    */
   actor_id: string;
   /**
-   * 取引アクション種別（許可辺 MARKET_EDGES 外の遷移は route が 409）。pay_declare/pay_confirm は round-16 決済裁定（銀行振込既定・IHL非関与）の状態遷移で、tax_* 同様 listing state を動かさない経済副次イベント（買主:振込済み申告→売主:入金確認、を都度投影で表示する）。cancel は matched→cancelled の許可辺（猶予キャンセル/48h no-pay 自動キャンセル）。
+   * 取引アクション種別（許可辺 MARKET_EDGES 外の遷移は route が 409）。pay_declare/pay_confirm は round-16 決済裁定（銀行振込既定・IHL非関与）の状態遷移で、tax_* 同様 listing state を動かさない経済副次イベント（買主:振込済み申告→売主:入金確認、を都度投影で表示する）。pay_confirm の payload.mismatch(任意 partial|over)は round-15裁定 V3-MKT-13「金額相違」自己申告(部分入金=残債・過入金=クレジット記録のみ・自動制裁なし)。cancel は matched→cancelled の許可辺（猶予キャンセル/48h no-pay 自動キャンセル）。ship_link は round-15裁定 V3-MKT-20(匿名配送=外部URL中継)で売り手が入金確認後に payload.external_shipping_url を relay する経済副次イベント(住所非保持・システムは中継のみ)。
    */
   kind:
     | "list_fixed"
@@ -43,7 +43,8 @@ export interface MktTransactionEvent {
     | "fee_unpaid"
     | "pay_declare"
     | "pay_confirm"
-    | "cancel";
+    | "cancel"
+    | "ship_link";
   /**
    * 相手方 actor_id（offer/match/transfer 等・任意）。
    */
