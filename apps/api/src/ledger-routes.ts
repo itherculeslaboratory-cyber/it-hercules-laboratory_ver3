@@ -5,6 +5,8 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import type { KVNamespaceLite } from "./kv";
+import { revokeActor } from "./denylist";
 import { KARMA_VALUE_MIN, KARMA_VALUE_MAX, KARMA_BAN_THRESHOLD } from "./economy-constants";
 
 export const KARMA_TYPE = "ihl.economy.karma_event.v1";
@@ -134,18 +136,29 @@ export async function appendKarma(
  * append。現在カウントを投影で読んでから from→from+steps の累積 Fib を引く
  * (同一トランザクションの複数段は逐次適用と等価)。重大詐欺の一括 +5 等は
  * steps=5 で呼ぶ。append-only: value/count を別イベントとして 2 本 append。
+ *
+ * kv(省略可): V3-AUT-03 denylist の書込先(AUTH_DENYLIST Binding)。渡された場合、
+ * 付与後に isBanned() を再判定し、新たに BAN 域(karma_value ≤ 閾値)へ落ちたら
+ * revokeActor で既発行セッションを即時失効する — fee_unpaid/dispute/予約無反応/
+ * GOV-09 flag 等、全てのカルマペナルティ経路がこの関数を通るため、ここ一箇所の
+ * guard で「BAN処理(V3-KRM-04)からの配線」を満たす(root-cause: 個別呼び出し側に
+ * 都度 guard を置かない)。kv 未指定(既存の直接呼び出し・cron 等)は従来どおり無変更。
  */
 export async function grantKarmaCountIncrease(
   s: TruthStore,
   actorId: string,
   steps: number,
   reason_code: "dispute" | "fee_unpaid" | "manual" | "other" = "dispute",
+  kv?: KVNamespaceLite,
 ): Promise<void> {
   if (!Number.isInteger(steps) || steps <= 0) throw new Error("steps must be a positive integer");
   const { karma_count } = await projectLedger(s, actorId);
   const penalty = fibPenalty(karma_count, karma_count + steps);
   await appendKarma(s, actorId, "count", steps, reason_code);
   await appendKarma(s, actorId, "value", -penalty, reason_code);
+  if (kv && (await isBanned(s, actorId))) {
+    await revokeActor(kv, actorId);
+  }
 }
 
 /** プラチナ功績章の付与(coin_event・付与のみ・grant_amount>=0)。 */

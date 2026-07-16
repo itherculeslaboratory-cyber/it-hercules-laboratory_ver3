@@ -254,10 +254,12 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "a49ca1c"
+    ],
     "tc": [],
-    "note": ""
+    "note": "KVデニーリスト実装(denylist.ts+kv.ts・AUTH_DENYLIST Binding・毎リクエスト照会でSESSION_REVOKED 401)。書込配線はgrantKarmaCountIncrease内でBAN越え検知時に自動revoke(fee_unpaid/dispute/予約無反応/GOV-09 flag全経路が同関数を通る一箇所guard)+gov-routes.tsのPOST /gov/flagsから行政命令として無条件revoke。KV未バインドはno-op degrade(落ちない)。"
   },
   {
     "id": "V3-AUT-06",
@@ -4237,10 +4239,12 @@
     "tier": "A",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "a49ca1c"
+    ],
     "tc": [],
-    "note": ""
+    "note": "POST /api/v1/auth/verify-code(PUBLIC・infra-route-072)実装。magic-link発行時のiatから決定論的に6桁コードを導出(サーバ追加保存なし)・findMatchingIatでMAGIC_TTL窓内逆引き・試行回数制限(5回)+ワンタイム消費はAUTH_CODE_STATE KVで管理。login.json/login-sent.jsonにcode-form追加。"
   },
   {
     "id": "V3-CST-09",

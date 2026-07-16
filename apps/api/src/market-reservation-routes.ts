@@ -15,6 +15,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import type { KVNamespaceLite } from "./kv";
 import { isBlockedPair } from "./market-block-routes";
 import { grantKarmaCountIncrease } from "./ledger-routes";
 import { RESERVATION_CONFIRM_WINDOW_HOURS } from "./economy-constants";
@@ -155,6 +156,7 @@ async function settleReservationExpiry(
   reservation: Reservation,
   events: ReservationEvent[],
   now: Date,
+  kv?: KVNamespaceLite,
 ): Promise<ReservationEvent[]> {
   const { status, offer } = reservationStatus(events);
   if (status !== "offered" || !offer?.expires_at) return events;
@@ -175,7 +177,7 @@ async function settleReservationExpiry(
     systemReservationEventEnvelope(id, data),
   );
   if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
-  await grantKarmaCountIncrease(s, reservation.actor_id, 1, "other");
+  await grantKarmaCountIncrease(s, reservation.actor_id, 1, "other", kv);
   return [...events, data as unknown as ReservationEvent];
 }
 
@@ -236,7 +238,7 @@ marketReservationRoutes.get("/market/reservations", async (c) => {
   const out: Record<string, unknown>[] = [];
   for (const r of mine) {
     let events = await listReservationEventsFor(s, r.reservation_id);
-    events = await settleReservationExpiry(s, r, events, now);
+    events = await settleReservationExpiry(s, r, events, now, c.env.AUTH_DENYLIST);
     const { status, offer } = reservationStatus(events);
     out.push({
       ...r,
@@ -351,7 +353,7 @@ marketReservationRoutes.get("/market/transfer/:listing_id", async (c) => {
   const rows: Record<string, unknown>[] = [];
   for (const r of reservations) {
     let events = await listReservationEventsFor(s, r.reservation_id);
-    events = await settleReservationExpiry(s, r, events, now);
+    events = await settleReservationExpiry(s, r, events, now, c.env.AUTH_DENYLIST);
     const { status, offer } = reservationStatus(events);
     rows.push({
       reservation_id: r.reservation_id,
@@ -382,7 +384,7 @@ marketReservationRoutes.post("/market/reservations/:reservation_id/confirm", asy
 
   const now = new Date();
   let events = await listReservationEventsFor(s, reservationId);
-  events = await settleReservationExpiry(s, reservation, events, now);
+  events = await settleReservationExpiry(s, reservation, events, now, c.env.AUTH_DENYLIST);
   const { status, offer } = reservationStatus(events);
   if (status === "expired") return c.json({ error: "EXPIRED" }, 409);
   if (status !== "offered" || !offer) return c.json({ error: "NOT_OFFERED", status }, 409);
@@ -416,7 +418,7 @@ marketReservationRoutes.post("/market/reservations/:reservation_id/decline", asy
 
   const now = new Date();
   let events = await listReservationEventsFor(s, reservationId);
-  events = await settleReservationExpiry(s, reservation, events, now);
+  events = await settleReservationExpiry(s, reservation, events, now, c.env.AUTH_DENYLIST);
   const { status, offer } = reservationStatus(events);
   if (status === "expired") return c.json({ error: "EXPIRED" }, 409);
   if (status !== "offered" || !offer) return c.json({ error: "NOT_OFFERED", status }, 409);
@@ -435,6 +437,6 @@ marketReservationRoutes.post("/market/reservations/:reservation_id/decline", asy
   if (res.status === "invalid") return c.json({ error: "INVALID_DECLINE", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "ALREADY_RESOLVED" }, 409);
 
-  await grantKarmaCountIncrease(s, actorId, 1, "other"); // V3-IND-35: 未確定=カルマ-1
+  await grantKarmaCountIncrease(s, actorId, 1, "other", c.env.AUTH_DENYLIST); // V3-IND-35: 未確定=カルマ-1
   return c.json({ reservation_id: reservationId, status: "declined" }, 201);
 });

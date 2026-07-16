@@ -11,6 +11,7 @@ import type { Bindings, Variables } from "./env";
 import { projectRanking, dedupVotes } from "./plaza-routes";
 import { requireRole } from "./authz";
 import { grantKarmaCountIncrease } from "./ledger-routes";
+import { revokeActor } from "./denylist";
 import { DISPUTE_TTL_DAYS, GOV_FLAG_COUNT_STEPS, OS_PROMOTION_MIN_SCORE } from "./plaza-constants";
 
 const VOTE_TYPE = "ihl.gov.vote.v1";
@@ -366,6 +367,11 @@ govRoutes.post("/gov/flags", requireRole("operator", "admin"), async (c) => {
   if (res.status === "invalid") return c.json({ error: "INVALID_FLAG", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_FLAG", key: res.key }, 409);
   // 対象 owner に Δcount+10 とフィボナッチ減点を台帳 append(reason_code は enum 内の "other")。
-  await grantKarmaCountIncrease(s, targetOwner, GOV_FLAG_COUNT_STEPS, "other");
+  // BAN 閾値を跨いだ場合は grantKarmaCountIncrease 内部で denylist 登録される(V3-KRM-04)。
+  await grantKarmaCountIncrease(s, targetOwner, GOV_FLAG_COUNT_STEPS, "other", c.env.AUTH_DENYLIST);
+  // V3-AUT-03(round-16 Q-REQ-03)「行政命令(V3-GOV-09)から denylist 登録を配線」: 行政指摘
+  // による不使用フラグは閾値を跨がなくても無条件で即時失効させる(「開発者は裁判官には
+  // ならないが行政命令には従う」= 人間ゲート裁定済みの既存方針・GOV-09 statement)。
+  await revokeActor(c.env.AUTH_DENYLIST, targetOwner);
   return c.json({ flag_id: flagId, target_owner: targetOwner }, 201);
 });

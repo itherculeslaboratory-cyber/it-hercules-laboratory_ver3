@@ -1,0 +1,42 @@
+{
+  "screen_id": "login-sent",
+  "route": "/login/sent",
+  "title": "送信しました",
+  "layout": "standard",
+  "notes": "V3-AUT-46(round-16 OQ-ONB-03)。POST /api/v1/auth/magic-link は列挙防止のため 202 {sent:true} を常に返すので、この画面は誤入力時にも表示される「送信成功画面」— usecase-driven-design.md §収束フロー『届かない全経路の受け皿』の一部として、数字コード入力欄(login.json と同じ code-form)を常設する。email は magic-form の送信値が queryFromBody 経由で {{params.email}} に載る(renderer.tsx queryFromBody)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "login-sent.title.text", "text": "ログインリンクを送りました", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "login-sent.lead.text", "text": "{{params.email}} 宛にログインリンクを送りました(15分間有効)。", "muted": true } },
+            { "id": "code-lead", "type": "text", "props": { "text_key": "login-sent.code-lead.text", "text": "別の端末やアプリ内ブラウザでリンクを開けない場合は、メール本文の数字コードを入力してください。" } },
+            {
+              "id": "code-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/auth/verify-code", "body_from": "code-form" },
+              "children": [
+                { "id": "email", "type": "field", "props": { "variant": "hidden", "name": "email", "default": "{{params.email}}" } },
+                { "id": "code", "type": "field", "props": { "variant": "text", "name": "code", "label_key": "login-sent.code.label", "label": "数字コード(6桁)", "placeholder": "123456", "required": true } },
+                { "id": "code-submit", "type": "button", "props": { "label_key": "login-sent.code-submit.label", "label": "コードでログイン", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            {
+              "id": "back-to-login",
+              "type": "link",
+              "props": { "label_key": "login-sent.back.label", "label": "違うメールアドレスだった? 入力し直す", "href": "/login" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "code-form", "to_screen_id": "home", "label": "コード検証成功後にホームへ" }
+  ]
+}

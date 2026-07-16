@@ -171,7 +171,10 @@ describe("Renderer — terms consent checkbox reactive submit (V3-AUT-06)", () =
     const submit = screen.getByRole("button", { name: "ログインリンクを送る" });
     // initial paint: no input has fired, terms unchecked -> disabled synchronously
     expect(submit).toBeDisabled();
-    fireEvent.change(screen.getByLabelText(/メールアドレス/), {
+    // login.json also has a code-form (V3-AUT-46) with its own "メールアドレス" field
+    // (round-16 数字コード verify・route-matrix POST /auth/verify-code) → 2 matches;
+    // the magic-form's email field renders first (DOM order = JSON node order).
+    fireEvent.change(screen.getAllByLabelText(/メールアドレス/)[0], {
       target: { value: "you@example.com" },
     });
     expect(submit).toBeDisabled(); // terms still unchecked

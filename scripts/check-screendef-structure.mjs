@@ -18,7 +18,7 @@ import { loadScreenDefs } from "./check-navigation.mjs";
 
 // design-k4 §1.4/§5 — the 10 K4 (converted + new) screens.
 export const CLUSTER_OWNED = [
-  "home", "settings", "theme-gallery", "ui-templates", "login",
+  "home", "settings", "theme-gallery", "ui-templates", "login", "login-sent",
   "obs-domain-select", "obs-entry", "obs-detail", "individual-detail", "qr-resume",
 ];
 

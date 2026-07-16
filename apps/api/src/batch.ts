@@ -7,6 +7,7 @@
 // (config/consented-crons.json の consent artifact + GATE 緑まで作り、デプロイはしない)。
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings } from "./env";
+import type { KVNamespaceLite } from "./kv";
 import {
   KARMA_TYPE,
   COIN_TYPE,
@@ -244,7 +245,7 @@ export async function mktAutoGoodRatings(s: TruthStore, now: Date): Promise<void
 // reason 'fee_unpaid' 再利用)。tax_pay 消込で fee_unpaid_started_at が消え Δcount 停止。
 // deterministic な fee_unpaid marker(listing, 当月)を marker-first で put-if-absent し、
 // at-most-once(クラッシュ時は 1 月スキップ・二重課金しない)を保証。
-export async function mktFeeUnpaidPenalty(s: TruthStore, now: Date): Promise<void> {
+export async function mktFeeUnpaidPenalty(s: TruthStore, now: Date, kv?: KVNamespaceLite): Promise<void> {
   const txns = (await s.listEvents(`truth/${TXN_TYPE}/`)).map(dataOf) as unknown as TxnEvent[];
   const listingIds = [...new Set(txns.map((t) => t.listing_id).filter((x): x is string => typeof x === "string"))];
   for (const listingId of listingIds) {
@@ -268,19 +269,19 @@ export async function mktFeeUnpaidPenalty(s: TruthStore, now: Date): Promise<voi
       }, now),
     );
     if (marker.status === "conflict") continue; // 当月課金済 = 冪等スキップ
-    await grantKarmaCountIncrease(s, debtor, 1, "fee_unpaid"); // 1 段 Fib 減点(fibPenalty 連動)
+    await grantKarmaCountIncrease(s, debtor, 1, "fee_unpaid", kv); // 1 段 Fib 減点(fibPenalty 連動)
   }
 }
 
 // 月次バッチ本体(全ジョブ)。now を注入して境界をテスト可能にする(純関数的)。ジョブ
 // 単位で try/catch し、1 ジョブの失敗が他を巻き込まないようにする(cron 耐性)。
-export async function runMonthlyBatch(s: TruthStore, now: Date): Promise<void> {
+export async function runMonthlyBatch(s: TruthStore, now: Date, kv?: KVNamespaceLite): Promise<void> {
   const jobs: [string, () => Promise<void>][] = [
     ["krm03", () => krmMonthlyRecovery(s, now)],
     ["krm12", () => krmDryAxisMercyMint(s, now)],
     ["krm11", () => krmForkVoteRebate(s, now)],
     ["mkt04", () => mktAutoGoodRatings(s, now)],
-    ["mkt10", () => mktFeeUnpaidPenalty(s, now)],
+    ["mkt10", () => mktFeeUnpaidPenalty(s, now, kv)],
   ];
   for (const [name, run] of jobs) {
     try {
@@ -303,5 +304,5 @@ export async function handleScheduled(
 ): Promise<void> {
   const now = new Date(typeof event?.scheduledTime === "number" ? event.scheduledTime : Date.now());
   if (now.getUTCDate() !== RECOVERY_BASE_DAY) return; // 月次分岐: 25 日基準以外は no-op
-  await runMonthlyBatch(new TruthStore(env.TRUTH), now);
+  await runMonthlyBatch(new TruthStore(env.TRUTH), now, env.AUTH_DENYLIST);
 }

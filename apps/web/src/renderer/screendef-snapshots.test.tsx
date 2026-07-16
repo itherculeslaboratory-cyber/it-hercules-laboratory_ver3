@@ -26,6 +26,7 @@ const SCREEN_IDS = [
   "knowledge-thread",
   "language-select",
   "login",
+  "login-sent",
   "market-trade",
   "match",
   "obs-confirm",

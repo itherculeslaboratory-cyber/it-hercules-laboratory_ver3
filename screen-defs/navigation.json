@@ -2,6 +2,7 @@
   "entry": "login",
   "screens": [
     "login",
+    "login-sent",
     "country-select",
     "language-select",
     "terms",
@@ -74,6 +75,21 @@
       "from": "login",
       "to": "home",
       "label": "dev-login"
+    },
+    {
+      "from": "login",
+      "to": "login-sent",
+      "label": "magic-link 送信後(V3-AUT-46)"
+    },
+    {
+      "from": "login-sent",
+      "to": "home",
+      "label": "数字コード検証成功後(V3-AUT-46)"
+    },
+    {
+      "from": "login-sent",
+      "to": "login",
+      "label": "違うメールアドレスだった? 入力し直す"
     },
     {
       "from": "home",
