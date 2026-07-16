@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
-<title>第16回裁定 質問シート(全51問)</title>
+<title>第16回裁定 質問シート(全54問)</title>
 <style>
  :root{--bg:#0f1216;--card:#171b22;--line:#272d38;--fg:#e7e9ee;--dim:#8a93a3;--acc:#ff7a1a;--acc-bg:#2a1a0e;--ok:#3fb950;--warn:#d9a53b;}
  *{box-sizing:border-box}
@@ -56,10 +56,10 @@
 </style></head>
 <body>
 <header>
- <h1>第16回裁定 質問シート(全51問)</h1>
+ <h1>第16回裁定 質問シート(全54問)</h1>
  <p class="sub">2026-07-16 / ihl-ver3 T-38 全機能実装完了ラン — 各問は推奨案が初期選択済みです。変更したい問だけラジオを選び直し、必要ならコメントを添えてください。</p>
  <div class="toolbar">
-  <span class="progress">変更 <b class="chg" id="cChanged">0</b>件 / コメント <b class="cmt" id="cComment">0</b>件 / 全51問</span>
+  <span class="progress">変更 <b class="chg" id="cChanged">0</b>件 / コメント <b class="cmt" id="cComment">0</b>件 / 全54問</span>
   <button class="act" id="btnReset" type="button">全て推奨に戻す</button>
   <button class="act primary" id="btnSummary" type="button">回答まとめを作成してコピー</button>
  </div>
@@ -68,38 +68,15 @@
 <main>
 <section class="qsection" id="sec-A">
  <h2>A. 方向を決める(最重要)</h2>
- <p class="sdesc">ラン全体の方向が変わる5問。特に Q-PAY-01 は元指示と推奨が異なるため明示裁定をお願いします。</p>
+ <p class="sdesc">Q-PAY-01は回答済み(2026-07-16: PayPay統一で確定・GMOあおぞらは個人事業主に本番API非提供と公式確認)。以下は実現方法の追加裁定4問+進め方1問+既存3問。</p>
  <ul class="cards">
-  <li class="card" id="card_Q-PAY-01">
-    <div class="chead">
-      <div>
-        <span class="qid">Q-PAY-01</span>
-        <div class="qtext">GMOあおぞら→PayPay統一の実現方式をどれにするか。</div>
-        <p class="bg">Web一次情報調査の結論: (1)『PayPay』は別会社2つ — PayPay銀行(旧ジャパンネット銀行)とPayPay株式会社(QR決済/OPA)。(2)PayPay銀行には個人事業主が単独契約できるリアルタイム入金Webhookが確認できず(小口向け振込専用口座はAPI通知なし+新規契約停止中)、sunabar相当のサンドボックスも無く、API料金非公開・最短6〜7週の個別審査 = 現行のGMO入金照合(検証済)をPayPay銀行では再現できない。(3)PayPay決済(OPA)は個人事業主可・開発サンドボックスあり・手数料1.98%(取引額比例)・昆虫生体の直接禁止規定なし(昆虫店『極』『クワガタ横丁』の導入実例あり)。ただし C2C分配/生体審査承認/資金決済法該当性 の3点が未確認(P0)。</p>
-        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §3(PayPay調査要約)</code> </p>
-      </div>
-      <div class="chips">
-        <span class="chip chip-state" id="st_Q-PAY-01">推奨どおり</span>
-        <span class="chip chip-comment" id="cm-chip_Q-PAY-01" style="display:none">+コメント</span>
-      </div>
-    </div>
-    <div class="opts">
-     <label class="opt rec"><input type="radio" name="Q-PAY-01" value="0" checked><span class="opttext">方式D: 決済のみPayPay追加・銀行はGMOあおぞら維持(非破壊・10年コスト最小) <span class="rec-badge">★推奨</span></span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-01" value="1"><span class="opttext">方式B: PayPay決済(OPA)へ一本化・銀行振込は廃止</span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-01" value="2"><span class="opttext">方式A: PayPay銀行へ全面移行(調査上は実現困難)</span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-01" value="3"><span class="opttext">現状維持: PayPay導入自体を見送り</span></label>
-    </div>
-    <p class="recnote">※元指示『あおぞらGMOやめます』と異なる推奨です。GMO口座を解約すると検証済みの入金照合基盤を失い、PayPay銀行側に個人事業主向けの代替がありません。ここだけは明示の裁定をお願いします。</p>
-    <textarea class="comment" id="cm_Q-PAY-01" placeholder="変更・条件・補足があれば"></textarea>
-  </li>
-
   <li class="card" id="card_Q-PAY-02">
     <div class="chead">
       <div>
         <span class="qid">Q-PAY-02</span>
-        <div class="qtext">PayPay加盟店のP0未確認3点(①昆虫生体の審査承認 ②C2C分配=複数出品者の代金徴収・5%控除・分配の規約可否 ③資金決済法(資金移動業)該当性)の確認方法。問い合わせ送信は人間アクションです。</div>
-        <p class="bg">いずれの回答でも、確認が済むまでPayPay決済の本番接続には着手しません(設計+sandbox検証まで)。③は最終的に弁護士確認が推奨されています。</p>
-        <p class="materials">材料: <code>docs/planning/c8/PLAN-c8-full-run.md §3</code> </p>
+        <div class="qtext">決済まわりの外部問い合わせ(人間アクション)の進め方。対象: ①KOMOJU仮審査照会(昆虫マーケット運営+システム利用料徴収の業態開示) ②PayPay OPAのプラットフォーム業態・オンライン専業可否の照会 ③PayPay銀行Open API(参照系・自社口座のみ)の要件照会 ④弁護士へのPTコイン前払式支払手段該当性の確認</div>
+        <p class="bg">いずれも確認が済むまで該当機能の本番接続には着手しません(設計+sandboxまで先行)。</p>
+        <p class="materials">材料: <code>docs/planning/b2-research/research-paypay-unification.md</code> </p>
       </div>
       <div class="chips">
         <span class="chip chip-state" id="st_Q-PAY-02">推奨どおり</span>
@@ -107,12 +84,99 @@
       </div>
     </div>
     <div class="opts">
-     <label class="opt rec"><input type="radio" name="Q-PAY-02" value="0" checked><span class="opttext">AIが問い合わせ文面を起草→ユーザーが送信 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt rec"><input type="radio" name="Q-PAY-02" value="0" checked><span class="opttext">AIが全問い合わせ文面を起草→ユーザーが送信 <span class="rec-badge">★推奨</span></span></label>
      <label class="opt"><input type="radio" name="Q-PAY-02" value="1"><span class="opttext">ユーザーが後日自分で問い合わせ</span></label>
-     <label class="opt"><input type="radio" name="Q-PAY-02" value="2"><span class="opttext">確認は本番契約直前まで先送り(設計だけ進める)</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-02" value="2"><span class="opttext">本番契約直前まで先送り(設計だけ進める)</span></label>
     </div>
     <p class="recnote">文面起草まで自走し、送信だけ人間ゲートに残すのが最速。</p>
     <textarea class="comment" id="cm_Q-PAY-02" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-PAY-03">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-PAY-03</span>
+        <div class="qtext">IHL徴収層(5%システム維持費)のPayPay決済の実装経路。</div>
+        <p class="bg">追加調査の結論: 買主→売主の代金はPayPay送金にできない(規約で営利利用が禁止・一次情報で確定)ため、PayPay化できるのはIHL自身の徴収層のみ。経路比較: (a)中間PSP KOMOJU=個人事業主OK・サンドボックス即日・PayPayオンライン手数料3.5%(5%維持費に対してなので成約額比0.175%) (b)PayPay OPA直接=1.98%(成約額比0.099%)だが本番接続まで約2ヶ月+プラットフォーム業態の審査通過が不確実。手数料差は成約額比0.1%未満と僅少。</p>
+        <p class="materials">材料: <code>docs/planning/b2-research/research-paypay-unification.md §1,§3</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-PAY-03">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-PAY-03" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-PAY-03" value="0" checked><span class="opttext">段階併用: Phase1=KOMOJUで即ローンチ + Phase2=PayPay OPA直接加盟を並行申請し、承認後に低料率へ任意移行 <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-03" value="1"><span class="opttext">OPA直接のみ(審査約2ヶ月を待ってからローンチ・実効最安)</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-03" value="2"><span class="opttext">KOMOJUのみ(OPA申請はしない)</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-03" value="3"><span class="opttext">銀行振込+会計APIかませ(PayPay決済は使わない)</span></label>
+    </div>
+    <p class="recnote">ローンチをOPA審査でブロックせず、料率最適化は後から可逆に行える。</p>
+    <textarea class="comment" id="cm_Q-PAY-03" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-PAY-04">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-PAY-04</span>
+        <div class="qtext">round-15裁定記録77行目『PayPay送金・郵便局機能を手動誘導すれば商用利用OK』の撤回。</div>
+        <p class="bg">追加調査で一次情報により反証: PayPay残高利用規約第7条が営利目的利用を禁止し、公式ヘルプ(b0861)が個人間送金での商品代金受取を明示禁止。違反時は無催告のアカウント停止。元記述は出典不明のAI回答テキストの転記でした。裁定記録は履歴として残し、round-16で撤回記録を追加する形で修正します(不変条項③準拠)。郵便局側の主張は未検証のため別途裏取りします。</p>
+        <p class="materials">材料: <code>docs/planning/b2-research/research-paypay-unification.md 付録(P2P規約)</code> <code>docs/planning/rulings/user-ruling-2026-07-15-round-15.md L77</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-PAY-04">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-PAY-04" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-PAY-04" value="0" checked><span class="opttext">撤回を承認(round-16で撤回記録を追加) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-04" value="1"><span class="opttext">保留(自分でも確認したい)</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-PAY-04" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-PAY-05">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-PAY-05</span>
+        <div class="qtext">[設計確定] 買主→売主のP2P代金(銀行振込)をIHLがどう扱うか。現行ワイヤーF3は『振込→自動検知』と記述していますが、P2P代金はIHLの口座を通らないため技術的に検知不能です。</div>
+        <p class="bg">(a)なら資金移動業リスクゼロ・GMOあおぞら完全解約が可能・U-code(CL-11)はP2P用途では不要化(5%徴収はmerchantPaymentId照合に置換)。(b)はIHLが代金を預かるエスクロー型となり資金移動業登録が必要になる可能性が高い。</p>
+        <p class="materials">材料: <code>docs/planning/b2-research/research-paypay-unification.md §2-C</code> <code>docs/planning/c7/wireframes-core5.md F3</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-PAY-05">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-PAY-05" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-PAY-05" value="0" checked><span class="opttext">(a) IHL非関与を明確化: 買主が売主の口座へ直接振込→売主が自分の銀行で入金確認→アプリで受取確定を押す(IHLは照合せず状態遷移のみ管理) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-05" value="1"><span class="opttext">(b) IHL口座経由で代金を預かる(エスクロー型・資金移動業リスク大)</span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-05" value="2"><span class="opttext">(c) (a)を採用し、将来オプションとして売主向け照合支援(売主自身の会計API連携等)を第2波で検討</span></label>
+    </div>
+    <p class="recnote">(c)を選んでも(a)と同じ実装で開始できます(第2波検討のフラグが付くだけ)。</p>
+    <textarea class="comment" id="cm_Q-PAY-05" placeholder="変更・条件・補足があれば"></textarea>
+  </li>
+
+  <li class="card" id="card_Q-PAY-06">
+    <div class="chead">
+      <div>
+        <span class="qid">Q-PAY-06</span>
+        <div class="qtext">PTコイン(プラチナ)チャージ機能の実装凍結。</div>
+        <p class="bg">調査で二重ブロッカーが判明: ①要件矛盾=V3-MKT-38『プラチナは金銭購入不可』とコードのpt_topupが正面衝突(V3-KRM-10はPTとプラチナを別概念と定義) ②PayPay加盟店規約がプリペイド/有価証券販売を原則禁止(個別承諾必須)+前払式支払手段(資金決済法)該当性は弁護士確認事項。5%維持費の徴収には影響しません(通常のサービス利用料)。</p>
+        <p class="materials">材料: <code>docs/planning/b2-research/research-paypay-unification.md §2-B</code> <code>01-requirements/registry.json V3-MKT-38/V3-KRM-10</code> </p>
+      </div>
+      <div class="chips">
+        <span class="chip chip-state" id="st_Q-PAY-06">推奨どおり</span>
+        <span class="chip chip-comment" id="cm-chip_Q-PAY-06" style="display:none">+コメント</span>
+      </div>
+    </div>
+    <div class="opts">
+     <label class="opt rec"><input type="radio" name="Q-PAY-06" value="0" checked><span class="opttext">凍結承認: 矛盾裁定+弁護士確認が済むまでPTチャージは実装しない(5%徴収のみ先行) <span class="rec-badge">★推奨</span></span></label>
+     <label class="opt"><input type="radio" name="Q-PAY-06" value="1"><span class="opttext">今この場で方針を裁定する(コメント欄で指定)</span></label>
+    </div>
+    
+    <textarea class="comment" id="cm_Q-PAY-06" placeholder="変更・条件・補足があれば"></textarea>
   </li>
 
   <li class="card" id="card_Q-SCOPE-01">
@@ -1231,7 +1295,7 @@
   {
    "key": "A",
    "title": "A. 方向を決める(最重要)",
-   "desc": "ラン全体の方向が変わる5問。特に Q-PAY-01 は元指示と推奨が異なるため明示裁定をお願いします。"
+   "desc": "Q-PAY-01は回答済み(2026-07-16: PayPay統一で確定・GMOあおぞらは個人事業主に本番API非提供と公式確認)。以下は実現方法の追加裁定4問+進め方1問+既存3問。"
   },
   {
    "key": "B",
@@ -1276,36 +1340,85 @@
  ],
  "questions": [
   {
-   "qid": "Q-PAY-01",
-   "section": "A",
-   "question": "GMOあおぞら→PayPay統一の実現方式をどれにするか。",
-   "background": "Web一次情報調査の結論: (1)『PayPay』は別会社2つ — PayPay銀行(旧ジャパンネット銀行)とPayPay株式会社(QR決済/OPA)。(2)PayPay銀行には個人事業主が単独契約できるリアルタイム入金Webhookが確認できず(小口向け振込専用口座はAPI通知なし+新規契約停止中)、sunabar相当のサンドボックスも無く、API料金非公開・最短6〜7週の個別審査 = 現行のGMO入金照合(検証済)をPayPay銀行では再現できない。(3)PayPay決済(OPA)は個人事業主可・開発サンドボックスあり・手数料1.98%(取引額比例)・昆虫生体の直接禁止規定なし(昆虫店『極』『クワガタ横丁』の導入実例あり)。ただし C2C分配/生体審査承認/資金決済法該当性 の3点が未確認(P0)。",
-   "options": [
-    "方式D: 決済のみPayPay追加・銀行はGMOあおぞら維持(非破壊・10年コスト最小)",
-    "方式B: PayPay決済(OPA)へ一本化・銀行振込は廃止",
-    "方式A: PayPay銀行へ全面移行(調査上は実現困難)",
-    "現状維持: PayPay導入自体を見送り"
-   ],
-   "rec": 0,
-   "rec_note": "※元指示『あおぞらGMOやめます』と異なる推奨です。GMO口座を解約すると検証済みの入金照合基盤を失い、PayPay銀行側に個人事業主向けの代替がありません。ここだけは明示の裁定をお願いします。",
-   "materials": [
-    "docs/planning/c8/PLAN-c8-full-run.md §3(PayPay調査要約)"
-   ]
-  },
-  {
    "qid": "Q-PAY-02",
    "section": "A",
-   "question": "PayPay加盟店のP0未確認3点(①昆虫生体の審査承認 ②C2C分配=複数出品者の代金徴収・5%控除・分配の規約可否 ③資金決済法(資金移動業)該当性)の確認方法。問い合わせ送信は人間アクションです。",
-   "background": "いずれの回答でも、確認が済むまでPayPay決済の本番接続には着手しません(設計+sandbox検証まで)。③は最終的に弁護士確認が推奨されています。",
+   "question": "決済まわりの外部問い合わせ(人間アクション)の進め方。対象: ①KOMOJU仮審査照会(昆虫マーケット運営+システム利用料徴収の業態開示) ②PayPay OPAのプラットフォーム業態・オンライン専業可否の照会 ③PayPay銀行Open API(参照系・自社口座のみ)の要件照会 ④弁護士へのPTコイン前払式支払手段該当性の確認",
+   "background": "いずれも確認が済むまで該当機能の本番接続には着手しません(設計+sandboxまで先行)。",
    "options": [
-    "AIが問い合わせ文面を起草→ユーザーが送信",
+    "AIが全問い合わせ文面を起草→ユーザーが送信",
     "ユーザーが後日自分で問い合わせ",
-    "確認は本番契約直前まで先送り(設計だけ進める)"
+    "本番契約直前まで先送り(設計だけ進める)"
    ],
    "rec": 0,
    "rec_note": "文面起草まで自走し、送信だけ人間ゲートに残すのが最速。",
    "materials": [
-    "docs/planning/c8/PLAN-c8-full-run.md §3"
+    "docs/planning/b2-research/research-paypay-unification.md"
+   ]
+  },
+  {
+   "qid": "Q-PAY-03",
+   "section": "A",
+   "question": "IHL徴収層(5%システム維持費)のPayPay決済の実装経路。",
+   "background": "追加調査の結論: 買主→売主の代金はPayPay送金にできない(規約で営利利用が禁止・一次情報で確定)ため、PayPay化できるのはIHL自身の徴収層のみ。経路比較: (a)中間PSP KOMOJU=個人事業主OK・サンドボックス即日・PayPayオンライン手数料3.5%(5%維持費に対してなので成約額比0.175%) (b)PayPay OPA直接=1.98%(成約額比0.099%)だが本番接続まで約2ヶ月+プラットフォーム業態の審査通過が不確実。手数料差は成約額比0.1%未満と僅少。",
+   "options": [
+    "段階併用: Phase1=KOMOJUで即ローンチ + Phase2=PayPay OPA直接加盟を並行申請し、承認後に低料率へ任意移行",
+    "OPA直接のみ(審査約2ヶ月を待ってからローンチ・実効最安)",
+    "KOMOJUのみ(OPA申請はしない)",
+    "銀行振込+会計APIかませ(PayPay決済は使わない)"
+   ],
+   "rec": 0,
+   "rec_note": "ローンチをOPA審査でブロックせず、料率最適化は後から可逆に行える。",
+   "materials": [
+    "docs/planning/b2-research/research-paypay-unification.md §1,§3"
+   ]
+  },
+  {
+   "qid": "Q-PAY-04",
+   "section": "A",
+   "question": "round-15裁定記録77行目『PayPay送金・郵便局機能を手動誘導すれば商用利用OK』の撤回。",
+   "background": "追加調査で一次情報により反証: PayPay残高利用規約第7条が営利目的利用を禁止し、公式ヘルプ(b0861)が個人間送金での商品代金受取を明示禁止。違反時は無催告のアカウント停止。元記述は出典不明のAI回答テキストの転記でした。裁定記録は履歴として残し、round-16で撤回記録を追加する形で修正します(不変条項③準拠)。郵便局側の主張は未検証のため別途裏取りします。",
+   "options": [
+    "撤回を承認(round-16で撤回記録を追加)",
+    "保留(自分でも確認したい)"
+   ],
+   "rec": 0,
+   "rec_note": "",
+   "materials": [
+    "docs/planning/b2-research/research-paypay-unification.md 付録(P2P規約)",
+    "docs/planning/rulings/user-ruling-2026-07-15-round-15.md L77"
+   ]
+  },
+  {
+   "qid": "Q-PAY-05",
+   "section": "A",
+   "question": "[設計確定] 買主→売主のP2P代金(銀行振込)をIHLがどう扱うか。現行ワイヤーF3は『振込→自動検知』と記述していますが、P2P代金はIHLの口座を通らないため技術的に検知不能です。",
+   "background": "(a)なら資金移動業リスクゼロ・GMOあおぞら完全解約が可能・U-code(CL-11)はP2P用途では不要化(5%徴収はmerchantPaymentId照合に置換)。(b)はIHLが代金を預かるエスクロー型となり資金移動業登録が必要になる可能性が高い。",
+   "options": [
+    "(a) IHL非関与を明確化: 買主が売主の口座へ直接振込→売主が自分の銀行で入金確認→アプリで受取確定を押す(IHLは照合せず状態遷移のみ管理)",
+    "(b) IHL口座経由で代金を預かる(エスクロー型・資金移動業リスク大)",
+    "(c) (a)を採用し、将来オプションとして売主向け照合支援(売主自身の会計API連携等)を第2波で検討"
+   ],
+   "rec": 0,
+   "rec_note": "(c)を選んでも(a)と同じ実装で開始できます(第2波検討のフラグが付くだけ)。",
+   "materials": [
+    "docs/planning/b2-research/research-paypay-unification.md §2-C",
+    "docs/planning/c7/wireframes-core5.md F3"
+   ]
+  },
+  {
+   "qid": "Q-PAY-06",
+   "section": "A",
+   "question": "PTコイン(プラチナ)チャージ機能の実装凍結。",
+   "background": "調査で二重ブロッカーが判明: ①要件矛盾=V3-MKT-38『プラチナは金銭購入不可』とコードのpt_topupが正面衝突(V3-KRM-10はPTとプラチナを別概念と定義) ②PayPay加盟店規約がプリペイド/有価証券販売を原則禁止(個別承諾必須)+前払式支払手段(資金決済法)該当性は弁護士確認事項。5%維持費の徴収には影響しません(通常のサービス利用料)。",
+   "options": [
+    "凍結承認: 矛盾裁定+弁護士確認が済むまでPTチャージは実装しない(5%徴収のみ先行)",
+    "今この場で方針を裁定する(コメント欄で指定)"
+   ],
+   "rec": 0,
+   "rec_note": "",
+   "materials": [
+    "docs/planning/b2-research/research-paypay-unification.md §2-B",
+    "01-requirements/registry.json V3-MKT-38/V3-KRM-10"
    ]
   },
   {
