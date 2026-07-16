@@ -67,7 +67,7 @@ export interface Node {
    */
   id: string;
   /**
-   * コンポーネントカタログ v0（§4.2 の 12 種 + measurement-table + A層7種 + 観測登録スライス1の2種 + 磨き直し1種 + スライス2の4種 + 検索スライスAの1種 + 個体詳細スライスAの2種）。field は props.variant で text|number|select|photo|checkbox|segmented|hidden を表現。measurement-table は行追加できる計測入力表（項目/数値/単位/計測方法 × N 行 → measurements[] へ整形・V3-OBS-18）。table/badge/progress/tabs/image-grid/stepper/kpi-tile は共有レンダラ語彙 A層（c7 ui-parity-map §2）。card は既存ノードを icon/title/meta/badges/action ナビで上位互換拡張（新種なし）。visit-tracker/recent-chips は V3-AIP-101 観測登録スライス1: 個体閲覧履歴を localStorage に記録/直近3件をチップ表示する client-only 部品（新 Truth 型なし）。disclosure は V3-AIP-101 磨き直し: 既定折りたたみのトリガー（badge/buttonスタイル）+タップで開く children（F2ステージ変更・死亡記録）。clutch-intake/batch-roster/batch-summary/batch-done は V3-AIP-101 観測登録スライス2（c7-wireframes-core5 §F3/F4/F5/F6）: クラッチ割り出し1画面完結フォーム、お世話/移動/クラッチ照合・昇格の一括選択グリッド、バッチ確認サマリ、バッチ保存後の完了表示。複数 API 呼び出し+行単位のローカル状態を1画面内に持つため、既存の宣言的 form/list/table 語彙では表現しきれず専用ノードにした（measurement-table と同じ縮退）。search-navigator は V3-AIP-101 検索スライスA（obs-search）: GET /individuals + GET /placements の取得、localStorage 保存検索チップ、ファセット絞り込み+0件時の緩和バー、ソート、下部固定バスケットを1画面に持つ。同じく複数 API 呼び出し+行単位ローカル状態が多く宣言的語彙では表現しきれないため専用ノードにした。growth-chart は V3-AIP-101 個体詳細スライスA（c7-wireframes-core5 §4 F1/F2）: 依存追加なしの手書き SVG 折れ線（本個体実線+親破線オーバーレイ+コホート min-max 帯）。親データ無しはⓘ帯+親リンク小フォームを内包する第一級状態。individual-profile は同スライスAのヘッダ/血統健全度・近交リスクチップ/血縁レール/変化点タイムライン/sticky下端バーを1画面に持つ（GET /individuals/{id}/profile + /pedigree を自前取得）。
+   * コンポーネントカタログ v0（§4.2 の 12 種 + measurement-table + A層7種 + 観測登録スライス1の2種 + 磨き直し1種 + スライス2の4種 + 検索スライスAの1種 + 個体詳細スライスAの2種）。field は props.variant で text|number|select|photo|checkbox|segmented|hidden を表現。measurement-table は行追加できる計測入力表（項目/数値/単位/計測方法 × N 行 → measurements[] へ整形・V3-OBS-18）。table/badge/progress/tabs/image-grid/stepper/kpi-tile は共有レンダラ語彙 A層（c7 ui-parity-map §2）。card は既存ノードを icon/title/meta/badges/action ナビで上位互換拡張（新種なし）。visit-tracker/recent-chips は V3-AIP-101 観測登録スライス1: 個体閲覧履歴を localStorage に記録/直近3件をチップ表示する client-only 部品（新 Truth 型なし）。disclosure は V3-AIP-101 磨き直し: 既定折りたたみのトリガー（badge/buttonスタイル）+タップで開く children（F2ステージ変更・死亡記録）。clutch-intake/batch-roster/batch-summary/batch-done は V3-AIP-101 観測登録スライス2（c7-wireframes-core5 §F3/F4/F5/F6）: クラッチ割り出し1画面完結フォーム、お世話/移動/クラッチ照合・昇格の一括選択グリッド、バッチ確認サマリ、バッチ保存後の完了表示。複数 API 呼び出し+行単位のローカル状態を1画面内に持つため、既存の宣言的 form/list/table 語彙では表現しきれず専用ノードにした（measurement-table と同じ縮退）。search-navigator は V3-AIP-101 検索スライスA（obs-search）: GET /individuals + GET /placements の取得、localStorage 保存検索チップ、ファセット絞り込み+0件時の緩和バー、ソート、下部固定バスケットを1画面に持つ。同じく複数 API 呼び出し+行単位ローカル状態が多く宣言的語彙では表現しきれないため専用ノードにした。growth-chart は V3-AIP-101 個体詳細スライスA（c7-wireframes-core5 §4 F1/F2）: 依存追加なしの手書き SVG 折れ線（本個体実線+親破線オーバーレイ+コホート min-max 帯）。親データ無しはⓘ帯+親リンク小フォームを内包する第一級状態。individual-profile は同スライスAのヘッダ/血統健全度・近交リスクチップ/血縁レール/変化点タイムライン/sticky下端バーを1画面に持つ（GET /individuals/{id}/profile + /pedigree を自前取得）。thread-posts は c8（ui-asset-catalog.md 【最優先2】）: per-post avatar（actor_id モノグラム）/handle/body/引用badge/相談室（dispute）導線+スレ主のみの解決マーク（POST /plaza/posts への tags 規約・新 Truth 型なし）を1画面に持つ。GET /plaza/threads/{thread_id} + GET /me/profile を自前取得する。field は textarea variant（c8: 複数行返信本文）も表現する。
    */
   type:
     | "app-shell"
@@ -99,7 +99,8 @@ export interface Node {
     | "batch-done"
     | "search-navigator"
     | "growth-chart"
-    | "individual-profile";
+    | "individual-profile"
+    | "thread-posts";
   /**
    * semantic props のみ（variant 等）。raw hex/任意色クラスは禁止（check-ui-tokens.mjs が拒否）。
    */

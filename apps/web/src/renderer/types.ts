@@ -60,7 +60,15 @@ export type NodeType =
   // GET /individuals/{id}/profile + /pedigree の2本を自前取得する(growth-chart
   // と合わせて2重取得になるが、この規模では素朴な自前fetchのほうが軽い —
   // search-navigator/batch-summary と同じ縮退)。
-  | "individual-profile";
+  | "individual-profile"
+  // c8 knowledge-thread(ui-asset-catalog.md 【最優先2】): per-post avatar/handle
+  // (actor_id monogram — no display-name field exists in the actor data model)
+  // /body/引用badge/相談室(dispute)導線 + スレ主のみの解決マーク(既存
+  // POST /plaza/posts へ tags:["resolved"] を積む規約・新 Truth 型なし)を
+  // 1画面に持つ。汎用 list の item_text(text+image のみ)では per-post
+  // アクション行を表現できないため専用ノード化(既存7種と同格の一発物)。
+  // GET /plaza/threads/{thread_id} + GET /me/profile を自前取得する。
+  | "thread-posts";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported
@@ -75,7 +83,10 @@ export type FieldVariant =
   | "segmented"
   // V3-AIP-101: an invisible carry-forward field (props.default, scope-
   // interpolated) — e.g. the individual id riding F2 → F5 through the draft.
-  | "hidden";
+  | "hidden"
+  // c8 knowledge-thread: multi-line reply/description bodies (renderer had no
+  // multi-row control at all — table/text-note c8-ui-asset-catalog gap #3).
+  | "textarea";
 
 // Documented props the Renderer understands (props stays an open Record so the
 // schema — additionalProperties:true — remains the SSOT). C5/K4 adds:
@@ -87,11 +98,21 @@ export type FieldVariant =
 //    affordance when the viewer locale differs from `lang` (V3-I18-06).
 //  - next_step: trailing "次にやること" navigation hint (V3-UIX-05).
 // A層（c7 ui-parity-map §2）: table props.columns[] ({key,label,cell:
-// "text"|"badge"|"progress",tone_key,max}) + bind_items; badge/progress
-// props.tone (success|warning|caution|neutral — no new hex, mapped onto the
-// existing primary/danger/muted trio); tabs props.tabs[] + child props.tab_id;
-// image-grid mirrors list's bind_items with item_image/item_label/item_meta/
-// item_badge; stepper props.steps[] + props.current; kpi-tile props.value/
+// "text"|"badge"|"progress"|"date"|"observed"|"link",tone_key,max,true_label,
+// false_label}) + bind_items — true_label/false_label (c8) give a boolean cell
+// value (e.g. knowledge-thread's Polis consensus/divisive flags) Japanese copy
+// instead of the raw "true"/"false" string; badge/progress props.tone
+// (success|warning|caution|neutral — no new hex, mapped onto the existing
+// primary/danger/muted trio); tabs props.tabs[] + child props.tab_id +
+// props.default_tab (c8: may carry a "{{...}}" scope template, e.g.
+// "{{data.state.stage}}", to auto-select the tab matching fetched data — still
+// tap-switchable, this only sets which tab opens first); image-grid mirrors
+// list's bind_items with item_image/item_label/item_meta/item_badge; stepper
+// props.steps[] + props.current (may also carry a "{{...}}" template) +
+// props.current_from/current_map (c8: derive_from+labels convention,
+// BadgeNode-style — current_from is a "{{...}}" template resolved against
+// scope, current_map remaps that raw value onto a step id/index so N backend
+// states can collapse onto fewer visible steps); kpi-tile props.value/
 // label/trend. card gains icon/title/meta/badges[] + a nav chevron rendered
 // when the card node itself carries an `action`.
 export interface KnownNodeProps {

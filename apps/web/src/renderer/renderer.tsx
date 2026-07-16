@@ -306,6 +306,11 @@ function queryFromResult(result: unknown): Record<string, string> {
   if (typeof r.token === "string") q.token = r.token;
   if (typeof r.capture_id === "string") q.id = r.capture_id;
   else if (typeof r.individual_id === "string") q.id = r.individual_id;
+  // c8 market-trade/dispute: a create action's response id is what the next
+  // load of the SAME screen needs on the query string to refetch the right
+  // record (self-navigate transitions are how this renderer "refreshes").
+  if (typeof r.listing_id === "string") q.listing_id = r.listing_id;
+  if (typeof r.dispute_id === "string") q.dispute_id = r.dispute_id;
   return q;
 }
 
@@ -702,6 +707,18 @@ function FieldNode({ node }: { node: ScreenNode }) {
     // individual id from F2 to F5) so a later screen's `static` can reference
     // {{params.*}} without the user re-entering it. No visible label/wrapper.
     return <input {...shared} type="hidden" value={interpolate(String(p.default ?? ""), scope)} readOnly />;
+  } else if (variant === "textarea") {
+    // c8 knowledge-thread: multi-line reply/description bodies. Same
+    // .civ-input treatment as every other control (no bespoke styling) —
+    // only the element differs.
+    control = (
+      <textarea
+        {...shared}
+        rows={Number(p.rows ?? 4)}
+        placeholder={p.placeholder ? String(p.placeholder) : undefined}
+        defaultValue={p.default != null ? interpolate(String(p.default), scope) : undefined}
+      />
+    );
   } else {
     control = (
       <input
@@ -1068,7 +1085,14 @@ function renderCell(col: Record<string, unknown>, row: unknown): React.ReactNode
         : col.tone_key != null
           ? String(getPath(row, String(col.tone_key)) ?? "neutral")
           : "neutral";
-    return <Badge text={String(value ?? "")} tone={tone} />;
+    // c8 knowledge-thread consensus/divisive columns are booleans (Polis
+    // decision, not free text) — true_label/false_label give them Japanese
+    // copy instead of showing the raw "true"/"false" string.
+    const text =
+      typeof value === "boolean"
+        ? String(value ? (col.true_label ?? "true") : (col.false_label ?? "false"))
+        : String(value ?? "");
+    return <Badge text={text} tone={tone} />;
   }
   if (cell === "progress") {
     const n = Number(value ?? 0);
@@ -1108,24 +1132,29 @@ function TableNode({ node }: { node: ScreenNode }) {
     return <p className="civ-empty">{String(p.empty_text)}</p>;
   }
   return (
-    <table className="civ-table">
-      <thead>
-        <tr>
-          {columns.map((c, i) => (
-            <th key={i}>{displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((row, ri) => (
-          <tr key={ri}>
-            {columns.map((c, ci) => (
-              <td key={ci}>{renderCell(c, row)}</td>
+    // c8: a mobile-width (390px) viewport clips trailing columns without a
+    // scroll wrapper — this affects every table-node screen, not just c8's,
+    // so the fix lives at the shared node rather than per-screen.
+    <div className="civ-table-scroll">
+      <table className="civ-table">
+        <thead>
+          <tr>
+            {columns.map((c, i) => (
+              <th key={i}>{displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}</th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {items.map((row, ri) => (
+            <tr key={ri}>
+              {columns.map((c, ci) => (
+                <td key={ci}>{renderCell(c, row)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -1136,10 +1165,26 @@ function TableNode({ node }: { node: ScreenNode }) {
 function TabsNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
   const tabs = (p.tabs as Array<Record<string, unknown>>) ?? [];
-  const [active, setActive] = useState<string>(
-    p.default_tab != null ? String(p.default_tab) : String(tabs[0]?.id ?? ""),
-  );
+  const rawDefault = p.default_tab != null ? String(p.default_tab) : String(tabs[0]?.id ?? "");
+  // c8 market-trade: default_tab may carry a "{{...}}" scope template (e.g.
+  // "{{data.state.stage}}") so a screen can auto-select the tab matching
+  // server-fetched state (public listing vs. private post-match board). The
+  // fetch that fills scope.data is async (useSource resolves after mount), so
+  // a plain useState initializer would only ever see the pre-fetch empty
+  // value — the effect below re-applies the resolved default once the data
+  // arrives, but only until the visitor taps a tab themselves.
+  const resolvedDefault = rawDefault.includes("{{") ? interpolate(rawDefault, scope) : rawDefault;
+  const [active, setActive] = useState<string>(resolvedDefault || String(tabs[0]?.id ?? ""));
+  const touchedRef = useRef(false);
+  useEffect(() => {
+    if (touchedRef.current) return;
+    if (resolvedDefault && tabs.some((t) => String(t.id ?? "") === resolvedDefault) && resolvedDefault !== active) {
+      setActive(resolvedDefault);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedDefault]);
   const children = node.children ?? [];
   return (
     <div className="civ-tabs">
@@ -1155,7 +1200,10 @@ function TabsNode({ node }: { node: ScreenNode }) {
               aria-selected={selected}
               className={cn("civ-interactive", "civ-tab")}
               data-active={selected || undefined}
-              onClick={() => setActive(id)}
+              onClick={() => {
+                touchedRef.current = true;
+                setActive(id);
+              }}
             >
               {displayText(resolve, t.label_key, t.label, id)}
             </button>
@@ -1223,8 +1271,21 @@ function ImageGridNode({ node }: { node: ScreenNode }) {
 function StepperNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const resolve = useContext(MessagesCtx);
+  const scope = useContext(ScopeCtx);
   const steps = (p.steps as Array<Record<string, unknown>>) ?? [];
-  const cur = p.current;
+  // c8 market-trade: `current` may be a "{{...}}" scope template (a literal
+  // step id/index straight off fetched data). `current_from` + `current_map`
+  // additionally remap a raw fetched value (e.g. the transaction state string
+  // "shipped") onto a step index — the same derive_from+labels convention
+  // BadgeNode already uses for life-stage, so a many-states→N-steps screen
+  // doesn't need N literal step ids matching the backend's state machine 1:1.
+  let cur: unknown = p.current;
+  if (typeof cur === "string" && cur.includes("{{")) cur = interpolate(cur, scope);
+  if (p.current_from) {
+    const raw = interpolate(String(p.current_from), scope);
+    const map = (p.current_map as Record<string, unknown> | undefined) ?? {};
+    cur = raw in map ? map[raw] : raw;
+  }
   const currentIndex =
     typeof cur === "number" ? cur : Math.max(0, steps.findIndex((s) => String(s.id ?? "") === String(cur ?? "")));
   return (
@@ -4843,6 +4904,231 @@ function IndividualProfileNode() {
   );
 }
 
+// V3-AIP-101 c8 knowledge-thread — per-post avatar/handle/body/cite/action row
+// (Path B dedicated node: catalog c8-ui-asset-catalog.md 【最優先2】 — the
+// generic `list` node's item_text is text+image only and cannot express a
+// per-post avatar + inline actions). Self-fetches its own thread (same
+// convention as individual-profile/search-navigator) instead of depending on
+// a sibling list node's source_path.
+type ThreadPost = {
+  post_id: string;
+  actor_id: string;
+  channel: string;
+  topic: string;
+  board_kind: string;
+  body: string;
+  created_at: string;
+  reply_to?: string;
+  cite_refs?: Array<{ type: string; id: string; label?: string }>;
+  tags?: string[];
+};
+type ThreadView = {
+  thread_id: string;
+  channel: string;
+  topic: string;
+  posts: ThreadPost[];
+  tombstones?: Array<{ ref: { type: string; id: string }; reason: string }>;
+};
+
+// No display-name/avatar field exists anywhere in the actor data model (only
+// actor_id) — c8-ui-asset-catalog §gaps. The monogram is derived FROM the real
+// id (not an invented name), same honesty bar as the raw-id label next to it.
+function monogram(actorId: string): string {
+  return actorId.trim().slice(0, 1).toUpperCase() || "?";
+}
+
+// actor_id is a 64-char hex hash (deriveActorId) — showing it in full breaks
+// mobile (390px) layout (V3-AIP-101 c8 screenshot gate caught this: the raw
+// id overflowed the viewport instead of wrapping). Truncate for display; the
+// full id still round-trips via the title attribute for anyone who needs to
+// copy it (e.g. into the dispute screen's respondent_id field).
+function shortActorId(actorId: string): string {
+  return actorId.length > 12 ? `${actorId.slice(0, 10)}…` : actorId;
+}
+
+// round-16 OQ-PLZ-03 (resolve mark, thread-starter only) rides the EXISTING
+// plaza post endpoint as a tag convention (tags:["resolved"|"unresolved"])
+// instead of a new Truth event type — the latest such tagged post wins.
+// ponytail: OQ-PLZ-01/02/05 (weighted-vote promotion badges + card-issuance
+// delegation) need real actor-role Truth data (certified breeder / primary
+// observer flags) that does not exist in any schema today — out of scope
+// here, not silently faked. See task report.
+function resolvedStatus(posts: ThreadPost[]): boolean {
+  for (let i = posts.length - 1; i >= 0; i--) {
+    const tags = posts[i].tags ?? [];
+    if (tags.includes("resolved")) return true;
+    if (tags.includes("unresolved")) return false;
+  }
+  return false;
+}
+
+function ThreadPostsNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const scope = useContext(ScopeCtx);
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+  const threadId = String(scope.params.thread_id ?? "");
+  const [view, setView] = useState<ThreadView | null>(null);
+  const [viewerId, setViewerId] = useState<string>("");
+  const [loaded, setLoaded] = useState(false);
+  const [resolving, setResolving] = useState(false);
+
+  const reload = useCallback(async () => {
+    if (!threadId) {
+      setLoaded(true);
+      return;
+    }
+    try {
+      const v = (await execute({ kind: "api", method: "GET", path: `/api/v1/plaza/threads/${threadId}` })) as ThreadView;
+      setView(v);
+    } catch {
+      setView(null);
+    } finally {
+      setLoaded(true);
+    }
+  }, [execute, threadId]);
+
+  useEffect(() => {
+    let alive = true;
+    void reload();
+    // Promise.resolve(...) defensively wraps execute()'s return the same way
+    // useSource does — a bare test double (vi.fn() with no implementation)
+    // returns undefined synchronously, not a Promise, and .then() on that
+    // throws (V3-AIP-50 snapshot sweep caught this).
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/me/profile" }))
+      .then((r) => {
+        if (alive) setViewerId(String((r as { actor_id?: string } | undefined)?.actor_id ?? ""));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId]);
+
+  const toggleResolve = useCallback(
+    async (root: ThreadPost, next: boolean) => {
+      setResolving(true);
+      try {
+        await execute(
+          { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
+          {
+            channel: root.channel,
+            topic: root.topic,
+            board_kind: root.board_kind,
+            // thread_id is the THREAD's key, not the root post's own post_id —
+            // those coincide only when the thread was seeded without an
+            // explicit thread_id (projectThread filters posts by exact
+            // thread_id match, so getting this wrong silently files the
+            // resolve-tag post into a different/new thread bucket).
+            thread_id: threadId,
+            reply_to: root.post_id,
+            body: next ? "スレッドを解決済みにしました。" : "解決を取り消しました。",
+            tags: [next ? "resolved" : "unresolved"],
+          },
+        );
+        await reload();
+      } finally {
+        setResolving(false);
+      }
+    },
+    [execute, reload],
+  );
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
+  if (!view || view.posts.length === 0) {
+    return <p className="civ-empty">{String(p.empty_text ?? "まだ投稿がありません。")}</p>;
+  }
+  const root = view.posts[0];
+  const resolved = resolvedStatus(view.posts);
+  const isStarter = !!viewerId && viewerId === root.actor_id;
+  const tombstoned = new Set((view.tombstones ?? []).map((t) => `${t.ref.type}:${t.ref.id}`));
+
+  return (
+    <div className="civ-thread-posts">
+      <div className="civ-thread-posts-head">
+        <Badge text={resolved ? "✔ 解決済み" : "未解決"} tone={resolved ? "success" : "neutral"} />
+        {isStarter && (
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant="secondary"
+            disabled={resolving}
+            aria-busy={resolving || undefined}
+            onClick={() => void toggleResolve(root, !resolved)}
+          >
+            {resolved ? "解決を取り消す" : "✔ 解決済みにする"}
+          </button>
+        )}
+      </div>
+      <ul className="civ-list civ-thread-post-list">
+        {view.posts.map((post) => (
+          <li key={post.post_id}>
+            <article className="civ-card civ-thread-post">
+              <div className="civ-thread-post-head">
+                <span className="civ-avatar-badge" aria-hidden="true">
+                  {monogram(post.actor_id)}
+                </span>
+                <span className="civ-thread-post-actor" title={post.actor_id}>
+                  {shortActorId(post.actor_id)}
+                </span>
+                <span className="civ-text" data-muted="true">
+                  {formatDateJa(post.created_at)}
+                </span>
+                {post.post_id === root.post_id && <Badge text="スレ主" tone="neutral" />}
+              </div>
+              {post.reply_to && (
+                <p className="civ-text" data-muted="true">
+                  &gt;&gt;{post.reply_to}
+                </p>
+              )}
+              <p className="civ-text">{post.body}</p>
+              {(post.cite_refs ?? []).length > 0 && (
+                <div className="civ-card-badges">
+                  {(post.cite_refs ?? []).map((ref, i) => {
+                    // BBS-20 tombstone: the cite target no longer resolves
+                    // (projectThread's citeTargetExists check) — the ref
+                    // itself is kept (append-only) but flagged invalid.
+                    const invalid = tombstoned.has(`${ref.type}:${ref.id}`);
+                    return (
+                      <Badge
+                        key={i}
+                        text={invalid ? `${ref.type}: ${ref.label ?? ref.id}（無効）` : `${ref.type}: ${ref.label ?? ref.id}`}
+                        tone={invalid ? "warning" : "neutral"}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="ghost"
+                onClick={() =>
+                  navigate("dispute", {
+                    category: "board",
+                    subject_type: "post",
+                    subject_id: post.post_id,
+                    respondent_id: post.actor_id,
+                  })
+                }
+              >
+                この投稿を相談室へ
+              </button>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
@@ -4975,6 +5261,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <GrowthChartNode node={node} />;
     case "individual-profile":
       return <IndividualProfileNode />;
+    case "thread-posts":
+      return <ThreadPostsNode node={node} />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (
