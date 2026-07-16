@@ -404,7 +404,7 @@
       "0bf56a8"
     ],
     "tc": [],
-    "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。"
+    "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。thread画面再構築済み。"
   },
   {
     "id": "V3-BBS-05",
@@ -4299,7 +4299,7 @@
       "5d11d74"
     ],
     "tc": [],
-    "note": "銀行振込既定路線(pay_declare/pay_confirm状態機械)は実装済。PAY.JP Platformカード決済の選択肢・5%自動控除は未実装 — partialのまま。"
+    "note": "銀行振込既定路線(pay_declare/pay_confirm状態機械)は実装済。PAY.JP Platformカード決済の選択肢・5%自動控除は未実装 — partialのまま。振込済み申告/入金確認UIまで実装(E2E通貫)。"
   },
   {
     "id": "V3-MKT-63",
