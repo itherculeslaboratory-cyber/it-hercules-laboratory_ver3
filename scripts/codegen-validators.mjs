@@ -64,6 +64,10 @@ const SCHEMAS = [
   ["mktRating", "events/mkt-rating.schema.json"],
   ["mktTemplate", "events/mkt-template.schema.json"],
   ["mktPostOffice", "events/mkt-post-office.schema.json"],
+  // round-16 D節(OQ-MKT/ROUTE-03) 市場バックエンド新要件(V3-IND-35/V3-MKT-61)
+  ["mktBlock", "events/mkt-block.schema.json"],
+  ["mktReservation", "events/mkt-reservation.schema.json"],
+  ["mktReservationEvent", "events/mkt-reservation-event.schema.json"],
   ["socialEval", "events/social-eval.schema.json"],
   ["socialPlatinumVote", "events/social-platinum-vote.schema.json"],
   ["researchProposal", "events/research-proposal.schema.json"],

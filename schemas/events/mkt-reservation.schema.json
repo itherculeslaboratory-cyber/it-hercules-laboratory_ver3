@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-reservation.schema.json",
+  "title": "Market reservation data (ihl.mkt.reservation.v1)",
+  "description": "割り出し予約(V3-IND-35)。割り出し(クラッチ確定)前に、親個体(♂/♀)を指定した予約 listing(mkt-listing.v1 の reservation_sire_id/reservation_dam_id)に対し、買い手が単価・匹数を宣言する append-only の一意record。イミュータブル(状態遷移は ihl.mkt.reservation_event.v1 が別途担う)。Truth キー truth/ihl.mkt.reservation.v1/<reservation_id>.json。",
+  "x_ihl_req": "V3-IND-35",
+  "x_ihl_source": "docs/planning/rulings/user-ruling-2026-07-15-round-15.md #1",
+  "type": "object",
+  "required": ["reservation_id", "listing_id", "actor_id", "desired_unit_price", "desired_count", "created_at", "schema_version"],
+  "properties": {
+    "reservation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "予約の一意キー(ULID)。"
+    },
+    "listing_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象の予約 listing_id(mkt-listing.v1・reservation_sire_id/dam_id を持つ)。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "予約した買い手の actor_id(セッション principal 強制・V3-AUT-17)。"
+    },
+    "desired_unit_price": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "希望単価(円)。自動マッチングは単価の高い順(V3-IND-35)。"
+    },
+    "desired_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "希望匹数。出品側しきい値(mkt-listing.v1 reservation_min/max_apply_count)の範囲外は自動マッチング対象外。"
+    },
+    "note": {
+      "type": "string",
+      "description": "任意メモ。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "予約時刻(RFC3339)。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

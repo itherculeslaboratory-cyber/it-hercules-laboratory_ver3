@@ -45,6 +45,10 @@ const VALIDATOR_NAME: Record<string, string> = {
   "mkt-rating": "mktRating",
   "mkt-template": "mktTemplate",
   "mkt-post-office": "mktPostOffice",
+  // round-16 D節(OQ-MKT/ROUTE-03) 市場バックエンド新要件(V3-IND-35/V3-MKT-61)
+  "mkt-block": "mktBlock",
+  "mkt-reservation": "mktReservation",
+  "mkt-reservation-event": "mktReservationEvent",
   "social-eval": "socialEval",
   "social-platinum-vote": "socialPlatinumVote",
   "research-proposal": "researchProposal",
@@ -145,6 +149,11 @@ const EVENT_NAMES = new Set([
   "mkt-rating",
   "mkt-template",
   "mkt-post-office",
+  // round-16 D節(OQ-MKT/ROUTE-03) — data validation MUST fire or putEvent stores
+  // unchecked data at 201 permanently (Truth is INSERT ONLY, unfixable).
+  "mkt-block",
+  "mkt-reservation",
+  "mkt-reservation-event",
   "social-eval",
   "social-platinum-vote",
   "research-proposal",
