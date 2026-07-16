@@ -10,12 +10,25 @@ import {
   reduceMarket,
   projectSettlement,
   projectOwnershipLineage,
+  projectPayment,
   isAllowedEdge,
+  isNoPayCancelDue,
+  isGraceCancelWindowOpen,
+  isOfferExpired,
   type MarketKind,
   type MarketState,
   type TxnEvent,
 } from "./market-settlement";
 import { projectPreferences } from "./settings-routes";
+import { isBlockedPair } from "./market-block-routes";
+import {
+  NO_PAY_LIMIT_COUNT,
+  NO_PAY_LIMIT_WINDOW_DAYS,
+  NO_PAY_RESTRICT_DAYS,
+  GRACE_CANCEL_LIMIT_COUNT,
+  GRACE_CANCEL_LIMIT_WINDOW_DAYS,
+  GRACE_CANCEL_RESTRICT_DAYS,
+} from "./economy-constants";
 
 const LISTING_TYPE = "ihl.mkt.listing.v1";
 const LISTING_SCHEMA = "schemas/events/mkt-listing.schema.json";
@@ -26,11 +39,18 @@ const TXN_TYPE = "ihl.mkt.transaction_event.v1";
 const TXN_SCHEMA = "schemas/events/mkt-transaction-event.schema.json";
 const TXN_SCHEMA_VERSION = "1";
 
+// system actor(V3-AUT-17 例外): 48h no-pay 自動キャンセルは人間操作でなく read-time
+// 自己修復(batch.ts SYSTEM_ACTOR="system:cron" と同型の命名。cron でなく request 契機)。
+const SYSTEM_AUTO_ACTOR = "system:auto";
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 // /transition が受ける遷移 kind(offer/love_letter は POST /market/offers 専用・
-// tax_* 等の経済副次 kind は本 route では発行しない)。
+// tax_debt/tax_pay/fee_unpaid 等の経済副次 kind は本 route では発行しない)。
+// pay_declare/pay_confirm/cancel は round-16 決済裁定+状態機械5脚③(D節)。
 const TRANSITION_KINDS = new Set<MarketKind>([
   "list_fixed", "list_auction", "list_lottery", "list_platinum",
   "bid", "match", "ship", "receive", "rate", "delist", "transfer",
+  "pay_declare", "pay_confirm", "cancel",
 ]);
 
 export const marketRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -76,6 +96,20 @@ marketRoutes.post("/market/listings", async (c) => {
   if (typeof body?.description === "string") data.description = body.description;
   const price = Number(body?.price);
   if (Number.isInteger(price) && price >= 0) data.price = price;
+
+  // round-16 OQ-MKT-02: 成立方式(既定=即決・省略可)。V3-IND-35: 予約 listing 化する
+  // 親個体参照+応募単位しきい値(いずれも任意)。
+  if (body?.accept_mode === "instant" || body?.accept_mode === "consent") data.accept_mode = body.accept_mode;
+  if (typeof body?.reservation_sire_id === "string" && body.reservation_sire_id) {
+    data.reservation_sire_id = body.reservation_sire_id;
+  }
+  if (typeof body?.reservation_dam_id === "string" && body.reservation_dam_id) {
+    data.reservation_dam_id = body.reservation_dam_id;
+  }
+  const minApply = Number(body?.reservation_min_apply_count);
+  if (Number.isInteger(minApply) && minApply >= 1) data.reservation_min_apply_count = minApply;
+  const maxApply = Number(body?.reservation_max_apply_count);
+  if (Number.isInteger(maxApply) && maxApply >= 1) data.reservation_max_apply_count = maxApply;
 
   // I18-06 part1: UGC 原文の作者言語タグを actor の locale から刻印(翻訳はしない・
   // 常駐サーバ翻訳を持たない＝不変条項①)。未設定は projectPreferences が DEFAULT_LOCALE=ja。
@@ -125,6 +159,21 @@ function txnEnvelope(id: string, actorId: string, data: Record<string, unknown>)
   };
 }
 
+// batch.ts agentProvenance() と同型: read-time 自己修復(no-pay 48h 自動キャンセル等)は
+// generator_kind="agent" で正直に記録する(CL-02 再現性メタ・"human" への誤表示回避)。
+function systemTxnEnvelope(id: string, data: Record<string, unknown>) {
+  return {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: TXN_TYPE,
+    time: new Date().toISOString(),
+    dataschema: TXN_SCHEMA,
+    provenance: { generator_kind: "agent", agent_name: "market-auto-cancel" },
+    data,
+  };
+}
+
 // 取引イベントを append(actor_id はセッション principal 強制・V3-AUT-17)。data と
 // putEvent 結果を返す(投影の即時再計算に data を使う)。
 async function appendTxn(
@@ -150,9 +199,29 @@ async function appendTxn(
 
 // 当事者ガード: 出品者/落札者のみが自分側のアクションを起こせる(第三者による
 // 横取り match / 他人の受取申告を禁ずる)。当事者未確定(seller/buyer 不在)なら素通し。
-function transitionActorGuard(kind: MarketKind, cur: MarketState, actorId: string): string | null {
-  const sellerOnly = kind === "match" || kind === "ship" || kind === "delist" || kind === "transfer";
-  const buyerOnly = kind === "receive" || kind === "rate";
+// round-16 OQ-MKT-02: kind=match は accept_mode(既定=即決)で分岐 — listed_fixed から
+// なら「買い手の自己申込=成立」を許す。承諾制/offer_pending からの受諾(オークション
+// 落札含む)は従来どおり出品者のみ。kind=cancel は猶予キャンセル(成立後60分)の
+// 買い手自己申告のみ(48h no-pay 自動キャンセルは内部 helper が guard を経由せず直接
+// append する)。
+function transitionActorGuard(
+  kind: MarketKind,
+  cur: MarketState,
+  actorId: string,
+  opts: { acceptMode?: string } = {},
+): string | null {
+  if (kind === "match") {
+    const instantSelfApply =
+      cur.state === "listed_fixed" && opts.acceptMode !== "consent" && !!cur.seller_id && actorId !== cur.seller_id;
+    if (!instantSelfApply && cur.seller_id && actorId !== cur.seller_id) return "seller only";
+    return null;
+  }
+  if (kind === "cancel") {
+    if (cur.matched_with && actorId !== cur.matched_with) return "matched buyer only";
+    return null;
+  }
+  const sellerOnly = kind === "ship" || kind === "delist" || kind === "transfer" || kind === "pay_confirm";
+  const buyerOnly = kind === "receive" || kind === "rate" || kind === "pay_declare";
   if (sellerOnly && cur.seller_id && actorId !== cur.seller_id) return "seller only";
   if (buyerOnly && cur.matched_with && actorId !== cur.matched_with) return "matched buyer only";
   if (kind === "bid" && cur.seller_id === actorId) return "seller cannot bid own listing";
@@ -168,6 +237,82 @@ function pickExtra(body: Record<string, unknown> | null): Record<string, unknown
   return extra;
 }
 
+// 状態機械5脚③(批評R4)の read-time 自己修復: matched のまま48h無入金なら系統 actor
+// (SYSTEM_AUTO_ACTOR)が cancel(reason=no_pay_auto・counterparty=買い手)を deterministic
+// key で put-if-absent する(cron 非依存・不変条項①「都度再計算」を書込側にも適用)。
+// 二重発火は key 衝突(409→無視)で自然に防げる。呼び出し側は返り値の events を以後の
+// 判定に使う(自己修復後の最新状態で処理を続ける)。
+async function settleNoPayCancel(
+  s: TruthStore,
+  listingId: string,
+  events: TxnEvent[],
+  now: Date,
+): Promise<TxnEvent[]> {
+  if (!isNoPayCancelDue(events, now)) return events;
+  const cur = reduceMarket(listingId, events);
+  if (!cur.matched_with) return events;
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    transaction_event_id: id,
+    listing_id: listingId,
+    actor_id: SYSTEM_AUTO_ACTOR,
+    kind: "cancel",
+    counterparty: cur.matched_with,
+    payload: { cancel_reason: "no_pay_auto" },
+    created_at: now.toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  const res = await s.putEventAt(`truth/${TXN_TYPE}/auto-cancel-nopay-${listingId}.json`, systemTxnEnvelope(id, data));
+  if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
+  return [...events, data as unknown as TxnEvent];
+}
+
+// no-pay/猶予キャンセルの回数投影(round-16 OQ-MKT-03/04)。cancel イベントの
+// payload.cancel_reason で判別: no_pay_auto は counterparty(=買い手)、grace は
+// actor_id(=自己申告した買い手本人)が対象者。ponytail: 取引型を全走査 O(n)(既存の
+// loadTxns と同型・投影 index は別波)。
+async function countCancelReason(
+  s: TruthStore,
+  buyerId: string,
+  reason: "no_pay_auto" | "grace",
+  now: Date,
+  windowDays: number,
+): Promise<{ count: number; mostRecentAt?: string }> {
+  const all = (await s.listEvents(`truth/${TXN_TYPE}/`)).map(dataOf) as unknown as TxnEvent[];
+  const windowMs = windowDays * DAY_MS;
+  const mine = all.filter((e) => {
+    if (e.kind !== "cancel") return false;
+    const p = e.payload as { cancel_reason?: string } | undefined;
+    if (p?.cancel_reason !== reason) return false;
+    const who = reason === "no_pay_auto" ? e.counterparty : e.actor_id;
+    if (who !== buyerId) return false;
+    return now.getTime() - new Date(e.created_at).getTime() <= windowMs;
+  });
+  const mostRecentAt = mine.map((e) => e.created_at).sort().pop();
+  return { count: mine.length, mostRecentAt };
+}
+
+/** 新規申込(即決自己申込/オファー)ガード。しきい値到達 かつ 制限期間内なら拒否。
+ * 制限期間は最新の該当 cancel から起算(V3-GOV-17 将来調整を見越し定数は
+ * economy-constants に集約)。 */
+async function applyRestrictionGuard(
+  s: TruthStore,
+  buyerId: string,
+  now: Date,
+): Promise<{ error: string; restricted_until: string } | null> {
+  const noPay = await countCancelReason(s, buyerId, "no_pay_auto", now, NO_PAY_LIMIT_WINDOW_DAYS);
+  if (noPay.count >= NO_PAY_LIMIT_COUNT && noPay.mostRecentAt) {
+    const until = new Date(new Date(noPay.mostRecentAt).getTime() + NO_PAY_RESTRICT_DAYS * DAY_MS);
+    if (until.getTime() > now.getTime()) return { error: "NO_PAY_RESTRICTED", restricted_until: until.toISOString() };
+  }
+  const grace = await countCancelReason(s, buyerId, "grace", now, GRACE_CANCEL_LIMIT_WINDOW_DAYS);
+  if (grace.count >= GRACE_CANCEL_LIMIT_COUNT && grace.mostRecentAt) {
+    const until = new Date(new Date(grace.mostRecentAt).getTime() + GRACE_CANCEL_RESTRICT_DAYS * DAY_MS);
+    if (until.getTime() > now.getTime()) return { error: "GRACE_CANCEL_RESTRICTED", restricted_until: until.toISOString() };
+  }
+  return null;
+}
+
 // POST /market/listings/{id}/transition — 許可辺のみ(不正遷移は 409・MKT-02)。
 // 最初の遷移は unlisted→list_* のみ許可(=各チャネルの出品ルール・MKT-01)。
 marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
@@ -178,18 +323,62 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
     return c.json({ error: "INVALID_TRANSITION", details: ["unknown or unsupported kind"] }, 400);
   }
   const actorId = c.get("actorId");
-  const events = await loadTxns(c, listingId);
+  const s = store(c);
+  const now = new Date();
+  let events = await loadTxns(c, listingId);
+  events = await settleNoPayCancel(s, listingId, events, now); // 状態機械5脚③(自己修復)
+
   const cur = reduceMarket(listingId, events);
   if (!isAllowedEdge(cur.state, kind)) {
     return c.json({ error: "ILLEGAL_TRANSITION", from: cur.state, kind }, 409);
   }
-  const guard = transitionActorGuard(kind, cur, actorId);
+
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const acceptMode = listingEv && typeof dataOf(listingEv).accept_mode === "string" ? String(dataOf(listingEv).accept_mode) : undefined;
+  const guard = transitionActorGuard(kind, cur, actorId, { acceptMode });
   if (guard) return c.json({ error: "FORBIDDEN", details: [guard] }, 403);
 
   const extra = pickExtra(body);
+  // round-16 OQ-MKT-02: listed_fixed の即決自己申込は counterparty 省略時=自分。
+  if (kind === "match" && !extra.counterparty && cur.seller_id && actorId !== cur.seller_id) {
+    extra.counterparty = actorId;
+  }
   if ((kind === "match" || kind === "transfer") && typeof extra.counterparty !== "string") {
     return c.json({ error: "INVALID_TRANSITION", details: ["counterparty required"] }, 400);
   }
+
+  if (kind === "match") {
+    const counterpartyId = extra.counterparty as string;
+    // 即決の自己申込は counterparty=自分なので、判定すべき相手方は常に出品者側
+    // (buyer 視点なら seller、seller が offer_pending を受諾する視点なら counterparty=buyer)。
+    const otherParty = actorId === cur.seller_id ? counterpartyId : cur.seller_id;
+    if (otherParty && (await isBlockedPair(s, actorId, otherParty))) {
+      return c.json({ error: "BLOCKED" }, 403);
+    }
+    // 状態機械5脚②: 承諾制(offer_pending からの受諾)は対象オファーの24h応答期限切れなら拒否。
+    if (cur.state === "offer_pending") {
+      const offerEv = events
+        .filter((e) => (e.kind === "offer" || e.kind === "love_letter") && e.actor_id === counterpartyId)
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
+      if (offerEv && isOfferExpired(offerEv.created_at, now)) {
+        return c.json({ error: "OFFER_EXPIRED" }, 409);
+      }
+    }
+    const restriction = await applyRestrictionGuard(s, counterpartyId, now);
+    if (restriction) return c.json(restriction, 403);
+  }
+  if (kind === "bid" && cur.seller_id && (await isBlockedPair(s, actorId, cur.seller_id))) {
+    return c.json({ error: "BLOCKED" }, 403);
+  }
+  if (kind === "cancel" && cur.state === "matched" && actorId === cur.matched_with) {
+    // 猶予キャンセル(成立後60分)。窓が閉じた後の相手承認制キャンセル依頼フローは
+    // 本波対象外(残課題・open_questions)。
+    if (!isGraceCancelWindowOpen(events, now)) {
+      return c.json({ error: "GRACE_WINDOW_CLOSED" }, 409);
+    }
+    extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), cancel_reason: "grace" };
+  }
+
   const { res, data } = await appendTxn(c, listingId, actorId, kind, extra);
   if (res.status === "invalid") return c.json({ error: "INVALID_TRANSITION", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_TRANSITION", key: res.key }, 409);
@@ -198,12 +387,22 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   return c.json({ listing_id: listingId, state: next.state, stage: next.stage }, 201);
 });
 
-// GET /market/listings/{id}/state — 末尾状態 + stage + 成立投影(MKT-02/03)。
+// GET /market/listings/{id}/state — 末尾状態 + stage + 成立投影 + 決済投影(MKT-02/03・
+// round-16 決済裁定)。読み取り時に状態機械5脚③の自己修復を先に適用する。
 marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
   const listingId = c.req.param("listing_id");
-  const events = await loadTxns(c, listingId);
+  const s = store(c);
+  const now = new Date();
+  let events = await loadTxns(c, listingId);
+  events = await settleNoPayCancel(s, listingId, events, now);
   const cur = reduceMarket(listingId, events);
-  return c.json({ ...cur, settlement: projectSettlement(events, new Date()) });
+  return c.json({
+    ...cur,
+    settlement: projectSettlement(events, now),
+    payment: projectPayment(events),
+    no_pay_cancel_due: isNoPayCancelDue(events, now),
+    grace_cancel_window_open: isGraceCancelWindowOpen(events, now),
+  });
 });
 
 // GET /market/listings/{id}/board — 非公開ボード(matched 以降・当事者2人のみ・
@@ -244,10 +443,16 @@ marketRoutes.post("/market/offers", async (c) => {
   if (!listingId) return c.json({ error: "INVALID_OFFER", details: ["listing_id required"] }, 400);
   const kind: MarketKind = body?.love_letter === true ? "love_letter" : "offer";
   const actorId = c.get("actorId");
+  const s = store(c);
   const events = await loadTxns(c, listingId);
   const cur = reduceMarket(listingId, events);
   if (cur.seller_id === actorId) return c.json({ error: "FORBIDDEN", details: ["cannot offer on own listing"] }, 403);
+  if (cur.seller_id && (await isBlockedPair(s, actorId, cur.seller_id))) {
+    return c.json({ error: "BLOCKED" }, 403); // V3-MKT-61: ブロック関係とは取引不可
+  }
   if (!isAllowedEdge(cur.state, kind)) return c.json({ error: "OFFER_REJECTED", from: cur.state }, 409);
+  const restriction = await applyRestrictionGuard(s, actorId, new Date());
+  if (restriction) return c.json(restriction, 403); // round-16 OQ-MKT-03/04: no-pay/猶予キャンセル過多は新規申込制限
 
   const extra: Record<string, unknown> = {};
   if (cur.seller_id) extra.counterparty = cur.seller_id;

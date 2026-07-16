@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-block.schema.json",
+  "title": "Market Block relation event (ihl.mkt.block.v1)",
+  "description": "ブロック関係の append-only イベント(V3-MKT-61)。既存 V3-AUT-28 のブロックリストとは別に、マーケット取引ガード専用の投影として持つ(掲示板/議論は不干渉・取引のみ遮断)。Truth キー truth/ihl.mkt.block.v1/<block_id>.json。GET/取引 route は (blocker,blocked) ペアの最新 action で last-write-wins 投影し unblock を表現する(UPDATE/DELETE 不使用・不変条項③)。",
+  "x_ihl_req": "V3-MKT-61",
+  "x_ihl_source": "docs/planning/rulings/user-ruling-2026-07-15-round-15.md #5",
+  "type": "object",
+  "required": ["block_id", "actor_id", "blocked_actor_id", "action", "created_at", "schema_version"],
+  "properties": {
+    "block_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ブロックイベントの一意キー(ULID)。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ブロックした側の actor_id(セッション principal 強制・V3-AUT-17)。"
+    },
+    "blocked_actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ブロックされた側の actor_id。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["block", "unblock"],
+      "description": "block=ブロック追加・unblock=解除。ペア単位で最新の action が投影の正(LWW)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "記録時刻(RFC3339)。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-reservation-event.schema.json",
+  "title": "Market reservation state event (ihl.mkt.reservation_event.v1)",
+  "description": "割り出し予約(V3-IND-35)の append-only 状態機械イベント。割り出し完了(harvested_count)後の自動マッチングが単価降順で match_offer を発行し、買い手の confirm(成立)/decline(未確定・カルマ-1)、または応答期限超過の expire(未確定・カルマ-1)を記録する。Truth キー truth/ihl.mkt.reservation_event.v1/<reservation_id>-<event_id>.json。current 状態は listing 単位の全 event を都度畳んで投影する(常駐カウンタなし・不変条項①)。",
+  "x_ihl_req": "V3-IND-35",
+  "x_ihl_source": "docs/planning/rulings/user-ruling-2026-07-15-round-15.md #1",
+  "type": "object",
+  "required": ["event_id", "reservation_id", "listing_id", "kind", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "イベントの一意キー(ULID)。"
+    },
+    "reservation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象の ihl.mkt.reservation.v1 reservation_id。"
+    },
+    "listing_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象の予約 listing_id(prefix scan の集約キー)。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["match_offer", "confirm", "decline", "expire"],
+      "description": "match_offer=自動マッチングが提示(系統 actor)／confirm=買い手が確認・成立／decline=買い手が明示辞退(未確定)／expire=応答期限超過(未確定・read-time 判定+自己修復 append)。decline/expire はいずれも V3-IND-35 のカルマ-1 対象。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "発行者の actor_id。match_offer/expire は系統 actor(V3-AUT-17 例外・agent 生成)、confirm/decline は買い手本人。"
+    },
+    "offered_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "match_offer 時に提示された匹数。"
+    },
+    "offered_unit_price": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "match_offer 時に提示された単価(円)。"
+    },
+    "rank": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "match_offer 時の単価降順順位(0 始まり)。"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "match_offer の確認期限(RESERVATION_CONFIRM_WINDOW_HOURS)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "記録時刻(RFC3339)。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}
