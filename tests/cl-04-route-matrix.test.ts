@@ -1,9 +1,10 @@
-// CL-04: 68-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 65-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
-//   (iii) row count === 68 (57 + 9 FND-18/FND-21 source/ai routes, design-k7 +
-//        2 V3-OBS-32 CSV import routes, infra-route-067/068)
+//   (iii) row count === 65 (68 - 6 GMO rows retired round-16/L-PAY GMO 退役
+//        infra-route-052..057 + 3 PAY.JP 新規 route infra-route-069..071:
+//        POST /fees/{obligation_id}/invoice・POST /fees/payjp-webhook[PUBLIC]・GET /me/fees)
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -34,21 +35,22 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (68 rows)", () => {
-  it("has exactly 68 route rows", () => {
-    expect(rows.length).toBe(68);
+describe("CL-04 route matrix (65 rows)", () => {
+  it("has exactly 65 route rows", () => {
+    expect(rows.length).toBe(65);
   });
 
   it("access column is only public|protected", () => {
     for (const r of rows) expect(["public", "protected"]).toContain(r.access);
   });
 
-  it("public = only auth magic-link/verify/session paths", () => {
+  it("public = only auth magic-link/verify/session + payjp-webhook paths", () => {
     const publicPaths = new Set(rows.filter((r) => r.access === "public").map((r) => r.path));
     expect([...publicPaths].sort()).toEqual([
       "/api/v1/auth/magic-link",
       "/api/v1/auth/session",
       "/api/v1/auth/verify",
+      "/api/v1/fees/payjp-webhook",
     ]);
   });
 

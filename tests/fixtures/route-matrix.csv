@@ -53,12 +53,6 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/theme-packs,VPS,Workers,W2,infra-route-049,protected,implemented,ihl.theme.pack.v1 append(fork=parent_pack_id)・C5 K4・design-k4 §1.1
 —,GET,/api/v1/settings,VPS,Workers,W2,infra-route-050,protected,implemented,043 と同一 handler(重複行)・C5 K4・design-k4 §1.1
 —,PATCH,/api/v1/me/preferences,VPS,Workers,W2,infra-route-051,protected,implemented,044 と同一 handler(重複行)・C5 K4・design-k4 §1.1
-—,GET,/api/v1/gmo/reconciliation/meta,VPS,Workers,W2,infra-route-052,protected,planned,
-—,GET,/api/v1/gmo/transfer-code,VPS,Workers,W2,infra-route-053,protected,planned,
-—,GET,/api/v1/gmo/va-deposit/unsent,VPS,Workers,W2,infra-route-054,protected,planned,
-—,POST,/api/v1/gmo/expected-payment,VPS,Workers,W2,infra-route-055,protected,planned,
-—,POST,/api/v1/gmo/va-deposit/subscribe,VPS,Workers,W2,infra-route-056,protected,planned,
-—,POST,/api/v1/gmo/webhook,VPS,Workers,W2,infra-route-057,protected,planned,
 —,POST,/api/v1/placements,VPS,Workers,W2,infra-route-058,protected,implemented,置き場所登録(C5 K7・design-k7 §1.1・V3-FND-18・put-if-absent INSERT ONLY・actor_id=session)
 —,GET,/api/v1/placements,VPS,Workers,W2,infra-route-059,protected,implemented,置き場所 本人スコープ一覧投影(C5 K7・design-k7 §1.1・prefix scan 都度再計算)
 —,POST,/api/v1/device-bindings,VPS,Workers,W2,infra-route-060,protected,implemented,機器バインド開始(C5 K7・design-k7 §1.1・未終了 dup→409・start=新 INSERT)
@@ -70,3 +64,6 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/ai/{task},VPS,Workers,W2,infra-route-066,protected,implemented,AI kernel A90(C5 K7・design-k7 §1.1・V3-FND-21・既定 AI_DISABLED 501・LLM OFF 不変条項①・未知 task 404)
 —,POST,/api/v1/obs/env-import,VPS,Workers,W2,infra-route-067,protected,implemented,環境CSVインポート(V3-OBS-32・汎用列マッピング/SwitchBotプリセット・200,000行/16MB上限・put-if-absent冪等スキップ・OQ-LB-02 bucketキーにsource=csv)
 —,GET,/api/v1/obs/telemetry/latest,VPS,Workers,W2,infra-route-068,protected,implemented,テレメトリ read-back投影(V3-OBS-32・OQ-LB-02・同一論理bucketのsource-count最大を採用)
+—,POST,/api/v1/fees/{obligation_id}/invoice,VPS,Workers,W2,infra-route-069,protected,implemented,L-PAY PAY.JP 5%請求発行(round-16裁定・本人スコープ・義務台帳obligation_id直読み・GMO U-code照合廃止)
+—,POST,/api/v1/fees/payjp-webhook,VPS,Workers,W2,infra-route-070,public,implemented,L-PAY PAY.JP webhook 受領(PUBLIC・自己ゲート=charge id再照会・GET /v1/charges/:idで確認できた事実のみ信頼)
+—,GET,/api/v1/me/fees,VPS,Workers,W2,infra-route-071,protected,implemented,L-PAY 本人の未払い/支払い済み投影(round-16裁定・期限超過の自動ペナルティは発火させない・既存カルマ機構は不接続)

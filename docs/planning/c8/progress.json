@@ -1049,10 +1049,12 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [
-      "674a5dc"
+      "674a5dc",
+      "1c5d912",
+      "bff1b98"
     ],
     "tc": [],
-    "note": "料率5%(旧8%)への追従はeconomy-constants.tsで完了。要件本体(負債計上/猶予/貢献度変換等)は未完 — partialのまま。"
+    "note": "round-16裁定(ゆるい請求ベース・PAY.JP第一弾)でfee-routes.ts/payjp-connector.ts新設(TC: tests/fee-routes.test.ts・tests/payjp-connector.test.ts): POST /fees/{obligation_id}/invoice(請求発行)・POST /fees/payjp-webhook(charge再照会2段構えで消込)・GET /me/fees(未払い投影+days_unpaid)。既存義務台帳(ihl.gmo.obligation.v1)を継承・新イベント型ihl.fee.invoice.v1/ihl.fee.settlement.v1。未着手のまま: 取引成立からの義務自動計上(market-routes.tsからのobligation発行route)・30日猶予後の貢献度1:1変換・fee_unpaid月次Fibonacci課金(期限超過の自動ペナルティは今回スコープ外=ゆるい請求は投影のみ) — 引き続きpartial。"
   },
   {
     "id": "V3-MKT-12",
@@ -1065,7 +1067,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "round-16裁定: 5%(fee_tax)レーンはU-code正規表現照合を使わずPAY.JP charge metadata.obligation_idの直接照合へ移行(fee-routes.ts)。本要件が定義するU-code FIFO(GMO名前照合)自体はgmo-routes.tsに実装済みだがroute非マウント(GMO退役)。P2P用途は別裁定待ちのため本要件は評価対象を変えずtodoのまま。"
   },
   {
     "id": "V3-MKT-18",
@@ -1181,10 +1183,12 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [
-      "674a5dc"
+      "674a5dc",
+      "1c5d912",
+      "bff1b98"
     ],
     "tc": [],
-    "note": "料率5%(旧8%)への追従はeconomy-constants.tsで完了。要件本体(負債計上/猶予/貢献度変換等)は未完 — partialのまま。"
+    "note": "料率5%(旧8%)への追従はeconomy-constants.tsで完了。round-16裁定で(2)5%積立の徴収経路をPAY.JPゆるい請求(fee-routes.ts)へ実装。(1)文明OS拠出3%・(3)フォーク還元10%の負債計上/猶予/変換ロジックは未着手 — 引き続きpartial。"
   },
   {
     "id": "V3-MKT-40",
@@ -3123,7 +3127,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "round-16 fee-routes.ts の消込はobligation単位のon/off判定のみ(ゆるい請求=amount一致を強制しない)。残債の累積減算・過入金クレジット繰越は未実装 — todoのまま。"
   },
   {
     "id": "V3-MKT-16",
