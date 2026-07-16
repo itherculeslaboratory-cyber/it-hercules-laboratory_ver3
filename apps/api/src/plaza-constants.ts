@@ -38,3 +38,14 @@ export const RANKING_WEIGHTS = { like: 1, use: 2, retain: 3, vote: 5, fork: 1 } 
 // GOV-23: /os/main 昇格に要する projectRanking 最小スコア。
 // ponytail: 較正 knob。昇格ラインを運用実測で調整(GUI 後波)。
 export const OS_PROMOTION_MIN_SCORE = 100;
+
+// GOV-35(round-15拡張・違法出品ユーザー自治): 同国指摘の二段閾値モデレーション+
+// 誤BAN復帰の投票ゲート。出典: user-ruling-2026-07-15-round-15.md #6-9。
+// ponytail: 較正 knob 群。実測で調整(GUI 後波・V3-GOV-17)。
+export const MKT_LISTING_FLAG_HIDE_THRESHOLD = 5; // 同一商品への active 指摘5件で非表示
+export const MKT_SELLER_SUSPEND_THRESHOLD = 5; // 非表示5件蓄積した出品者は出品停止
+export const MKT_LISTING_FLAG_KARMA_STEPS = 1; // 既存の指摘Δcountルール(grantKarmaCountIncrease)を1段目相当で適用
+export const MISBAN_REVERSAL_VOTER_KARMA_MIN = 80; // 誤BAN判定に参加できるカルマ下限
+export const MISBAN_REVERSAL_VOTER_COUNT = 5; // 誤BAN判定に要する適格ユーザー数
+export const MISBAN_REVERSAL_OWNER_KARMA_BONUS = 5; // 誤って停止された出品者へのカルマ+5
+export const MISBAN_REVERSAL_JUROR_CONTRIBUTION = 5; // 判定に貢献したユーザーへの貢献度付与(axis=development・source=vote)

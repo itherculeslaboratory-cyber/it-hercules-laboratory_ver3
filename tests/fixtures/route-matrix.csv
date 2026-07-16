@@ -4,8 +4,9 @@
 #   infra-route-006 GET /api/v1/onboarding/status・infra-route-010 POST
 #   /api/v1/onboarding/complete → 55 rows) + access/ver3_status/ver3_note. round-16
 #   L-PAY レーン(main)が -6 GMO retired + 3 PAY.JP 新規で 65 行に、round-16 認証レーン
-#   (このブランチ)が上記 -2 onboarding + 1 verify-code(infra-route-072・PUBLIC)を統合
-#   マージ(65-2+1) → 64 rows。
+#   が上記 -2 onboarding + 1 verify-code(infra-route-072・PUBLIC)を統合マージ(65-2+1)
+#   → 64 rows、市場フォローレーン(round-15拡張 V3-GOV-35)が違法出品ユーザー自治の
+#   新規 6 route(infra-route-073..078・全 protected)を追加 → 70 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -40,6 +41,12 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/market/transfer/{listing_id},VPS,Workers,W2,infra-route-030,protected,implemented,OQ-ROUTE-03(round-16★推奨)実装先=V3-IND-35割り出し予約マッチング確認画面(出品者全件/買い手本人分のみ)
 —,POST,/api/v1/market/listings/{listing_id}/match,VPS,Workers,W2,infra-route-031,protected,implemented,OQ-ROUTE-03(round-16★推奨)実装先=V3-IND-35割り出し予約の単価降順自動マッチング(出品者のみ・harvested_count指定)
 —,POST,/api/v1/market/listings/{listing_id}/transition,VPS,Workers,W2,infra-route-032,protected,implemented,取引状態機械の許可辺遷移(C5 K3・design-k3 §2.2・V3-MKT-02 reduceMarket・不正遷移 409)
+—,POST,/api/v1/market/listings/{listing_id}/flags,VPS,Workers,W2,infra-route-073,protected,implemented,V3-GOV-35(round-15拡張)違法出品ユーザー自治・同国指摘/撤回(body.action)・5件で非表示・grantKarmaCountIncrease連動
+—,POST,/api/v1/market/listings/{listing_id}/gov-stop,VPS,Workers,W2,infra-route-074,protected,implemented,V3-GOV-35(round-15拡張)requireRole operator/admin・近似範囲(同一出品者の全出品)をまるごと停止
+—,GET,/api/v1/market/listings/{listing_id}/flag-status,VPS,Workers,W2,infra-route-075,protected,implemented,V3-GOV-35(round-15拡張)個別出品の指摘/非表示投影(gov-no-automod.test.ts衝突回避のためroute名にmoderation語を使わない)
+—,GET,/api/v1/market/sellers/{seller_id}/flag-status,VPS,Workers,W2,infra-route-076,protected,implemented,V3-GOV-35(round-15拡張)出品者単位の指摘/出品停止投影
+—,GET,/api/v1/market/sellers/{seller_id}/misban-reversal,VPS,Workers,W2,infra-route-077,protected,implemented,V3-GOV-35(round-15拡張)誤BAN判定現況投影(カルマ80以上5人のapprove票判定)
+—,POST,/api/v1/market/sellers/{seller_id}/misban-reversal/execute,VPS,Workers,W2,infra-route-078,protected,implemented,V3-GOV-35(round-15拡張)誤BAN判定成立時の実行・出品停止解除+当該出品者カルマ+5+陪審貢献度付与(deterministic key1回限り)
 —,GET,/api/v1/board/{category}/threads,VPS,Workers,W2,infra-route-033,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・ver3 実体 GET /api/v1/plaza/channels/{channel}/threads(board/{category}→/plaza/channels)・旧パスは deny-by-default 401 据置
 —,GET,/api/v1/board/categories,VPS,Workers,W2,infra-route-034,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・板は board_kind enum(guide/complaint/improvement)で投影・旧パスは deny-by-default 401 据置
 —,GET,/api/v1/component-board,VPS,Workers,W2,infra-route-035,protected,implemented,知の広場 統合(C5 K6・design-k6 §2.1)・ver3 実体 GET /api/v1/plaza/forks(component-board→/plaza/forks・5段ランク投影)・旧パスは deny-by-default 401 据置

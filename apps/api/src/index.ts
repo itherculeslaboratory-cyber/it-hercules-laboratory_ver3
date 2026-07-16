@@ -18,6 +18,7 @@ import { feeRoutes } from "./fee-routes";
 import { marketRoutes } from "./market-routes";
 import { marketReservationRoutes } from "./market-reservation-routes";
 import { marketBlockRoutes } from "./market-block-routes";
+import { marketFlagRoutes } from "./market-flag-routes";
 import { plazaRoutes } from "./plaza-routes";
 import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
@@ -239,6 +240,12 @@ app.route("/api/v1", marketReservationRoutes);
 // isBlockedPair 投影(market-routes/market-reservation-routes の取引ガードから参照)。
 // 掲示板/議論は不干渉(plaza/gov には配線しない)。全て保護。
 app.route("/api/v1", marketBlockRoutes);
+
+// V3-GOV-35 違法出品ユーザー自治(round-15拡張): POST /market/listings/{id}/flags
+// (同国指摘・5件で非表示)・POST /market/listings/{id}/gov-stop(operator/admin・近似範囲
+// まるごと停止)・GET moderation 投影・POST /market/sellers/{id}/misban-reversal/execute
+// (カルマ80×5人判定で出品停止解除)。全て保護。
+app.route("/api/v1", marketFlagRoutes);
 
 // Plaza / 知の広場書込 (design-c5.md §K6 §2.1 slot033-036 / V3-BBS-01/03/05/10/20/29/36):
 // POST posts/stances/forks/signals/summaries + 決定論投影(thread/consensus/fork-rank/

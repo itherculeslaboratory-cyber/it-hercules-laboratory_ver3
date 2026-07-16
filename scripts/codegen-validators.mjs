@@ -68,6 +68,8 @@ const SCHEMAS = [
   ["mktBlock", "events/mkt-block.schema.json"],
   ["mktReservation", "events/mkt-reservation.schema.json"],
   ["mktReservationEvent", "events/mkt-reservation-event.schema.json"],
+  // round-15拡張(V3-GOV-35違法出品ユーザー自治)
+  ["mktListingFlag", "events/mkt-listing-flag.schema.json"],
   ["socialEval", "events/social-eval.schema.json"],
   ["socialPlatinumVote", "events/social-platinum-vote.schema.json"],
   ["researchProposal", "events/research-proposal.schema.json"],

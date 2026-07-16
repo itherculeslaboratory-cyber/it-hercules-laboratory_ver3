@@ -17,9 +17,9 @@ export interface GovVote {
    */
   actor_id: string;
   /**
-   * 投票種別（OS 昇格 / 閾値調整 / fork ランク昇降）。
+   * 投票種別（OS 昇格 / 閾値調整 / fork ランク昇降 / V3-GOV-35 誤BAN復帰判定）。misban_reversal は proposal_target=停止された出品者 actor_id・value=approve が「誤BAN」票。
    */
-  kind: "os_merge" | "threshold_adjust" | "fork_rank";
+  kind: "os_merge" | "threshold_adjust" | "fork_rank" | "misban_reversal";
   /**
    * 提案対象（rule_id / fork_id / os ref）。
    */

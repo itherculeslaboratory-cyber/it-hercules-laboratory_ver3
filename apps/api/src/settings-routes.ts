@@ -13,8 +13,11 @@ const PREF_TYPE = "ihl.pref.set.v1";
 const PREF_SCHEMA = "schemas/events/pref-set.schema.json";
 const SCHEMA_VERSION = "1";
 
-// 投影が畳み込む選好フィールド(per-field last-write-wins)。
-const PREF_FIELDS = ["locale", "theme_pack_id", "template_id", "reduced_motion_override"] as const;
+// 投影が畳み込む選好フィールド(per-field last-write-wins)。country は round-16裁定
+// (V3-AUT-35/I18-02)の内部必須属性(UI非表示)。KRM-21 profile-routes.ts の
+// CONFIGURABLE_FIELDS が既に "country" を宣言済みで、この pref-set 経路が実体を持つ
+// (V3-GOV-35 の同国スコープ判定が最初の利用先)。
+const PREF_FIELDS = ["locale", "theme_pack_id", "template_id", "reduced_motion_override", "country"] as const;
 
 export const settingsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -30,6 +33,7 @@ export type Preferences = {
   theme_pack_id: string;
   template_id: string;
   reduced_motion_override: string;
+  country: string;
 };
 
 // 選好投影(都度再計算)。pref-set を prefix scan → actor 一致のみ → created_at/ULID
@@ -53,6 +57,7 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
     theme_pack_id: DEFAULT_THEME_PACK_ID,
     template_id: DEFAULT_TEMPLATE_ID,
     reduced_motion_override: "system",
+    country: "", // 未設定(round-16: 国籍は任意の内部属性・既定は非選択)
   };
   for (const e of events) {
     for (const k of PREF_FIELDS) {

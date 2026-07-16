@@ -1092,10 +1092,12 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "b070403"
+    ],
     "tc": [],
-    "note": ""
+    "note": "匿名配送=外部URL中継(round-15裁定): 住所は一切保持せず、入金確認(pay_confirm)後に売り手が外部誘導URL(ship_link)を非公開ボードでのみ中継。適法性/到達性は未検証(断定しない)。"
   },
   {
     "id": "V3-MKT-22",
@@ -2814,10 +2816,12 @@
     "tier": "A",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "b070403"
+    ],
     "tc": [],
-    "note": ""
+    "note": "違法出品ユーザー自治(round-15拡張): 同国指摘5件で非表示・requireRole operator/admin近似範囲まるごと停止・カルマ80以上5人の/gov/votes kind=misban_reversal判定で復帰(出品者カルマ+5+陪審貢献度)。route-matrix infra-route-073..078。"
   },
   {
     "id": "V3-I18-09",
@@ -3126,10 +3130,12 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "best-effort",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "b070403"
+    ],
     "tc": [],
-    "note": "round-16 fee-routes.ts の消込はobligation単位のon/off判定のみ(ゆるい請求=amount一致を強制しない)。残債の累積減算・過入金クレジット繰越は未実装 — todoのまま。"
+    "note": "金額相違自己申告(round-15裁定): pay_confirmのpayload.mismatch(partial=部分入金・over=過入金)を追加。自動制裁・自動充当なし(ゆる運用)。"
   },
   {
     "id": "V3-MKT-16",

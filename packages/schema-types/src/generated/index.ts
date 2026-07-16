@@ -37,6 +37,7 @@ export * from "./events/intent";
 export * from "./events/mapping-event";
 export * from "./events/match-preference";
 export * from "./events/mkt-block";
+export * from "./events/mkt-listing-flag";
 export * from "./events/mkt-listing";
 export * from "./events/mkt-post-office";
 export * from "./events/mkt-rating";

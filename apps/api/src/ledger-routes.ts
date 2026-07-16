@@ -3,7 +3,7 @@
 // append。残高・カルマ値は投影で都度再計算(常駐 DB 禁止・不変条項①)。
 // 付与はサーバ内関数(観測 append 時のフックは C5 — 今回は付与関数 + 投影 + 本人スコープ route)。
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, type PutEventResult } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import type { KVNamespaceLite } from "./kv";
 import { revokeActor } from "./denylist";
@@ -159,6 +159,44 @@ export async function grantKarmaCountIncrease(
   if (kv && (await isBanned(s, actorId))) {
     await revokeActor(kv, actorId);
   }
+}
+
+/**
+ * V3-GOV-35 誤BAN復帰専用の value 正増加パス。KRM-06 guard(appendKarma)は
+ * reason_code='monthly_batch' 以外の value 正増加を全 caller 一律で禁じている
+ * (貢献付与・免罪符等の抜け道防止=karma-guard.test.ts が固定)。この関数は
+ * その共有 guard を緩めず、カルマ80以上5人の判定という高摩擦ゲートを通過した
+ * 場合だけに限定される別経路として、deterministic key(misban-reversal-<sellerId>)
+ * への put-if-absent で直接 append する(1 seller につき1回だけ・二重付与は
+ * putEventAt の conflict で自然に防げる=settleNoPayCancel と同型の自己修復)。
+ * reason_code は frozen ledger-entry.schema.json の許可値のうち 'manual' を使う
+ * (新規 reason_code は CL-12 frozen 契約の変更になるため不可)。
+ */
+export async function grantMisbanReversalKarma(
+  s: TruthStore,
+  sellerId: string,
+  amount: number,
+): Promise<PutEventResult> {
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    karma_event_id: id,
+    actor_id: sellerId,
+    layer: "value",
+    delta: amount,
+    reason_code: "manual",
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  return s.putEventAt(
+    `truth/${KARMA_TYPE}/misban-reversal-${sellerId}.json`,
+    envelope(KARMA_TYPE, id, sellerId, data),
+  );
+}
+
+/** grantMisbanReversalKarma の deterministic key が既に存在するか(誤BAN復帰が実行済みか
+ * =出品停止を解除してよいかの判定に使う・market-flag-routes.ts projectSellerModeration)。 */
+export async function hasMisbanReversal(s: TruthStore, sellerId: string): Promise<boolean> {
+  return (await s.readEvent(`truth/${KARMA_TYPE}/misban-reversal-${sellerId}.json`)) !== null;
 }
 
 /** プラチナ功績章の付与(coin_event・付与のみ・grant_amount>=0)。 */

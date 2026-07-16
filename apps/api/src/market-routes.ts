@@ -11,6 +11,7 @@ import {
   projectSettlement,
   projectOwnershipLineage,
   projectPayment,
+  projectShippingLink,
   isAllowedEdge,
   isNoPayCancelDue,
   isGraceCancelWindowOpen,
@@ -21,6 +22,7 @@ import {
 } from "./market-settlement";
 import { projectPreferences } from "./settings-routes";
 import { isBlockedPair } from "./market-block-routes";
+import { projectSellerModeration, projectListingModeration } from "./market-flag-routes";
 import {
   NO_PAY_LIMIT_COUNT,
   NO_PAY_LIMIT_WINDOW_DAYS,
@@ -50,7 +52,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TRANSITION_KINDS = new Set<MarketKind>([
   "list_fixed", "list_auction", "list_lottery", "list_platinum",
   "bid", "match", "ship", "receive", "rate", "delist", "transfer",
-  "pay_declare", "pay_confirm", "cancel",
+  "pay_declare", "pay_confirm", "cancel", "ship_link",
 ]);
 
 export const marketRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -84,6 +86,11 @@ marketRoutes.post("/market/listings", async (c) => {
   if (!title) return c.json({ error: "INVALID_LISTING", details: ["title required"] }, 400);
 
   const actorId = c.get("actorId");
+  // V3-GOV-35(round-15拡張): 非表示5件蓄積した出品者は新規出品停止(誤BAN復帰=
+  // カルマ80×5人判定で解除・market-flag-routes.ts projectSellerModeration)。
+  if ((await projectSellerModeration(store(c), actorId)).suspended) {
+    return c.json({ error: "SELLER_SUSPENDED" }, 403);
+  }
   const listingId = typeof body?.listing_id === "string" && body.listing_id ? body.listing_id : ulid();
 
   const data: Record<string, unknown> = {
@@ -122,20 +129,32 @@ marketRoutes.post("/market/listings", async (c) => {
   return c.json({ listing_id: listingId }, 201);
 });
 
-// GET /market/listings — 一覧投影(全出品)。
+// GET /market/listings — 一覧投影(全出品)。V3-GOV-35(round-15拡張): 非表示判定
+// (active flag >= 閾値 or government stop)された出品は一覧から除外する(直接 ID を
+// 知る当事者は GET /market/listings/{id} で参照可能・全消去はしない=safety側だが
+// 当事者への説明可能性は残す)。
 // ponytail: listing-type prefix scan = O(n) 全走査。MVP 量なら十分。投影 index は
 // 別波(design-c2 §3.1「一覧系投影は R2 prefix scan」)。
 marketRoutes.get("/market/listings", async (c) => {
-  const listings = (await store(c).listEvents(`truth/${LISTING_TYPE}/`)).map(dataOf);
+  const s = store(c);
+  const all = (await s.listEvents(`truth/${LISTING_TYPE}/`)).map(dataOf);
+  const listings = [];
+  for (const l of all) {
+    const moderation = await projectListingModeration(s, String(l.listing_id), String(l.actor_id));
+    if (!moderation.hidden) listings.push(l);
+  }
   return c.json({ listings });
 });
 
-// GET /market/listings/{listing_id} — 詳細投影(404 or { listing })。
+// GET /market/listings/{listing_id} — 詳細投影(404 or { listing, moderation })。
 marketRoutes.get("/market/listings/:listing_id", async (c) => {
   const listingId = c.req.param("listing_id");
-  const ev = await store(c).readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const s = store(c);
+  const ev = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
   if (!ev) return c.json({ error: "NOT_FOUND" }, 404);
-  return c.json({ listing: dataOf(ev) });
+  const listing = dataOf(ev);
+  const moderation = await projectListingModeration(s, listingId, String(listing.actor_id));
+  return c.json({ listing, moderation });
 });
 
 // ── 取引状態機械(MKT-01/02/03/06/29)────────────────────────────────────
@@ -220,7 +239,8 @@ function transitionActorGuard(
     if (cur.matched_with && actorId !== cur.matched_with) return "matched buyer only";
     return null;
   }
-  const sellerOnly = kind === "ship" || kind === "delist" || kind === "transfer" || kind === "pay_confirm";
+  const sellerOnly =
+    kind === "ship" || kind === "delist" || kind === "transfer" || kind === "pay_confirm" || kind === "ship_link";
   const buyerOnly = kind === "receive" || kind === "rate" || kind === "pay_declare";
   if (sellerOnly && cur.seller_id && actorId !== cur.seller_id) return "seller only";
   if (buyerOnly && cur.matched_with && actorId !== cur.matched_with) return "matched buyer only";
@@ -332,6 +352,14 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   if (!isAllowedEdge(cur.state, kind)) {
     return c.json({ error: "ILLEGAL_TRANSITION", from: cur.state, kind }, 409);
   }
+  // V3-GOV-35(round-15拡張): unlisted からの list_* は「新規出品」の実体(POST
+  // /market/listings は任意メタデータのみで state を動かさない)。ここが真の出品停止
+  // 判定点(誤BAN復帰=カルマ80×5人判定で解除・market-flag-routes.ts)。
+  if (cur.state === "unlisted" && kind.startsWith("list_")) {
+    if ((await projectSellerModeration(s, actorId)).suspended) {
+      return c.json({ error: "SELLER_SUSPENDED" }, 403);
+    }
+  }
 
   const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
   const acceptMode = listingEv && typeof dataOf(listingEv).accept_mode === "string" ? String(dataOf(listingEv).accept_mode) : undefined;
@@ -378,6 +406,28 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
     }
     extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), cancel_reason: "grace" };
   }
+  // V3-MKT-13(round-15裁定・金額相違自己申告): pay_confirm の payload.mismatch は
+  // partial(部分入金=残債の再申告待ち)/over(過入金=クレジット記録のみ)の2値限定。
+  // 自動制裁・自動充当は一切行わない(ゆる運用・route はここで append するだけ)。
+  if (kind === "pay_confirm") {
+    const mismatch = (extra.payload as { mismatch?: unknown } | undefined)?.mismatch;
+    if (mismatch !== undefined && mismatch !== "partial" && mismatch !== "over") {
+      return c.json({ error: "INVALID_TRANSITION", details: ["payload.mismatch must be 'partial' or 'over' when present"] }, 400);
+    }
+  }
+  // V3-MKT-20(round-15裁定・匿名配送=外部URL中継): 入金確認(pay_confirm)後にのみ、
+  // 売り手が外部誘導 URL を中継できる。システムは URL の適法性・到達性を検証しない
+  // (郵便局側の商用利用可否は round-16 時点で裏取り未了=断定しない・誘導リンクの
+  // relay に徹する)。
+  if (kind === "ship_link") {
+    const url = (extra.payload as { external_shipping_url?: unknown } | undefined)?.external_shipping_url;
+    if (typeof url !== "string" || !url.trim()) {
+      return c.json({ error: "INVALID_TRANSITION", details: ["payload.external_shipping_url required"] }, 400);
+    }
+    if (!events.some((e) => e.kind === "pay_confirm")) {
+      return c.json({ error: "PAYMENT_NOT_CONFIRMED", details: ["ship_link requires a prior pay_confirm"] }, 409);
+    }
+  }
 
   const { res, data } = await appendTxn(c, listingId, actorId, kind, extra);
   if (res.status === "invalid") return c.json({ error: "INVALID_TRANSITION", details: res.errors }, 400);
@@ -407,7 +457,8 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
 
 // GET /market/listings/{id}/board — 非公開ボード(matched 以降・当事者2人のみ・
 // 第三者 403・MKT-03)。出品者向けに offer/love_letter を集約(値段は love_letter
-// のみ非開示・MKT-06)。
+// のみ非開示・MKT-06)。V3-MKT-20(round-15裁定): 外部誘導URL(住所非保持の中継のみ)は
+// 当事者2人限定のこの非公開ボードでのみ公開する(公開 GET /state には出さない)。
 marketRoutes.get("/market/listings/:listing_id/board", async (c) => {
   const listingId = c.req.param("listing_id");
   const actorId = c.get("actorId");
@@ -424,7 +475,16 @@ marketRoutes.get("/market/listings/:listing_id/board", async (c) => {
       amount: e.kind === "love_letter" ? undefined : e.amount, // ラブレターは値段非開示
       at: e.created_at,
     }));
-  return c.json({ listing_id: listingId, stage: cur.stage, state: cur.state, parties, matched_with: cur.matched_with, offers });
+  return c.json({
+    listing_id: listingId,
+    stage: cur.stage,
+    state: cur.state,
+    parties,
+    matched_with: cur.matched_with,
+    offers,
+    payment: projectPayment(events),
+    shipping_link: projectShippingLink(events),
+  });
 });
 
 // GET /market/listings/{id}/ownership — 所有権系譜(観測引継ぎ・MKT-29)。
