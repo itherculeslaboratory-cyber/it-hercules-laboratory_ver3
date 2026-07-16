@@ -96,6 +96,8 @@ const SCHEMAS = [
   ["plazaFork", "events/plaza-fork.schema.json"],
   ["plazaSignal", "events/plaza-signal.schema.json"],
   ["plazaSummary", "events/plaza-summary.schema.json"],
+  // round-16 裁定(OQ-PLZ-03)知の広場スレ解決マーク。
+  ["plazaResolution", "events/plaza-resolution.schema.json"],
   ["govVote", "events/gov-vote.schema.json"],
   ["govDispute", "events/gov-dispute.schema.json"],
   ["govPrecedent", "events/gov-precedent.schema.json"],

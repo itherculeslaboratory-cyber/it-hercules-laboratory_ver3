@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.it-hercules.uk/events/plaza-signal.schema.json",
   "title": "Plaza signal data (ihl.plaza.signal.v1)",
-  "description": "自然淘汰シグナルイベント ihl.plaza.signal.v1 の data 部（BBS-03/GOV-23）。Truth キー truth/ihl.plaza.signal.v1/<target_type>/<target_id>/<signal_id>.json に append-only。projectRanking が RANKING_WEIGHTS で like/use/retain を加重合算し都度ランキング投影（利用率→ランキング・GOV-23 自然淘汰）。",
+  "description": "自然淘汰シグナルイベント ihl.plaza.signal.v1 の data 部（BBS-03/GOV-23）。Truth キー truth/ihl.plaza.signal.v1/<target_type>/<target_id>/<signal_id>.json に append-only。projectRanking が RANKING_WEIGHTS で like/use/retain を加重合算し都度ランキング投影（利用率→ランキング・GOV-23 自然淘汰）。retry_reproduced/retry_not_reproduced は知の広場スレの追試チップ(target_type=\"plaza_thread\"・target_id=thread_id)専用で、projectPromotionStatus が OQ-PLZ-01 昇格閾値の判定に用いる（round-16 裁定）。",
   "x_ihl_req": "V3-BBS-03",
   "x_ihl_source": "docs/planning/c5/design-c5.md §K6 §2.2",
   "type": "object",
@@ -38,8 +38,8 @@
     },
     "signal": {
       "type": "string",
-      "enum": ["like", "use", "retain"],
-      "description": "シグナル種別（いいね/利用/継続・RANKING_WEIGHTS で加重）。"
+      "enum": ["like", "use", "retain", "retry_reproduced", "retry_not_reproduced"],
+      "description": "シグナル種別（いいね/利用/継続・RANKING_WEIGHTS で加重。retry_reproduced/retry_not_reproduced=知の広場スレの追試「再現/再現せず」・OQ-PLZ-01 昇格判定専用でランキングには加重しない）。"
     },
     "created_at": {
       "type": "string",

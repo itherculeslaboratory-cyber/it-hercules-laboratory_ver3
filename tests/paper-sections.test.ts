@@ -4,7 +4,8 @@
 // completeness_pct∈[0,100]・LATEX_FORBIDDEN(\ と $)拒否・paper≠content_type を検証。
 import { describe, expect, it } from "vitest";
 import { TruthStore } from "@ihl/truth";
-import { FakeR2Bucket, makeEnvelope } from "./helpers";
+import app from "../apps/api/src/index";
+import { AUTH_HEADERS, FakeR2Bucket, makeEnv, makeEnvelope } from "./helpers";
 
 const CONTENT_SCHEMA = "schemas/events/content.schema.json";
 
@@ -92,5 +93,39 @@ describe("PPR-03 paper content schema validation via putEvent", () => {
       created_at: "2026-07-11T00:00:00Z", schema_version: "1",
     });
     expect(res.status).toBe("invalid");
+  });
+});
+
+describe("PPR-03 sections_completeness_pct projection (design_only skeleton)", () => {
+  it("GET /research/content/:id computes sections_completeness_pct from filled flags", async () => {
+    const bucket = new FakeR2Bucket();
+    const s: Record<string, { filled: boolean; text: string }> = Object.fromEntries(
+      ["purpose", "hypothesis", "conditions"].map((k) => [k, { filled: true, text: "x" }]),
+    );
+    for (const k of ["verification", "phase", "gap"]) s[k] = { filled: false, text: "" };
+    const created = await app.request(
+      "/api/v1/research/content",
+      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ content_id: "P-COMPLETE", content_type: "paper", title: "T", sections: s, completeness_pct: 10 }) },
+      makeEnv(bucket),
+    );
+    expect(created.status).toBe(201);
+    const res = await app.request("/api/v1/research/content/P-COMPLETE", { headers: AUTH_HEADERS }, makeEnv(bucket));
+    const body = (await res.json()) as { completeness_pct: number; sections_completeness_pct: number };
+    // stored value is untouched (append-only) even though it disagrees with the computed one.
+    expect(body.completeness_pct).toBe(10);
+    // computed value is the actual 3-of-6 filled ratio, independent of the stored input.
+    expect(body.sections_completeness_pct).toBe(50);
+  });
+
+  it("non-paper content has no sections_completeness_pct field", async () => {
+    const bucket = new FakeR2Bucket();
+    await app.request(
+      "/api/v1/research/content",
+      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ content_id: "A-PLAIN", content_type: "article", title: "T" }) },
+      makeEnv(bucket),
+    );
+    const res = await app.request("/api/v1/research/content/A-PLAIN", { headers: AUTH_HEADERS }, makeEnv(bucket));
+    const body = (await res.json()) as Record<string, unknown>;
+    expect("sections_completeness_pct" in body).toBe(false);
   });
 });

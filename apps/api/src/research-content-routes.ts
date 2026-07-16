@@ -6,9 +6,10 @@
 // PROTECTED（deny-by-default: PUBLIC_ROUTES に載せない）。投影は都度再計算（常駐 DB 禁止）で
 // proposal-routes.ts の reduceProposal パターンを流用。envelope/store/dataOf は inline。
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { AI_TAGS_MAX, RAG_PRIORITY } from "./research-constants";
+import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN } from "./research-constants";
+import { computeSectionsCompleteness, type SectionState } from "./paper-match";
 
 export const researchContentRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -98,6 +99,9 @@ export function suggestTags(content: Record<string, unknown>): string[] {
 export interface SearchQuery {
   text?: string; tags?: string[]; user?: string; node?: string; type?: string;
   query_vector?: number[];
+  // WIK-13 embedding 類似検索: embedding は content に永続保存しない(既定 OFF・不変条項①)ため
+  // 呼び手が content_id→vector を注入する(gapAnalysis の neighbors 注入と同型・CL-08 dim guard)。
+  content_vectors?: Record<string, number[]>;
 }
 export interface SearchHit {
   content_id: string; content_type: string; title: string; actor_id: string;
@@ -122,6 +126,12 @@ export async function unifiedSearch(s: TruthStore, q: SearchQuery): Promise<Sear
       if (t.system_tags.some((x) => q.tags!.includes(x))) matched.add("system");
       if (t.ai_tags.some((x) => q.tags!.includes(x))) matched.add("ai");
       if (t.user_tags.some((x) => q.tags!.includes(x))) matched.add("user");
+    }
+    // embedding pillar(WIK-13): query_vector + content_vectors[contentId] の両方がある時のみ
+    // cosine 類似度を評価(embedding 既定 OFF・不変条項①・ベクトル未注入なら常にスキップ)。
+    const cv = q.content_vectors?.[contentId];
+    if (q.query_vector && cv && cosineSimilarity(q.query_vector, cv) >= EMBEDDING_SIMILARITY_MIN) {
+      matched.add("embedding");
     }
     // user(author) / node pillars: hit の入口だが RAG チャネルは持たない（フィルタ扱い）。
     let pillarHit = false;
@@ -194,13 +204,19 @@ researchContentRoutes.get("/research/content", async (c) => {
   return c.json({ items });
 });
 
-// GET /research/content/:id — 詳細 + 3 層タグ集約投影（正本は tag-event・WIK-16/14）。
+// GET /research/content/:id — 詳細 + 3 層タグ集約投影（正本は tag-event・WIK-16/14）。paper は
+// sections_completeness_pct を投影併記（PPR-03 design_only の投影骨格・書込時 completeness_pct
+// は不変のまま、こちらは filled フラグからの再計算値）。
 researchContentRoutes.get("/research/content/:id", async (c) => {
   const id = c.req.param("id");
   const ev = await store(c).readEvent(contentKey(id));
   if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const data = dataOf(ev);
   const tags = await aggregateContentTags(store(c), id);
-  return c.json({ ...dataOf(ev), tags });
+  const extra = data.sections
+    ? { sections_completeness_pct: computeSectionsCompleteness(data.sections as Record<string, SectionState>) }
+    : {};
+  return c.json({ ...data, tags, ...extra });
 });
 
 // POST /research/content/:id/tags — 確認 POST でのみ tag_event を append（WIK-14）。

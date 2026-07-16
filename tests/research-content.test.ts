@@ -89,6 +89,29 @@ describe("WIK-13 four search pillars hit immediately after append (prefix scan p
     expect(await ids({ user: detail.actor_id })).toContain("S-1"); // user(author) pillar
     expect(await ids({ node: "S-1" })).toContain("S-1"); // node(content_id) pillar
   });
+
+  it("embedding pillar: query_vector + content_vectors above threshold hits; below threshold or unmatched vectors miss", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "V-near", content_type: "article", title: "no keyword overlap" });
+    await createContent(bucket, { content_id: "V-far", content_type: "article", title: "no keyword overlap either" });
+
+    const res = await post(bucket, "/api/v1/research/search", {
+      query_vector: [1, 0, 0],
+      content_vectors: { "V-near": [0.99, 0.01, 0], "V-far": [0, 1, 0] }, // near: cos~1 (>=0.7) / far: cos=0
+    });
+    const results = ((await res.json()) as { results: Array<{ content_id: string; matched: string[] }> }).results;
+    const near = results.find((r) => r.content_id === "V-near");
+    expect(near?.matched).toContain("embedding");
+    expect(results.find((r) => r.content_id === "V-far")).toBeUndefined(); // below EMBEDDING_SIMILARITY_MIN, no other pillar hit
+  });
+
+  it("embedding pillar is a no-op when query_vector is absent (embedding stays OFF by default)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "V-noquery", content_type: "article", title: "irrelevant" });
+    const res = await post(bucket, "/api/v1/research/search", { content_vectors: { "V-noquery": [1, 0, 0] } });
+    const results = ((await res.json()) as { results: Array<{ content_id: string }> }).results;
+    expect(results.find((r) => r.content_id === "V-noquery")).toBeUndefined();
+  });
 });
 
 describe("WIK-14 three-layer tags + suggest + RAG_PRIORITY", () => {
