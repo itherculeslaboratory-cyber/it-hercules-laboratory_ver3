@@ -1,12 +1,13 @@
-// MKT-25/23/20 出品支援。推奨価格(類似個体成約価格→重み付き平均/中央値・計算元込み・
-// embedding 既定 OFF)・黄金フロー autofill(個体 ID 選択で観測引用 draft + 推奨価格)・
-// 送料見積り(観測→梱包サイズ→局間距離・住所非保持・着払い)。純関数 + 薄い route。
+// MKT-25/23 出品支援。推奨価格(類似個体成約価格→重み付き平均/中央値・計算元込み・
+// embedding 既定 OFF)・黄金フロー autofill(個体 ID 選択で観測引用 draft + 推奨価格)。
+// 純関数 + 薄い route。MKT-20(送料見積り・郵便局登録)は round-15 裁定で外部URL中継方式へ
+// 差替 superseded — 対応する estimateShipping/POST /me/post-offices/shipping-estimate の
+// TC はここから削除済み(market-pricing-routes.ts の同スコープ削除に追従)。
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import {
   recommendPrice,
   buildListingDraft,
-  estimateShipping,
   type Comparable,
 } from "../apps/api/src/market-pricing-routes";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
@@ -60,23 +61,6 @@ describe("MKT-23 buildListingDraft 黄金フロー autofill", () => {
   it("未知変数は空に置換(欠損観測でも破綻しない)", () => {
     const draft = buildListingDraft([{ individual_id: "I1" }], "{{size}}-{{missing}}", []);
     expect(draft.description).toBe("-");
-  });
-});
-
-describe("MKT-20 estimateShipping(住所非保持・着払い)", () => {
-  it("観測重量→梱包サイズ→局間距離×サイズで送料・住所フィールド無し", () => {
-    const est = estimateShipping([{ individual_id: "I1", weight_g: 800 }], "OFFICE-100", "OFFICE-105");
-    expect(est.size).toBe("80"); // 800g → 80 サイズ
-    // base 900 + |100-105|*100 = 900 + 500 = 1400
-    expect(est.yen).toBe(1400);
-    expect(est.payment).toBe("cash_on_delivery");
-    expect(est).not.toHaveProperty("address");
-    expect(Object.keys(est).sort()).toEqual(["from_office", "payment", "size", "to_office", "yen"]);
-  });
-
-  it("重量が増えると梱包サイズ区分が上がる", () => {
-    expect(estimateShipping([{ individual_id: "x", weight_g: 100 }], "A1", "A1").size).toBe("60");
-    expect(estimateShipping([{ individual_id: "x", weight_g: 6000 }], "A1", "A1").size).toBe("120");
   });
 });
 
@@ -136,29 +120,5 @@ describe("pricing routes", () => {
     expect(body.anchor).toBe(2000); // (1000+3000)/2
     expect(body.embedding_used).toBe(false);
     expect(body.sources.length).toBe(2);
-  });
-
-  it("POST /me/post-offices → GET shipping-estimate が既定局を採用(住所非保持)", async () => {
-    const bucket = new FakeR2Bucket();
-    const env = makeEnv(bucket);
-    const reg = await app.request(
-      "/api/v1/me/post-offices",
-      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ post_office_id: "OFFICE-100", is_default: true }) },
-      env,
-    );
-    expect(reg.status).toBe(201);
-    const est = await app.request(
-      "/api/v1/market/listings/L1/shipping-estimate?to_office=OFFICE-105&weight_g=800",
-      { headers: AUTH_HEADERS },
-      env,
-    );
-    expect(est.status).toBe(200);
-    const body = (await est.json()) as { from_office: string; size: string; yen: number };
-    expect(body).toMatchObject({ from_office: "OFFICE-100", size: "80", yen: 1400 });
-  });
-
-  it("GET shipping-estimate: to_office 欠如は 400", async () => {
-    const res = await app.request("/api/v1/market/listings/L1/shipping-estimate", { headers: AUTH_HEADERS }, makeEnv());
-    expect(res.status).toBe(400);
   });
 });

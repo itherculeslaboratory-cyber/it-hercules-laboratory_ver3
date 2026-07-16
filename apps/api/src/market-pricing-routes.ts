@@ -1,16 +1,17 @@
-// MKT-23/25/20 出品支援(黄金フロー autofill・推奨価格・送料見積り)。全て純関数 +
-// 薄い route。推奨価格は類似個体の過去成約価格を重み付き平均/中央値で集約し計算元を
-// 全公開、embedding は既定 OFF(明示 ON 時のみ・不変条項①)。送料は観測から梱包サイズを
-// 推定し局間距離×サイズ、着払い前提で住所は一切保持しない(PII 不使用・MKT-20)。
+// MKT-23/25 出品支援(黄金フロー autofill・推奨価格)。全て純関数 + 薄い route。推奨価格は
+// 類似個体の過去成約価格を重み付き平均/中央値で集約し計算元を全公開、embedding は既定 OFF
+// (明示 ON 時のみ・不変条項①)。
+// MKT-20(送料見積り・郵便局登録)は round-15 裁定(user-ruling-2026-07-15-round-15.md #10)で
+// 「郵便局ID登録+郵便局間距離×サイズ推定」方式が外部URL中継方式(ゆうパックスマホ割等)へ
+// 差替 superseded — このファイルから当該コード(estimateShipping・POST /me/post-offices・
+// GET shipping-estimate)は削除済み。price-recommendation は screen-defs/market-trade.json
+// で現役参照されており対象外(round-15/16 とも supersede 対象に含まない)。
 // 全 route PROTECTED・actor_id はセッション principal 強制(V3-AUT-17)。
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 
-const POST_OFFICE_TYPE = "ihl.mkt.post_office.v1";
-const POST_OFFICE_SCHEMA = "schemas/events/mkt-post-office.schema.json";
 const TXN_TYPE = "ihl.mkt.transaction_event.v1";
-const SCHEMA_VERSION = "1";
 
 export const marketPricingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -102,47 +103,6 @@ export function buildListingDraft(
   };
 }
 
-// ── MKT-20 送料見積り(住所非保持・着払い)────────────────────────────────
-export interface ShippingEstimate {
-  size: string; // 梱包サイズ区分(60/80/100/120/160)
-  yen: number; // 推定送料
-  from_office: string;
-  to_office: string;
-  payment: "cash_on_delivery"; // 着払い前提(住所フィールドは持たない)
-}
-
-const SIZE_BUCKETS: [number, string][] = [
-  [500, "60"],
-  [2000, "80"],
-  [5000, "100"],
-  [10000, "120"],
-  [Infinity, "160"],
-];
-const SIZE_BASE_YEN: Record<string, number> = { "60": 700, "80": 900, "100": 1100, "120": 1400, "160": 1700 };
-const DISTANCE_YEN_PER_UNIT = 100;
-
-function packSize(individuals: IndividualObs[]): string {
-  const totalG = individuals.reduce((a, i) => a + (typeof i.weight_g === "number" ? i.weight_g : 0), 0);
-  return (SIZE_BUCKETS.find(([max]) => totalG <= max) as [number, string])[1];
-}
-// 局 ID 末尾数字の差で距離ユニットを近似(住所は使わない)。
-// ponytail: 郵便局間の実距離表が着地したら差し込む。今は決定論スタブ。
-function distanceUnits(from: string, to: string): number {
-  const n = (s: string) => Number((s.match(/\d+/) ?? ["0"])[0]);
-  return Math.abs(n(from) - n(to));
-}
-
-/** 観測(梱包サイズ)+送/受局 ID から送料を推定(MKT-20)。住所は入力にも出力にも無い。 */
-export function estimateShipping(
-  individuals: IndividualObs[],
-  fromOffice: string,
-  toOffice: string,
-): ShippingEstimate {
-  const size = packSize(individuals);
-  const yen = SIZE_BASE_YEN[size] + distanceUnits(fromOffice, toOffice) * DISTANCE_YEN_PER_UNIT;
-  return { size, yen, from_office: fromOffice, to_office: toOffice, payment: "cash_on_delivery" };
-}
-
 // ── routes ───────────────────────────────────────────────────────────────
 // POST /market/listings/draft — 個体 ID 選択で draft 生成(MKT-23)。individuals 未指定時は
 // individual_ids から最小スタブ観測を組む(観測投影の本格ロードは別波)。
@@ -170,57 +130,4 @@ marketPricingRoutes.get("/market/listings/:id/price-recommendation", async (c) =
     .map((d) => ({ individual_id: String(d.listing_id), price: d.amount as number, weight: 1 }));
   const method = c.req.query("method") === "median" ? "median" : "weighted_mean";
   return c.json({ listing_id: listingId, ...recommendPrice(comparables, { method }) });
-});
-
-// GET /market/listings/{id}/shipping-estimate — 送料見積り(着払い・住所非保持・MKT-20)。
-// from_office 省略時は本人の既定局を採用、to_office はクエリ必須(受取側の受取局)。
-marketPricingRoutes.get("/market/listings/:id/shipping-estimate", async (c) => {
-  const toOffice = c.req.query("to_office") ?? "";
-  if (!toOffice) return c.json({ error: "INVALID_ESTIMATE", details: ["to_office required"] }, 400);
-  const fromOffice = c.req.query("from_office") ?? (await defaultOffice(c, c.get("actorId"))) ?? "";
-  if (!fromOffice) return c.json({ error: "INVALID_ESTIMATE", details: ["from_office (no default post office)"] }, 400);
-  const weightG = Number(c.req.query("weight_g"));
-  const individuals: IndividualObs[] = [
-    { individual_id: c.req.param("id"), weight_g: Number.isFinite(weightG) ? weightG : 0 },
-  ];
-  return c.json(estimateShipping(individuals, fromOffice, toOffice));
-});
-
-// 本人の既定郵便局(最新の is_default=true 行)。住所は保持しない=局 ID のみ。
-async function defaultOffice(c: { env: Bindings }, actorId: string): Promise<string | null> {
-  const mine = (await store(c).listEvents(`truth/${POST_OFFICE_TYPE}/`))
-    .map(dataOf)
-    .filter((d) => d.actor_id === actorId && d.is_default === true)
-    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-  return mine[0] ? String(mine[0].post_office_id) : null;
-}
-
-// POST /me/post-offices — 最寄り局を登録(住所非保持・MKT-20)。
-marketPricingRoutes.post("/me/post-offices", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const postOfficeId = body && typeof body.post_office_id === "string" ? body.post_office_id.trim() : "";
-  if (!postOfficeId) return c.json({ error: "INVALID_POST_OFFICE", details: ["post_office_id required"] }, 400);
-  const actorId = c.get("actorId");
-  const id = ulid();
-  const data = {
-    post_office_event_id: id,
-    actor_id: actorId,
-    post_office_id: postOfficeId,
-    is_default: body?.is_default === true,
-    created_at: new Date().toISOString(),
-    schema_version: SCHEMA_VERSION,
-  };
-  const res = await store(c).putEvent({
-    specversion: "1.0",
-    id,
-    source: "apps/api",
-    type: POST_OFFICE_TYPE,
-    time: new Date().toISOString(),
-    dataschema: POST_OFFICE_SCHEMA,
-    provenance: { generator_kind: "human", actor_id: actorId },
-    data,
-  });
-  if (res.status === "invalid") return c.json({ error: "INVALID_POST_OFFICE", details: res.errors }, 400);
-  if (res.status === "conflict") return c.json({ error: "DUPLICATE_POST_OFFICE", key: res.key }, 409);
-  return c.json({ post_office_event_id: id, post_office_id: postOfficeId, is_default: data.is_default }, 201);
 });

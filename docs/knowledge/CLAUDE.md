@@ -42,5 +42,5 @@ claude --model sonnet -p "docs/knowledge/CLAUDE.md を読み、sources/ の DIST
 ## 境界
 
 - 本バンドルは **docs 配下のみ**。`01-要件` 等の他ディレクトリへは**一方向リンク**のみで、変更しない。
-- 知の広場は PROVISIONAL（実装禁止ゲート中）。ゲートを尊重し、K1/K2 は docs/tools 層に限定する。
+- 知の広場: （旧）PROVISIONAL（実装禁止ゲート中） → （現在）第13回裁定（`user-ruling-2026-07-11-round-13.md` #2）で本採用 Go・HG-KN-01〜08 確定。BBS（plaza-routes）/GOV（gov-routes）系は実装済み。残る人間ゲートは**一般公開のみ**（PROTECTED 解除は cutover 後に別途裁定・不可逆ゲート分離）。K1/K2 は引き続き docs/tools 層に限定する。
 - Truth データ（R2 / captures / events）は append-only。UPDATE / DELETE しない。
