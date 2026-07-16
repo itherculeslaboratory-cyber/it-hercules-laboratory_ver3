@@ -305,29 +305,46 @@ export async function moveOccupancy(
 // 5-min bucket for one device don't collide (bucketize already groups by metric).
 // Dropping metric would make the second metric a false skipped_duplicate and lose
 // its reading permanently (Truth is INSERT ONLY). Upgrade path: none needed.
-function telemetryKey(b: TelemetryBucket): string {
-  // device_id/metric は schema 上ハイフンを含み得る自由文字列。素の hyphen 結合だと
-  // (a-b, c) と (a, b-c) が同一キーへ衝突し、INSERT ONLY のため後着が恒久喪失する。
-  // 各セグメントを encodeURIComponent し、素通りする "-" も %2D へ潰して区切りを一意化。
+//
+// V3-OBS-32 / OQ-LB-02: `source` (csv/collector/manual) is now ALSO part of the
+// key. put-if-absent stays first-wins per KEY, but two different sources no
+// longer collide on the SAME logical bucket (device_id, metric, bucket_start_ms)
+// — both snapshots persist and read-back (projectTelemetryLatest below) picks
+// the source-count-max one. Segments are encodeURIComponent'd (hyphens folded to
+// %2D) so no raw "-" survives inside a segment — the "-" separators between
+// segments stay unambiguous (same reasoning as the device_id/metric case above).
+function telemetryKey(b: TelemetryBucket, source: string): string {
   const seg = (s: string) => encodeURIComponent(s).replace(/-/g, "%2D");
-  return `truth/${TELEMETRY_TYPE}/${seg(b.device_id)}-${seg(b.metric)}-${b.bucket_start_ms}.json`;
+  return `truth/${TELEMETRY_TYPE}/${seg(b.device_id)}-${seg(b.metric)}-${b.bucket_start_ms}-${seg(source)}.json`;
 }
 
-// POST /telemetry — ingest raw 1-min rows, bucketize to 5-min aggregates, append
-// each bucket idempotently. Merge outcome is storage-layer put-if-absent:
-//   inserted → written · 409 → skipped_duplicate · invalid rows → skipped_invalid.
-// actor_id (provenance) forced from session; device_id comes from the rows.
-sourceRoutes.post("/telemetry", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
-  const actorId = c.get("actorId");
-  const rows = Array.isArray(body.rows) ? body.rows : [];
-  const buckets = bucketize(rows);
-  const validRowCount = buckets.reduce((n, b) => n + b.count, 0);
-
+/**
+ * Shared bucketized-telemetry writer (V3-OBS-32 / V3-FND-18). Both the generic
+ * POST /telemetry route (source="manual") and the CSV import route
+ * (env-import-routes.ts, source="csv") funnel through this — one ingest path,
+ * one key scheme, so read-back never has to reconcile two implementations.
+ * dryRun=true performs the SAME put-if-absent existence check via readEvent
+ * (no write) so a caller can preview would-be written/skipped_duplicate counts
+ * without mutating Truth.
+ */
+export async function ingestTelemetryBuckets(
+  st: TruthStore,
+  actorId: string,
+  buckets: TelemetryBucket[],
+  source: string,
+  opts: { dryRun?: boolean } = {},
+): Promise<{ written: number; skipped_duplicate: number; invalid: string[] }> {
   let written = 0;
   let skippedDuplicate = 0;
-  const st = store(c);
+  const invalid: string[] = [];
   for (const b of buckets) {
+    const key = telemetryKey(b, source);
+    if (opts.dryRun) {
+      const existing = await st.readEvent(key);
+      if (existing) skippedDuplicate += 1;
+      else written += 1;
+      continue;
+    }
     const data = {
       device_id: b.device_id,
       bucket_start_ms: b.bucket_start_ms,
@@ -335,12 +352,78 @@ sourceRoutes.post("/telemetry", async (c) => {
       mean: b.mean,
       count: b.count,
       source_granularity_ms: b.source_granularity_ms,
+      source,
       schema_version: TELEMETRY_TYPE,
     };
-    const res = await st.putEventAt(telemetryKey(b), envelope(TELEMETRY_TYPE, TELEMETRY_SCHEMA, actorId, data));
+    const res = await st.putEventAt(key, envelope(TELEMETRY_TYPE, TELEMETRY_SCHEMA, actorId, data));
     if (res.status === "inserted") written += 1;
     else if (res.status === "conflict") skippedDuplicate += 1;
-    else return c.json({ error: "INVALID_TELEMETRY", details: res.errors }, 400);
+    else invalid.push(...res.errors);
   }
-  return c.json({ written, skipped_duplicate: skippedDuplicate, skipped_invalid: rows.length - validRowCount }, 202);
+  return { written, skipped_duplicate: skippedDuplicate, invalid };
+}
+
+export interface TelemetrySnapshot {
+  metric: string;
+  bucket_start_ms: number;
+  mean: number;
+  count: number;
+  source_granularity_ms: number;
+  source: string;
+}
+
+/**
+ * Read-back projection (V3-OBS-32 / OQ-LB-02): a device may have MULTIPLE
+ * snapshots for the same logical bucket (device_id, metric, bucket_start_ms) —
+ * one per ingest source, since telemetryKey now includes source. This picks,
+ * per logical bucket, the snapshot with the highest count (=source-count, the
+ * number of raw rows aggregated into it); ties prefer source "csv" (環境の正本)
+ * over other sources (usecase-driven-design §machines-environment-io 手順11).
+ * Always recomputed from Truth (prefix scan) — no resident index (不変条項①).
+ */
+export async function projectTelemetryLatest(
+  bucket: R2BucketLite,
+  deviceId: string,
+  metric?: string,
+): Promise<TelemetrySnapshot[]> {
+  const seg = (s: string) => encodeURIComponent(s).replace(/-/g, "%2D");
+  const prefix = `truth/${TELEMETRY_TYPE}/${seg(deviceId)}-`;
+  const events = (await new TruthStore(bucket).listEvents(prefix)).map(dataOf);
+  const best = new Map<string, TelemetrySnapshot>(); // key: metric|bucket_start_ms
+  for (const d of events) {
+    if (typeof d.metric !== "string" || typeof d.bucket_start_ms !== "number") continue;
+    if (metric && d.metric !== metric) continue;
+    const snap: TelemetrySnapshot = {
+      metric: d.metric,
+      bucket_start_ms: d.bucket_start_ms,
+      mean: Number(d.mean),
+      count: Number(d.count),
+      source_granularity_ms: Number(d.source_granularity_ms),
+      source: typeof d.source === "string" ? d.source : "manual",
+    };
+    const key = `${snap.metric}|${snap.bucket_start_ms}`;
+    const cur = best.get(key);
+    const snapWins = !cur || snap.count > cur.count || (snap.count === cur.count && snap.source === "csv" && cur.source !== "csv");
+    if (snapWins) best.set(key, snap);
+  }
+  return [...best.values()].sort((a, b) => a.metric.localeCompare(b.metric) || a.bucket_start_ms - b.bucket_start_ms);
+}
+
+// POST /telemetry — ingest raw 1-min rows, bucketize to 5-min aggregates, append
+// each bucket idempotently. Merge outcome is storage-layer put-if-absent:
+//   inserted → written · 409 → skipped_duplicate · invalid rows → skipped_invalid.
+// actor_id (provenance) forced from session; device_id comes from the rows.
+// source="manual" (this is the direct/session ingest path — distinct from the
+// V3-OBS-32 CSV route and the Ed25519 collector path, see ingestTelemetryBuckets).
+sourceRoutes.post("/telemetry", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const rows = Array.isArray(body.rows) ? body.rows : [];
+  const buckets = bucketize(rows);
+  const validRowCount = buckets.reduce((n, b) => n + b.count, 0);
+
+  const st = store(c);
+  const { written, skipped_duplicate, invalid } = await ingestTelemetryBuckets(st, actorId, buckets, "manual");
+  if (invalid.length > 0) return c.json({ error: "INVALID_TELEMETRY", details: invalid }, 400);
+  return c.json({ written, skipped_duplicate, skipped_invalid: rows.length - validRowCount }, 202);
 });
