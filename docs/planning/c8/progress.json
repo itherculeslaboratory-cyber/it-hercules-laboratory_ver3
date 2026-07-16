@@ -698,10 +698,12 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "e61f50b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "individual master を Truth正本(truth/ihl.ind.master.v1/{id}.json)に保存。apps/api/src/individual-routes.ts createIndividualMaster()+POST /individuals(コメントでIND-02明示)。UIDは幼虫〜蛹〜成虫〜標本まで一貫(life-eventsが同一individual_idを串刺し)、画像/数値/環境ログはsubject_ref=individual/{id}で紐付け。割り出し前幼虫の匿名count層はV3-IND-36(clutch)側で別途実装済み(第16回裁定Q-REQ-02の但し書きどおり)。TC: tests/individual.test.ts describe(\"IND-02 master(成長データ枠なし)+ subject_ref 解決\")+tests/clutch.test.ts describe(\"V3-IND-02 但し書き — アドレス(individual層のUID)は昇格(promote)時にしか発生しない\")。"
   },
   {
     "id": "V3-IND-04",
@@ -711,10 +713,12 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "e61f50b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "改名/brand_templateはUPDATEせずINSERT ONLYで実装。apps/api/src/individual-routes.ts POST /individuals/{id}/name(name_event追記・created_at指定で当時名を後日追加可)+GET /individuals/{id}/name?at=(projectNameが時点指定で「当時名」を再現)+POST /brand-templates(active=falseは論理削除=新レコード追記)。TC: tests/individual.test.ts describe(\"IND-04 改名(projectName・当時名再現)\")—同一created_atの複数改名はULID tie-breakで決定論的に1つへ定まるテスト含む、brand_template active=false後も過去name_eventが再現できるテスト。"
   },
   {
     "id": "V3-IND-08",
@@ -737,10 +741,12 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "e61f50b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "血統(Cross)画面の率カード計算を実装。apps/api/src/individual-routes.ts projectCross(): weight_by_instar(first/second/third_early/third_late)+size_extremes(max_weight/max_length/min_length)+rates(mortality/survival/completion/eclosion_failure/hatch_rate/sex_ratio)。GET /individuals/{id}/cross?metric=で同一コンポーネントが1枚だけ差し替え可能、ホームレベルの/cross route は存在しない(個体経由必須の設計どおり)。TC: tests/individual.test.ts describe(\"IND-12 交配結果(projectCross・決定論)\")。未実装: 率カードから詳細一覧へのドリルダウンrouteは無し(GET /individualsの?statusフィルタでは cohort/親単位の絞り込みができない)、color_reproducibility は色解析待ちでnull固定(コード内コメントで明示的に後波へ defer)。"
   },
   {
     "id": "V3-IND-13",
@@ -750,10 +756,12 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "e61f50b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "個体詳細(A2)6文化集約の投影を実装。apps/api/src/individual-routes.ts projectIndividual()+GET /individuals/{id}: master/name/timeline(life-events時系列)/observations/schedules/templates/data_sources を1レスポンスに集約。TC: tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")—6ブロック全キー+timeline sort順を検証。未実装: market_offers/improvementsはコード内コメントで明示的に空配列固定(\"mkt-listing has no individual ref yet\" \"fork/improvement lineage is a later 波\")—マーケット/改善文化は未接続、所有者履歴・環境時系列の統合も未確認。"
   },
   {
     "id": "V3-IND-15",
@@ -763,10 +771,12 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "e61f50b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "生体カード基本部+QR一括発行を実装。apps/api/src/individual-routes.ts projectBioCard()+GET /individuals/{id}/bio-card(種・最新サイズ・QR URL)+POST /individuals/qr-batch(count∈{100,500,1000}のみ受理・連番URL自動生成)。TC: tests/individual.test.ts describe(\"IND-15 名刺(bio-card / qr-batch)\")。未実装: 印刷用テンプレートのfork/外部素材取込/UIビルダー編集、A-one・コクヨ名刺用紙型番(91×55mm)への等倍印刷対応、QR印刷A4シート3パターン(QRのみ/QR+識別情報/QR+情報+名刺切り込み)は route 側コメントで明示的に対象外(\"Physical print alignment...is a human gate (§5), not this route\")。"
   },
   {
     "id": "V3-IND-20",
@@ -1267,10 +1277,12 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "e61f50b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "value_origin(9値凍結enum: direct_observed/image_derived/environment_derived/lineage_derived/estimated/imputed/aggregate/model_inference/unknown)を必須化。apps/api/src/observation-constants.ts CONFIDENCE_ORDER+apps/api/src/observation-routes.ts VALUE_ORIGINS/measurementValueOriginError+POST /observation/measurements で value_origin 欠落は400 MEASUREMENT_VALUE_ORIGIN_REQUIRED、不正値は400 INVALID_VALUE_ORIGIN。TC: tests/observation-ext.test.ts describe(\"OBS-06 appendMeasurement value_origin gate\")。"
   },
   {
     "id": "V3-OBS-07",
@@ -1280,10 +1292,12 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "e61f50b"
+    ],
     "tc": [],
-    "note": ""
+    "note": "信頼度モデル(自動取得>手入力>後日編集)+◎/○/△視覚文化を実装。apps/api/src/tag-routes.ts confidenceGrade()(コメントでOBS-07明示): CONFIDENCE_ORDERで9値enum全域を◎/○/△に総写像、is_manual_edit=trueは起源に関わらず最下位△(後日編集)。TC: tests/tags.test.ts describe(\"OBS-07 confidenceGrade (value_origin -> grade, 自動>手入力>後日編集)\")—ランク順序/is_manual_edit最下位/9値enum全域totalityの3テスト。未実装:「再測定タグ」(テンプレ/AI/技術向上後の再測定に付与する専用タグ)はコード内に該当箇所なし(grep該当0件) — 再測定の識別自体は未着手。"
   },
   {
     "id": "V3-OBS-08",
@@ -2935,10 +2949,12 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "best-effort",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "65d7a00"
+    ],
     "tc": [],
-    "note": ""
+    "note": "個体一覧(A1)の多軸フィルタ/ソートを実装。apps/api/src/individual-routes.ts GET /individuals: ?species=/?stage=/?status=(deriveLifeStatusで生体/蛹/幼虫/死亡/標本の5値判定)+?sort=/?order=(LIST_SORT_FIELDSホワイトリスト=last_capture_at/capture_count/latest_length_mm/latest_weight_g/next_observation_at、未知値は既定individual_id昇順にフォールバック)。TC: tests/individual.test.ts describe(\"V3-IND-14 個体一覧A1: species/stage/status フィルタ + sort/order\")。残課題: 棚移動・瓶交換等の一括操作/morph・テンプレート・棚・スケジュール状態フィルタは対象外(コード内注記)。"
   },
   {
     "id": "V3-IND-16",
@@ -4299,10 +4315,12 @@
     "tier": "S",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "65d7a00"
+    ],
     "tc": [],
-    "note": ""
+    "note": "クラッチ attrition 照合(水増し/行方不明検出)を実装。apps/api/src/clutch-routes.ts: projectClutchReconciliation(current_count投影+recount discrepancy集計+has_shortfall/has_surplus)+ GET /clutches/{id}/reconciliation。writeClutchEvent の recount 分岐で expected_before/discrepancy を書込時に確定。TC: tests/clutch.test.ts describe(\"clutch attrition 照合 — 水増し/行方不明検出 (V3-IND-36)\")。"
   },
   {
     "id": "V3-OBS-73",
@@ -4312,10 +4330,12 @@
     "tier": "C",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "65d7a00"
+    ],
     "tc": [],
-    "note": ""
+    "note": "データエクスポート二層は実装済み: apps/api/src/individual-routes.ts GET /export/facts.csv(事実CSV・バイナリ非含有)+ GET /export/photos.csv(写真参照メタのみ・media_key/sha256、バイナリ本体は含まない)。TC: tests/individual.test.ts describe(\"V3-OBS-73 データエクスポート二層(facts.csv / photos.csv)\")。未了: 要件statementのCRフロー(grillingで確定した事項を要件へ環流させる運用プロセス)はドキュメント作業フローでありデータ実装のスコープ外——コード側コメントで明示的に対象外と宣言(誇張ゼロ)。プロセス整備自体は未着手のため in_progress のまま。"
   },
   {
     "id": "V3-SEC-57",

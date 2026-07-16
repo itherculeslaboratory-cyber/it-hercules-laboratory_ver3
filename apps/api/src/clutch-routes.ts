@@ -82,6 +82,56 @@ export async function projectClutchCurrentCount(s: TruthStore, clutchId: string)
   return count;
 }
 
+/**
+ * V3-IND-36 attrition 照合ビュー: count層の減少(recount/attrition)と
+ * individual層の増加(promote)を突合し、水増し(discrepancy>0)・行方不明
+ * (discrepancy<0)を検出する。各 recount イベントが書込時点で計算済みの
+ * expected_before/discrepancy をそのまま集約するだけ(都度再計算・不変条項①・
+ * 常駐カウンタなし)。
+ */
+export async function projectClutchReconciliation(
+  s: TruthStore,
+  clutchId: string,
+): Promise<Record<string, unknown> | null> {
+  const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
+  if (!clutch) return null;
+  const cd = dataOf(clutch);
+  const events = (await s.listEvents(`truth/${CLUTCH_EVENT_TYPE}/${clutchId}-`))
+    .map(dataOf)
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)) || String(a.event_id).localeCompare(String(b.event_id)));
+
+  let totalPromoted = 0;
+  let totalAttritionDeath = 0;
+  const recountDiscrepancies: Record<string, unknown>[] = [];
+  for (const e of events) {
+    if (e.kind === "attrition") totalAttritionDeath += Number(e.death_count ?? 0);
+    if (e.kind === "promote") {
+      totalPromoted += Array.isArray(e.promoted_individual_ids) ? e.promoted_individual_ids.length : 0;
+      totalAttritionDeath += Number(e.death_count ?? 0);
+    }
+    if (e.kind === "recount" && typeof e.discrepancy === "number") {
+      recountDiscrepancies.push({
+        event_id: e.event_id,
+        at: e.at,
+        counted: e.counted,
+        expected_before: e.expected_before,
+        discrepancy: e.discrepancy,
+      });
+    }
+  }
+
+  return {
+    clutch_id: clutchId,
+    initial_count: cd.initial_count,
+    current_count: await projectClutchCurrentCount(s, clutchId),
+    total_promoted: totalPromoted,
+    total_attrition_death: totalAttritionDeath,
+    recount_discrepancies: recountDiscrepancies,
+    has_shortfall: recountDiscrepancies.some((r) => Number(r.discrepancy) < 0), // 行方不明疑い
+    has_surplus: recountDiscrepancies.some((r) => Number(r.discrepancy) > 0), // 水増し疑い
+  };
+}
+
 async function clutchView(s: TruthStore, clutchId: string): Promise<Record<string, unknown> | null> {
   const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
   if (!clutch) return null;
@@ -160,6 +210,14 @@ clutchRoutes.get("/clutches/:id", async (c) => {
   return c.json(view);
 });
 
+// GET /clutches/{id}/reconciliation — count層⇔individual層の attrition 照合
+// (水増し/行方不明検出・V3-IND-36)。
+clutchRoutes.get("/clutches/:id/reconciliation", async (c) => {
+  const view = await projectClutchReconciliation(store(c), c.req.param("id"));
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json(view);
+});
+
 // Shared clutch-event append (recount/attrition), reused by
 // POST /clutches/:id/events AND batch-commit kind:"clutch-event"
 // (コピペ二重化しない — F4 行メニュー「匹数を照合」も一括保存も同じ経路)。
@@ -168,7 +226,9 @@ export async function writeClutchEvent(
   actorId: string,
   clutchId: string,
   body: Record<string, unknown>,
-): Promise<{ ok: true; event_id: string } | { ok: false; error: string; details?: string[] }> {
+): Promise<
+  { ok: true; event_id: string; discrepancy?: number } | { ok: false; error: string; details?: string[] }
+> {
   const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
   if (!clutch) return { ok: false, error: "NOT_FOUND" };
 
@@ -176,10 +236,15 @@ export async function writeClutchEvent(
   if (kind !== "recount" && kind !== "attrition") {
     return { ok: false, error: "INVALID_KIND" }; // promote has its own dedicated route
   }
+  let expectedBefore: number | null = null;
   if (kind === "recount") {
     if (typeof body.counted !== "number" || !Number.isInteger(body.counted) || body.counted < 0) {
       return { ok: false, error: "INVALID_COUNTED" };
     }
+    // V3-IND-36 attrition 照合: この recount 適用前の投影値と counted を突合し、
+    // 差分を記録する(正=水増し疑い/負=行方不明疑い)。検出のみ・書込はブロックしない
+    // (現場の recount は基点を自由にリセットできる運用のまま — F4)。
+    expectedBefore = await projectClutchCurrentCount(s, clutchId);
   }
   if (kind === "attrition") {
     if (typeof body.death_count !== "number" || !Number.isInteger(body.death_count) || body.death_count < 0) {
@@ -199,7 +264,13 @@ export async function writeClutchEvent(
     actor_id: actorId,
     created_at: nowIso(),
   };
-  if (kind === "recount") data.counted = body.counted;
+  if (kind === "recount") {
+    data.counted = body.counted;
+    if (expectedBefore !== null) {
+      data.expected_before = expectedBefore;
+      data.discrepancy = Number(body.counted) - expectedBefore; // body.counted already validated as an integer above
+    }
+  }
   if (kind === "attrition") data.death_count = body.death_count;
   if (typeof body.note === "string") data.note = body.note;
 
@@ -209,7 +280,9 @@ export async function writeClutchEvent(
   );
   if (res.status === "invalid") return { ok: false, error: "INVALID_CLUTCH_EVENT", details: res.errors };
   if (res.status === "conflict") return { ok: false, error: "DUPLICATE_CLUTCH_EVENT" };
-  return { ok: true, event_id: eventId };
+  return typeof data.discrepancy === "number"
+    ? { ok: true, event_id: eventId, discrepancy: data.discrepancy }
+    : { ok: true, event_id: eventId };
 }
 
 // POST /clutches/{id}/events — recount(匹数照合) / attrition(減耗照合)。
@@ -222,7 +295,10 @@ clutchRoutes.post("/clutches/:id/events", async (c) => {
     const status = r.error === "NOT_FOUND" ? 404 : r.error === "DUPLICATE_CLUTCH_EVENT" ? 409 : 400;
     return c.json({ error: r.error, details: r.details }, status);
   }
-  return c.json({ event_id: r.event_id, clutch_id: clutchId, kind: body.kind }, 201);
+  return c.json(
+    { event_id: r.event_id, clutch_id: clutchId, kind: body.kind, ...(r.discrepancy !== undefined ? { discrepancy: r.discrepancy } : {}) },
+    201,
+  );
 });
 
 // POST /clutches/{id}/promote — 個別容器へ分割(昇格): count 体の個体を

@@ -634,6 +634,34 @@ function representativeMeasurement(data: Record<string, unknown>): string | null
   return pick ? `${pick.value}${pick.unit ?? ""}` : null;
 }
 
+// V3-IND-14 一覧フィルタ軸「状態(生体/蛹/幼虫/死亡/標本)」の5値判定。優先度:
+// 直近の終端 life-event(death/survival_correction/specimen・at 昇順末尾)が
+// specimen なら standing の死活を問わず標本、death なら死亡。survival_correction
+// が最新なら死亡訂正済み=生存側へ戻り、蛹(直近 molt.detail.to_stage==="pupa")
+// →生体(eclosion 済み=成虫)→幼虫(既定)の順で判定する。
+function deriveLifeStatus(
+  terminals: Record<string, unknown>[],
+  stage: string | null,
+  hasEclosion: boolean,
+): "alive" | "pupa" | "larva" | "dead" | "specimen" {
+  const last = terminals.slice().sort((a, b) => String(a.at).localeCompare(String(b.at))).pop();
+  if (last?.kind === "specimen") return "specimen";
+  if (last?.kind === "death") return "dead";
+  if (stage === "pupa") return "pupa";
+  if (hasEclosion) return "alive";
+  return "larva";
+}
+
+// V3-IND-14 ソート軸ホワイトリスト(最新観測/観測数/体長/体重/次の予定)。未知の
+// sort 値は既定(individual_id 昇順)へフォールバックする(決定論を崩さない)。
+const LIST_SORT_FIELDS = new Set([
+  "last_capture_at",
+  "capture_count",
+  "latest_length_mm",
+  "latest_weight_g",
+  "next_observation_at",
+]);
+
 // GET /individuals?q= — 本人の個体一覧/検索(V3-AIP-101 観測登録スライス1 F1).
 // q が local_label_text/name/species の部分一致(大小無視)に当たる個体のみ返す。
 // q なしは本人の全件。label は local_label_text→name→id の優先で埋める。
@@ -650,11 +678,22 @@ function representativeMeasurement(data: Record<string, unknown>): string | null
 // (PHOTO_TYPE の 4 本目の全件スキャンを追加・capture_id→先頭 photo_id の
 // マップを作り、個体の caps を新しい方から辿って最初にヒットした capture の
 // サムネ URL を返す)。
-// ponytail: O(n) full master + capture/life-event/occupancy/photo scan(1回
-// ずつ、計4本), per-actor/individual index は在庫が伸びたら昇格(既存
+// A1 一覧フィルタ拡張(V3-IND-14・obs-search の決定論梯子=画像類似検索とは別軸の
+// 構造化フィルタ): ?species=/?stage=/?status= は完全一致(大小無視は species の
+// み・stage/status はコード値の exact match)、?sort=/?order= は
+// LIST_SORT_FIELDS のみ許可し既定は individual_id 昇順のまま。棚移動・瓶交換等の
+// 一括操作/形態(morph)・テンプレート・棚・スケジュール状態フィルタは対象外
+// (V3-IND-14 残課題・morph は個体未連携=projectBioCard 既存注記と同じ理由)。
+// ponytail: O(n) full master + capture/life-event/occupancy/photo/schedule
+// scan(1回ずつ、計5本), per-actor/individual index は在庫が伸びたら昇格(既存
 // /observation/search 前例と同じ縮退)。
 individualRoutes.get("/individuals", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
+  const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
+  const stageFilter = c.req.query("stage") ?? "";
+  const statusFilter = c.req.query("status") ?? "";
+  const sortKey = c.req.query("sort") ?? "";
+  const sortOrder = c.req.query("order") === "asc" ? 1 : -1; // 既定 desc(新しい/多い/大きい順)
   const actorId = c.get("actorId");
   const s = store(c);
   const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
@@ -672,6 +711,9 @@ individualRoutes.get("/individuals", async (c) => {
   }
   const moltsByIndividual = new Map<string, Record<string, unknown>[]>();
   const eclosionsByIndividual = new Map<string, Record<string, unknown>[]>();
+  // V3-IND-14 状態フィルタ用: death/survival_correction/specimen(deriveLifeStatus
+  // の入力)。既存の molt/eclosion ループへ1分岐追加するだけで新規スキャンなし。
+  const terminalsByIndividual = new Map<string, Record<string, unknown>[]>();
   for (const e of await s.listEvents(`truth/${LIFE_TYPE}/`)) {
     const d = dataOf(e);
     const id = String(d.individual_id ?? "");
@@ -679,6 +721,8 @@ individualRoutes.get("/individuals", async (c) => {
     if (d.kind === "molt") (moltsByIndividual.get(id) ?? moltsByIndividual.set(id, []).get(id)!).push(d);
     else if (d.kind === "eclosion")
       (eclosionsByIndividual.get(id) ?? eclosionsByIndividual.set(id, []).get(id)!).push(d);
+    else if (d.kind === "death" || d.kind === "survival_correction" || d.kind === "specimen")
+      (terminalsByIndividual.get(id) ?? terminalsByIndividual.set(id, []).get(id)!).push(d);
   }
   // 検索スライスA: capture_id → 先頭 photo_id(1個体1capture分あれば十分・
   // サムネは最新観測の代表1枚)。既存3本の全件スキャンと同じ O(n) スタイル。
@@ -689,6 +733,15 @@ individualRoutes.get("/individuals", async (c) => {
     const photoId = String(d.photo_id ?? "");
     if (!capId || !photoId || firstPhotoByCapture.has(capId)) continue;
     firstPhotoByCapture.set(capId, photoId);
+  }
+  // V3-IND-14 ソート軸「次の予定」: schedule 単位で最新(created_at 最大)の
+  // next_observation_at を採用(individual-detail profile と同じ規約)。
+  const scheduleByIndividual = new Map<string, Record<string, unknown>[]>();
+  for (const e of await s.listEvents(`truth/${SCHEDULE_TYPE}/`)) {
+    const d = dataOf(e);
+    const id = String(d.individual_id ?? "");
+    if (!id) continue;
+    (scheduleByIndividual.get(id) ?? scheduleByIndividual.set(id, []).get(id)!).push(d);
   }
   const placementByIndividual = new Map<string, Record<string, unknown>[]>();
   for (const e of await s.listEvents(`truth/${OCCUPANCY_TYPE}/`)) {
@@ -725,6 +778,17 @@ individualRoutes.get("/individuals", async (c) => {
       .slice()
       .sort((a, b) => String(a.at).localeCompare(String(b.at)));
     const latestEclosion = eclosions[eclosions.length - 1];
+    const lifeStatus = deriveLifeStatus(terminalsByIndividual.get(id) ?? [], stage, eclosions.length > 0);
+    const schedules = (scheduleByIndividual.get(id) ?? [])
+      .slice()
+      .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+    const latestSchedule = schedules[schedules.length - 1];
+    const nextObservationAt = latestSchedule ? String(latestSchedule.next_observation_at ?? "") || null : null;
+    // V3-IND-14 多軸フィルタ: species/stage/status は完全一致(species は大小
+    // 無視・q の部分一致キーワード検索とは別軸)。
+    if (speciesFilter && species.toLowerCase() !== speciesFilter) continue;
+    if (stageFilter && stage !== stageFilter) continue;
+    if (statusFilter && lifeStatus !== statusFilter) continue;
     // 最新観測から遡って最初に写真がある capture のサムネ URL(無ければ null)。
     let thumbnailPath: string | null = null;
     for (let i = caps.length - 1; i >= 0; i--) {
@@ -750,9 +814,24 @@ individualRoutes.get("/individuals", async (c) => {
       capture_count: caps.length,
       eclosion_at: latestEclosion ? String(latestEclosion.at ?? "") || null : null,
       thumbnail_path: thumbnailPath,
+      life_status: lifeStatus,
+      next_observation_at: nextObservationAt,
     });
   }
-  individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
+  if (LIST_SORT_FIELDS.has(sortKey)) {
+    individuals.sort((a, b) => {
+      const av = a[sortKey] as number | string | null;
+      const bv = b[sortKey] as number | string | null;
+      if (av === null || bv === null) {
+        if (av === bv) return String(a.individual_id).localeCompare(String(b.individual_id));
+        return av === null ? 1 : -1; // null は方向によらず末尾
+      }
+      if (av === bv) return String(a.individual_id).localeCompare(String(b.individual_id));
+      return av < bv ? -sortOrder : sortOrder;
+    });
+  } else {
+    individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
+  }
   return c.json({ individuals });
 });
 
@@ -852,6 +931,91 @@ individualRoutes.get("/individuals/:id/bio-card", async (c) => {
   const card = await projectBioCard(store(c), c.req.param("id"));
   if (!card) return c.json({ error: "NOT_FOUND" }, 404);
   return c.json(card);
+});
+
+// ── V3-OBS-73 データエクスポート二層 ─────────────────────────────────────────
+// 「事実CSV/画像分離」の二層: facts.csv=個体の構造化事実(バイナリを含まない・
+// ロックイン回避で持ち出せる)/ photos.csv=写真の参照メタのみ(media_key・
+// sha256・バイナリ本体は含めない=CSV自体を軽量に保つ・実体は既存
+// GET /observation/{captureId}/thumbnail/{photoId} から個別に取得)。
+// grillingで確定した事項を要件へ環流させるCRフローは要件プロセス側の運用機構
+// であり(データではなくドキュメント作業フロー)本ルートのスコープ外
+// (誇張ゼロ: 未着手をここに書かない)。
+function csvEscape(v: string | number | null): string {
+  const s = v === null ? "" : String(v);
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function toCsv(header: string[], rows: (string | number | null)[][]): string {
+  return [header, ...rows].map((r) => r.map(csvEscape).join(",")).join("\r\n") + "\r\n";
+}
+function csvResponse(csv: string): Response {
+  return new Response(csv, { headers: { "content-type": "text/csv; charset=utf-8" } });
+}
+
+// GET /export/facts.csv — 本人個体の構造化事実(画像バイナリ非含有・V3-OBS-73)。
+individualRoutes.get("/export/facts.csv", async (c) => {
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`)).map(dataOf).filter((m) => m.actor_id === actorId);
+  const rows: (string | number | null)[][] = [];
+  for (const m of masters) {
+    const id = String(m.individual_id ?? "");
+    if (!id) continue;
+    rows.push([
+      id,
+      typeof m.local_label_text === "string" ? m.local_label_text : "",
+      typeof m.species === "string" ? m.species : "",
+      await projectName(s, id),
+      typeof m.birth_or_hatch_date === "string" ? m.birth_or_hatch_date : "",
+      typeof m.source_type === "string" ? m.source_type : "",
+      typeof m.created_at === "string" ? m.created_at : "",
+    ]);
+  }
+  rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  return csvResponse(
+    toCsv(["individual_id", "label", "species", "name", "birth_or_hatch_date", "source_type", "created_at"], rows),
+  );
+});
+
+// GET /export/photos.csv — 本人個体の写真参照のみ(バイナリ本体は含まない・
+// 画像分離層・V3-OBS-73)。
+individualRoutes.get("/export/photos.csv", async (c) => {
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const myIds = new Set(
+    (await s.listEvents(`truth/${MASTER_TYPE}/`))
+      .map(dataOf)
+      .filter((m) => m.actor_id === actorId)
+      .map((m) => String(m.individual_id ?? "")),
+  );
+  const capById = new Map<string, Record<string, unknown>>();
+  for (const e of await s.listEvents(`truth/${CAPTURE_TYPE}/`)) {
+    const d = dataOf(e);
+    const ref = typeof d.subject_ref === "string" ? d.subject_ref : "";
+    if (!ref.startsWith("individual/") || !myIds.has(ref.slice("individual/".length))) continue;
+    capById.set(String(d.capture_id ?? ""), d);
+  }
+  const rows: (string | number | null)[][] = [];
+  for (const e of await s.listEvents(`truth/${PHOTO_TYPE}/`)) {
+    const d = dataOf(e);
+    const capId = String(d.capture_id ?? "");
+    const cap = capById.get(capId);
+    if (!cap) continue; // 本人個体の capture に紐づく写真のみ(本人スコープ)
+    const ref = typeof cap.subject_ref === "string" ? cap.subject_ref : "";
+    rows.push([
+      String(d.photo_id ?? ""),
+      capId,
+      ref.startsWith("individual/") ? ref.slice("individual/".length) : "",
+      typeof d.media_key === "string" ? d.media_key : "",
+      typeof d.content_type === "string" ? d.content_type : "",
+      typeof d.size_bytes === "number" ? d.size_bytes : null,
+      typeof d.sha256 === "string" ? d.sha256 : "",
+    ]);
+  }
+  rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  return csvResponse(
+    toCsv(["photo_id", "capture_id", "individual_id", "media_key", "content_type", "size_bytes", "sha256"], rows),
+  );
 });
 
 // POST /individuals/qr-batch — issue a run of blank QR labels as URLs (IND-15).

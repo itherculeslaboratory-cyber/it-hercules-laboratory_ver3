@@ -10,15 +10,15 @@
 
 ## サマリー
 
-- 全体: ░░░░░░░░░░░░░░░░░░░░ 2%（8/333）
-- 第1波必達(required): █░░░░░░░░░░░░░░░░░░░ 3%（6/183）
-- 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 1%（2/150）
+- 全体: █░░░░░░░░░░░░░░░░░░░ 4%（13/333）
+- 第1波必達(required): █░░░░░░░░░░░░░░░░░░░ 5%（10/183）
+- 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 321 |
-| 着手中(in_progress) | 4 |
-| 完了(done) | 8 |
+| 未着手(todo) | 311 |
+| 着手中(in_progress) | 9 |
+| 完了(done) | 13 |
 | 検証済(verified) | 0 |
 
 ## lane 別内訳
@@ -31,7 +31,7 @@
 | L4 | ░░░░░░░░░░░░░░░░░░░░ 0%（0/51） |
 | L4-gov | █░░░░░░░░░░░░░░░░░░░ 3%（1/35） |
 | L4-knowledge | ░░░░░░░░░░░░░░░░░░░░ 0%（0/54） |
-| L4-obs | ░░░░░░░░░░░░░░░░░░░░ 2%（1/65） |
+| L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/65） |
 | L6-ui | ░░░░░░░░░░░░░░░░░░░░ 0%（0/39） |
 
 ## lane 別明細
@@ -299,19 +299,19 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-IND-02 | individual masterの保存先をIHL R2のindividualテ… | required | todo | — |
-| V3-IND-04 | 個体名のリネーム/改名・昇格・テンプレ更新はUPDATEせずname_event… | required | todo | — |
+| V3-IND-02 | individual masterの保存先をIHL R2のindividualテ… | required | done | e61f50b |
+| V3-IND-04 | 個体名のリネーム/改名・昇格・テンプレ更新はUPDATEせずname_event… | required | done | e61f50b |
 | V3-IND-08 | マチアプの数式エンジンは計算量O(nタグ数)・GPU不要・深層学習/ブラックボッ… | required | todo | — |
-| V3-IND-12 | 血統(Cross)画面は非常に重要な機能として、齢別平均体重(初令/二令/三令初… | required | todo | — |
-| V3-IND-13 | 個体詳細(A2)を「個体のホーム画面」とし、観測(最新観測・履歴・成長曲線グラフ… | required | todo | — |
-| V3-IND-15 | 生体カード(種・形態・サイズ・特徴・QRコード)を生成し、印刷用テンプレートをf… | required | todo | — |
+| V3-IND-12 | 血統(Cross)画面は非常に重要な機能として、齢別平均体重(初令/二令/三令初… | required | in_progress | e61f50b |
+| V3-IND-13 | 個体詳細(A2)を「個体のホーム画面」とし、観測(最新観測・履歴・成長曲線グラフ… | required | in_progress | e61f50b |
+| V3-IND-15 | 生体カード(種・形態・サイズ・特徴・QRコード)を生成し、印刷用テンプレートをf… | required | in_progress | e61f50b |
 | V3-IND-20 | スケジュール(飼育タスク)ノードを個体・観測テンプレに紐付け、AIが種族・成長ス… | required | todo | — |
 | V3-IND-34 | 血統管理は複数系統(A:体格重視、C:色重視等)を並行してインライン累代させ、理… | required | todo | — |
 | V3-IND-35 | 割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ… | required | done | b5fd006 |
-| V3-IND-36 | 割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl… | required | todo | — |
+| V3-IND-36 | 割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl… | required | done | 65d7a00 |
 | V3-OBS-02 | 観測対象ナビゲータはテキストのみ(画像・サムネイル非表示)で、学名検索・アキネー… | required | todo | — |
-| V3-OBS-06 | 全ての計測・特徴値にvalue_origin(direct_observed/i… | required | todo | — |
-| V3-OBS-07 | 観測の信頼度モデルを設け、自動取得>手入力>後日編集の順で信頼度を明示スコア化し… | required | todo | — |
+| V3-OBS-06 | 全ての計測・特徴値にvalue_origin(direct_observed/i… | required | done | e61f50b |
+| V3-OBS-07 | 観測の信頼度モデルを設け、自動取得>手入力>後日編集の順で信頼度を明示スコア化し… | required | in_progress | e61f50b |
 | V3-OBS-08 | 観測パイプラインはITO構造(IN:写真・env・metadata → Tran… | required | todo | — |
 | V3-OBS-09 | 画像埋め込みはEmbeddingBackend Protocolで一本化し、本番… | required | todo | — |
 | V3-OBS-11 | 類似検索の最終rerankスコアはembedding+color+size+li… | required | todo | — |
@@ -336,13 +336,13 @@
 | V3-OBS-61 | 観測入力を自然言語のフリーテキスト欄1つ+「解析する」ボタンで受け付け、日付・個… | required | todo | — |
 | V3-OBS-62 | 観測フローを固定順で定義する: userId/auth→種族確定(taxonom… | required | todo | — |
 | V3-OBS-72 | 研究室環境コンテキストの紐付け: 部屋・棚の配置、エアコン等の空調環境、センサー… | required | todo | — |
-| V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | todo | — |
+| V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | in_progress | 65d7a00 |
 | V3-IND-03 | 観測登録時に個体をindividual_id+display_nameで扱い、ユ… | best-effort | todo | — |
 | V3-IND-05 | 血統(親子)表示で最良個体のみ次世代シリーズ名(例「玉」→「王」)へ昇格させる仕… | best-effort | todo | — |
 | V3-IND-06 | 親表示はハイブリッド(Q7 C): truthはADR-H-11のparent_… | best-effort | todo | — |
 | V3-IND-09 | マチアプに、価値観の精度を上げるPairwise比較画面(記載済み②)の前段とし… | best-effort | todo | — |
 | V3-IND-11 | 色などの見た目を画像解析しユーザーの好みを統計学習して「理想個体に近づくにはどの… | best-effort | todo | — |
-| V3-IND-14 | 個体一覧(A1)はキーワード・種族・形態・状態(生体/蛹/幼虫/死亡/標本)・テ… | best-effort | todo | — |
+| V3-IND-14 | 個体一覧(A1)はキーワード・種族・形態・状態(生体/蛹/幼虫/死亡/標本)・テ… | best-effort | done | 65d7a00 |
 | V3-IND-16 | 生体の一生をイベントログ(bio.created/moved/scheduled… | best-effort | todo | — |
 | V3-IND-23 | 研究プロジェクト(projectId/P100)を中心に論文・個体・マット・製造… | best-effort | todo | — |
 | V3-IND-26 | 成体の成長を追う4D Viewerは3D(体重X/体長Y/成長速度Z)+時間(s… | best-effort | todo | — |

@@ -5,7 +5,7 @@
 // regenerate: node scripts/codegen-schemas.mjs
 
 /**
- * クラッチ append-only イベント ihl.ind.clutch_event.v1 の data 部（匹数照合・減耗照合・昇格）。Truth キー truth/ihl.ind.clutch_event.v1/<clutch_id>-<event_id>.json。current_count は clutch.initial_count → 最新 recount を基点に、以降の attrition/promote の death_count を差し引いて都度再計算する（常駐カウンタなし・不変条項①）。
+ * クラッチ append-only イベント ihl.ind.clutch_event.v1 の data 部（匹数照合・減耗照合・昇格）。Truth キー truth/ihl.ind.clutch_event.v1/<clutch_id>-<event_id>.json。current_count は clutch.initial_count → 最新 recount を基点に、以降の attrition/promote の death_count を差し引いて都度再計算する（常駐カウンタなし・不変条項①）。recount の expected_before/discrepancy は count層とindividual層のattrition照合で水増し・行方不明を検出する（V3-IND-36）。
  */
 export interface IndClutchEvent {
   /**
@@ -32,6 +32,14 @@ export interface IndClutchEvent {
    * attrition/promote 時の死亡照合数（current_count から差し引く）。
    */
   death_count?: number;
+  /**
+   * recount 時、この recount 適用前の投影 current_count（直前の基点+以降の attrition/promote 差引済み・監査用）。kind=recount のみ設定。
+   */
+  expected_before?: number;
+  /**
+   * recount 時の counted − expected_before（V3-IND-36 attrition 照合の検出値）。正=水増し疑い（想定より多い）／負=行方不明疑い（想定より少ない・未記録の減耗）。kind=recount のみ設定。
+   */
+  discrepancy?: number;
   /**
    * promote 時に生成された individual_id の一覧。
    */

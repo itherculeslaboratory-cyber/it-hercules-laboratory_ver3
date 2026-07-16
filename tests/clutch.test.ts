@@ -102,6 +102,65 @@ describe("clutch create + current_count projection", () => {
   });
 });
 
+describe("clutch attrition 照合 — 水増し/行方不明検出 (V3-IND-36)", () => {
+  it("recount short of the projected count flags a negative discrepancy (行方不明疑い)", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { initial_count: 100 });
+    // 100 匹のはずが再計測で 92 匹しかいない → 8 匹分の行方不明疑い。
+    const res = await post(`/api/v1/clutches/${id}/events`, { kind: "recount", counted: 92, at: "2026-07-13T00:00:00Z" }, env);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { discrepancy: number };
+    expect(body.discrepancy).toBe(-8);
+
+    const rec = (await (await get(`/api/v1/clutches/${id}/reconciliation`, env)).json()) as {
+      recount_discrepancies: { counted: number; expected_before: number; discrepancy: number }[];
+      has_shortfall: boolean;
+      has_surplus: boolean;
+    };
+    expect(rec.recount_discrepancies).toHaveLength(1);
+    expect(rec.recount_discrepancies[0]).toMatchObject({ counted: 92, expected_before: 100, discrepancy: -8 });
+    expect(rec.has_shortfall).toBe(true);
+    expect(rec.has_surplus).toBe(false);
+  });
+
+  it("recount above the projected count flags a positive discrepancy (水増し疑い)", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { initial_count: 50 });
+    const res = await post(`/api/v1/clutches/${id}/events`, { kind: "recount", counted: 55, at: "2026-07-13T00:00:00Z" }, env);
+    const body = (await res.json()) as { discrepancy: number };
+    expect(body.discrepancy).toBe(5);
+
+    const rec = (await (await get(`/api/v1/clutches/${id}/reconciliation`, env)).json()) as {
+      has_shortfall: boolean;
+      has_surplus: boolean;
+    };
+    expect(rec.has_shortfall).toBe(false);
+    expect(rec.has_surplus).toBe(true);
+  });
+
+  it("reconciliation aggregates total_promoted/total_attrition_death across the full event history; unknown clutch -> 404", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { initial_count: 68 });
+    await post(`/api/v1/clutches/${id}/events`, { kind: "attrition", death_count: 3, at: "2026-07-13T00:00:00Z" }, env);
+    await post(`/api/v1/clutches/${id}/promote`, { count: 60, death_count: 5, at: "2026-08-01T00:00:00Z" }, env);
+
+    const rec = (await (await get(`/api/v1/clutches/${id}/reconciliation`, env)).json()) as {
+      total_promoted: number;
+      total_attrition_death: number;
+      current_count: number;
+      has_shortfall: boolean;
+      has_surplus: boolean;
+    };
+    expect(rec.total_promoted).toBe(60);
+    expect(rec.total_attrition_death).toBe(8); // 3 (attrition) + 5 (promote's own death_count)
+    expect(rec.current_count).toBe(0); // 68 - 3 - 60 - 5
+    expect(rec.has_shortfall).toBe(false); // no recount events -> no discrepancies at all
+    expect(rec.has_surplus).toBe(false);
+
+    expect((await get("/api/v1/clutches/nope/reconciliation", env)).status).toBe(404);
+  });
+});
+
 describe("clutch promote (個別容器へ分割 / 昇格)", () => {
   it("creates `count` individuals inheriting species/sire/dam/harvested_at, appends promote event, current_count drops by count+death_count", async () => {
     const { env } = ctx();
@@ -139,6 +198,20 @@ describe("clutch promote (個別容器へ分割 / 昇格)", () => {
     const body = (await res.json()) as { error: string; current_count: number };
     expect(body.error).toBe("PROMOTE_EXCEEDS_COUNT");
     expect(body.current_count).toBe(10);
+  });
+});
+
+describe("V3-IND-02 但し書き — アドレス(individual層のUID)は昇格(promote)時にしか発生しない", () => {
+  it("count層のまま(promote前)は個体マスタが1件も存在せず、promote後にちょうど count 件だけ現れる", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { initial_count: 20 });
+    const before = (await (await get("/api/v1/individuals", env)).json()) as { individuals: unknown[] };
+    expect(before.individuals).toHaveLength(0); // count層は匿名プールのまま — 個体UIDはまだ無い
+
+    const promote = await post(`/api/v1/clutches/${id}/promote`, { count: 3, at: "2026-08-01T00:00:00Z" }, env);
+    expect(promote.status).toBe(201);
+    const after = (await (await get("/api/v1/individuals", env)).json()) as { individuals: unknown[] };
+    expect(after.individuals).toHaveLength(3); // 個別容器分割の瞬間に生成されたぶんだけ
   });
 });
 
