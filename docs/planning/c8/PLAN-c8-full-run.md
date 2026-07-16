@@ -91,3 +91,4 @@ status: draft
 
 - コミット: 自律実行理由+参照 `plan-c8-full-run` を全コミットに付す。シークレット混入 grep を commit 前に実施。
 - 完了報告: ①☑/◐+成果物の具体パス ②確認アクション(開くファイル・押すボタン) ③残(人間ゲート分離)。TASK-LEDGER T-38 とメモリを更新。
+- 進捗追跡(C8ラン進捗追跡機構): 実装コミットは対応する `docs/planning/c8/progress.json` の該当エントリの `status`/`commits` を**同コミットで**更新し、`node scripts/render-c8-progress.mjs` を再実行して `progress.md` を再生成すること。乖離は `--check` で検出される。
