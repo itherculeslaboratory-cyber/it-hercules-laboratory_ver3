@@ -9,6 +9,7 @@ import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
 import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
+import { envImportRoutes } from "./env-import-routes";
 import { ledgerRoutes } from "./ledger-routes";
 import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
@@ -347,6 +348,13 @@ app.route("/api/v1", researchAgentBatchRoutes);
 // principal 強制・TruthStore put-if-absent(INSERT ONLY)。telemetry は 1 分行→5 分
 // バケット冪等マージ(written/skipped_duplicate/skipped_invalid)。
 app.route("/api/v1", sourceRoutes);
+
+// Environment CSV import (V3-OBS-32 / OQ-LB-02): POST /api/v1/obs/env-import
+// (汎用列マッピング・SwitchBotプリセット・200,000行/16MB上限・put-if-absent冪等)・
+// GET /api/v1/obs/telemetry/latest(read-back投影・同一論理bucketのsource-count最大
+// を採用)。All protected(PUBLIC_ROUTES 非登録)。既存 FND-18 telemetry bucket infra
+// (source-routes.ts)を bucketキーにsource segmentを足す形で再利用・別実装しない。
+app.route("/api/v1", envImportRoutes);
 
 // AI kernel A90 (design-k7 FND-21 / V3-FND-21 / route-matrix infra-route-066): POST
 // /ai/:task。protected。既定 AI_DISABLED(501・IHL_AI_PROVIDER 未設定=LLM OFF・不変
