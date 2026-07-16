@@ -18,6 +18,8 @@ export * from "./events/device-binding";
 export * from "./events/economy-contribution-event";
 export * from "./events/economy-pt-event";
 export * from "./events/envelope";
+export * from "./events/fee-invoice";
+export * from "./events/fee-settlement";
 export * from "./events/gmo-obligation";
 export * from "./events/gov-dispute";
 export * from "./events/gov-flag";

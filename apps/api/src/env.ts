@@ -14,12 +14,18 @@ export type Bindings = {
   // of registered collector public keys. The signature IS the credential
   // (design-c3 §3) — an unregistered collector_id is rejected 401.
   COLLECTOR_PUBLIC_KEYS?: string;
-  // GMO sunabar 照合(design-c4 §2). MODE=sunabar(既定・無料 sandbox)|live(人間
-  // ゲートまで throw). TOKEN1/ACCOUNT_ID は READ(入出金明細 poll)用。実値は env のみ。
+  // GMO sunabar 照合(design-c4 §2)。retired 2026-07-17 round-16(gmo-connector.ts 冒頭
+  // 参照)— route 非マウント後は接続層単体 TC 用に型だけ残置。MODE=sunabar(既定・無料
+  // sandbox)|live(人間ゲートまで throw). TOKEN1/ACCOUNT_ID は READ(入出金明細 poll)用。
   GMO_CONNECTOR_MODE?: string;
   GMO_SUNABAR_TOKEN1?: string;
   GMO_SUNABAR_API_BASE?: string;
   GMO_SUNABAR_ACCOUNT_ID?: string;
+  // PAY.JP 決済コネクタ(payjp-connector.ts / round-16 裁定・L-PAY)。MODE=test(既定・
+  // テストモード秘密鍵)|live(人間ゲートまで throw). 実値は env のみ(実鍵投入は人間ゲート)。
+  PAYJP_MODE?: string;
+  PAYJP_SECRET_KEY?: string;
+  PAYJP_API_BASE?: string;
   // 研究 LLM 助言モード(design-k5 §2.5). 既定 off=静的ヒントのみ. on は実 API キー
   // 必須で人間ゲート「実鍵投入」まで throw. 実値は env のみ(コミット禁止)。
   RESEARCH_LLM_MODE?: string;

@@ -12,7 +12,7 @@ import { collectorRoutes } from "./collector-routes";
 import { ledgerRoutes } from "./ledger-routes";
 import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
-import { gmoRoutes } from "./gmo-routes";
+import { feeRoutes } from "./fee-routes";
 import { marketRoutes } from "./market-routes";
 import { plazaRoutes } from "./plaza-routes";
 import { govRoutes } from "./gov-routes";
@@ -65,6 +65,13 @@ const PUBLIC_ROUTES = [
   // self-gated by X-Hub-Signature-256 HMAC — the signature IS the credential.
   // Forged/missing signature → 401 inside the route, so no session surface leaks.
   "/api/v1/github/webhook",
+  // PAY.JP webhook (L-PAY / round-16): public at the session layer. PAY.JP's
+  // webhook lacks a reliable HMAC signature (payjp-connector.ts header comment),
+  // so the self-gate is a re-query instead: the route trusts only the charge
+  // id from the body and re-fetches the charge via GET /v1/charges/:id with our
+  // own secret key before recording anything — a forged body alone matches
+  // nothing real.
+  "/api/v1/fees/payjp-webhook",
 ];
 
 // CORS (design-k7 FND-11 §1.5). credentials=true → `*` is forbidden; only an origin
@@ -193,10 +200,11 @@ app.route("/api/v1", contributionRoutes);
 // 価格 fib(stage)・PT 消費。全て保護・本人スコープ。
 app.route("/api/v1", shopRoutes);
 
-// GMO sunabar 照合 (design-c4 §2 / CL-11): GET /gmo/transfer-code・
-// POST /gmo/expected-payment・GET /gmo/reconciliation/meta。全て本人スコープ・保護。
-// 照合ジョブ reconcileOnce はサーバ内関数(Cron 配線は C5)。
-app.route("/api/v1", gmoRoutes);
+// L-PAY 5%システム維持費のゆるい請求フロー (round-16 裁定 / V3-MKT-10): POST /fees/
+// {obligation_id}/invoice(本人スコープ・保護)・POST /fees/payjp-webhook(PUBLIC・自己ゲート
+// = charge id 再照会)・GET /me/fees(本人スコープ・保護・未払い投影)。GMO route は retired
+// (gmo-routes.ts 冒頭コメント参照・義務台帳イベント型はそのまま継承)。
+app.route("/api/v1", feeRoutes);
 
 // Market skeleton (design-c4 §3 / V3-MKT-01): POST /market/listings(出品)・
 // GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
