@@ -7,6 +7,7 @@
 "01-requirements/srs.md","4009757904",""
 "02-design/adr/adr-v3-emb-01-embedding-dimension.md","78bdadd05e",""
 "02-design/adr/adr-v3-layer-01-truth-projection.md","aaa7c64811",""
+"02-design/adr/adr-v3-wasm-01-script-driver.md","318e86e27f",""
 "02-design/constitution.md","32188adc74",""
 "screen-defs/ai-profile-settings.json","08c5740801",""
 "screen-defs/bio-card.json","6fe29433dd",""

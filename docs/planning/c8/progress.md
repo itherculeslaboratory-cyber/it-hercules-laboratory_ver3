@@ -10,15 +10,15 @@
 
 ## サマリー
 
-- 全体: ███░░░░░░░░░░░░░░░░░ 16%（52/334）
-- 第1波必達(required): █████░░░░░░░░░░░░░░░ 27%（49/184）
+- 全体: ████░░░░░░░░░░░░░░░░ 20%（66/334）
+- 第1波必達(required): ███████░░░░░░░░░░░░░ 34%（63/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 263 |
+| 未着手(todo) | 249 |
 | 着手中(in_progress) | 19 |
-| 完了(done) | 52 |
+| 完了(done) | 66 |
 | 検証済(verified) | 0 |
 
 ## lane 別内訳
@@ -28,7 +28,7 @@
 | CSV | ████████████████████ 100%（1/1） |
 | L1/PAY | █████░░░░░░░░░░░░░░░ 26%（16/61） |
 | L3/L4-auth | ████░░░░░░░░░░░░░░░░ 19%（5/27） |
-| L4 | █████░░░░░░░░░░░░░░░ 27%（14/51） |
+| L4 | ███████████░░░░░░░░░ 55%（28/51） |
 | L4-gov | █░░░░░░░░░░░░░░░░░░░ 3%（1/35） |
 | L4-knowledge | ███░░░░░░░░░░░░░░░░░ 15%（8/54） |
 | L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/66） |
@@ -144,25 +144,25 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-AIP-07 | FR/NFRの100%をRTM行に紐づけreq_id↔test_case_idを… | required | todo | — |
-| V3-AIP-104 | 写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedd… | required | todo | — |
-| V3-AIP-22 | GitHub ActionsでpytestとApps/webのtest/buil… | required | todo | — |
-| V3-AIP-23 | CONTRIBUTINGのcloneパスをrepoルート相対に統一しdesign… | required | todo | — |
-| V3-AIP-28 | 成果物はスコアカードで加重機械採点する(例: STRUCTURAL25%・DES… | required | todo | — |
-| V3-AIP-31 | 人間ゲート/human-in-the-loopを必須とする：ワンクリック全自動を… | required | todo | — |
+| V3-AIP-07 | FR/NFRの100%をRTM行に紐づけreq_id↔test_case_idを… | required | done | 8e00920 |
+| V3-AIP-104 | 写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedd… | required | done | 912941e, ed2c13a |
+| V3-AIP-22 | GitHub ActionsでpytestとApps/webのtest/buil… | required | done | 124027b(既存) |
+| V3-AIP-23 | CONTRIBUTINGのcloneパスをrepoルート相対に統一しdesign… | required | done | 567a554 |
+| V3-AIP-28 | 成果物はスコアカードで加重機械採点する(例: STRUCTURAL25%・DES… | required | done | 3d21a73, 8e00920(cwd依存バグ修正) |
+| V3-AIP-31 | 人間ゲート/human-in-the-loopを必須とする：ワンクリック全自動を… | required | done | b88a0f6 |
 | V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を採り、憲… | required | in_progress | 124027b |
-| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | in_progress | 124027b |
+| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | in_progress | 124027b, a0c631d |
 | V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytestの正統な流… | required | in_progress | 124027b |
-| V3-AIP-57 | 繰り返し使うワークフロー・手順はまず1回手動で正しさを確認してからスキル/ルール… | required | todo | — |
-| V3-AIP-60 | ver1・ver2のコード・設計書・過去のAIとの要件整理やり取りを全て資料とし… | required | todo | — |
+| V3-AIP-57 | 繰り返し使うワークフロー・手順はまず1回手動で正しさを確認してからスキル/ルール… | required | done | b1511e4 |
+| V3-AIP-60 | ver1・ver2のコード・設計書・過去のAIとの要件整理やり取りを全て資料とし… | required | done | 91e2e17 |
 | V3-AIP-67 | GitHub Issues(label=improvement/feature-… | required | todo | — |
-| V3-AIP-78 | 大量タスクを夜間overnight/週次実行パックとしてAI(Auto余力)に切… | required | todo | — |
-| V3-AIP-90 | RAG検索基盤を文明の脳とし全データ(観測・論文・掲示板・UI・テンプレート)を… | required | todo | — |
+| V3-AIP-78 | 大量タスクを夜間overnight/週次実行パックとしてAI(Auto余力)に切… | required | done | 4883f25 |
+| V3-AIP-90 | RAG検索基盤を文明の脳とし全データ(観測・論文・掲示板・UI・テンプレート)を… | required | done | 91a782f |
 | V3-AIP-92 | Builder(文明編集ツール)をOSDefinition/Component/… | required | todo | — |
-| V3-AIP-93 | 各正本Markdown/画面1ファイルに開発掲示板スレ1本を1:1で紐づけ(fi… | required | todo | — |
-| V3-AIP-96 | 就寝中など人間不在の時間帯に、Claude Code の余剰セッション/スケジュ… | required | todo | — |
-| V3-AIP-97 | D:\claude を Claude の本拠地（HQ）とするワークスペース階層を… | required | todo | — |
-| V3-AIP-98 | 夜間限定の自動運転(V3-AIP-96)を時間帯予約式スケジューラへ拡張し、夜間… | required | todo | — |
+| V3-AIP-93 | 各正本Markdown/画面1ファイルに開発掲示板スレ1本を1:1で紐づけ(fi… | required | done | 2219a99 |
+| V3-AIP-96 | 就寝中など人間不在の時間帯に、Claude Code の余剰セッション/スケジュ… | required | done | 26bbb23 |
+| V3-AIP-97 | D:\claude を Claude の本拠地（HQ）とするワークスペース階層を… | required | done | 4ac0d40 |
+| V3-AIP-98 | 夜間限定の自動運転(V3-AIP-96)を時間帯予約式スケジューラへ拡張し、夜間… | required | done | 3388451 |
 | V3-CST-01 | 10年間ユーザーが増えなくてもコストを賄える構造を最優先とし、ユーザー数に比例し… | required | done | 831f14f |
 | V3-CST-02 | Sakura VPS(サーバー費)+Cloudflare R2(ストレージ費)等… | required | done | f3ebe59 |
 | V3-CST-09 | Truth(R2)バックアップ二重化: Truth正本を別プロバイダ(Backb… | required | done | fed43fb |

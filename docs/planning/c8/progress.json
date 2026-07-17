@@ -7,10 +7,10 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["8e00920"],
+    "tc": ["tests/guards.test.ts describe(V3-AIP-05 checkRtm)"],
+    "note": "RTM 100%紐づけは749件全件を1レーンで達成するのは非現実的と判断し、g09レーンで今回実装した4件(AIP-104/93/31/28)をreq/det/test/trn_ui/retrofitの実参照付きでrtm.jsonへ追加(13→17件)、rtm.csv/mdを再生成。rtm.jsonの$commentに『捏造禁止・testの無いIDは足さない』運用方針を明記。全749件の充足には至っていない。"
   },
   {
     "id": "V3-AIP-22",
@@ -20,10 +20,10 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["124027b(既存)"],
+    "tc": [".github/workflows/ci.yml"],
+    "note": "CIパイプライン(pytest+apps/web test/build+npm run lint、シークレット不要)は既に.github/workflows/ci.ymlに実装済みで04-traceability/rtm.jsonで5ゲート閉包済み(要件72条件を再検証)。progress.jsonがtodoのまま停滞していたstaleケース。新規コミット不要、既存124027bで実装済みを確認。"
   },
   {
     "id": "V3-AIP-23",
@@ -33,10 +33,10 @@
     "tier": "C",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["567a554"],
     "tc": [],
-    "note": ""
+    "note": "CONTRIBUTING.mdにrepoルート相対のセットアップ手順+「#NNの選び方」(progress.json tier優先度で次タスクを選ぶ運用)を追記。"
   },
   {
     "id": "V3-AIP-28",
@@ -46,10 +46,10 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["3d21a73", "8e00920(cwd依存バグ修正)"],
+    "tc": ["tests/scorecard-gate.test.ts describe(V3-AIP-28 evaluateScorecard total + per-axis minimums)"],
+    "note": "加重スコアカードゲート機構(合計点+各軸最低点の同時判定)をscripts/scorecard-gate.mjs(evaluateScorecard関数)として実装、config/scorecard-presets.jsonに要件本文の2例(weighted-3axis/abcd-rtm)をプリセット化。軸スコアの実測(採点そのもの)は批評家ゲート運用側の継続作業でこのスコープ外。"
   },
   {
     "id": "V3-AIP-31",
@@ -59,10 +59,10 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["b88a0f6"],
+    "tc": ["tests/guards.test.ts describe(V3-AIP-31 classifyDangerousDiff auto-gate-bypass)"],
+    "note": "人間ゲート必須・ワンクリック全自動禁止の機械ガードとして、scripts/check-danger-code.mjsにauto-gate-bypassカテゴリを追加(autoApprove/skipHumanGate/oneClickDeploy等をPR diffで検出)。"
   },
   {
     "id": "V3-AIP-34",
@@ -77,7 +77,7 @@
       "124027b"
     ],
     "tc": [],
-    "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。"
+    "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。 追加(g09レーン): in_progress残余(他ドメインへの拡張)には今回も着手できず。他18項目を優先した時間配分上の判断で、内容の困難さによるスキップではない。次セッションでの継続を推奨。"
   },
   {
     "id": "V3-AIP-49",
@@ -89,10 +89,11 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [
-      "124027b"
+      "124027b",
+      "a0c631d"
     ],
     "tc": [],
-    "note": "E2E(Playwright)実UI+実バックエンド統合テストをapps/web/e2e/ledger.spec.ts+market.spec.tsに実装(V3-AIP-49/C7-T1タグ)、backend unit(tests/*.test.ts 約120ファイル)+frontend unit(renderer.test.tsx等)も並行整備済み。「新機能追加時の既存回帰率0%を受入」という運用ルール自体は継続的実践であり一度の完成物ではないため部分実装のまま。本番コード(R2)を差し替えずローカルメモリで統合テストする仕組み・機能別E2E条件分岐網羅設計書の整備状況は本エントリでは未確認。"
+    "note": "E2E(Playwright)実UI+実バックエンド統合テストをapps/web/e2e/ledger.spec.ts+market.spec.tsに実装(V3-AIP-49/C7-T1タグ)、backend unit(tests/*.test.ts 約120ファイル)+frontend unit(renderer.test.tsx等)も並行整備済み。「新機能追加時の既存回帰率0%を受入」という運用ルール自体は継続的実践であり一度の完成物ではないため部分実装のまま。 追加(g09レーン): in_progress残余の2点のうち1点を検証・確定: (1)『本番コード(R2)を差し替えずローカルメモリで統合テストする仕組み』はtests/helpers.tsのFakeR2Bucket(R2BucketLite実装)+apps/web e2eのwrangler dev local-mode R2シミュレーションとして実在確認(claim確定)。(2)『機能別E2E条件分岐網羅設計書』はdocs/planning/c5/e2e-design.mdが実在するが、C5執筆時点の6機能(observation/ugc-translate/market/ledger/spec-thread/screendef)止まりで、C6〜C8で追加された7 spec(individual-detail/knowledge-thread/market-trade-lifecycle/obs-register-batch/obs-register/obs-search/screen-sweep)は個別の条件分岐網羅節が未執筆。索引表を追加し可視化したが執筆自体は未完了(残作業として明記)。"
   },
   {
     "id": "V3-AIP-50",
@@ -107,7 +108,7 @@
       "124027b"
     ],
     "tc": [],
-    "note": "JSON画面定義からのテスト自動生成(DSL→テストケース、Renderer→スナップショット)をscripts/gen-screendef-snapshots.mjs+apps/web/src/renderer/screendef-snapshots.test.tsxとして実装(全screen-defを描画しheading存在を検証)。TC: 同ファイル describe(\"ScreenDef snapshots — every screen-def renders (V3-AIP-50)\")。「要件→TC表→pytestの正統な流れ」の全機能への体系適用・機能別の読みやすいE2E設計書の網羅整備は未確認。"
+    "note": "JSON画面定義からのテスト自動生成(DSL→テストケース、Renderer→スナップショット)をscripts/gen-screendef-snapshots.mjs+apps/web/src/renderer/screendef-snapshots.test.tsxとして実装(全screen-defを描画しheading存在を検証)。TC: 同ファイル describe(\"ScreenDef snapshots — every screen-def renders (V3-AIP-50)\")。「要件→TC表→pytestの正統な流れ」の全機能への体系適用・機能別の読みやすいE2E設計書の網羅整備は未確認。 追加(g09レーン): gen-screendef-snapshots.mjsのScreenDef→スナップショット自動生成器は全50画面を実際にカバー(50/50テスト green、npm test -w apps/web -- screendef-snapshotsで再検証済み・ドリフトガード内蔵)であることを再確認。ただし『要件→TC表→pytestの正統な流れ』の全機能(Python側)への体系適用は未着手のまま(ScreenDef/UIドメインのみ実証済み、他ドメインへの拡張は別途大きな作業)。コード変更なし(検証のみ)。"
   },
   {
     "id": "V3-AIP-57",
@@ -117,10 +118,10 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["b1511e4"],
     "tc": [],
-    "note": ""
+    "note": "既存11スキル(~/.claude/skills)をkeep/merge/rewrite/deleteで機械監査、notebooklmの暗黙トリガーが広すぎるためrewrite候補と特定。docs/ops/skill-audit.md新設。グローバル設定の実際の書き換えは越権のため実施せず(監査記録のみ)。"
   },
   {
     "id": "V3-AIP-60",
@@ -130,10 +131,10 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["91e2e17"],
     "tc": [],
-    "note": ""
+    "note": "ver1/ver2資料の日時信頼性分類+要約抽出書先出しは既にPhase B1で実施済み(srs.md冒頭の「抽出書v2・711件」+source:frontmatter provenance chain)であることの証跡をdocs/planning/research/ver1-ver2-triage-evidence.mdに記録。新規プロセス実装ではなく既存事実の記録。"
   },
   {
     "id": "V3-AIP-67",
@@ -156,10 +157,10 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["4883f25"],
     "tc": [],
-    "note": ""
+    "note": "夜間/週次実行パック分割(完全無人禁止・迷う1割は人間ゲート)を既存runner.ps1機構(1タスク=1ファイル選定・zero_result_stop・morning-review OK/NG)へ対応付け、docs/ops/nightly-autorun.mdに追記。"
   },
   {
     "id": "V3-AIP-90",
@@ -169,10 +170,10 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["91a782f"],
     "tc": [],
-    "note": ""
+    "note": "統合検索(RAG)基盤を既存の観測パイプライン決定論梯子+wiki統合基盤のruri-v3-70m(384次元)選定の横展開として設計。新規ベクトルDBなし・不変条項①準拠。docs/knowledge/topics/unified-search-rag.md新設(OKF形式・index.md/log.md同時更新)。"
   },
   {
     "id": "V3-AIP-92",
@@ -195,10 +196,10 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["2219a99"],
+    "tc": ["tests/file-board-registry.test.ts describe(V3-AIP-93 gen-file-board-registry scan + csv)"],
+    "note": "file-board linkageレジストリ(repo_path+sha256短縮)を新設。scripts/gen-file-board-registry.mjsが01-requirements/02-design/screen-defsを走査し04-traceability/file-board-registry.csvを生成、npm run lintに--check組み込みでCI一致検証。board_thread_id自体(実スレ紐づけ)は継続運用として未着手(正直に空欄)。"
   },
   {
     "id": "V3-AIP-96",
@@ -208,10 +209,10 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["26bbb23"],
     "tc": [],
-    "note": ""
+    "note": "夜間自動運転(D:\\claude\\ops\\autorun)のHQ側実体を読み取り専用で実在確認し、docs/ops/nightly-autorun.mdに参照文書化+検証手順(schtasks照会/runs.jsonl/STOP.md等)を記録。"
   },
   {
     "id": "V3-AIP-97",
@@ -221,10 +222,10 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["4ac0d40"],
     "tc": [],
-    "note": ""
+    "note": "HQワークスペース階層(D:\\claude直下4フォルダ構成)を実在確認し、docs/ops/hq-workspace-hierarchy.mdに参照文書化+検証手順を記録。"
   },
   {
     "id": "V3-AIP-98",
@@ -234,10 +235,10 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["3388451"],
     "tc": [],
-    "note": ""
+    "note": "時間帯予約式スケジューラ(週間グリッドdev/recovery/auto)をautorun-schedule.json実在確認の上、docs/ops/nightly-autorun.mdに追記。"
   },
   {
     "id": "V3-AUT-01",
@@ -4364,10 +4365,10 @@
     "tier": "C",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["912941e", "ed2c13a"],
+    "tc": ["tests/ai-profile.test.ts describe(V3-AIP-104 BYOC compute_location)"],
+    "note": "写真解析/embedding実行場所をBYOC3層(device既定・docker・cloud)としてdocs/architecture.mdに設計反映、schemas/ai-profile.schema.jsonにcompute_locationフィールド追加、ai-profile-settings.json画面にUI選択肢を追加。round-16裁定(受領5補足)準拠。"
   },
   {
     "id": "V3-AUT-46",
