@@ -437,7 +437,11 @@ describe("OBS-23 thumbnail serve, no raw bulk download", () => {
     // future edit reintroducing /image/ here fails loudly.
     const fs = await import("node:fs");
     const path = await import("node:path");
-    const defPath = path.join(process.cwd(), "..", "screen-defs", "obs-detail.json");
+    const url = await import("node:url");
+    // Resolved from this test file's own location — NOT process.cwd() — so it
+    // stays correct regardless of which workspace cwd the runner invokes from.
+    const testDir = path.dirname(url.fileURLToPath(import.meta.url));
+    const defPath = path.join(testDir, "..", "screen-defs", "obs-detail.json");
     const def = JSON.parse(fs.readFileSync(defPath, "utf8")) as { nodes: unknown };
     const json = JSON.stringify(def);
     expect(json).toContain("/thumbnail/{{photo_id}}");
