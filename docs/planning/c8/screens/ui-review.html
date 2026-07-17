@@ -42,7 +42,7 @@
 </head>
 <body>
 <header>
-  <h1>C8 UIレビュー新版 — 全画面(52) + 受領10再レビュー3画面(対応表つき)</h1>
+  <h1>C8 UIレビュー新版 — 全画面(55) + 受領10再レビュー3画面(対応表つき)</h1>
   <div class="sub">各カードに <b>点数 / 良い点 / 悪い点</b> を記入 → 下部「まとめをコピー」→ 貼り戻してください。画像はクリックで原寸表示(別タブ)できます。全画面 desktop(1440px)/mobile(390px) の2幅。</div>
 </header>
 <main>
@@ -113,7 +113,7 @@
   <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
   <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
 </div>
-<h2 class="section">全画面(navigation.json 52画面。上記3画面は上のセクションで重複掲載しない)</h2>
+<h2 class="section">全画面(navigation.json 55画面。上記3画面は上のセクションで重複掲載しない)</h2>
 <h3 class="cluster">認証・初期設定</h3>
 
 <div class="card" data-name="login">
@@ -282,6 +282,20 @@
   <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
   <div class="thumbs"><a class="thumb" href="qr-resume-1440.png" target="_blank"><img src="qr-resume-1440.png" alt="qr-resume-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
     <a class="thumb" href="qr-resume-390.png" target="_blank"><img src="qr-resume-390.png" alt="qr-resume-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">観測登録(旧世代)[新規]</h3>
+
+<div class="card" data-name="obs-templates">
+  <div class="ctitle">obs-templates</div>
+  <p class="kanten"><b>route</b>: <code>/observe/templates</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 観測テンプレート管理 — 既存テンプレ一覧を見てforked_from指定でフォーク保存する管理画面</p>
+  <p class="kanten"><b>変更点要約</b>: V3-UIX-50 新規screen-def。既存 GET/POST /observation/templates(V3-OBS-18)をUI化。観測入力フロー(obs-entry)の側経路で主フロー3クリックの外</p>
+  <div class="thumbs"><a class="thumb" href="obs-templates-1440.png" target="_blank"><img src="obs-templates-1440.png" alt="obs-templates-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-templates-390.png" target="_blank"><img src="obs-templates-390.png" alt="obs-templates-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
   
   <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
   <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
@@ -556,6 +570,20 @@
   <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
   <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
 </div>
+<h3 class="cluster">実績/信用/通貨[新規]</h3>
+
+<div class="card" data-name="costs">
+  <div class="ctitle">costs</div>
+  <p class="kanten"><b>route</b>: <code>/costs</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: ランニングコスト透明表示(V3-MKT-49) — サーバー/ストレージ月額をVPS手動値+R2使用量から開示。収益・銀行残高は個人事業主のプライバシーとして非表示</p>
+  <p class="kanten"><b>変更点要約</b>: V3-MKT-49/V3-CST-02 新規screen-def。GET /api/v1/costsに接続(Cloudflare認証未設定時はmanual_override_yenへ縮退)</p>
+  <div class="thumbs"><a class="thumb" href="costs-1440.png" target="_blank"><img src="costs-1440.png" alt="costs-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="costs-390.png" target="_blank"><img src="costs-390.png" alt="costs-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
 <h3 class="cluster">fork×投票文化</h3>
 
 <div class="card" data-name="template-market">
@@ -645,6 +673,20 @@
   <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
   <div class="thumbs"><a class="thumb" href="knowledge-board-1440.png" target="_blank"><img src="knowledge-board-1440.png" alt="knowledge-board-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
     <a class="thumb" href="knowledge-board-390.png" target="_blank"><img src="knowledge-board-390.png" alt="knowledge-board-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">知の広場[新規]</h3>
+
+<div class="card" data-name="ai-sessions">
+  <div class="ctitle">ai-sessions</div>
+  <p class="kanten"><b>route</b>: <code>/wiki/ai-sessions</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: AIセッション閲覧(V3-WIK-28) — Cursor等のAIセッションログの一覧+本文閲覧</p>
+  <p class="kanten"><b>変更点要約</b>: V3-WIK-28 新規screen-def。既存の共通CMS基盤(content_type=chat_log)を再利用。取り込み自体はローカル抽出手順書側で実施しUIフォームは持たない(常駐DB接続をしない設計・不変条項①)</p>
+  <div class="thumbs"><a class="thumb" href="ai-sessions-1440.png" target="_blank"><img src="ai-sessions-1440.png" alt="ai-sessions-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="ai-sessions-390.png" target="_blank"><img src="ai-sessions-390.png" alt="ai-sessions-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
   
   <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
   <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
