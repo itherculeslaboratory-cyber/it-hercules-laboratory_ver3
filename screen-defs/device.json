@@ -3,7 +3,7 @@
   "route": "/devices",
   "title": "観測機器",
   "layout": "standard",
-  "notes": "OBS-31 機器は置き場所に紐付け(個体紐付けは 400)。API キーは暗号化保存で平文非表示・表示は display_name のみ。実鍵投入と cron 常駐は人間ゲート。",
+  "notes": "OBS-31 機器は置き場所に紐付け(個体紐付けは 400)。API キーは暗号化保存で平文非表示・表示は display_name のみ。実鍵投入と cron 常駐は人間ゲート。V3-UIX-24: POST /devices/{id}/test は実プロバイダ接続前、device_id から決定論生成した『dummy discovery』(sensor-xxxxxx-a/b)を返す(docs/planning/c7/usecase-driven-design.md §「幻の実装を済と書かない」で明記済みの既知ギャップ)。本番検出と誤認させないよう、結果表示は必ず『サンプルデータ』であることを明示する(実際に動く dummy provider の結果を正直に示すのみで、実プロバイダ機能があるとは書かない)。",
   "nodes": [
     {
       "id": "shell",
@@ -17,13 +17,39 @@
             { "id": "lead", "type": "text", "props": { "text": "機器は置き場所に紐付けます。表示は表示名のみで、鍵は暗号化して保存します。", "muted": true } },
             { "id": "list-title", "type": "heading", "props": { "text": "登録済みの機器", "level": 2 } },
             {
-              "id": "device-list",
-              "type": "list",
+              "id": "device-table",
+              "type": "table",
               "props": {
                 "source_path": "/api/v1/devices",
-                "bind_items": "data.device-list.devices",
-                "item_text": "{{display_name}}"
+                "bind_items": "data.device-table.devices",
+                "columns": [
+                  { "key": "display_name", "label": "表示名" },
+                  { "key": "provider", "label": "プロバイダ" },
+                  { "key": "device_id", "label": "疎通確認", "cell": "link", "href_tpl": "/devices?device_id={{device_id}}", "link_label": "確認を開く" }
+                ],
+                "empty_text": "登録済みの機器はまだありません。"
               }
+            },
+            {
+              "id": "test-hint",
+              "type": "text",
+              "props": { "text": "上の一覧から機器の「確認を開く」を選ぶと、下のボタンで疎通確認できます。", "muted": true }
+            },
+            {
+              "id": "test-btn",
+              "type": "button",
+              "props": { "label": "この機器の疎通を確認する", "variant": "secondary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/devices/{{params.device_id}}/test" }
+            },
+            {
+              "id": "test-result-note",
+              "type": "text",
+              "props": { "text": "結果はサンプルデータです(実プロバイダ未接続・本番の検出結果ではありません)。", "muted": true }
+            },
+            {
+              "id": "test-result",
+              "type": "text",
+              "props": { "text": "プロバイダ: {{result.provider}} / 疎通: {{result.ok}} / 検出名(サンプル): {{result.discovered}}" }
             },
             { "id": "create-title", "type": "heading", "props": { "text": "機器を登録する", "level": 2 } },
             {
