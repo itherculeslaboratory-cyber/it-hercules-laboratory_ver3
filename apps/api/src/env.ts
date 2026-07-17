@@ -44,6 +44,10 @@ export type Bindings = {
   // AI プロバイダ名(design-k7 FND-21 §1.6). 未設定=AI_DISABLED(既定 OFF・不変条項①)。
   // 実プロバイダの鍵投入は人間ゲート。実値は env のみ。
   IHL_AI_PROVIDER?: string;
+  // GitHub Issues 読み取りコネクタ(github-issues-connector.ts / V3-AIP-67)。public repo は
+  // 無認証でも読めるため TOKEN は任意(レート制限緩和用のみ・必須シークレットではない)。
+  GITHUB_API_BASE?: string;
+  GITHUB_TOKEN?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

@@ -8,7 +8,8 @@
 #   → 64 rows、市場フォローレーン(round-15拡張 V3-GOV-35)が違法出品ユーザー自治の
 #   新規 6 route(infra-route-073..078・全 protected)を追加 → 70 rows、知の広場レーン
 #   (round-16 OQ-PLZ-03)がスレ解決マーク新規 1 route(infra-route-079・protected)を
-#   追加 → 71 rows。
+#   追加 → 71 rows、V3-AIP-67(GitHub Issues/掲示板→AI要約スレ)が新規 1 route
+#   (infra-route-080・protected)を追加 → 72 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -83,3 +84,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/fees/payjp-webhook,VPS,Workers,W2,infra-route-070,public,implemented,L-PAY PAY.JP webhook 受領(PUBLIC・自己ゲート=charge id再照会・GET /v1/charges/:idで確認できた事実のみ信頼)
 —,GET,/api/v1/me/fees,VPS,Workers,W2,infra-route-071,protected,implemented,L-PAY 本人の未払い/支払い済み投影(round-16裁定・期限超過の自動ペナルティは発火させない・既存カルマ機構は不接続)
 —,POST,/api/v1/plaza/threads/{thread_id}/resolution,VPS,Workers,W2,infra-route-079,protected,implemented,知の広場スレ解決マーク(round-16裁定OQ-PLZ-03)・権限=スレ主のみ・append-only supersedeパターン(resolution_id ULID昇順の最後が現在値)
+—,POST,/api/v1/ai-digest/sync,VPS,Workers,W2,infra-route-080,protected,implemented,V3-AIP-67 GitHub Issues/掲示板→AI要約スレ・requireRole operator/admin手動即時実行・ai-kernel LLMClient(既定AI_DISABLED)+ai-profiles/newspaper.json再利用・保存はihl.plaza.post.v1(channel=knowledge-board)を再利用し新イベント型を増やさない
