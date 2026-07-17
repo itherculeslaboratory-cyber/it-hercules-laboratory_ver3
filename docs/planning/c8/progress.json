@@ -293,10 +293,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["e9db7f7"],
+    "tc": ["tests/handle.test.ts"],
+    "note": "GET/POST /api/v1/me/handleを新設。3〜30文字[A-Za-z0-9_]の限定文字種を検証、truth/ihl.aut.handle.v1/<handle>.jsonへのput-if-absentで一意性を担保(409 HANDLE_TAKEN)、本人が既に確定済みなら再確定を拒否(409 HANDLE_IMMUTABLE)。OSは自動生成せず本人の明示POSTでのみ確定(usecase-driven-design.md §auth-onboarding-locale準拠)。候補生成UI・availability advisory route・onboarding画面統合はスコープ外(UI波)。"
   },
   {
     "id": "V3-AUT-09",
@@ -306,10 +306,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["eda9946"],
+    "tc": ["tests/account-onboarding.test.ts::V3-AUT-09 open registration — account row created on first verify"],
+    "note": "初回ログイン成功時(magic-link verify/verify-code/dev-login)にtruth/ihl.aut.account.v1/<actor_id>.jsonをput-if-absentするensureAccountを新設(2回目以降はidempotent no-op)。独立サインアップ画面は元々無い(login画面のマジックリンク検証がオープン登録)ことも確認。"
   },
   {
     "id": "V3-AUT-10",
@@ -319,10 +319,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["eda9946"],
     "tc": [],
-    "note": ""
+    "note": "バックエンド契約は完成: projectOnboardingStatus(handle確定+locale明示選択の両方=必須2ゲート)をGET /api/v1/me/onboardingとGET /api/v1/auth/sessionのonboarding_completeで公開・テスト済み。表示名/タイムゾーン/テーマはゲート対象外(usecase-driven-design.md §auth-onboarding-locale準拠)。未完了部分: クライアント側で「オンボーディング未完了の間はアプリ全体を専用フローに閉じる」実際のUI(setup-profile統合画面)がまだ存在しない(ui-asset-catalog.mdが指摘する既知ギャップ「handle確定専用ステップ」画面未作成)。V3-AUT-12のmiddlewareは未ログインのみ/s/loginへ誘導し、ログイン済みだがonboarding未完了のケースはまだガードしていない。"
   },
   {
     "id": "V3-AUT-11",
@@ -347,10 +347,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["db2bc69"],
     "tc": [],
-    "note": ""
+    "note": "apps/web/src/middleware.tsを新設: /s/login・/s/login-sent以外の全画面をセッション必須にし、未ログイン時は/s/loginへ307誘導(既存の公開GET /api/v1/auth/sessionを叩くのみでJWT検証を再実装しない・API不通時はfail-closed)。next buildで実際にコンパイル成功を確認済み。未実装: (a)ログイン済みだがonboarding未完了のケースをsetup-profile画面へ誘導する分岐(V3-AUT-10のonboarding_completeは取得済みなので追加は小さいが、誘導先のsetup-profile画面自体が無い) (b)ログイン/登録/ログアウトのナビリンクをAppShellヘッダーに常時表示する要件 — Renderer共通のapp-shell caseか全47screen-defへの追記が必要で、golden snapshot(screendef-snapshots.test.tsx 50件)への影響が大きく、UI磨き波(別レーン)に委ねる判断をした。"
   },
   {
     "id": "V3-AUT-15",
@@ -373,10 +373,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["987c5c3"],
     "tc": [],
-    "note": ""
+    "note": "認証ゲートにINVALID_TOKEN(v1.形式トークンが提示されたが検証失敗)を追加し、既存のAUTH_REQUIRED(無提示)/SESSION_REVOKED(denylist)とは区別した(CL-03/CL-04等の既存frozen契約は不変のまま拡張)。USER_NOT_FOUND/KARMA_SUSPENDEDは未実装: 前者はアカウント行(V3-AUT-09で新設)の存在を毎リクエスト参照する設計判断が必要(現状はensureAccountで自動作成するため事実上USER_NOT_FOUNDは発生しない設計)、後者はKRM-04「BANはログイン時のみ判定・毎リクエスト走査回避」という既存コスト裁定(不変条項①)と衝突するため、per-requestカルマ再計算を追加する設計判断が必要。次波での裁定待ち。"
   },
   {
     "id": "V3-AUT-20",
@@ -386,10 +386,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["987c5c3"],
+    "tc": ["apps/web/src/lib/error-messages.test.ts", "apps/web/src/renderer/renderer.test.tsx::Renderer — defaultExecute forwards the server's machine-readable error code (V3-AUT-20)"],
+    "note": "defaultExecute(renderer.tsx)が非2xx応答のbody.errorを読みApiError.codeに積むよう変更(従来はHTTPステータスのみ)。mapErrorに主要な機械可読コード(INVALID_TOKEN/BANNED/INVALID_EMAIL/INVALID_CODE/TOO_MANY_ATTEMPTS/HANDLE_TAKEN/HANDLE_IMMUTABLE等)の個別文言を追加、既存のaria-invalid付きalert表示経路(V3-UIX-03)へ接続。"
   },
   {
     "id": "V3-BBS-03",
@@ -679,10 +679,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["d59fb61"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx::derives the resolver from catalogs+viewerLocale when resolveMessage is omitted", "apps/web/src/lib/viewer-locale.test.ts"],
+    "note": "page.tsx/[screen]/page.tsxがサーバ側でGET /me/preferencesのlocaleを読み、loadCatalogs()と共にRendererへcatalogs+viewerLocale(シリアライズ可能な形)で渡す配線。Renderer内でresolveMessageを自前構築(関数はRSC境界を越えられないため)。全画面共通の1配線点なのでauth/UI/掲示板/裁判/マーケット/カルマ横断で効く。副産物としてi18n.tsをi18n-resolve.ts(client-safe純関数)とloadCatalogs()(node:fs使用)に分離。"
   },
   {
     "id": "V3-I18-02",
@@ -692,10 +692,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "二層(locale主属性+国籍内部属性)のスキーマ・API自体は既存実装済みで確認済み(settings-routes.ts PREF_FIELDSにcountry・ISO 3166-1 alpha-2検証・tests/settings-preferences.test.ts)。今回追加: onboardingComplete判定はlocaleが『pref-setイベントに明示的にフィールドとして存在する』ことを要求し、既定jaへのフォールバックだけでは満たされないようにした(hasExplicitLocale・V3-AUT-10と共通実装)。未解決: 「所属国は必須選択(だがUI上は非表示)」という一見矛盾する要求の充足方法が未確定 — 候補は(1)Cloudflare Workersのrequest.cf.countryから自動補完(ローカル/テストでは.cfが無く検証不能・VPN/プロキシで誤判定の限界あり)(2)実装を見送りcountryは任意のまま(現状)で人間裁定を待つ。二者択一かつ二人のエンジニアで解釈が割れうる設計判断のため実装せず据え置いた。"
   },
   {
     "id": "V3-I18-03",
@@ -705,10 +705,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["d59fb61"],
+    "tc": ["screen-defs/settings.json (navigation.json self-edge settings→settings)", "apps/web/src/lib/viewer-locale.test.ts"],
+    "note": "settings.jsonのpref-formにsettings自己遷移(既存のself-navigate=再読込規約)を追加。保存後にPATCH /me/preferencesが成功すると画面が再読込され、サーバ側が新localeを読み直してUI全文が切替わる(再ログイン不要)。localeはcountryと独立でカルマ停止/係争にブロックされない(settings-routes.tsは元々banチェックなし・既存挙動)。"
   },
   {
     "id": "V3-I18-06",
@@ -718,10 +718,10 @@
     "tier": "S",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["b3cd929"],
+    "tc": ["tests/i18n-ugc.test.ts::I18-06 part2 — plaza posts / dispute messages も原文保存 + lang 刻印"],
+    "note": "market listing(既存)と同型でplaza-post/gov-dispute messageにもactor localeからlangを刻印(サーバ翻訳なし・原文保存)。schemas/events 2件にlang追加+codegen再生成。"
   },
   {
     "id": "V3-I18-08",
@@ -731,10 +731,10 @@
     "tier": "A",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "todo",
+    "status": "done",
     "commits": [],
-    "tc": [],
-    "note": ""
+    "tc": ["apps/web/src/lib/i18n.test.ts", "tests/check-i18n-keys.test.ts"],
+    "note": "実装済み確認のみ(コード変更なし)。i18n.ts fallback chain(exact→lang→ja→key・空文字は不採用)+check-i18n-keys.mjs CI gate(ハードコードCJK検知・全screen-def解決確認)が既に完備。既存テストgreenを再確認しdoneと報告。"
   },
   {
     "id": "V3-IND-02",

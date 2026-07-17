@@ -10,15 +10,15 @@
 
 ## サマリー
 
-- 全体: ████░░░░░░░░░░░░░░░░ 20%（66/334）
-- 第1波必達(required): ███████░░░░░░░░░░░░░ 34%（63/184）
+- 全体: ████░░░░░░░░░░░░░░░░ 22%（73/334）
+- 第1波必達(required): ████████░░░░░░░░░░░░ 38%（70/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 249 |
-| 着手中(in_progress) | 19 |
-| 完了(done) | 66 |
+| 未着手(todo) | 238 |
+| 着手中(in_progress) | 23 |
+| 完了(done) | 73 |
 | 検証済(verified) | 0 |
 
 ## lane 別内訳
@@ -27,7 +27,7 @@
 |---|---|
 | CSV | ████████████████████ 100%（1/1） |
 | L1/PAY | █████░░░░░░░░░░░░░░░ 26%（16/61） |
-| L3/L4-auth | ████░░░░░░░░░░░░░░░░ 19%（5/27） |
+| L3/L4-auth | █████████░░░░░░░░░░░ 44%（12/27） |
 | L4 | ███████████░░░░░░░░░ 55%（28/51） |
 | L4-gov | █░░░░░░░░░░░░░░░░░░░ 3%（1/35） |
 | L4-knowledge | ███░░░░░░░░░░░░░░░░░ 15%（8/54） |
@@ -115,20 +115,20 @@
 | V3-AUT-01 | 認証はメール宛マジックリンク方式のみ（パスワードレス）とし、パスワード・OAut… | required | done | 1409b6b |
 | V3-AUT-03 | ver3のセッションは署名付きステートレストークン(HMAC/JWT系・サーバ側… | required | done | a49ca1c |
 | V3-AUT-06 | ログイン画面はメールアドレス入力と利用規約同意チェックを必須とし、未同意/未入力… | required | done | 4295494 |
-| V3-AUT-08 | @ユーザーID（handle）は3〜30文字の限定文字種で一意・不変（確定後変更… | required | todo | — |
-| V3-AUT-09 | 新規登録は独立サインアップ画面を持たず、ログイン画面のマジックリンク初回検証時に… | required | todo | — |
-| V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | todo | — |
+| V3-AUT-08 | @ユーザーID（handle）は3〜30文字の限定文字種で一意・不変（確定後変更… | required | done | e9db7f7 |
+| V3-AUT-09 | 新規登録は独立サインアップ画面を持たず、ログイン画面のマジックリンク初回検証時に… | required | done | eda9946 |
+| V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | in_progress | eda9946 |
 | V3-AUT-11 | 認証→初期設定フロー（登録→国/言語→利用規約→ホーム）を明示的に定義し、全画面… | required | done | 4295494 |
-| V3-AUT-12 | 保護ルートはProtectedApp/middlewareでガードし未ログイン時… | required | todo | — |
+| V3-AUT-12 | 保護ルートはProtectedApp/middlewareでガードし未ログイン時… | required | in_progress | db2bc69 |
 | V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | required | todo | — |
-| V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | todo | — |
-| V3-AUT-20 | APIエラーは機械可読なerrorコードで返し、クライアントはそれをユーザー向け… | required | todo | — |
+| V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | in_progress | 987c5c3 |
+| V3-AUT-20 | APIエラーは機械可読なerrorコードで返し、クライアントはそれをユーザー向け… | required | done | 987c5c3 |
 | V3-AUT-46 | magic-link数字コードフォールバック: magic-link発行時に同一… | required | done | a49ca1c |
-| V3-I18-01 | 翻訳/i18n(#21)の横断機能を認証・UI・掲示板・裁判・マーケット・カルマ… | required | todo | — |
-| V3-I18-02 | 新規登録/オンボーディングで表示言語(locale)を必須選択させ、国籍・国コー… | required | todo | — |
-| V3-I18-03 | 表示言語(locale)を設定/プロフィールからいつでも変更でき、保存成功後は製… | required | todo | — |
-| V3-I18-06 | UGC(掲示板投稿・二人部屋メッセージ・出品説明・自由記述等)は作者言語の原文の… | required | todo | — |
-| V3-I18-08 | UI文言リソースをキー化({screen}.{component}.{field… | required | todo | — |
+| V3-I18-01 | 翻訳/i18n(#21)の横断機能を認証・UI・掲示板・裁判・マーケット・カルマ… | required | done | d59fb61 |
+| V3-I18-02 | 新規登録/オンボーディングで表示言語(locale)を必須選択させ、国籍・国コー… | required | in_progress | — |
+| V3-I18-03 | 表示言語(locale)を設定/プロフィールからいつでも変更でき、保存成功後は製… | required | done | d59fb61 |
+| V3-I18-06 | UGC(掲示板投稿・二人部屋メッセージ・出品説明・自由記述等)は作者言語の原文の… | required | done | b3cd929 |
+| V3-I18-08 | UI文言リソースをキー化({screen}.{component}.{field… | required | done | — |
 | V3-AUT-26 | 世界全体にowner/editor/viewer等のロール(role)を定義し、… | best-effort | todo | — |
 | V3-AUT-28 | 投稿・観察記録・研究・プロフィールなど各コンテンツ種別ごとにデフォルト公開範囲(… | best-effort | todo | — |
 | V3-AUT-31 | メールアドレス乗っ取り時はアカウントを即時凍結(freeze=true)し、元の… | best-effort | todo | — |
