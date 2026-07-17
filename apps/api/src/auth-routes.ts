@@ -5,6 +5,7 @@ import type { Bindings, Variables } from "./env";
 import type { KVNamespaceLite } from "./kv";
 import { isBanned } from "./ledger-routes";
 import { sendMagicLink } from "./mail";
+import { checkRateLimit, clientIp } from "./rate-limit";
 import {
   MAGIC_TTL,
   SESSION_TTL,
@@ -15,6 +16,13 @@ import {
   verifyMagicToken,
   verifySessionToken,
 } from "./session";
+
+// V3-SEC-14: ログイン系エンドポイントの IP レート制限(較正値は要件定義書どおり固定・
+// GUI 調整対象ではない=セキュリティ境界値)。rate-limit.ts の固定ウィンドウカウンタを
+// RATE_LIMIT KV(未バインド=no-op degrade)で共有。
+const MAGIC_LINK_RATE_LIMIT = 20; // 20回/60秒/IP
+const VERIFY_RATE_LIMIT = 60; // 60回/60秒/IP
+const RATE_WINDOW_SECONDS = 60;
 
 // email 正規化は入口で統一（第6回裁定③）。deriveActorId 自体は raw 有意のまま凍結。
 function normalizeEmail(email: string): string {
@@ -32,6 +40,14 @@ export const authRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>
 // V3-AUT-46: 同じ iat から数字コード(6桁)も導出し、リンクと併せて送る(別端末/webview
 // でリンクを開けない場合の受け皿)。
 authRoutes.post("/magic-link", async (c) => {
+  const minuteBucket = Math.floor(Date.now() / (RATE_WINDOW_SECONDS * 1000));
+  const rl = await checkRateLimit(
+    c.env.RATE_LIMIT,
+    `login:magic-link:${clientIp(c.req)}:${minuteBucket}`,
+    MAGIC_LINK_RATE_LIMIT,
+    RATE_WINDOW_SECONDS,
+  );
+  if (!rl.allowed) return c.json({ error: "RATE_LIMITED" }, 429);
   const body = (await c.req.json().catch(() => null)) as { email?: unknown } | null;
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
     return c.json({ error: "INVALID_EMAIL" }, 400);
@@ -51,6 +67,14 @@ authRoutes.post("/magic-link", async (c) => {
 
 // POST /verify (公開): magic token → session token + Set-Cookie. { actor_id }.
 authRoutes.post("/verify", async (c) => {
+  const minuteBucket = Math.floor(Date.now() / (RATE_WINDOW_SECONDS * 1000));
+  const rl = await checkRateLimit(
+    c.env.RATE_LIMIT,
+    `login:verify:${clientIp(c.req)}:${minuteBucket}`,
+    VERIFY_RATE_LIMIT,
+    RATE_WINDOW_SECONDS,
+  );
+  if (!rl.allowed) return c.json({ error: "RATE_LIMITED" }, 429);
   const body = (await c.req.json().catch(() => null)) as { token?: unknown } | null;
   if (!body || typeof body.token !== "string") {
     return c.json({ error: "INVALID_TOKEN" }, 401);
