@@ -54,9 +54,6 @@
   "knowledge-thread.title.text": "Thread",
   "knowledge-thread.posts-title.text": "Posts",
   "knowledge-thread.consensus-title.text": "Consensus",
-  "knowledge-thread.stance-title.text": "Cast a stance",
-  "knowledge-thread.stance-statement.label": "Target post ID",
-  "knowledge-thread.stance-value.label": "Stance (agree / disagree / pass)",
   "knowledge-thread.back-board.label": "Back to board",
   "knowledge-board.open-thread.label": "Open a thread"
 }

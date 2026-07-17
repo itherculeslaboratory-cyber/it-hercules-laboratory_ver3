@@ -510,10 +510,45 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* c8磨き第2弾#7(受領10 モバイル「詳細を開く」ボタン潰れ): <=560px は table を
+ * カードリスト化する(横スクロール置換ではなく再フロー)。data-label(TableNode
+ * が全 <td> に付与済み)を ::before で列見出しとして出す — マークアップ追加は
+ * 属性1つのみ、レイアウト切替は CSS のみで完結(ネイティブ機能で足りる)。 */
 @media (max-width: 560px) {
-  .civ-table {
+  .civ-table-scroll {
+    overflow-x: visible;
+  }
+  .civ-table thead {
+    display: none;
+  }
+  .civ-table,
+  .civ-table tbody,
+  .civ-table tr,
+  .civ-table td {
     display: block;
-    overflow-x: auto;
+    width: 100%;
+  }
+  .civ-table tr {
+    margin-bottom: 12px;
+    border: 1px solid var(--civ-border);
+    border-radius: var(--civ-radius);
+    padding: 4px 0;
+  }
+  .civ-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .civ-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: none;
+  }
+  .civ-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: var(--civ-fs-1);
+    color: var(--civ-text-muted);
   }
 }
 
@@ -561,6 +596,30 @@ body {
   border-radius: 0;
   aspect-ratio: 1 / 1;
   object-fit: cover;
+}
+/* c8磨き第2弾#2(受領10「画像を押せば詳細が出る」): item_href renders the
+ * card as an <a> instead of a bare <figure> — same box, just clickable
+ * (ImageGridNode). No separate "詳細を開く" button/underline/link styling. */
+a.civ-thumb-card {
+  text-decoration: none;
+  color: inherit;
+}
+a.civ-thumb-card:focus-visible {
+  outline: 2px solid var(--civ-focus);
+  outline-offset: 2px;
+}
+/* an item_image whose referenced field is unset (no photo uploaded yet) shows
+ * this instead of a broken <img> — an icon only, no explanatory copy (受領10
+ * 「説明されなくてもわかる」— a photo icon in an empty photo slot is self-
+ * evident, adding a caption would repeat exactly what the user said not to). */
+.civ-thumb-placeholder {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--civ-surface-2);
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-3);
 }
 .civ-thumb-card figcaption {
   padding: 8px;
@@ -1021,4 +1080,49 @@ body {
 .civ-thread-post-actor {
   font-size: var(--civ-fs-1);
   color: var(--civ-text-muted);
+}
+.civ-thread-post-stance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* =============================================================================
+ * c8 UI磨き第2弾#3(受領10「『…』のなかに畳んで」) — kebab メニュー(renderer
+ * プリミティブ KebabMenu)。shadow forbidden(design-c2 §4.3) — 境界は border
+ * のみで表現する。
+ * ========================================================================== */
+.civ-kebab {
+  position: relative;
+  display: inline-block;
+}
+.civ-kebab-trigger {
+  padding: 0 10px;
+  background: transparent;
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-3);
+  line-height: 1;
+}
+.civ-kebab-trigger[aria-expanded="true"] {
+  color: var(--civ-text);
+  border-color: var(--civ-border);
+}
+.civ-kebab-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--civ-surface);
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+}
+.civ-kebab-menu .civ-button {
+  width: 100%;
+  justify-content: flex-start;
 }

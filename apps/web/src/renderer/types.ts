@@ -115,6 +115,15 @@ export type FieldVariant =
 // states can collapse onto fewer visible steps); kpi-tile props.value/
 // label/trend. card gains icon/title/meta/badges[] + a nav chevron rendered
 // when the card node itself carries an `action`.
+// c8 UI磨き第2弾: ANY node may carry props.when = { eq: [a,b] } | { not_eq:
+// [a,b] } — both sides are "{{...}}" templates against the full scope
+// (params/data/result/viewer); a false comparison renders nothing (upper-
+// compatible — no `when` = always renders). This is how role-based visibility
+// (buyer/seller/thread_owner) is expressed without a bespoke per-screen hack.
+// table props.columns[] cell also gains "actor" (renders an ActorLabel —
+// display name if set, else a short actor_id hash — instead of the raw
+// string); list's bind_items branch gains item_actor_field (row key holding
+// an actor_id, rendered the same way ahead of item_text).
 export interface KnownNodeProps {
   text?: string;
   text_key?: string;

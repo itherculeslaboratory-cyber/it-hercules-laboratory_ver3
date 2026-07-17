@@ -3,7 +3,7 @@
   "route": "/knowledge/thread",
   "title": "スレッド",
   "layout": "standard",
-  "notes": "c8(ui-asset-catalog.md 【最優先2】)再構築版。BBS-05/10/36。GET /plaza/threads/{thread_id}(posts materialized view)+ GET /plaza/threads/{thread_id}/consensus(Polis型 Agree/Disagree/Pass 決定論投影)+ POST /plaza/stances + POST /plaza/posts を実結線。thread_id は ?thread_id= (params.thread_id)。専用ノード thread-posts が avatar(actor_id モノグラム。display-name フィールドは actor データモデルに存在しない=誇張ゼロ)/body/引用badge(tombstone=無効引用を tone danger で明示)/相談室(dispute)導線+スレ主のみの解決マーク(round-16 OQ-PLZ-03。POST /plaza/posts への tags:['resolved'] 規約・新 Truth 型なし)を持つ。stance は既存 segmented variant、返信は新規 textarea variant。round-16 OQ-PLZ-01/02/05(昇格閾値バッジ✔/⚠の重み付き投票・カード発行委譲)は certified-breeder/primary-observer 等の actor ロール Truth データが schemas 上どこにも存在せず、ui-asset-catalog.md【最優先2】の組み立て表にも記載が無いため対象外(捏造しない・c8タスク報告に明記)。",
+  "notes": "c8(ui-asset-catalog.md 【最優先2】)再構築版・UI磨き第2弾(受領10)で追改修。BBS-05/10/36。GET /plaza/threads/{thread_id}(posts materialized view)+ GET /plaza/threads/{thread_id}/consensus(Polis型 Agree/Disagree/Pass 決定論投影)+ POST /plaza/stances + POST /plaza/posts を実結線。thread_id は ?thread_id= (params.thread_id)。専用ノード thread-posts が avatar(actor_id モノグラム)/actor 表示プリミティブ(display_name があれば表示・磨き第2弾#5・ihl.actor.display_name.v1)/body/引用badge(tombstone=無効引用を tone danger で明示)/相談室(dispute)導線+スレ主のみの解決マーク(round-16 OQ-PLZ-03。POST /plaza/posts への tags:['resolved'] 規約・新 Truth 型なし)を持つ。磨き第2弾#6(受領10「投稿ごとの投票ボタンに」): 賛否投票は投稿ごとのインライン Agree/Disagree/Pass ボタン(thread-posts 内・statement_id=post_id を自動送信)に統合し、旧スタンドアロン stance-form(「対象の投稿 ID」手入力)は撤去。磨き第2弾#3(受領10「『…』のなかに畳んで」): 「この投稿を相談室へ」は per-post kebab(⋮)メニューへ格納(常時露出→必要な時だけ)。返信は textarea variant。round-16 OQ-PLZ-01/02/05(昇格閾値バッジ✔/⚠の重み付き投票・カード発行委譲)は certified-breeder/primary-observer 等の actor ロール Truth データが schemas 上どこにも存在せず、ui-asset-catalog.md【最優先2】の組み立て表にも記載が無いため対象外(捏造しない・c8タスク報告に明記)。",
   "nodes": [
     {
       "id": "shell",
@@ -45,33 +45,6 @@
                 ],
                 "empty_text": "まだ賛否の投票がありません。"
               }
-            },
-            { "id": "stance-title", "type": "heading", "props": { "text_key": "knowledge-thread.stance-title.text", "text": "賛否を投じる", "level": 2 } },
-            {
-              "id": "stance-form",
-              "type": "form",
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/plaza/stances" },
-              "children": [
-                { "id": "stance-statement", "type": "field", "props": { "name": "statement_id", "label_key": "knowledge-thread.stance-statement.label", "label": "対象の投稿 ID", "variant": "text", "required": true } },
-                {
-                  "id": "stance-value",
-                  "type": "field",
-                  "props": {
-                    "name": "value",
-                    "label_key": "knowledge-thread.stance-value.label",
-                    "label": "賛否",
-                    "variant": "segmented",
-                    "default": "pass",
-                    "required": true,
-                    "options": [
-                      { "value": "agree", "label": "賛成" },
-                      { "value": "disagree", "label": "反対" },
-                      { "value": "pass", "label": "保留" }
-                    ]
-                  }
-                },
-                { "id": "stance-submit", "type": "button", "props": { "type": "submit", "label": "賛否を投じる", "variant": "primary" } }
-              ]
             },
             { "id": "reply-title", "type": "heading", "props": { "text": "返信する", "level": 2 } },
             {
