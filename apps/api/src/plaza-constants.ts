@@ -39,6 +39,14 @@ export const RANKING_WEIGHTS = { like: 1, use: 2, retain: 3, vote: 5, fork: 1 } 
 // ponytail: 較正 knob。昇格ラインを運用実測で調整(GUI 後波)。
 export const OS_PROMOTION_MIN_SCORE = 100;
 
+// BBS-14: 改善要求(board_kind=improvement)投稿の AI 安全チェック。LLM は既定 OFF
+// (不変条項①・ai-kernel.ts)のため、決定論キーワードブロックリストで攻撃的内容を拒否する
+// フォールバック実装(投稿 400・plaza-routes.ts isOffensiveContent)。
+// ponytail: 固定キーワード列の較正 knob。IHL_AI_PROVIDER に実鍵が入り classify task が
+// 有効化された後(§6 人間ゲート)、makeLLMClient(task:"classify") 判定へ差し替えるのが
+// 上げ道(ai-kernel.ts の DI seam を再利用・新規 kernel は作らない)。
+export const BBS14_BLOCKED_TERMS = ["死ね", "殺す", "kill you", "die you"] as const;
+
 // GOV-35(round-15拡張・違法出品ユーザー自治): 同国指摘の二段閾値モデレーション+
 // 誤BAN復帰の投票ゲート。出典: user-ruling-2026-07-15-round-15.md #6-9。
 // ponytail: 較正 knob 群。実測で調整(GUI 後波・V3-GOV-17)。

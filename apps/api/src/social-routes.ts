@@ -22,8 +22,11 @@ type EvalKind = (typeof EVAL_KINDS)[number];
 // 通し、行未供給時は既定 100（design-k3 §2.3・KRM-16 GUI 編集フォームは後波）。
 // ponytail: workerd は CSV を実行時 read できない＝GUI 行の bundle は後波。既定 100 を
 // resolver の fallback で解決（policy 経由・ハードコードでない）。
-const OFFICIAL_THRESHOLD_KEY = "platinum_vote.official_threshold";
-const OFFICIAL_THRESHOLD_DEFAULT = 100;
+// export: V3-BBS-14(改善要求 voteable)が同一閾値/同一投票基盤(POST /social/platinum-votes・
+// projectPlatinumVoteTally)を再利用する(plaza-routes.ts の改善要求優先度キュー投影)。
+// 新規投票機構は作らない(round-16 裁定準拠)。
+export const OFFICIAL_THRESHOLD_KEY = "platinum_vote.official_threshold";
+export const OFFICIAL_THRESHOLD_DEFAULT = 100;
 
 export const socialRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 

@@ -20,7 +20,12 @@ import {
   PLZ_VERIFIED_RETRY_MIN,
   PLZ_REFUTED_RETRY_MIN,
   PLZ_UNRESOLVED_STANCE_MIN,
+  BBS14_BLOCKED_TERMS,
 } from "./plaza-constants";
+// BBS-14: 改善要求の投票基盤は既存プラチナ投票(KRM-25・GOV-07/MKT-35 と同一の積み投票
+// 通貨方式)を再利用する。新規投票機構は作らない(round-16 裁定準拠)。
+import { projectPlatinumVoteTally, OFFICIAL_THRESHOLD_KEY, OFFICIAL_THRESHOLD_DEFAULT } from "./social-routes";
+import { resolvePolicyInt } from "./policy";
 
 const POST_TYPE = "ihl.plaza.post.v1";
 const POST_SCHEMA = "schemas/events/plaza-post.schema.json";
@@ -131,15 +136,27 @@ async function citeTargetExists(s: TruthStore, ref: CiteRef): Promise<boolean> {
   return true;
 }
 
+// BBS-14: 改善要求(board_kind=improvement)の AI 安全チェック。LLM 既定 OFF(不変条項①)の
+// 決定論フォールバック=固定ブロックリストの部分一致(大小文字無視)。真の攻撃的内容分類は
+// ai-kernel.ts の classify task に実鍵が入ってから差し替える(§6 人間ゲート・upgrade path)。
+export function isOffensiveContent(text: string): boolean {
+  const lower = text.toLowerCase();
+  return BBS14_BLOCKED_TERMS.some((term) => lower.includes(term.toLowerCase()));
+}
+
 // ── 投稿(BBS-01/03/05/20/36)──────────────────────────────────────────
 // POST /plaza/posts — 投稿を append。多セグメントキー
 // truth/ihl.plaza.post.v1/<channel>/<thread_id>/<post_id>.json に putEventAt。
 // topic/board_kind/body の必須・enum は envelope schema 検証が gate(欠落→400)。
 // cite_refs[] を正本に、本文の [ihl:cite] トークンを統合(BBS-20)。actor_id 強制刻印。
+// board_kind=improvement(BBS-14)は投稿前に isOffensiveContent で AI 安全チェック(拒否 400)。
 plazaRoutes.post("/plaza/posts", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const channel = str(body?.channel);
   if (!channel) return c.json({ error: "INVALID_POST", details: ["channel required"] }, 400);
+  if (body?.board_kind === "improvement" && isOffensiveContent(str(body?.body))) {
+    return c.json({ error: "AI_SAFETY_REJECTED", details: ["offensive content blocked"] }, 400);
+  }
 
   const actorId = c.get("actorId");
   const postId = str(body?.post_id) || ulid();
@@ -236,6 +253,49 @@ export async function projectChannelThreads(s: TruthStore, channel: string) {
 // GET /plaza/channels/:channel/threads — channel 別スレ一覧 + 3板。
 plazaRoutes.get("/plaza/channels/:channel/threads", async (c) => {
   return c.json(await projectChannelThreads(store(c), c.req.param("channel")));
+});
+
+// ── 改善要求 優先度キュー(BBS-14)────────────────────────────────────────
+// projectImprovementQueue — board_kind=improvement のスレ(root post=thread_id)を
+// プラチナ投票合計(target_id=thread_id・既存 KRM-25 基盤を再利用・GOV-07/MKT-35 と同一方式)
+// でコイン降順に並べた運営者向け優先度キュー。閾値到達(既定 100 票)で official=true
+// (自動公式化・実際の公式化=人間ゲートは変わらず、ここは投影のフラグのみ)。
+// notify_admin は「管理者へ通知する」の投影側実装(pull型・push メール送信は mail.ts の
+// RESEND_API_KEY 実鍵配線と同じ人間ゲート待ちのため対象外・upgrade path として残す)。
+export interface ImprovementQueueRow {
+  thread_id: string;
+  topic: string;
+  post_count: number;
+  votes: number;
+  official_threshold: number;
+  official: boolean;
+  notify_admin: boolean;
+}
+
+export async function projectImprovementQueue(s: TruthStore, channel: string): Promise<ImprovementQueueRow[]> {
+  const { boards } = await projectChannelThreads(s, channel);
+  const threshold = resolvePolicyInt(OFFICIAL_THRESHOLD_KEY, [], OFFICIAL_THRESHOLD_DEFAULT);
+  const rows = await Promise.all(
+    (boards.improvement ?? []).map(async (t) => {
+      const tally = await projectPlatinumVoteTally(s, t.thread_id, threshold);
+      return {
+        thread_id: t.thread_id,
+        topic: t.topic,
+        post_count: t.post_count,
+        votes: tally.total,
+        official_threshold: tally.official_threshold,
+        official: tally.candidate,
+        notify_admin: tally.candidate,
+      };
+    }),
+  );
+  return rows.sort((a, b) => b.votes - a.votes || (a.thread_id < b.thread_id ? -1 : 1));
+}
+
+// GET /plaza/channels/:channel/improvement-queue — 運営者向け優先度キュー投影(BBS-14)。
+// コインを積んだ順(降順)に並ぶ=「コインを積んだ順に上から本人がレビュー」の投影。
+plazaRoutes.get("/plaza/channels/:channel/improvement-queue", async (c) => {
+  return c.json({ channel: c.req.param("channel"), queue: await projectImprovementQueue(store(c), c.req.param("channel")) });
 });
 
 // GET /plaza/posts/:post_id — 単一投稿(permalink 不変・全走査で post_id 一致)。
