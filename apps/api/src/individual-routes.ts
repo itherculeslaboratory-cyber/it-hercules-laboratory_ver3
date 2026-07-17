@@ -10,10 +10,12 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { QR_BATCH_SIZES } from "./observation-constants";
+import { QR_BATCH_SIZES, STAGE_TO_NEXT_TRANSITION } from "./observation-constants";
 import { appendContribution } from "./contribution";
 import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
 import { projectOpenBindings } from "./source-routes";
+import { computeNextObservationAt } from "./home-routes";
+import { aggregateTags } from "./tag-routes";
 
 export const individualRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -23,6 +25,7 @@ const CROSS_TYPE = "ihl.ind.cross_parent.v1";
 const NAME_TYPE = "ihl.ind.name_event.v1";
 const BRAND_TYPE = "ihl.ind.brand_template.v1";
 const LIFE_TYPE = "ihl.ind.life_event.v1";
+const LINEAGE_DOUBT_TYPE = "ihl.ind.lineage_doubt.v1";
 // cross-module read-only types (owned by observation / market / source packages).
 const CAPTURE_TYPE = "ihl.obs.capture.v1";
 const PHOTO_TYPE = "ihl.obs.photo.v1";
@@ -31,6 +34,7 @@ const DEVICE_TYPE = "ihl.obs.device.v1";
 const OCCUPANCY_TYPE = "ihl.src.occupancy.v1";
 const BINDING_TYPE = "ihl.src.device_binding.v1"; // FND-18 source module (V3-IND-13 環境時系列 join)
 const TELEMETRY_TYPE = "ihl.src.telemetry.v1";
+const TXN_TYPE = "ihl.mkt.transaction_event.v1";
 
 const SCHEMA = {
   master: "schemas/events/ind-master.schema.json",
@@ -38,6 +42,7 @@ const SCHEMA = {
   name: "schemas/events/ind-name-event.schema.json",
   brand: "schemas/events/ind-brand-template.schema.json",
   life: "schemas/events/ind-life-event.schema.json",
+  lineageDoubt: "schemas/events/ind-lineage-doubt.schema.json",
 } as const;
 
 function store(c: { env: Bindings }): TruthStore {
@@ -164,6 +169,35 @@ export async function projectIndividual(s: TruthStore, id: string) {
   const templates = [
     ...new Set(observations.map((o) => o.template_id).filter((x): x is string => typeof x === "string")),
   ];
+  // V3-IND-13 所有者履歴(owner_history): 所有者は Truth に常駐フィールドを
+  // 持たない(不変条項① 派生値は都度再計算)。市場の transfer 取引イベント
+  // (kind:"transfer"・individual_ids[] にこの個体が載った回だけ)を全件スキャンし
+  // from(出品者actor)→to(相手)の系譜を組む — market-routes.ts の
+  // projectOwnershipLineage(1 listing 単位)の個体横断版。mkt-listing 自体には
+  // individual_ids リンクがまだ無い(MKT-29・別クラスタ残課題)ため、これは
+  // 「取引が明示的に運んだ個体」だけを拾う(一般の出品検索連携は対象外のまま)。
+  const owner_history = (await s.listEvents(`truth/${TXN_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.kind === "transfer" && Array.isArray(d.individual_ids) && (d.individual_ids as unknown[]).includes(id))
+    .map((d) => ({
+      listing_id: String(d.listing_id ?? ""),
+      from: String(d.actor_id ?? ""),
+      to: typeof d.counterparty === "string" ? d.counterparty : null,
+      at: String(d.created_at ?? ""),
+    }))
+    .sort((a, b) => a.at.localeCompare(b.at));
+  // V3-IND-13 環境履歴(environment_history): 現在地(projectIndividualProfile の
+  // placement_id)だけでなく、この個体の occupancy 全件(start/end 相含む)を
+  // 時系列で返す — 引っ越し全履歴。
+  const environment_history = (await s.listEvents(`truth/${OCCUPANCY_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.subject_ref === ref)
+    .map((d) => ({
+      placement_id: String(d.placement_id ?? ""),
+      phase: typeof d.phase === "string" ? d.phase : null,
+      effective_at: String(d.effective_at ?? ""),
+    }))
+    .sort((a, b) => a.effective_at.localeCompare(b.effective_at) || a.placement_id.localeCompare(b.placement_id));
   return {
     individual_id: id,
     master: master ? dataOf(master) : null,
@@ -176,6 +210,8 @@ export async function projectIndividual(s: TruthStore, id: string) {
     data_sources,
     market_offers: [] as Record<string, unknown>[], // ponytail: mkt-listing has no individual ref yet; join is a later 波
     improvements: [] as Record<string, unknown>[], // fork/improvement lineage is a later 波
+    owner_history,
+    environment_history,
   };
 }
 
@@ -301,12 +337,18 @@ export async function projectBioCard(s: TruthStore, id: string) {
     .sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id))); // ULID = time order
   const latest = caps[caps.length - 1];
   const latestSize = latest ? latestMeasure(latest, "length") ?? latestMeasure(latest, "weight") : null;
+  // V3-IND-34 feature_tags: 既存の二層タグ集約(POST/GET /tags・target_type="individual")
+  // を配線する — 新規タグ層は作らない。両層(ai/user)のどちらか一方でも0件だと
+  // aggregateTags は null を返す(批評家#4 の 400 条件)ので、bio-card 側は
+  // "タグ未登録" として静かに [] 扱いにする(エラーにしない)。
+  const tagAgg = await aggregateTags(s, "individual", id);
+  const feature_tags = tagAgg ? [...new Set([...tagAgg.ai_tags, ...tagAgg.user_tags])].sort() : [];
   return {
     individual_id: id,
     species: typeof m.species === "string" ? m.species : null,
     morph: null as string | null, // morph link is a later 波(taxon.morph is a master, not yet individual-linked)
     latest_size: latestSize,
-    feature_tags: [] as string[], // tag layer is P4; empty until joined
+    feature_tags,
     qr_url: `/individuals/${id}`, // QR content = the individual URL (IND-15)
   };
 }
@@ -386,6 +428,9 @@ export async function projectAuthenticity(s: TruthStore, id: string) {
       consistent: caps.length > 0 || life.length === 0,
     },
     lineage_conflicts: conflicts,
+    // V3-IND-21 疑義の記録(購入者が血統説明の矛盾を確認・記録できる文化):
+    // POST/GET /individuals/{id}/lineage-doubt の LWW 投影(withdrawn で撤回)。
+    doubts: await projectLineageDoubts(s, id),
   };
 }
 
@@ -431,6 +476,43 @@ export async function checkLineageClaim(
     issues.push({ code: "SIRE_DAM_SAME_INDIVIDUAL" });
   }
   return { consistent: issues.length === 0, issues };
+}
+
+/** doubt_id 単位で最新の action(raised/withdrawn)を LWW 投影(active = raised のまま
+ *  撤回されていないもの)。元レコードは消さない(不変条項③・撤回は新規追記)。 */
+export async function projectLineageDoubts(
+  s: TruthStore,
+  id: string,
+): Promise<{ doubt_id: string; listing_id: string | null; reason: string; actor_id: string; created_at: string }[]> {
+  const rows = (await s.listEvents(`truth/${LINEAGE_DOUBT_TYPE}/${id}-`))
+    .map(dataOf)
+    .filter((d) => d.individual_id === id);
+  const latestByDoubt = new Map<string, Record<string, unknown>>();
+  for (const r of rows.slice().sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))) {
+    const key = String(r.doubt_id ?? "");
+    if (key) latestByDoubt.set(key, r);
+  }
+  return [...latestByDoubt.values()]
+    .filter((r) => r.action === "raised")
+    .map((r) => ({
+      doubt_id: String(r.doubt_id ?? ""),
+      listing_id: typeof r.listing_id === "string" ? r.listing_id : null,
+      reason: String(r.reason ?? ""),
+      actor_id: String(r.actor_id ?? ""),
+      created_at: String(r.created_at ?? ""),
+    }))
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+/** 直近 molt の detail.to_stage(life は at 昇順ソート済み前提)。V3-IND-20 の
+ *  スケジュール自動生成(現在の成長ステージ自動検出)と projectIndividualProfile
+ *  の両方が使う共通の導出(コピペ二重化しない)。 */
+export function deriveCurrentStage(life: Record<string, unknown>[]): string | null {
+  const molts = life.filter((d) => d.kind === "molt");
+  const latestMolt = molts[molts.length - 1];
+  return latestMolt && typeof latestMolt.detail === "object" && latestMolt.detail !== null
+    ? ((latestMolt.detail as Record<string, unknown>).to_stage as string | undefined) ?? null
+    : null;
 }
 
 /**
@@ -547,12 +629,7 @@ export async function projectIndividualProfile(s: TruthStore, id: string) {
   if (!master && observations.length === 0 && life.length === 0) return null;
 
   // stage: 直近 molt の detail.to_stage。
-  const molts = life.filter((d) => d.kind === "molt");
-  const latestMolt = molts[molts.length - 1];
-  const stage =
-    latestMolt && typeof latestMolt.detail === "object" && latestMolt.detail !== null
-      ? ((latestMolt.detail as Record<string, unknown>).to_stage as string | undefined) ?? null
-      : null;
+  const stage = deriveCurrentStage(life);
 
   // status: death/survival_correction のうち時刻が最も新しいものが勝つ
   // (誤記録の訂正は append-only の新レコード追記 — 元の death は消さない・不変条項③)。
@@ -1187,6 +1264,39 @@ individualRoutes.get("/individuals/:id/authenticity", async (c) => {
   return c.json(auth);
 });
 
+// POST /individuals/{id}/lineage-doubt — 購入者が血統説明の矛盾に疑義を記録する
+// (V3-IND-21・「取引出品文の血統説明に矛盾がないか照合して疑義を購入者が確認・
+// 記録できる文化」)。汎用 market-flag(出品自体の違法性通報・GOV-35)とは別の
+// 専用route——血統/真正性の疑義は GET .../authenticity の doubts[] に集約表示
+// される。append-only: action="withdrawn" は元の raised レコードを消さず、同じ
+// doubt_id で新規追記する(不変条項③)。
+individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const action = body.action === "withdrawn" ? "withdrawn" : "raised";
+  if (action === "raised" && (typeof body.reason !== "string" || !body.reason.trim())) {
+    return c.json({ error: "REASON_REQUIRED" }, 400);
+  }
+  const doubtId = typeof body.doubt_id === "string" && body.doubt_id ? body.doubt_id : ulid();
+  const data: Record<string, unknown> = {
+    doubt_id: doubtId,
+    individual_id: id,
+    action,
+    actor_id: actorId,
+    created_at: nowIso(),
+  };
+  if (typeof body.reason === "string" && body.reason.trim()) data.reason = body.reason;
+  if (typeof body.listing_id === "string" && body.listing_id) data.listing_id = body.listing_id;
+  const res = await store(c).putEventAt(
+    `truth/${LINEAGE_DOUBT_TYPE}/${id}-${ulid()}.json`,
+    envelope(LINEAGE_DOUBT_TYPE, SCHEMA.lineageDoubt, actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_LINEAGE_DOUBT", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_LINEAGE_DOUBT", key: res.key }, 409);
+  return c.json({ individual_id: id, doubt_id: doubtId, action }, 201);
+});
+
 // Shared life-event append (IND-12/13), reused by batch-commit kind:"life-event"
 // (コピペ二重化しない — F4 行メニュー/一括どちらも同じ append 経路)。
 export async function writeLifeEvent(
@@ -1220,4 +1330,51 @@ individualRoutes.post("/individuals/:id/life-events", async (c) => {
   const r = await writeLifeEvent(store(c), actorId, id, body);
   if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_LIFE_EVENT" ? 409 : 400);
   return c.json({ individual_id: r.individual_id, kind: r.kind }, 201);
+});
+
+// POST /individuals/{id}/schedule/generate — 「スケジュール自動生成」ボタン
+// (V3-IND-20)。現在の成長ステージ(直近 molt から自動検出・deriveCurrentStage)
+// を毎回手入力させず、既存の決定論 stage 間隔(SCHEDULE_STAGE_INTERVAL_DAYS・
+// computeNextObservationAt/home-routes.ts)から次回観測予定を1件 INSERT する
+// (POST /observation/schedule と同じ Truth 形・コピペ二重化しない)。LLM/常駐AI
+// は使わない(不変条項①)——「AI」は種族・ステージ・履歴からの決定論導出を指す。
+// ステージ未確定(まだ molt 記録なし)は 400 STAGE_UNKNOWN(推測しない・誇張ゼロ)。
+individualRoutes.post("/individuals/:id/schedule/generate", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const actorId = c.get("actorId");
+  const life = (await s.listEvents(`truth/${LIFE_TYPE}/${id}-`))
+    .map(dataOf)
+    .filter((d) => d.individual_id === id)
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  const stage = deriveCurrentStage(life);
+  if (!stage) return c.json({ error: "STAGE_UNKNOWN" }, 400);
+  // stage(life-event の to_stage 語彙: first/second/…)→ SCHEDULE_STAGE_INTERVAL_DAYS
+  // の遷移キー(first_to_second/…)へ変換。まだ例示値が無い段階(third_early 以降)
+  // は 400(未知の間隔を推測しない)。
+  const transitionKey = STAGE_TO_NEXT_TRANSITION[stage];
+  if (!transitionKey) return c.json({ error: "NO_INTERVAL_FOR_STAGE", stage }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const from = typeof body.from === "string" ? body.from : nowIso();
+  const nextAt = computeNextObservationAt(undefined, transitionKey, from);
+  if (nextAt === null) return c.json({ error: "NO_INTERVAL_FOR_STAGE", stage }, 400);
+  const scheduleId = ulid();
+  const data: Record<string, unknown> = {
+    schedule_id: scheduleId,
+    individual_id: id,
+    next_observation_at: nextAt,
+    stage: transitionKey,
+    actor_id: actorId,
+    created_at: nowIso(),
+  };
+  const res = await s.putEventAt(
+    `truth/${SCHEDULE_TYPE}/${id}-${scheduleId}.json`,
+    envelope(SCHEDULE_TYPE, "schemas/events/obs-schedule.schema.json", actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_SCHEDULE", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_SCHEDULE", key: res.key }, 409);
+  return c.json(
+    { individual_id: id, schedule_id: scheduleId, detected_stage: stage, stage: transitionKey, next_observation_at: nextAt },
+    201,
+  );
 });

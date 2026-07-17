@@ -30,6 +30,15 @@ export const SCHEDULE_STAGE_INTERVAL_DAYS = {
   second_to_third: 30,
 } as const;
 
+/** current life-event stage (to_stage vocabulary: first/second/third_early/…)
+ *  → the SCHEDULE_STAGE_INTERVAL_DAYS transition key for "what's next from here"
+ *  (V3-IND-20 スケジュール自動生成). Stages past `second` have no interval yet
+ *  (OBS-21 の例示値がここまでしか無い) — 未知は呼び出し側で 400(推測しない)。 */
+export const STAGE_TO_NEXT_TRANSITION: Record<string, keyof typeof SCHEDULE_STAGE_INTERVAL_DAYS> = {
+  first: "first_to_second",
+  second: "second_to_third",
+};
+
 /** target-navigator convergence bound: questions to reach a species (OBS-02). */
 export const NAVIGATOR_TARGET_QUESTIONS = { min: 7, max: 12 } as const;
 

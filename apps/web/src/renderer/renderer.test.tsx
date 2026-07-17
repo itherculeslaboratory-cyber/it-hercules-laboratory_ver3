@@ -702,6 +702,175 @@ describe("Renderer — target-navigator node (V3-OBS-02)", () => {
   });
 });
 
+describe("Renderer — measurement-table StructuredRow group/lock (V3-OBS-27)", () => {
+  it("locks a row whose value_origin is not direct_observed (badge instead of inputs)", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          {
+            id: "f",
+            type: "form",
+            action: { kind: "api", method: "POST", path: "/api/v1/observation/captures" },
+            children: [
+              {
+                id: "measurements",
+                type: "measurement-table",
+                props: {
+                  item_options: [{ value: "気温", label: "気温" }],
+                  method_options: [{ value: "手入力", label: "手入力" }],
+                  rows: [
+                    { item: "体長", value: 65, unit: "mm", value_origin: "direct_observed" },
+                    { item: "気温", value: 24.5, unit: "℃", value_origin: "environment_derived" },
+                  ],
+                },
+              },
+              { id: "s", type: "button", props: { label: "送信", type: "submit" } },
+            ],
+          },
+        ])}
+      />,
+    );
+    // the direct_observed row stays a normal editable number input…
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
+    // …the environment_derived row is locked: no select/input, just its value +
+    // an origin badge (grade + label), plus a lock glyph.
+    expect(screen.getByText("24.5")).toBeInTheDocument();
+    expect(screen.getByText("○ 環境由来")).toBeInTheDocument();
+    expect(screen.getByTitle("自動取得・読取専用")).toBeInTheDocument();
+  });
+
+  it("renders a group subheading when rows mix measurement/photo_condition groups", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          {
+            id: "measurements",
+            type: "measurement-table",
+            props: {
+              readonly: true,
+              rows: [
+                { group: "measurement", item: "体長", value: 65, unit: "mm", value_origin: "direct_observed" },
+                { group: "photo_condition", item: "気温", value: 24.5, unit: "℃", value_origin: "environment_derived" },
+              ],
+            },
+          },
+        ])}
+      />,
+    );
+    expect(screen.getByText("計測")).toBeInTheDocument();
+    expect(screen.getByText("撮影条件")).toBeInTheDocument();
+  });
+
+  it("readonly + bind_items renders rows sourced from fetched scope data, no add-row button", async () => {
+    const onAction = vi.fn(async () => ({
+      measurements: [{ item: "体長", value: 65, unit: "mm", value_origin: "direct_observed" }],
+    }));
+    render(
+      <Renderer
+        onAction={onAction}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "detail",
+              type: "card",
+              props: { source_path: "/api/v1/observation/x" },
+              children: [
+                {
+                  id: "measurements",
+                  type: "measurement-table",
+                  props: { readonly: true, bind_items: "data.detail.measurements" },
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText("65")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "行を追加" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Renderer — WorkflowContext client-only prefill (V3-OBS-19)", () => {
+  afterEach(() => window.localStorage.clear());
+
+  it("carry_to_workflow (form) writes named field values to localStorage on submit", async () => {
+    const onAction = vi.fn(async () => ({}));
+    render(
+      <Renderer
+        onAction={onAction}
+        def={screenDef([
+          {
+            id: "f",
+            type: "form",
+            action: { kind: "api", method: "POST", path: "/api/v1/observation/captures" },
+            props: { carry_to_workflow: ["species_candidate"] },
+            children: [
+              { id: "species", type: "field", props: { variant: "text", name: "species_candidate", label: "種" } },
+              { id: "s", type: "button", props: { label: "送信", type: "submit" } },
+            ],
+          },
+        ])}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("種"), { target: { value: "Dynastes hercules" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "送信" }));
+    });
+    expect(JSON.parse(window.localStorage.getItem("ihl:obs-workflow-context") ?? "{}")).toMatchObject({
+      species_candidate: "Dynastes hercules",
+    });
+  });
+
+  it("workflow_key (field) prefills an empty field from a prior carry_to_workflow write, still editable", async () => {
+    window.localStorage.setItem("ihl:obs-workflow-context", JSON.stringify({ species_candidate: "Dynastes hercules" }));
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          {
+            id: "species",
+            type: "field",
+            props: { variant: "text", name: "species_candidate", label: "種", workflow_key: "species_candidate" },
+          },
+        ])}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText("種")).toHaveValue("Dynastes hercules"));
+    // still a normal editable input — this is a default, not a lock.
+    fireEvent.change(screen.getByLabelText("種"), { target: { value: "Allomyrina dichotoma" } });
+    expect(screen.getByLabelText("種")).toHaveValue("Allomyrina dichotoma");
+  });
+
+  it("an explicit props.default wins over the workflow-context value (never overwrites an authored default)", async () => {
+    window.localStorage.setItem("ihl:obs-workflow-context", JSON.stringify({ species_candidate: "Dynastes hercules" }));
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          {
+            id: "species",
+            type: "field",
+            props: {
+              variant: "text",
+              name: "species_candidate",
+              label: "種",
+              default: "Trypoxylus dichotomus",
+              workflow_key: "species_candidate",
+            },
+          },
+        ])}
+      />,
+    );
+    expect(screen.getByLabelText("種")).toHaveValue("Trypoxylus dichotomus");
+  });
+});
+
 describe("Renderer — A層 badge/progress (c7 ui-parity-map §2-3/§2-4)", () => {
   it("renders a badge with the requested tone as a data attribute", () => {
     render(
@@ -864,6 +1033,49 @@ describe("Renderer — A層 image-grid node (c7 ui-parity-map §2-6)", () => {
     expect(screen.getByRole("img", { name: "個体A" })).toHaveAttribute("src", "/x.jpg");
     const badge = screen.getAllByText("良好").find((el) => el.className.includes("civ-badge"));
     expect(badge).toHaveAttribute("data-tone", "success");
+  });
+
+  it("V3-OBS-24 search_path does a POST self-fetch, rounds score into score_pct, and wires the citation button", async () => {
+    const onAction = vi.fn(async (action: Action, body?: Record<string, unknown>) => {
+      if (action.method === "POST" && action.path === "/api/v1/observation/search") {
+        expect(body).toMatchObject({ query_capture_id: "cap-1", rerank: true });
+        return { individuals: [{ subject_ref: "individual/ind-1", score: 0.873 }] };
+      }
+      return {};
+    });
+    const onNavigate = vi.fn();
+    render(
+      <Renderer
+        onAction={onAction}
+        onNavigate={onNavigate}
+        params={{ id: "cap-1" }}
+        def={{
+          screen_id: "t",
+          route: "/t",
+          title: "t",
+          nodes: [
+            {
+              id: "similar",
+              type: "image-grid",
+              props: {
+                search_path: "/api/v1/observation/search",
+                search_body: { query_capture_id: "{{params.id}}", rerank: true },
+                search_response_path: "individuals",
+                item_label: "{{subject_ref}}",
+                item_badge: "{{score_pct}}%",
+                item_action_screen: "individual-detail",
+                item_action_query: { id: "{{subject_ref}}" },
+                item_action_label: "引用として見る",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(await screen.findByText("individual/ind-1")).toBeInTheDocument();
+    expect(screen.getByText("87%")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "引用として見る" }));
+    expect(onNavigate).toHaveBeenCalledWith("individual-detail", { id: "individual/ind-1" });
   });
 });
 

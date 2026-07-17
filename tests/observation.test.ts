@@ -74,6 +74,20 @@ describe("§3 captures", () => {
     );
     expect(ok.status).toBe(202);
   });
+
+  it("V3-OBS-19: life_stage_candidate (free-text, optional) rides the capture like species_candidate", async () => {
+    const { bucket, env } = ctx();
+    const res = await post(
+      "/api/v1/observation/captures",
+      { domain: "biology", life_stage_candidate: "三令初期" },
+      env,
+    );
+    expect(res.status).toBe(202);
+    const { capture_id } = (await res.json()) as { capture_id: string };
+    const stored = new TruthStore(bucket);
+    const ev = await stored.readEvent(`truth/ihl.obs.capture.v1/${capture_id}.json`);
+    expect((ev!.data as { life_stage_candidate: string }).life_stage_candidate).toBe("三令初期");
+  });
 });
 
 describe("§3 upload + detail + image", () => {

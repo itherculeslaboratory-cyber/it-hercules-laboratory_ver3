@@ -3,7 +3,7 @@
   "route": "/observe/detail",
   "title": "観測の詳細",
   "layout": "standard",
-  "notes": "V3-OBS-72 研究室環境コンテキスト: この観測の個体が現在どの設置場所(棚)にいるかを occupancy から辿り、その棚に紐づく研究室環境(部屋/空調/センサー位置・placement-qr.json で記録)を表示する。個体が現在どこにも占有記録されていない/環境未記録なら空欄(honest empty state)。",
+  "notes": "V3-OBS-72 研究室環境コンテキスト: この観測の個体が現在どの設置場所(棚)にいるかを occupancy から辿り、その棚に紐づく研究室環境(部屋/空調/センサー位置・placement-qr.json で記録)を表示する。個体が現在どこにも占有記録されていない/環境未記録なら空欄(honest empty state)。V3-OBS-24 高忠実度: hero大型写真+構造化撮影条件+由来タグ(value_origin badge)付き測定表(既存measurement-table readonlyモード配線・V3-OBS-27)。類似個体サイドバーはV3-OBS-11のrerank APIをimage-gridのsearch_path縮退で再利用(スコア%+引用ボタン)。",
   "nodes": [
     {
       "id": "shell",
@@ -15,21 +15,44 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text_key": "obs-detail.title.text", "text": "観測の詳細", "level": 1 } },
             {
+              "id": "hero",
+              "type": "image",
+              "props": {
+                "hide_if_empty_path": "data.detail.photos",
+                "src": "/api/v1/observation/{{params.id}}/image/{{data.detail.photos.0.photo_id}}",
+                "alt": "観測写真"
+              }
+            },
+            {
               "id": "detail",
               "type": "card",
               "props": { "source_path": "/api/v1/observation/{{params.id}}" },
               "children": [
                 { "id": "domain", "type": "text", "props": { "text_key": "obs-detail.domain.text", "text": "ドメイン: {{data.detail.capture.domain}}" } },
-                { "id": "species", "type": "text", "props": { "text_key": "obs-detail.species.text", "text": "種の候補: {{data.detail.capture.species_candidate}}", "muted": true } }
+                { "id": "species", "type": "text", "props": { "text_key": "obs-detail.species.text", "text": "種の候補: {{data.detail.capture.species_candidate}}", "muted": true } },
+                { "id": "life-stage", "type": "text", "props": { "text_key": "obs-detail.life-stage.text", "text": "発育段階の候補: {{data.detail.capture.life_stage_candidate}}", "muted": true } }
+              ]
+            },
+            { "id": "conditions-title", "type": "heading", "props": { "text_key": "obs-detail.conditions-title.text", "text": "撮影条件", "level": 2 } },
+            {
+              "id": "conditions",
+              "type": "card",
+              "children": [
+                { "id": "cond-temp", "type": "text", "props": { "text_key": "obs-detail.cond-temp.text", "text": "気温: {{data.detail.capture.photo_conditions.temp_c}} ℃", "muted": true } },
+                { "id": "cond-humidity", "type": "text", "props": { "text_key": "obs-detail.cond-humidity.text", "text": "湿度: {{data.detail.capture.photo_conditions.humidity_pct}} %", "muted": true } },
+                { "id": "cond-time", "type": "text", "props": { "text_key": "obs-detail.cond-time.text", "text": "撮影時刻: {{data.detail.capture.photo_conditions.captured_at}}", "muted": true } }
               ]
             },
             { "id": "measures-title", "type": "heading", "props": { "text_key": "obs-detail.measures-title.text", "text": "計測", "level": 2 } },
             {
               "id": "measures",
-              "type": "list",
+              "type": "measurement-table",
               "props": {
+                "label_key": "obs-detail.measures.label",
+                "label": "計測",
+                "readonly": true,
                 "bind_items": "data.detail.capture.measurements",
-                "item_text": "{{item}}: {{value}} {{unit}}"
+                "empty_text": "計測はまだ記録されていません"
               }
             },
             { "id": "photos-title", "type": "heading", "props": { "text_key": "obs-detail.photos-title.text", "text": "写真", "level": 2 } },
@@ -52,6 +75,23 @@
                 { "id": "lab-env-hvac", "type": "text", "props": { "text_key": "obs-detail.lab-env-hvac.text", "text": "空調: {{data.lab-env.lab_environment.hvac_profile}}", "muted": true } },
                 { "id": "lab-env-sensor", "type": "text", "props": { "text_key": "obs-detail.lab-env-sensor.text", "text": "センサー位置: {{data.lab-env.lab_environment.sensor_position}}", "muted": true } }
               ]
+            },
+            { "id": "similar-title", "type": "heading", "props": { "text_key": "obs-detail.similar-title.text", "text": "類似個体", "level": 2 } },
+            {
+              "id": "similar",
+              "type": "image-grid",
+              "props": {
+                "search_path": "/api/v1/observation/search",
+                "search_body": { "query_capture_id": "{{params.id}}", "rerank": true, "aggregate": "max", "top_k": 5 },
+                "search_response_path": "individuals",
+                "item_label": "{{individual_id}}",
+                "item_badge": "{{score_pct}}%",
+                "item_badge_tone": "neutral",
+                "item_action_screen": "individual-detail",
+                "item_action_query": { "id": "{{individual_id}}" },
+                "item_action_label": "この個体を引用",
+                "empty_text": "類似する個体はまだ見つかっていません"
+              }
             },
             {
               "id": "to-individual",

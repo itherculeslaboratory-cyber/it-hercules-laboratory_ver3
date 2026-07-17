@@ -3,6 +3,7 @@
   "route": "/observe/entry",
   "title": "観測を記録する",
   "layout": "standard",
+  "notes": "V3-OBS-19: 種族(species_candidate)+発育段階(life_stage_candidate)は次回この画面を開いた時の既定値としてlocalStorageに退避(carry_to_workflow)し、workflow_keyを持つ両フィールドへプリフィルされる(taxonomy確定は常にユーザー)。V3-OBS-26: 計測1行UIは既存measurement-table(V3-OBS-18)を配線(項目/数値/単位/計測方法の4要素・自由項目追加可)。IoT機器未登録時はdevice画面への導線を静的リンクで併設。",
   "nodes": [
     {
       "id": "shell",
@@ -23,7 +24,7 @@
               "id": "capture-form",
               "type": "form",
               "action": { "kind": "navigate", "to": "obs-confirm" },
-              "props": { "static": { "measurements.0.kind": "number" } },
+              "props": { "carry_to_workflow": ["species_candidate", "life_stage_candidate"] },
               "children": [
                 { "id": "domain", "type": "field", "props": { "variant": "select", "name": "domain", "label_key": "obs-entry.domain.label", "label": "観測ドメイン", "required": true, "placeholder": "ドメインを選ぶ", "options": [
                   { "value": "biology", "label": "生き物" },
@@ -32,9 +33,39 @@
                   { "value": "place", "label": "場所" },
                   { "value": "custom", "label": "カスタム" }
                 ] } },
-                { "id": "species", "type": "field", "props": { "variant": "text", "name": "species_candidate", "label_key": "obs-entry.species.label", "label": "種の候補（任意・ユーザー入力）", "placeholder": "例: Dynastes hercules" } },
-                { "id": "measure-item", "type": "field", "props": { "variant": "text", "name": "measurements.0.item", "label_key": "obs-entry.measure-item.label", "label": "計測項目", "placeholder": "例: 体長", "required": true } },
-                { "id": "measure-value", "type": "field", "props": { "variant": "number", "name": "measurements.0.value", "label_key": "obs-entry.measure-value.label", "label": "計測値", "placeholder": "例: 65", "required": true } },
+                { "id": "species", "type": "field", "props": { "variant": "text", "name": "species_candidate", "label_key": "obs-entry.species.label", "label": "種の候補（任意・ユーザー入力）", "placeholder": "例: Dynastes hercules", "workflow_key": "species_candidate" } },
+                { "id": "life-stage", "type": "field", "props": { "variant": "text", "name": "life_stage_candidate", "label_key": "obs-entry.life-stage.label", "label": "発育段階の候補（任意・ユーザー入力）", "placeholder": "例: 三令初期", "workflow_key": "life_stage_candidate" } },
+                {
+                  "id": "measurements",
+                  "type": "measurement-table",
+                  "props": {
+                    "label_key": "obs-entry.measurements.label",
+                    "label": "計測",
+                    "add_label": "行を追加",
+                    "add_item_label": "＋ 項目を追加",
+                    "add_unit_label": "＋ 単位を追加",
+                    "item_options": [
+                      { "value": "体長", "label": "体長" },
+                      { "value": "体重", "label": "体重" },
+                      { "value": "頭角長", "label": "頭角長" }
+                    ],
+                    "unit_options": [
+                      { "value": "mm", "label": "mm" },
+                      { "value": "g", "label": "g" },
+                      { "value": "cm", "label": "cm" }
+                    ],
+                    "method_options": [
+                      { "value": "手入力", "label": "手入力" },
+                      { "value": "IoT取得", "label": "IoT取得" }
+                    ],
+                    "rows": [{ "item": "体長", "unit": "mm" }]
+                  }
+                },
+                {
+                  "id": "device-hint",
+                  "type": "link",
+                  "props": { "label_key": "obs-entry.device-hint.label", "label": "IoT機器が未登録の場合はこちら → 機器管理", "href": "/s/device" }
+                },
                 { "id": "subject", "type": "field", "props": { "variant": "text", "name": "subject_ref", "label_key": "obs-entry.subject.label", "label": "対象個体 ID（任意）", "placeholder": "individual/..." } },
                 { "id": "sire", "type": "field", "props": { "variant": "text", "name": "sire_id", "label_key": "obs-entry.sire.label", "label": "父個体 ID（任意）", "placeholder": "individual/..." } },
                 { "id": "dam", "type": "field", "props": { "variant": "text", "name": "dam_id", "label_key": "obs-entry.dam.label", "label": "母個体 ID（任意）", "placeholder": "individual/..." } },

@@ -600,6 +600,31 @@ function ButtonNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// V3-OBS-19 WorkflowContext(観測コンテキスト)— client-only 縮退版。種族
+// (species_candidate)+発育段階(life_stage_candidate)を1度決めたら次の観測
+// 画面の既定値だけをプリフィルする(taxonomy確定は常にユーザー・購読/検索/
+// テンプレ横断スコープの本体設計は要件全文どおり後波)。visit-tracker/
+// recent-chips と同じ localStorage 縮退パターン(新 Truth 型なし)。
+const WORKFLOW_CONTEXT_KEY = "ihl:obs-workflow-context";
+function readWorkflowContext(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(WORKFLOW_CONTEXT_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return obj && typeof obj === "object" ? (obj as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+function writeWorkflowContext(patch: Record<string, string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(WORKFLOW_CONTEXT_KEY, JSON.stringify({ ...readWorkflowContext(), ...patch }));
+  } catch {
+    /* ignore — best-effort prefill only */
+  }
+}
+
 function FieldNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const invalidCtx = useContext(InvalidCtx);
@@ -610,6 +635,20 @@ function FieldNode({ node }: { node: ScreenNode }) {
   const required = p.required === true;
   const invalid = p.invalid === true || invalidCtx.has(name);
   const id = `field-${node.id}`;
+  // V3-OBS-19 WorkflowContext(観測コンテキスト・client-only 縮退): workflow_key
+  // を持つフィールドは空欄のまま初回描画し(SSR/ハイドレーション安全)、マウント
+  // 後に一度だけ localStorage の前回値を imperative に流し込む(未入力の時の
+  // み・既定値プリフィルのみでオートサブミットはしない・ユーザーはいつでも
+  // 上書きできる・taxonomy確定は常にユーザーのまま変わらない)。
+  const workflowKey = p.workflow_key != null ? String(p.workflow_key) : "";
+  const wfRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+  useEffect(() => {
+    if (!workflowKey) return;
+    const el = wfRef.current;
+    if (!el || el.value) return;
+    const ctx = readWorkflowContext();
+    if (ctx[workflowKey]) el.value = ctx[workflowKey];
+  }, [workflowKey]);
   // V3-AIP-101 "前回値とΔ" (F2 live, obs-register-entry): a number field with
   // compare_source (another node's fetched `{source}.observations`) + compare_item
   // renders the previous value below the input and, as the user types, the delta.
@@ -674,7 +713,7 @@ function FieldNode({ node }: { node: ScreenNode }) {
   } else if (variant === "select") {
     const options = (p.options as Array<Record<string, unknown> | string>) ?? [];
     control = (
-      <select {...shared} defaultValue="">
+      <select {...shared} ref={workflowKey ? (wfRef as React.RefObject<HTMLSelectElement>) : undefined} defaultValue="">
         <option value="" disabled>
           {String(p.placeholder ?? "選択してください")}
         </option>
@@ -749,6 +788,7 @@ function FieldNode({ node }: { node: ScreenNode }) {
     control = (
       <input
         {...shared}
+        ref={workflowKey ? (wfRef as React.RefObject<HTMLInputElement>) : undefined}
         type={variant === "number" ? "number" : variant === "date" ? "date" : "text"}
         placeholder={p.placeholder ? String(p.placeholder) : undefined}
         defaultValue={p.default != null ? interpolate(String(p.default), scope) : undefined}
@@ -842,6 +882,19 @@ function FormNode({ node }: { node: ScreenNode }) {
           file = v;
         }
       });
+      // V3-OBS-19 WorkflowContext 書き込み側: carry_to_workflow に挙げた
+      // フィールド名の値だけを localStorage へ退避し、次の観測画面の
+      // workflow_key プリフィルに使う(送信内容そのものは変えない)。
+      const carry = p.carry_to_workflow as string[] | undefined;
+      if (carry?.length) {
+        const patch: Record<string, string> = {};
+        for (const k of carry) {
+          const v = getPath(body, k);
+          if (typeof v === "string" && v) patch[k] = v;
+          else if (typeof v === "number" && Number.isFinite(v)) patch[k] = String(v);
+        }
+        if (Object.keys(patch).length) writeWorkflowContext(patch);
+      }
       setPending(true);
       try {
         await run(node.action, body, file);
@@ -1285,14 +1338,57 @@ function templateHasMissingRef(tpl: string, scope: unknown): boolean {
   return false;
 }
 
+// V3-OBS-24 類似個体サイドバー: image-grid の bind_items(GET+source_path)は
+// POST の類似検索(OBS-11 rerank)を表現できないため、同じ「宣言的語彙で表現し
+// きれない専用フェッチ」縮退(individual-profile/growth-chart と同じ扱い)で
+// search_path+search_body を足す。bind_items と排他 — 両方指定は search_path
+// が勝つ。search_response_path はレスポンス中の配列の位置(例: "individuals"・
+// aggregate モードの POST /observation/search 応答)。
+function useSearchItems(node: ScreenNode): unknown[] {
+  const p = props(node);
+  const scope = useContext(ScopeCtx);
+  const execute = useContext(ExecuteCtx);
+  const { setNodeData } = useContext(DataSinkCtx);
+  const path = p.search_path ? String(p.search_path) : "";
+  const bodyTpl = (p.search_body as Record<string, unknown> | undefined) ?? {};
+  const bodyKey = JSON.stringify(bodyTpl);
+  useEffect(() => {
+    if (!path) return;
+    let alive = true;
+    const body = resolveStatic(bodyTpl, scope);
+    Promise.resolve(execute({ kind: "api", method: "POST", path }, body))
+      .then((r) => {
+        if (alive && r !== undefined) setNodeData(node.id, r);
+      })
+      .catch(() => {
+        /* honest empty state — no match / no embedding yet is not an error to show */
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, bodyKey]);
+  const stored = getPath(scope, `data.${node.id}`);
+  const respPath = p.search_response_path ? String(p.search_response_path) : "";
+  const arr = respPath ? getPath(stored, respPath) : stored;
+  return Array.isArray(arr) ? arr : [];
+}
+
 // Image grid / thumbnail cards (§2-6) — the bind_items twin of ListNode's
 // image branch, laid out as a grid instead of a stacked list, each cell
 // carrying a meta line + optional Badge. c8磨き第2弾#2(受領10「画像を押せば
 // 詳細が出る」): item_href makes the whole card a click-through link — no
-// separate "詳細を開く" button to squeeze on mobile.
+// separate "詳細を開く" button to squeeze on mobile. (+ V3-OBS-24 an optional
+// per-item navigate button — item_action_screen/item_action_query/
+// item_action_label — e.g. a similar-individual card's "引用として見る"
+// citation button — item_href and the action button are independent, both
+// may be present).
 function ImageGridNode({ node }: { node: ScreenNode }) {
   const p = props(node);
-  const items = useBoundItems(node);
+  const navigate = useContext(NavigateCtx);
+  const boundItems = useBoundItems(node);
+  const searchItems = useSearchItems(node);
+  const items = p.search_path ? searchItems : boundItems;
   if (items.length === 0 && p.empty_text) {
     return <p className="civ-empty">{String(p.empty_text)}</p>;
   }
@@ -1306,9 +1402,18 @@ function ImageGridNode({ node }: { node: ScreenNode }) {
   // Dynamic tag: <a> when the card navigates, <figure> otherwise — same
   // .civ-thumb-card box either way (see globals.css, tag-agnostic selector).
   const Wrapper = hrefTpl ? "a" : "figure";
+  const actionScreen = p.item_action_screen ? String(p.item_action_screen) : "";
+  const actionQueryTpl = (p.item_action_query as Record<string, string> | undefined) ?? {};
+  const actionLabel = p.item_action_label ? String(p.item_action_label) : "";
   return (
     <div className="civ-image-grid">
-      {items.map((it, i) => (
+      {items.map((rawIt, i) => {
+        // V3-OBS-24 スコア%: OBS-11 rerank score is a 0..1 float — a bare
+        // {{score}} template can't round/×100, so a rounded score_pct rides
+        // the per-item scope alongside the raw fields (additive, no interpolate change).
+        const s = (rawIt as Record<string, unknown>)?.score;
+        const it = typeof s === "number" && Number.isFinite(s) ? { ...(rawIt as object), score_pct: Math.round(s * 100) } : rawIt;
+        return (
         <Wrapper className="civ-thumb-card" key={i} {...(hrefTpl ? { href: interpolate(hrefTpl, it) } : {})}>
           {imgTpl && !templateHasMissingRef(imgTpl, it) ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1333,9 +1438,27 @@ function ImageGridNode({ node }: { node: ScreenNode }) {
                 tone={badgeToneTpl ? interpolate(badgeToneTpl, it) : undefined}
               />
             )}
+            {actionScreen && actionLabel && (
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="ghost"
+                onClick={() =>
+                  navigate(
+                    actionScreen,
+                    Object.fromEntries(
+                      Object.entries(actionQueryTpl).map(([k, v]) => [k, interpolate(String(v), it)]),
+                    ),
+                  )
+                }
+              >
+                {actionLabel}
+              </button>
+            )}
           </figcaption>
         </Wrapper>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -1480,13 +1603,58 @@ function UgcText({ node, text }: { node: ScreenNode; text: string }) {
 // ponytail: uncontrolled rows. An untouched template row still submits its
 // item/unit/method/kind with an empty value; the confirm/API step should drop
 // measurements missing a value. Add per-row value-gating only if that leak bites.
+//
+// V3-OBS-27 StructuredRow統一: 測定行/撮影条件行/環境スナップショット行を同じ
+// コンポーネントで表現する。種別差は専用ノードを増やさず tpl.group (既定
+// "measurement") のみで表現(複数 group が混在する時だけ小見出しを挟む)。
+// tpl.value_origin が "direct_observed" 以外(自動取得)なら、その行は
+// 読取専用(ロック) — 入力欄の代わりに出所バッジ(◎/○/△+日本語ラベル)を表示し、
+// 手入力行は従来どおり編集可(source は内部メタでユーザー選択式にしない)。
+// props.readonly:true は表全体を閲覧専用にする(obs-detail 等・行追加/項目追加
+// ボタンも隠す)。props.bind_items は table/list と同じ規約でスコープの配列
+// (例: 祖先 card の source_path が fetch した data.detail.capture.measurements)
+// を rows として束ねる — obs-entry のような静的 props.rows と排他。
+const ORIGIN_GRADE: Record<string, "◎" | "○" | "△"> = {
+  direct_observed: "◎",
+  image_derived: "○",
+  environment_derived: "○",
+  lineage_derived: "○",
+  estimated: "△",
+  imputed: "△",
+  aggregate: "△",
+  model_inference: "△",
+  unknown: "△",
+};
+const ORIGIN_LABEL: Record<string, string> = {
+  direct_observed: "手入力",
+  image_derived: "画像由来",
+  environment_derived: "環境由来",
+  lineage_derived: "血統由来",
+  estimated: "推定",
+  imputed: "補完",
+  aggregate: "集計",
+  model_inference: "モデル推論",
+  unknown: "不明",
+};
+const GROUP_LABEL: Record<string, string> = {
+  measurement: "計測",
+  photo_condition: "撮影条件",
+  environment_snapshot: "環境スナップショット",
+};
+const originTone = (grade: "◎" | "○" | "△" | ""): string =>
+  grade === "◎" ? "success" : grade === "○" ? "neutral" : grade === "△" ? "caution" : "neutral";
+
 function MeasurementTableNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const resolve = useContext(MessagesCtx);
+  const boundRows = useBoundItems(node);
   const baseItems = toOptions(p.item_options);
   const baseUnits = toOptions(p.unit_options);
   const methodOpts = toOptions(p.method_options);
-  const templates = (p.rows as Array<Record<string, unknown>>) ?? [];
+  const templates = p.bind_items
+    ? (boundRows as Array<Record<string, unknown>>)
+    : ((p.rows as Array<Record<string, unknown>>) ?? []);
+  const readonly = p.readonly === true;
   const [extra, setExtra] = useState(0);
   // V3-OBS-18 自由項目: user-defined item/unit choices extend every row's select.
   const [extraItems, setExtraItems] = useState<Opt[]>([]);
@@ -1495,14 +1663,16 @@ function MeasurementTableNode({ node }: { node: ScreenNode }) {
   const [pendingName, setPendingName] = useState("");
   const itemOpts = [...baseItems, ...extraItems];
   const unitOpts = [...baseUnits, ...extraUnits];
-  const rowCount = templates.length + extra;
+  const rowCount = readonly ? templates.length : templates.length + extra;
   const th = (k: unknown, l: unknown, fb: string) => displayText(resolve, k, l, fb);
   const itemLabel = th(p.item_label_key, p.item_label, "項目");
   const valueLabel = th(p.value_label_key, p.value_label, "数値");
   const unitLabel = th(p.unit_label_key, p.unit_label, "単位");
-  const methodLabel = th(p.method_label_key, p.method_label, "計測方法");
-  const canAddItem = p.add_item_label != null;
-  const canAddUnit = p.add_unit_label != null;
+  const methodLabel = th(p.method_label_key, p.method_label, readonly ? "出所" : "計測方法");
+  const canAddItem = p.add_item_label != null && !readonly;
+  const canAddUnit = p.add_unit_label != null && !readonly;
+  const groupOf = (t: Record<string, unknown>) => (t.group != null ? String(t.group) : "measurement");
+  const hasMultipleGroups = new Set(templates.map(groupOf)).size > 1;
 
   const confirmAdd = () => {
     const v = pendingName.trim();
@@ -1514,6 +1684,10 @@ function MeasurementTableNode({ node }: { node: ScreenNode }) {
     setPendingName("");
     setAdding(null);
   };
+
+  if (readonly && templates.length === 0) {
+    return p.empty_text ? <p className="civ-empty">{String(p.empty_text)}</p> : null;
+  }
 
   return (
     <div className="civ-measure-table" role="group" aria-label={th(p.label_key, p.label, "計測")}>
@@ -1530,7 +1704,35 @@ function MeasurementTableNode({ node }: { node: ScreenNode }) {
         const dMethod =
           tpl.method != null ? String(tpl.method) : String(methodOpts[0]?.value ?? "");
         const rowN = i + 1;
-        return (
+        const group = groupOf(tpl);
+        const prevGroup = i > 0 ? groupOf(templates[i - 1] ?? {}) : null;
+        const showGroupHeader = hasMultipleGroups && group !== prevGroup;
+        const origin = tpl.value_origin != null ? String(tpl.value_origin) : "";
+        const locked = readonly || (origin !== "" && origin !== "direct_observed");
+        const rowNode = locked ? (
+          <div className="civ-measure-row" data-locked="true" key={i}>
+            <span className="civ-text" aria-label={`${itemLabel} ${rowN}`}>
+              {dItem || "—"}
+            </span>
+            <span className="civ-text" aria-label={`${valueLabel} ${rowN}`}>
+              {tpl.value != null ? String(tpl.value) : "—"}
+            </span>
+            <span className="civ-text" aria-label={`${unitLabel} ${rowN}`}>
+              {dUnit}
+            </span>
+            <span className="civ-measure-origin" aria-label={`${methodLabel} ${rowN}`}>
+              <Badge
+                text={`${origin ? ORIGIN_GRADE[origin] ?? "" : ""} ${origin ? (ORIGIN_LABEL[origin] ?? origin) : "手入力"}`.trim()}
+                tone={originTone(origin ? (ORIGIN_GRADE[origin] ?? "") : "")}
+              />
+              {readonly ? null : (
+                <span aria-hidden="true" title="自動取得・読取専用">
+                  🔒
+                </span>
+              )}
+            </span>
+          </div>
+        ) : (
           <div className="civ-measure-row" key={i}>
             <select
               className="civ-input"
@@ -1550,6 +1752,7 @@ function MeasurementTableNode({ node }: { node: ScreenNode }) {
               type="number"
               inputMode="decimal"
               name={`measurements.${i}.value`}
+              defaultValue={tpl.value != null ? String(tpl.value) : undefined}
               aria-label={`${valueLabel} ${rowN}`}
             />
             <select
@@ -1580,43 +1783,51 @@ function MeasurementTableNode({ node }: { node: ScreenNode }) {
             <input type="hidden" name={`measurements.${i}.kind`} value="number" readOnly />
           </div>
         );
+        return (
+          <React.Fragment key={i}>
+            {showGroupHeader && <div className="civ-measure-group">{GROUP_LABEL[group] ?? group}</div>}
+            {rowNode}
+          </React.Fragment>
+        );
       })}
-      <div className="civ-measure-actions">
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-button")}
-          data-variant="secondary"
-          onClick={() => setExtra((n) => n + 1)}
-        >
-          {th(p.add_label_key, p.add_label, "行を追加")}
-        </button>
-        {canAddItem && (
+      {!readonly && (
+        <div className="civ-measure-actions">
           <button
             type="button"
             className={cn("civ-interactive", "civ-button")}
-            data-variant="ghost"
-            onClick={() => {
-              setAdding("item");
-              setPendingName("");
-            }}
+            data-variant="secondary"
+            onClick={() => setExtra((n) => n + 1)}
           >
-            {th(p.add_item_label_key, p.add_item_label, "＋ 項目を追加")}
+            {th(p.add_label_key, p.add_label, "行を追加")}
           </button>
-        )}
-        {canAddUnit && (
-          <button
-            type="button"
-            className={cn("civ-interactive", "civ-button")}
-            data-variant="ghost"
-            onClick={() => {
-              setAdding("unit");
-              setPendingName("");
-            }}
-          >
-            {th(p.add_unit_label_key, p.add_unit_label, "＋ 単位を追加")}
-          </button>
-        )}
-      </div>
+          {canAddItem && (
+            <button
+              type="button"
+              className={cn("civ-interactive", "civ-button")}
+              data-variant="ghost"
+              onClick={() => {
+                setAdding("item");
+                setPendingName("");
+              }}
+            >
+              {th(p.add_item_label_key, p.add_item_label, "＋ 項目を追加")}
+            </button>
+          )}
+          {canAddUnit && (
+            <button
+              type="button"
+              className={cn("civ-interactive", "civ-button")}
+              data-variant="ghost"
+              onClick={() => {
+                setAdding("unit");
+                setPendingName("");
+              }}
+            >
+              {th(p.add_unit_label_key, p.add_unit_label, "＋ 単位を追加")}
+            </button>
+          )}
+        </div>
+      )}
       {adding && (
         <div className="civ-measure-add">
           {/* no `name` — this is a choice-builder, not a submitted measurement field */}
@@ -5783,7 +5994,16 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <ListNode node={node} />;
     case "card":
       return <CardNode node={node} />;
-    case "image":
+    case "image": {
+      // V3-OBS-24 hero 写真: hide_if_empty_path (text node と同じ規約) は
+      // capture.photos が空の観測(写真なし)でも壊れた <img src> を出さない
+      // ためのガード。
+      if (p.hide_if_empty_path) {
+        const arr = getPath(scope, String(p.hide_if_empty_path));
+        if (!Array.isArray(arr) || arr.length === 0) {
+          return p.empty_text ? <p className="civ-empty">{String(p.empty_text)}</p> : null;
+        }
+      }
       // eslint-disable-next-line @next/next/no-img-element
       return (
         <img
@@ -5792,6 +6012,7 @@ export function NodeView({ node }: { node: ScreenNode }) {
           alt={String(p.alt ?? "")}
         />
       );
+    }
     case "qr-code":
       return <QrNode node={node} />;
     case "measurement-table":

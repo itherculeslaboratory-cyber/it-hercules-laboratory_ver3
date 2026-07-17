@@ -44,6 +44,10 @@
       "const": "user",
       "description": "種の確定者。常に user（AI 確定は不可・V3-OBS-03）。任意（species_candidate 記入時に付随）。"
     },
+    "life_stage_candidate": {
+      "type": "string",
+      "description": "発育段階の候補（自由記述・ユーザー入力のみ・V3-OBS-19)。species_candidate と同じ位置づけ（AI 候補は入れない・確定を強制しない）。任意。"
+    },
     "measurements": {
       "type": "array",
       "description": "計測項目の配列。",

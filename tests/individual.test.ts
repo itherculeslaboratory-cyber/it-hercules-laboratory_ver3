@@ -274,6 +274,73 @@ describe("IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約
     const tl = body.timeline as { kind: string; at: string }[];
     expect(tl.map((e) => e.kind)).toEqual(["birth", "death"]); // sorted by at
   });
+
+  it("owner_history: 個体IDを載せた transfer 取引を横断集計する(V3-IND-13)", async () => {
+    const { bucket, env } = ctx();
+    const id = await createInd(env);
+    const store = new TruthStore(bucket);
+    async function putTransfer(listingId: string, seller: string, buyer: string, at: string) {
+      const txId = ulid();
+      await store.putEvent({
+        specversion: "1.0",
+        id: txId,
+        source: "apps/api",
+        type: "ihl.mkt.transaction_event.v1",
+        time: at,
+        dataschema: "schemas/events/mkt-transaction-event.schema.json",
+        provenance: { generator_kind: "human", actor_id: seller },
+        data: {
+          transaction_event_id: txId,
+          listing_id: listingId,
+          actor_id: seller,
+          kind: "transfer",
+          counterparty: buyer,
+          individual_ids: [id],
+          created_at: at,
+          schema_version: "1",
+        },
+      });
+    }
+    await putTransfer("L-owner-1", "seller-a", "buyer-b", "2026-02-01T00:00:00Z");
+    await putTransfer("L-owner-2", "buyer-b", "buyer-c", "2026-05-01T00:00:00Z");
+    const body = (await (await get(`/api/v1/individuals/${id}`, env)).json()) as {
+      owner_history: { listing_id: string; from: string; to: string | null; at: string }[];
+    };
+    expect(body.owner_history).toEqual([
+      { listing_id: "L-owner-1", from: "seller-a", to: "buyer-b", at: "2026-02-01T00:00:00Z" },
+      { listing_id: "L-owner-2", from: "buyer-b", to: "buyer-c", at: "2026-05-01T00:00:00Z" },
+    ]);
+  });
+
+  it("environment_history: 現在地だけでなく全 occupancy(start/end)を時系列で返す(V3-IND-13)", async () => {
+    const { bucket, env } = ctx();
+    const id = await createInd(env);
+    const store = new TruthStore(bucket);
+    const ref = `individual/${id}`;
+    async function putOccupancy(occId: string, placementId: string, phase: "start" | "end", at: string) {
+      await store.putEventAt(`truth/ihl.src.occupancy.v1/${occId}-${phase}.json`, {
+        specversion: "1.0",
+        id: occId,
+        source: "apps/api",
+        type: "ihl.src.occupancy.v1",
+        time: at,
+        dataschema: "schemas/events/occupancy.schema.json",
+        provenance: { generator_kind: "human", actor_id: DEV_ACTOR },
+        data: { occupancy_id: occId, actor_id: DEV_ACTOR, placement_id: placementId, subject_ref: ref, effective_at: at, phase, schema_version: "1" },
+      });
+    }
+    await putOccupancy(ulid(), "shelf-A", "start", "2026-01-01T00:00:00Z");
+    await putOccupancy(ulid(), "shelf-A", "end", "2026-03-01T00:00:00Z");
+    await putOccupancy(ulid(), "shelf-B", "start", "2026-03-01T00:00:01Z");
+    const body = (await (await get(`/api/v1/individuals/${id}`, env)).json()) as {
+      environment_history: { placement_id: string; phase: string | null; effective_at: string }[];
+    };
+    expect(body.environment_history.map((e) => `${e.placement_id}:${e.phase}`)).toEqual([
+      "shelf-A:start",
+      "shelf-A:end",
+      "shelf-B:start",
+    ]);
+  });
 });
 
 describe("IND-15 名刺(bio-card / qr-batch)", () => {
@@ -298,6 +365,18 @@ describe("IND-15 名刺(bio-card / qr-batch)", () => {
     expect(body.urls.every((u) => u.startsWith("/individuals/"))).toBe(true);
     const bad = await post("/api/v1/individuals/qr-batch", { count: 7 }, env);
     expect(bad.status).toBe(400);
+  });
+
+  it("V3-IND-34: feature_tags は既存の二層タグ集約(POST/GET /tags)を配線する", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { species: "Extatosoma tiaratum" });
+    // 未タグの個体は静かに [](aggregateTags の 400 条件を握りつぶす・エラーにしない)。
+    const empty = (await (await get(`/api/v1/individuals/${id}/bio-card`, env)).json()) as { feature_tags: string[] };
+    expect(empty.feature_tags).toEqual([]);
+    await post("/api/v1/tags", { target_type: "individual", target_id: id, tag: "体格重視", tag_type: "line", source_type: "human_added" }, env);
+    await post("/api/v1/tags", { target_type: "individual", target_id: id, tag: "色重視", tag_type: "line", source_type: "machine_suggested" }, env);
+    const card = (await (await get(`/api/v1/individuals/${id}/bio-card`, env)).json()) as { feature_tags: string[] };
+    expect(card.feature_tags).toEqual(["体格重視", "色重視"]);
   });
 });
 
@@ -392,6 +471,86 @@ describe("V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/line
     const id = await createInd(env);
     expect((await get(`/api/v1/individuals/${id}`, env)).status).toBe(200);
     expect((await get(`/api/v1/individuals/lineage-check?sire_id=${id}`, env)).status).toBe(200);
+  });
+});
+
+describe("V3-IND-21 疑義の記録(POST /individuals/{id}/lineage-doubt)", () => {
+  it("疑義を記録する→ 201・authenticity の doubts[] に載る", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    const res = await post(
+      `/api/v1/individuals/${id}/lineage-doubt`,
+      { listing_id: "L-1", reason: "出品文の血統説明と観測履歴が食い違う" },
+      env,
+    );
+    expect(res.status).toBe(201);
+    const { doubt_id } = (await res.json()) as { doubt_id: string };
+    const auth = (await (await get(`/api/v1/individuals/${id}/authenticity`, env)).json()) as {
+      doubts: { doubt_id: string; listing_id: string | null; reason: string }[];
+    };
+    expect(auth.doubts).toHaveLength(1);
+    expect(auth.doubts[0]).toMatchObject({ doubt_id, listing_id: "L-1", reason: "出品文の血統説明と観測履歴が食い違う" });
+  });
+
+  it("reason 欠落 → 400・action=withdrawn は元レコードを消さず新規追記して doubts[] から外す", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    const missing = await post(`/api/v1/individuals/${id}/lineage-doubt`, {}, env);
+    expect(missing.status).toBe(400);
+
+    const raised = await post(`/api/v1/individuals/${id}/lineage-doubt`, { reason: "血統証がない" }, env);
+    const { doubt_id } = (await raised.json()) as { doubt_id: string };
+    let auth = (await (await get(`/api/v1/individuals/${id}/authenticity`, env)).json()) as {
+      doubts: { doubt_id: string }[];
+    };
+    expect(auth.doubts).toHaveLength(1);
+
+    const withdrawn = await post(`/api/v1/individuals/${id}/lineage-doubt`, { doubt_id, action: "withdrawn" }, env);
+    expect(withdrawn.status).toBe(201);
+    auth = (await (await get(`/api/v1/individuals/${id}/authenticity`, env)).json()) as { doubts: { doubt_id: string }[] };
+    expect(auth.doubts).toHaveLength(0); // 撤回後は非表示(append-only・元レコードは残る)
+  });
+});
+
+describe("V3-IND-20 スケジュール自動生成(POST /individuals/{id}/schedule/generate)", () => {
+  it("ステージ未確定(molt記録なし)→ 400 STAGE_UNKNOWN", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    const res = await post(`/api/v1/individuals/${id}/schedule/generate`, {}, env);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("STAGE_UNKNOWN");
+  });
+
+  it("直近molt(初令)から自動検出し、決定論間隔(first_to_second=30日)で1件生成する", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "molt", at: "2026-01-01T00:00:00Z", detail: { to_stage: "first" } }, env);
+    const res = await post(`/api/v1/individuals/${id}/schedule/generate`, { from: "2026-02-01T00:00:00Z" }, env);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { detected_stage: string; stage: string; next_observation_at: string };
+    expect(body.detected_stage).toBe("first");
+    expect(body.stage).toBe("first_to_second");
+    expect(body.next_observation_at).toBe("2026-03-03T00:00:00.000Z"); // +30日
+    // ihl.obs.schedule.v1 として INSERT 済み(POST /observation/schedule と同じ
+    // 形・home/summary が都度再計算できる) — projectHomeSummary は "実行時の今" 基準
+    // の分類(overdue/near/observing)なので、ここでは Truth に append されたこと
+    // 自体(=拾われる対象になっていること)だけを確認する。
+    const summary = (await (await get("/api/v1/home/summary", env)).json()) as {
+      overdue: { individual_id: string }[];
+      near: { individual_id: string }[];
+      observing: { individual_id: string }[];
+    };
+    const all = [...summary.overdue, ...summary.near, ...summary.observing].map((r) => r.individual_id);
+    expect(all).toContain(id);
+  });
+
+  it("間隔未定義のステージ(例: adult)→ 400 NO_INTERVAL_FOR_STAGE(推測しない)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "molt", at: "2026-01-01T00:00:00Z", detail: { to_stage: "adult" } }, env);
+    const res = await post(`/api/v1/individuals/${id}/schedule/generate`, {}, env);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("NO_INTERVAL_FOR_STAGE");
   });
 });
 

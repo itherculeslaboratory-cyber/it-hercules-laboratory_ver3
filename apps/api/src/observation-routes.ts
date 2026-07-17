@@ -145,6 +145,7 @@ const CAPTURE_FIELDS = [
   "dam_id",
   "species_candidate",
   "species_confirmed_by",
+  "life_stage_candidate",
   "measurements",
   "template_id",
   "entry_mode",
@@ -523,8 +524,16 @@ obsRoutes.post("/observation/search", async (c) => {
         if (!s.subject_ref) continue;
         (byInd.get(s.subject_ref) ?? byInd.set(s.subject_ref, []).get(s.subject_ref)!).push(s.score);
       }
+      // V3-OBS-24 類似個体サイドバー: subject_ref ("individual/<id>") alongside
+      // the bare individual_id (same derivation as GET /observation/{capture_id})
+      // so the UI can navigate to /individuals/<id> without string-manipulating
+      // a template — additive, subject_ref is unchanged for existing callers.
       const individuals = [...byInd.entries()]
-        .map(([subject_ref, scores]) => ({ subject_ref, score: aggregateIndividual(scores, aggMethod) }))
+        .map(([subject_ref, scores]) => ({
+          subject_ref,
+          individual_id: subject_ref.startsWith("individual/") ? subject_ref.slice("individual/".length) : undefined,
+          score: aggregateIndividual(scores, aggMethod),
+        }))
         .sort((a, b) => b.score - a.score || a.subject_ref.localeCompare(b.subject_ref));
       return c.json({ ladder_stage: stage, aggregate: aggMethod, individuals: individuals.slice(0, topK) });
     }

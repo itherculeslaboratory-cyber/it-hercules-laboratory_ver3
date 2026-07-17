@@ -173,13 +173,20 @@ describe("OBS-10 search: self-exclusion + prototype averaging + rerank + aggrega
     await seedCapture(bucket, env, { id: x2, subject_ref: "individual/X", vec: vec384({ 0: 0.6, 1: 0.8 }) });
     await seedCapture(bucket, env, { id: y1, subject_ref: "individual/Y", vec: vec384({ 1: 1 }) });
     const res = await post("/api/v1/observation/search", { query_vector: Array.from(vec384({ 0: 1 })), aggregate: "max" }, env);
-    const body = (await res.json()) as { aggregate: string; individuals: { subject_ref: string; score: number }[] };
+    const body = (await res.json()) as {
+      aggregate: string;
+      individuals: { subject_ref: string; individual_id?: string; score: number }[];
+    };
     expect(body.aggregate).toBe("max");
     const x = body.individuals.find((i) => i.subject_ref === "individual/X")!;
     const y = body.individuals.find((i) => i.subject_ref === "individual/Y")!;
     expect(x.score).toBeCloseTo(1, 5); // max(1, 0.6) = 1
     expect(y.score).toBeCloseTo(0, 5);
     expect(x.score).toBeGreaterThan(y.score);
+    // V3-OBS-24 類似個体サイドバー: bare individual_id rides alongside
+    // subject_ref so the UI can navigate without string-manipulating a template.
+    expect(x.individual_id).toBe("X");
+    expect(y.individual_id).toBe("Y");
   });
 });
 
