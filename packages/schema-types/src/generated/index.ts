@@ -8,6 +8,7 @@ export * from "./api/observation-search";
 export * from "./common/lineage-meta";
 export * from "./defs/ai-view";
 export * from "./evaluation-axis";
+export * from "./events/aut-account";
 export * from "./events/category";
 export * from "./events/citation";
 export * from "./events/cite-ref";

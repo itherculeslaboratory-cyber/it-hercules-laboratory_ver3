@@ -12,8 +12,8 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { findOwnHandle, HANDLE_TYPE, projectOnboardingStatus } from "./account";
 
-const HANDLE_TYPE = "ihl.aut.handle.v1";
 const HANDLE_SCHEMA = "schemas/events/handle-claim.schema.json";
 const SCHEMA_VERSION = "1";
 const HANDLE_RE = /^[A-Za-z0-9_]{3,30}$/;
@@ -23,21 +23,17 @@ export const handleRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
 }
-function dataOf(e: Record<string, unknown>): Record<string, unknown> {
-  return (e.data ?? {}) as Record<string, unknown>;
-}
-
-/** 本人が既に handle を確定済みなら its handle、未確定なら null。 */
-export async function findOwnHandle(s: TruthStore, actorId: string): Promise<string | null> {
-  const events = (await s.listEvents(`truth/${HANDLE_TYPE}/`)).map(dataOf);
-  const mine = events.find((d) => d.actor_id === actorId);
-  return mine ? String(mine.handle) : null;
-}
 
 // GET /me/handle — 本人の確定済み handle(未確定なら null)。
 handleRoutes.get("/me/handle", async (c) => {
   const handle = await findOwnHandle(store(c), c.get("actorId"));
   return c.json({ handle });
+});
+
+// GET /me/onboarding(V3-AUT-10/V3-I18-02): 必須2ゲート(handle+locale)の充足状況。
+// ProtectedApp 側の初期セットアップ画面ガードが読む投影(都度再計算・不変条項①)。
+handleRoutes.get("/me/onboarding", async (c) => {
+  return c.json(await projectOnboardingStatus(store(c), c.get("actorId")));
 });
 
 // POST /me/handle — 確定(一度きり・不変)。body { handle }。

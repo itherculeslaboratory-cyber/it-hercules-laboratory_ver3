@@ -140,7 +140,7 @@ describe("C2 auth — session state + middleware paths", () => {
 
     const { cookie, actorId } = await login("user@example.com");
     const authed = await app.request("/api/v1/auth/session", { headers: { Cookie: cookie } }, makeEnv());
-    expect(await authed.json()).toEqual({ authenticated: true, actor_id: actorId });
+    expect(await authed.json()).toEqual({ authenticated: true, actor_id: actorId, onboarding_complete: false });
   });
 
   it("cookie authenticates a protected write", async () => {
