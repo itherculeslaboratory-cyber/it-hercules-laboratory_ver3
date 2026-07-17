@@ -18,6 +18,9 @@ export type Bindings = {
   RESEND_API_KEY?: string;
   MAIL_FROM?: string;
   PUBLIC_APP_URL?: string;
+  // V3-FND-34 cron失敗監視: 通知先(未設定=通知 no-op degrade。ハートビート自体は
+  // OPS_ALERT_EMAIL 有無に関わらず Truth へ append される)。
+  OPS_ALERT_EMAIL?: string;
   IHL_DEV_EXPOSE_MAGIC_TOKEN?: string;
   // CL-09 collector ingest: JSON map { "<collector_id>": "<Ed25519 SPKI PEM>" }
   // of registered collector public keys. The signature IS the credential

@@ -53,6 +53,7 @@ export * from "./events/obs-photo";
 export * from "./events/obs-schedule";
 export * from "./events/obs-template";
 export * from "./events/occupancy";
+export * from "./events/ops-cron-heartbeat";
 export * from "./events/placement";
 export * from "./events/plaza-fork";
 export type { PlazaPost } from "./events/plaza-post";
