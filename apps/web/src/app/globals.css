@@ -362,6 +362,23 @@ body {
   margin-top: 4px;
   align-items: center;
 }
+/* V3-OBS-27 StructuredRow: group 小見出し + 自動取得(ロック)行の出所バッジ */
+.civ-measure-group {
+  font-size: var(--civ-fs-1);
+  font-weight: 600;
+  color: var(--civ-text-muted);
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--civ-border);
+}
+.civ-measure-row[data-locked="true"] {
+  opacity: 0.85;
+}
+.civ-measure-origin {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 @media (max-width: 560px) {
   .civ-measure-head {
     display: none;

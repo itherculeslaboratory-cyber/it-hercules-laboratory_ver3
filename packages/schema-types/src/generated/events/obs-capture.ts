@@ -41,6 +41,10 @@ export interface ObsCapture {
    */
   species_confirmed_by?: "user";
   /**
+   * 発育段階の候補（自由記述・ユーザー入力のみ・V3-OBS-19)。species_candidate と同じ位置づけ（AI 候補は入れない・確定を強制しない）。任意。
+   */
+  life_stage_candidate?: string;
+  /**
    * 計測項目の配列。
    */
   measurements?: {
