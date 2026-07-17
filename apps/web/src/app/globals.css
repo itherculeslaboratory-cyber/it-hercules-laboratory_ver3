@@ -1047,6 +1047,91 @@ a.civ-thumb-card:focus-visible {
 }
 
 /* =============================================================================
+ * T-63 波1(design-individual-finder.md §2.3/§4) — 個体ファインダー(一覧+絞り込み
+ * +個体詳細パネル+血統)。表は既存 .civ-table を再利用し、レイアウト用のラッパ
+ * クラスとソート見出しボタン・血統ツリーだけをここに足す(新規色なし)。
+ * ========================================================================== */
+.civ-finder-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+.civ-finder-table-col {
+  flex: 2 1 420px;
+  min-width: 0;
+}
+.civ-finder-detail-col {
+  flex: 1 1 280px;
+  min-width: 260px;
+  position: sticky;
+  top: 8px;
+}
+.civ-finder-sort-th {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.civ-finder-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--civ-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.civ-finder-row[data-selected="true"] td {
+  background: var(--civ-surface-2);
+}
+.civ-finder-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* 血統ツリー(先祖=info・子孫=successのテーマトークン色、矢印+上下配置で
+ * 親→子の向きを示す)。ネストは buildPedigree の再帰構造をそのまま辿る
+ * (世代が深いほど字下げが増える=より前の世代)。 */
+.civ-pedigree {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.civ-pedigree-branch {
+  list-style: none;
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 1px solid var(--civ-border);
+}
+.civ-pedigree-node {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.civ-pedigree-chip {
+  cursor: pointer;
+  align-self: flex-start;
+}
+.civ-pedigree-center {
+  align-self: flex-start;
+}
+.civ-pedigree-arrow {
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+  line-height: 1;
+}
+
+/* =============================================================================
  * V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2) — growth-chart
  * (手書き SVG)/血縁レールの chip/判断3指標2カラム/sticky下端バー。既存トークン
  * のみ(raw hex 禁止・check-ui-tokens GATE)。

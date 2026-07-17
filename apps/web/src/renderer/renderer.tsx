@@ -32,6 +32,13 @@ import {
   type DraftRow,
   type ScheduleTarget,
 } from "./batch-draft";
+import {
+  applyFinderSort,
+  nextFinderSort,
+  percentileThreshold,
+  type FinderSort,
+  type FinderSortKey,
+} from "./individual-finder-utils";
 import type { Action, ScreenDef, ScreenNode, Transition } from "./types";
 
 /* -------------------------------------------------------------------------- *
@@ -5421,6 +5428,531 @@ function IndividualProfileNode() {
   );
 }
 
+// =============================================================================
+// T-63 波1(design-individual-finder.md §2.3/§4) — 個体ファインダー(一覧+絞り込み
+// +個体詳細パネル+血統)。GET /individuals を1回取得しクライアント側でフィルタ/
+// 決定論sort/分位点プリセットを組み立てる(search-navigator と同じ縮退)。行選択
+// ごとに GET /individuals/{id}/pedigree(先祖・多世代)+ /profile(子・1世代)を
+// 取得して血統ツリーを描く。専用ノード1個(individual-finder-utils.ts の純関数を
+// 呼ぶだけ・新規npm依存なし)。
+// =============================================================================
+
+type FinderRow = {
+  individual_id: string;
+  label: string;
+  species: string | null;
+  stage: string | null;
+  life_status: string | null;
+  latest_length_mm: number | null;
+  latest_weight_g: number | null;
+  capture_count: number;
+  last_capture_at: string | null;
+  next_observation_at: string | null;
+  thumbnail_path: string | null;
+};
+
+const FINDER_STATUS_LABELS: Record<string, string> = {
+  alive: "生存中",
+  pupa: "蛹",
+  larva: "幼虫",
+  dead: "死亡",
+  specimen: "標本",
+};
+
+const FINDER_COLUMNS: { key: FinderSortKey; label: string }[] = [
+  { key: "latest_length_mm", label: "体長" },
+  { key: "latest_weight_g", label: "体重" },
+  { key: "capture_count", label: "観測回数" },
+  { key: "last_capture_at", label: "最終観測" },
+  { key: "next_observation_at", label: "次の予定" },
+];
+
+function finderCellText(row: FinderRow, key: FinderSortKey): string {
+  switch (key) {
+    case "latest_length_mm":
+      return row.latest_length_mm != null ? `${row.latest_length_mm}mm` : "—";
+    case "latest_weight_g":
+      return row.latest_weight_g != null ? `${row.latest_weight_g}g` : "—";
+    case "capture_count":
+      return `${row.capture_count}回`;
+    case "last_capture_at":
+      return row.last_capture_at ? formatDateJa(row.last_capture_at) : "—";
+    case "next_observation_at":
+      return row.next_observation_at ? formatDateJa(row.next_observation_at) : "—";
+  }
+}
+
+// 「実データの分位点を都度計算」プリセット(design-individual-finder.md §2.3) —
+// ハードコード閾値は使わない。体長/体重の2つのみ(胸角mm等は後続波・§5)。
+type FinderPreset = "length_top10" | "weight_top10";
+const FINDER_PRESETS: { id: FinderPreset; key: "latest_length_mm" | "latest_weight_g"; label: string }[] = [
+  { id: "length_top10", key: "latest_length_mm", label: "体長 上位10%" },
+  { id: "weight_top10", key: "latest_weight_g", label: "体重 上位10%" },
+];
+
+function toFinderRow(raw: Record<string, unknown>): FinderRow {
+  return {
+    individual_id: String(raw.individual_id ?? ""),
+    label: safeLabel(String(raw.label ?? raw.individual_id ?? ""), (raw.species as string | null) ?? null),
+    species: (raw.species as string | null) ?? null,
+    stage: (raw.stage as string | null) ?? null,
+    life_status: (raw.life_status as string | null) ?? null,
+    latest_length_mm: typeof raw.latest_length_mm === "number" ? raw.latest_length_mm : null,
+    latest_weight_g: typeof raw.latest_weight_g === "number" ? raw.latest_weight_g : null,
+    capture_count: typeof raw.capture_count === "number" ? raw.capture_count : 0,
+    last_capture_at: (raw.last_capture_at as string | null) ?? null,
+    next_observation_at: (raw.next_observation_at as string | null) ?? null,
+    thumbnail_path: (raw.thumbnail_path as string | null) ?? null,
+  };
+}
+
+// 血統chip(先祖=info/青系・子孫=success/緑系)。既存 Badge の tone トークンを
+// そのままボタンへ適用(新規色なし・V3-UIX-04)。
+function PedigreeChip({
+  label,
+  tone,
+  onClick,
+}: {
+  label: string;
+  tone: "info" | "success";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={cn("civ-interactive", "civ-badge", "civ-pedigree-chip")}
+      data-tone={tone}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+// 先祖ツリー(buildPedigree の再帰構造をそのまま辿る・多世代)。pedigree API は
+// individual_id のみ返す(名前は持たない)ため、既に取得済みの一覧(byId)で
+// ラベル解決し、載っていない個体(自分以外の所有者の血統元)は shortActorId と
+// 同じ短縮表示にフォールバックする(でっち上げの名前は作らない)。
+function PedigreeAncestors({
+  node,
+  byId,
+  onJump,
+}: {
+  node: PedNode;
+  byId: Map<string, string>;
+  onJump: (id: string) => void;
+}) {
+  if (node.parents.length === 0) return null;
+  return (
+    <ul className="civ-pedigree-branch">
+      {node.parents.map((p) => (
+        <li key={`${p.parent_role ?? "parent"}-${p.individual_id}`} className="civ-pedigree-node">
+          {p.known ? (
+            <PedigreeChip
+              label={`${p.parent_role === "sire" ? "♂" : p.parent_role === "dam" ? "♀" : "●"} ${byId.get(p.individual_id) ?? shortActorId(p.individual_id)}`}
+              tone="info"
+              onClick={() => onJump(p.individual_id)}
+            />
+          ) : (
+            <span className="civ-badge" data-tone="neutral">
+              不明の個体
+            </span>
+          )}
+          {p.circular && (
+            <p className="civ-text" data-muted="true">
+              ここで血統の輪が閉じています(同じ個体に戻る系統)。
+            </p>
+          )}
+          {p.truncated && (
+            <p className="civ-text" data-muted="true">
+              この先の世代は表示の上限に達しています。
+            </p>
+          )}
+          <PedigreeAncestors node={p} byId={byId} onJump={onJump} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// 選択個体の詳細パネル: 写真枠(実データがある時だけ)・名前/種/ステージ・形質
+// プロファイル(実測値のみ)・「詳細画面を開く」・血統(先祖=buildPedigree多世代
+// +子=profile.children 1世代・矢印+上下配置+色で親→子の向きを示す)。
+function FinderDetailPanel({
+  row,
+  byId,
+  onJump,
+}: {
+  row: FinderRow;
+  byId: Map<string, string>;
+  onJump: (id: string) => void;
+}) {
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+  const [pedigree, setPedigree] = useState<PedNode | null>(null);
+  const [children, setChildren] = useState<ProfileParentRef[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setLoaded(false);
+    (async () => {
+      try {
+        const [ped, prof] = await Promise.all([
+          execute({ kind: "api", method: "GET", path: `/api/v1/individuals/${row.individual_id}/pedigree` }) as Promise<PedNode>,
+          execute({ kind: "api", method: "GET", path: `/api/v1/individuals/${row.individual_id}/profile` }) as Promise<IndividualProfile>,
+        ]);
+        if (!alive) return;
+        setPedigree(ped ?? null);
+        setChildren(prof?.children ?? []);
+      } catch {
+        if (alive) {
+          setPedigree(null);
+          setChildren([]);
+        }
+      } finally {
+        if (alive) setLoaded(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.individual_id]);
+
+  return (
+    <section className="civ-card civ-finder-detail">
+      <div className="civ-card-head">
+        {row.thumbnail_path && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="civ-profile-thumb" src={row.thumbnail_path} alt="" />
+        )}
+        <h3 className="civ-card-title">{row.label}</h3>
+      </div>
+      {(row.species || row.stage || row.life_status) && (
+        <div className="civ-card-badges">
+          {row.species && <Badge text={row.species} tone="neutral" />}
+          {row.stage && <Badge text={STAGE_LABELS_JA[row.stage] ?? row.stage} tone="neutral" />}
+          {row.life_status && <Badge text={FINDER_STATUS_LABELS[row.life_status] ?? row.life_status} tone="neutral" />}
+        </div>
+      )}
+
+      <h4 className="civ-card-title">形質プロファイル</h4>
+      <ul className="civ-list">
+        <li className="civ-text">体長 {row.latest_length_mm != null ? `${row.latest_length_mm}mm` : "記録なし"}</li>
+        <li className="civ-text">体重 {row.latest_weight_g != null ? `${row.latest_weight_g}g` : "記録なし"}</li>
+        <li className="civ-text">観測回数 {row.capture_count}回</li>
+        <li className="civ-text">
+          直近記録日 {row.last_capture_at ? formatDateJa(row.last_capture_at) : "記録なし"}
+        </li>
+      </ul>
+
+      <button
+        type="button"
+        className={cn("civ-interactive", "civ-button")}
+        data-variant="primary"
+        onClick={() => navigate("individual-detail", { id: row.individual_id })}
+      >
+        詳細画面を開く
+      </button>
+
+      <h4 className="civ-card-title">血統</h4>
+      {!loaded ? (
+        <p className="civ-text" data-muted="true">
+          読み込み中…
+        </p>
+      ) : (
+        <div className="civ-pedigree">
+          <p className="civ-label">先祖</p>
+          {pedigree && pedigree.parents.length > 0 ? (
+            <PedigreeAncestors node={pedigree} byId={byId} onJump={onJump} />
+          ) : (
+            <p className="civ-text" data-muted="true">
+              先祖の記録はありません(単体登録)。
+            </p>
+          )}
+          <div className="civ-pedigree-arrow" aria-hidden="true">
+            ↓
+          </div>
+          <div className="civ-pedigree-center">
+            <Badge text={`${row.label}(選択中)`} tone="neutral" />
+          </div>
+          <div className="civ-pedigree-arrow" aria-hidden="true">
+            ↓
+          </div>
+          <p className="civ-label">子</p>
+          {children.length > 0 ? (
+            <div className="civ-chip-row">
+              {children.map((c) => (
+                <PedigreeChip key={c.individual_id} label={c.label} tone="success" onClick={() => onJump(c.individual_id)} />
+              ))}
+            </div>
+          ) : (
+            <p className="civ-text" data-muted="true">
+              子の記録はまだありません。
+            </p>
+          )}
+        </div>
+      )}
+
+      <p className="civ-text" data-muted="true">
+        個体ID: {row.individual_id}
+      </p>
+    </section>
+  );
+}
+
+function IndividualFinderNode() {
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+
+  const [rows, setRows] = useState<FinderRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const [q, setQ] = useState("");
+  const [species, setSpecies] = useState<string | null>(null);
+  const [stage, setStage] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [preset, setPreset] = useState<FinderPreset | null>(null);
+  const [sort, setSort] = useState<FinderSort>({ key: "last_capture_at", dir: "desc" });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const res = (await execute({ kind: "api", method: "GET", path: "/api/v1/individuals" })) as
+        | { individuals?: Record<string, unknown>[] }
+        | undefined;
+      if (!alive) return;
+      setRows((res?.individuals ?? []).map(toFinderRow));
+      setLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const byId = useMemo(() => new Map(rows.map((r) => [r.individual_id, r.label])), [rows]);
+  const speciesValues = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.species).filter((v): v is string => !!v))).sort(),
+    [rows],
+  );
+  const stageValues = useMemo(() => Array.from(new Set(rows.map((r) => r.stage).filter((v): v is string => !!v))), [rows]);
+  const statusValues = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.life_status).filter((v): v is string => !!v))),
+    [rows],
+  );
+
+  const qNorm = q.trim().toLowerCase();
+  const baseFiltered = useMemo(
+    () =>
+      rows.filter((r) => {
+        if (qNorm && !r.label.toLowerCase().includes(qNorm)) return false;
+        if (species != null && r.species !== species) return false;
+        if (stage != null && r.stage !== stage) return false;
+        if (status != null && r.life_status !== status) return false;
+        return true;
+      }),
+    [rows, qNorm, species, stage, status],
+  );
+
+  // 分位点は「今見ている絞り込み後」の実データから都度計算する(species/q/
+  // ステージ/状態フィルタの後・プリセット自身より前)。母集団全体(累積Truth
+  // 全件)ではなく現在の絞り込み対象で「上位10%」を出すほうが実用的で、種
+  // フィルタと組み合わせれば母集団を確定できる決定論にもなる。
+  const presetDef = preset ? FINDER_PRESETS.find((p) => p.id === preset)! : null;
+  const presetThreshold = useMemo(() => {
+    if (!presetDef) return null;
+    return percentileThreshold(baseFiltered.map((r) => r[presetDef.key]), 90);
+  }, [presetDef, baseFiltered]);
+
+  const filtered = useMemo(() => {
+    if (!presetDef || presetThreshold == null) return baseFiltered;
+    return baseFiltered.filter((r) => {
+      const v = r[presetDef.key];
+      return v != null && v >= presetThreshold;
+    });
+  }, [baseFiltered, presetDef, presetThreshold]);
+
+  const sorted = useMemo(() => applyFinderSort(filtered, sort), [filtered, sort]);
+
+  const togglePreset = (id: FinderPreset) => {
+    setPreset((cur) => (cur === id ? null : id));
+    if (preset !== id) {
+      const def = FINDER_PRESETS.find((p) => p.id === id)!;
+      setSort({ key: def.key, dir: "desc" });
+    }
+  };
+
+  const selected = rows.find((r) => r.individual_id === selectedId) ?? null;
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="civ-form">
+        <p className="civ-empty">まだ個体がいません。観測を記録すると、ここに理想の個体を探す一覧ができます。</p>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="primary"
+          onClick={() => navigate("obs-entry")}
+        >
+          観測を始める
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="civ-form civ-finder">
+      <div className="civ-chip-row">
+        <input
+          className="civ-input"
+          placeholder="個体名で検索"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="個体名で検索"
+        />
+      </div>
+      {speciesValues.length > 0 && (
+        <div className="civ-chip-row">
+          {speciesValues.map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+              data-active={species === v || undefined}
+              onClick={() => setSpecies((cur) => (cur === v ? null : v))}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="civ-roster-filters">
+        <select
+          className="civ-input"
+          value={stage ?? ""}
+          onChange={(e) => setStage(e.target.value || null)}
+          aria-label="ステージで絞り込み"
+        >
+          <option value="">ステージ: すべて</option>
+          {stageValues.map((v) => (
+            <option key={v} value={v}>
+              {STAGE_LABELS_JA[v] ?? v}
+            </option>
+          ))}
+        </select>
+        <select
+          className="civ-input"
+          value={status ?? ""}
+          onChange={(e) => setStatus(e.target.value || null)}
+          aria-label="状態で絞り込み"
+        >
+          <option value="">状態: すべて</option>
+          {statusValues.map((v) => (
+            <option key={v} value={v}>
+              {FINDER_STATUS_LABELS[v] ?? v}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="civ-chip-row">
+        {FINDER_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+            data-active={preset === p.id || undefined}
+            onClick={() => togglePreset(p.id)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <p className="civ-text">{sorted.length}個体</p>
+
+      <div className="civ-finder-layout">
+        <div className="civ-finder-table-col">
+          {sorted.length === 0 ? (
+            <p className="civ-empty">この条件に当てはまる個体はいません。</p>
+          ) : (
+            <div className="civ-table-scroll">
+              <table className="civ-table">
+                <thead>
+                  <tr>
+                    <th>個体</th>
+                    {FINDER_COLUMNS.map((c) => (
+                      <th key={c.key}>
+                        <button
+                          type="button"
+                          className={cn("civ-interactive", "civ-finder-sort-th")}
+                          onClick={() => setSort((s) => nextFinderSort(s, c.key))}
+                        >
+                          {c.label}
+                          {sort.key === c.key ? (sort.dir === "desc" ? " ▾" : " ▴") : ""}
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((r) => (
+                    <tr key={r.individual_id} className="civ-finder-row" data-selected={r.individual_id === selectedId || undefined}>
+                      <td data-label="個体">
+                        <button
+                          type="button"
+                          className={cn("civ-interactive", "civ-finder-row-btn")}
+                          aria-label={`${r.label} を選択`}
+                          onClick={() => setSelectedId(r.individual_id)}
+                        >
+                          {r.thumbnail_path && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img className="civ-search-thumb" src={r.thumbnail_path} alt="" />
+                          )}
+                          {r.label}
+                        </button>
+                        {r.species && (
+                          <span className="civ-text" data-muted="true">
+                            {" "}
+                            {r.species}
+                          </span>
+                        )}
+                      </td>
+                      {FINDER_COLUMNS.map((c) => (
+                        <td key={c.key} data-label={c.label}>
+                          {finderCellText(r, c.key)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <div className="civ-finder-detail-col">
+          {selected ? (
+            <FinderDetailPanel key={selected.individual_id} row={selected} byId={byId} onJump={setSelectedId} />
+          ) : (
+            <p className="civ-text" data-muted="true">
+              個体を選ぶと、ここに詳細と血統が出ます。
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // V3-AIP-101 c8 knowledge-thread — per-post avatar/handle/body/cite/action row
 // (Path B dedicated node: catalog c8-ui-asset-catalog.md 【最優先2】 — the
 // generic `list` node's item_text is text+image only and cannot express a
@@ -6061,6 +6593,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <ThreadPostsNode node={node} />;
     case "target-navigator":
       return <TargetNavigatorNode />;
+    case "individual-finder":
+      return <IndividualFinderNode />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (

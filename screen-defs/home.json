@@ -85,6 +85,12 @@
               "action": { "kind": "navigate", "to": "obs-search" }
             },
             {
+              "id": "open-individual-finder",
+              "type": "button",
+              "props": { "label_key": "home.open-individual-finder.label", "label": "理想の個体を探す", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "individual-finder" }
+            },
+            {
               "id": "open-match",
               "type": "button",
               "props": { "label_key": "home.open-match.label", "label": "マッチングを見る", "variant": "secondary" },
@@ -148,6 +154,7 @@
     { "from": "start-observe", "to_screen_id": "obs-entry", "label": "観測入力へ(V3-UIX-02 3クリック導線・domain は obs-entry が自前収集)" },
     { "from": "guide-select", "to_screen_id": "obs-domain-select", "label": "ガイド付きドメイン選択へ" },
     { "from": "open-individual", "to_screen_id": "obs-search", "label": "個体一覧(検索)へ・カードタップで個体詳細へ" },
+    { "from": "open-individual-finder", "to_screen_id": "individual-finder", "label": "理想の個体を探す(一覧+絞り込み+血統)へ" },
     { "from": "open-match", "to_screen_id": "match", "label": "マッチングへ" },
     { "from": "open-species", "to_screen_id": "species", "label": "種の管理へ" },
     { "from": "open-device", "to_screen_id": "device", "label": "機器の管理へ" },
