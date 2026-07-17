@@ -18,8 +18,14 @@ const JSON_SRC = join(ROOT, "docs", "planning", "c8", "progress.json");
 const MD_OUT = join(ROOT, "docs", "planning", "c8", "progress.md");
 const REGISTRY = join(ROOT, "01-requirements", "registry.json");
 
-const STATUS_VALUES = ["todo", "in_progress", "done", "verified"];
-const STATUS_LABEL = { todo: "未着手", in_progress: "着手中", done: "完了", verified: "検証済" };
+const STATUS_VALUES = ["todo", "in_progress", "blocked", "done", "verified"];
+const STATUS_LABEL = {
+  todo: "未着手",
+  in_progress: "着手中",
+  blocked: "ブロック中(裁定待ち/照会待ち/人間ゲート)",
+  done: "完了",
+  verified: "検証済",
+};
 
 function bar(done, total, width = 20) {
   const pct = total === 0 ? 0 : Math.round((done / total) * 100);
@@ -63,6 +69,25 @@ function buildMd(items) {
   ];
   for (const s of STATUS_VALUES) {
     lines.push(`| ${STATUS_LABEL[s]}(${s}) | ${items.filter((i) => i.status === s).length} |`);
+  }
+
+  const blocked = items.filter((i) => i.status === "blocked");
+  lines.push(
+    "",
+    "## blocked 一覧(裁定待ち/照会待ち/人間ゲート)",
+    "",
+    `- 件数: ${blocked.length}`,
+    ""
+  );
+  if (blocked.length) {
+    lines.push("| id | title | lane | note |", "|---|---|---|---|");
+    for (const i of blocked) {
+      lines.push(
+        `| ${i.id} | ${i.title.replace(/\|/g, "\\|")} | ${i.lane} | ${(i.note || "—").replace(/\|/g, "\\|").replace(/\n/g, " ")} |`
+      );
+    }
+  } else {
+    lines.push("(なし)");
   }
 
   lines.push("", "## lane 別内訳", "", "| lane | 進捗 |", "|---|---|");
