@@ -9,7 +9,7 @@
 // (GMO 退役に伴う簡素化)。新イベント型: ihl.fee.invoice.v1(請求発行)/
 // ihl.fee.settlement.v1(消込・charge_id put-if-absent で冪等)。
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, deriveTransferCode } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { OBLIGATION_TYPE, toObligation, safeKeyPart, type ObligationRec } from "./gmo-routes";
 import { makePayjpConnector, parseChargeIdFromWebhook, type PayjpConnector } from "./payjp-connector";
@@ -113,6 +113,11 @@ export function createFeeRoutes(makeConnector: (env: Bindings) => PayjpConnector
         status: "open",
         // PAY.JP charge 作成時に metadata.obligation_id へこの値をそのまま載せる(U-code不使用)。
         payjp_metadata_key: "obligation_id",
+        // V3-MKT-12: 銀行振込でゆる請求を払いたい人向けの案内(userId から決定的生成・
+        // CL-11 deriveTransferCode)。振込名義にこのコードを含めてもらう(P2P/5%税で共用)。
+        // 実際の入金確認は本人の pay_declare/pay_confirm 自己申告(市場側)で行い、この
+        // コード自体の自動照合(旧 GMO 名前照合)は退役済み(index.ts gmo-routes コメント参照)。
+        bank_transfer_code: await deriveTransferCode(actorId),
       },
       201,
     );
@@ -194,6 +199,8 @@ export function createFeeRoutes(makeConnector: (env: Bindings) => PayjpConnector
       unpaid_total: unpaid.reduce((a, i) => a + i.amount, 0),
       unpaid_count: unpaid.length,
       items,
+      // V3-MKT-12: 銀行振込で払う人向けの案内コード(見出し欄・上の invoice と同じ導出)。
+      bank_transfer_code: await deriveTransferCode(actorId),
     });
   });
 
