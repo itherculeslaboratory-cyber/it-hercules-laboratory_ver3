@@ -27,6 +27,7 @@ import { themeRoutes } from "./theme-routes";
 import { marketRatingRoutes } from "./market-rating-routes";
 import { marketPaymentGuidanceRoutes } from "./market-payment-guidance-routes";
 import { marketCommentRoutes } from "./market-comment-routes";
+import { marketIndividualOfferRoutes } from "./market-individual-offer-routes";
 import { marketTemplateRoutes } from "./market-template-routes";
 import { marketPricingRoutes } from "./market-pricing-routes";
 import { piiRoutes } from "./pii-routes";
@@ -303,6 +304,11 @@ app.route("/api/v1", piiRoutes);
 // master / parents(血統) / pedigree / cross / name / brand-templates / bio-card /
 // qr-batch / authenticity / life-events. All protected (not in PUBLIC_ROUTES).
 app.route("/api/v1", individualRoutes);
+
+// V3-MKT-06 未出品個体への直接オファー(個体詳細画面から送信)+ オファーポリシー
+// (拒否設定は現観測者=個体マスタの actor_id が設定): POST/GET
+// /individuals/{id}/offer-policy・POST/GET /individuals/{id}/offers。全て保護。
+app.route("/api/v1", marketIndividualOfferRoutes);
 
 // Taxon system (design-k1 §1.1 / V3-IND-19): species / morphs / aliases +
 // alias-candidates(決定論類似度提案). put-if-absent 409. All protected.
