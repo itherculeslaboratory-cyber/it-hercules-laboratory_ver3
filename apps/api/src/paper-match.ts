@@ -123,6 +123,91 @@ export function computeSectionsCompleteness(sections: Record<string, SectionStat
   return Math.round((filledCount / PAPER_SECTIONS.length) * 100);
 }
 
+// ── autoGeneratePaperDraft(PPR-20)───────────────────────────────────────────
+// PaperSectionsV1(PPR-03 実装済み)の拡張として、統一フォーマットの観測データ
+// (measurements[] = item/value/unit・obs-capture.schema.json と同一形状)のみから
+// 論文の conditions 節を機械生成する。別データフォーマットは新設しない(既存の
+// measurement 形状を再利用・ponytail: rung2)。
+export interface UnifiedMeasurement {
+  item: string;
+  value: number;
+  unit?: string;
+}
+export interface UnifiedMeasurementSummary {
+  unit?: string;
+  min: number;
+  max: number;
+  mean: number;
+  n: number;
+}
+
+/** summarizeUnifiedMeasurements — item ごとの min/max/mean/n を決定論集計(PPR-20)。 */
+export function summarizeUnifiedMeasurements(
+  observations: { measurements?: UnifiedMeasurement[] }[],
+): Record<string, UnifiedMeasurementSummary> {
+  const byItem = new Map<string, UnifiedMeasurement[]>();
+  for (const obs of observations) {
+    for (const m of obs.measurements ?? []) {
+      if (typeof m.item !== "string" || typeof m.value !== "number") continue;
+      (byItem.get(m.item) ?? byItem.set(m.item, []).get(m.item)!).push(m);
+    }
+  }
+  const out: Record<string, UnifiedMeasurementSummary> = {};
+  for (const [item, rows] of byItem) {
+    const values = rows.map((r) => r.value);
+    out[item] = {
+      unit: rows.find((r) => r.unit)?.unit,
+      min: Math.min(...values),
+      max: Math.max(...values),
+      mean: values.reduce((a, b) => a + b, 0) / values.length,
+      n: values.length,
+    };
+  }
+  return out;
+}
+
+export interface PaperDraft {
+  title: string;
+  sections: Record<string, SectionState>;
+  conditions: ConditionsP;
+  completeness_pct: number;
+}
+
+/**
+ * autoGeneratePaperDraft — 統一フォーマットの観測データのみから論文下書きを自動生成する
+ * (PPR-20「データのみから論文を自動生成できる仕組み」)。conditions 節は観測 min/max から
+ * required:true の観測レンジとして機械合成し、conditions 節本文(text)に集計表を並べる。
+ * purpose/hypothesis/phase/gap は人間の記述が要るため filled:false のまま(機械が勝手に
+ * 主張を作らない=不変条項⑤の精神)。verification は充足有無を機械算出(空観測=false)。
+ */
+export function autoGeneratePaperDraft(
+  observations: { measurements?: UnifiedMeasurement[] }[],
+  meta: { title: string },
+): PaperDraft {
+  const summary = summarizeUnifiedMeasurements(observations);
+  const items = Object.keys(summary).sort();
+  const conditions: ConditionsP = {};
+  for (const item of items) {
+    const s = summary[item];
+    conditions[item] = { min: s.min, max: s.max, required: true, ...(s.unit ? { unit: s.unit } : {}) };
+  }
+  const conditionsText = items
+    .map((item) => {
+      const s = summary[item];
+      return `${item}: ${s.min}〜${s.max}(平均${s.mean.toFixed(2)}${s.unit ?? ""}・n=${s.n})`;
+    })
+    .join("; ");
+  const sections: Record<string, SectionState> = {
+    purpose: { filled: false, text: "" },
+    hypothesis: { filled: false, text: "" },
+    conditions: { filled: items.length > 0, text: conditionsText },
+    verification: { filled: false, text: "" },
+    phase: { filled: false, text: "" },
+    gap: { filled: false, text: "" },
+  };
+  return { title: meta.title, sections, conditions, completeness_pct: computeSectionsCompleteness(sections) };
+}
+
 /**
  * autoFillDescriptor — 観測を Data Descriptor に投影して穴埋め（PPR-30）。
  * Stage1 機械検査は matchConditions を再利用（同一実装）。充足キー → 対応 claim の

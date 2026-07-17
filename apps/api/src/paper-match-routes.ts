@@ -15,11 +15,13 @@ import {
   quadrantAnalysis,
   derivePropositions,
   hypothesisDraftsForGaps,
+  autoGeneratePaperDraft,
   type ConditionsP,
   type ObservationJson,
   type NeighborPaper,
   type GapPaper,
   type TemplateClaim,
+  type UnifiedMeasurement,
 } from "./paper-match";
 
 export const paperMatchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -145,6 +147,18 @@ paperMatchRoutes.post("/research/quadrant", async (c) => {
   const hypothesis_drafts = hypothesisDraftsForGaps(result.gaps, pLabel, qLabel);
 
   return c.json({ ...result, propositions, hypothesis_drafts });
+});
+
+// POST /research/auto-draft — 統一フォーマットの観測データ(measurements[])のみから論文
+// 下書きを自動生成する(PPR-20)。非永続プレビュー(suggestTags と同じ規約=呼び手が確認して
+// 別途 POST /research/content で書込む・機械が勝手に paper を作らない)。
+paperMatchRoutes.post("/research/auto-draft", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const observations = Array.isArray(body.observations)
+    ? (body.observations as { measurements?: UnifiedMeasurement[] }[])
+    : [];
+  const title = typeof body.title === "string" && body.title ? body.title : "無題(自動生成下書き)";
+  return c.json({ ...autoGeneratePaperDraft(observations, { title }), persisted: false });
 });
 
 // POST /research/content/:id/hypothesis — 仮説を別イベントとして append（PPR-01）。
