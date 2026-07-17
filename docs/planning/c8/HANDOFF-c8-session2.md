@@ -36,7 +36,7 @@ status: active
 
 ## §3 残作業(セッション3以降 — §0の旧1/2/4/5項はセッション2で消化済み)
 
-0. **UI再設計ラウンド(最優先・受領11=UIレビュー第2弾 全体15点への構造回答)**: 正本=`docs/planning/c8/ui-redesign-round2.md`(語彙辞書・画面マップ・9画面After・§6全画面自己監査46画面+IA変更18項目)。**ユーザー判定待ち=`docs/planning/c8/redesign-round2/judgment-sheet.html`(構造判定を先頭に採点欄つき)**。GO後に実装波(旧観測フロー退役cutover・孤島5画面の導線or凍結・統合/廃止の実施)。確定バグ3種(interpolateハイフン・id無しnavigate・チケット番号露出)はd7e499cで修正済み。以後の全UI変更は正本整合が納品条件。**個体ファインダー採用確定**(ユーザー裁定「絶対に実装する」・正本参照=D:\claude\00-hq\dashboard\mockups\caseB7・設計=`design-individual-finder.md`・学習=00-hq feedback/learning-pr3-finder-process.md・実装はGO後の波でT-42/V3-UIX-82と統合)
+0. **UI再設計ラウンド — 停止中(ユーザー指示待ち)**: 受領11(第2弾採点=全体15点)への構造回答として judgment-sheet.html を提示したが、**2026-07-17夜 ユーザーがレビュー拒否(「ゴミ・価値無し・もう一旦任せれない」)しスレッドをクローズ**(persona R46)。正本=`docs/planning/c8/ui-redesign-round2.md`(語彙辞書・画面マップ・9画面After・§6自己監査46画面+IA変更18項目)は分析資料としては残るが**未承認**。**次セッションへの申し送り: UIの進め方はユーザー主導の再定義を待て。勝手に実装着手・大型提示物の再作成をするな。信頼回復は「小さく・実物で・1判断だけ」から**。GO後に実装波(旧観測フロー退役cutover・孤島5画面の導線or凍結・統合/廃止の実施)。確定バグ3種(interpolateハイフン・id無しnavigate・チケット番号露出)はd7e499cで修正済み。以後の全UI変更は正本整合が納品条件。**個体ファインダー採用確定**(ユーザー裁定「絶対に実装する」・正本参照=D:\claude\00-hq\dashboard\mockups\caseB7・設計=`design-individual-finder.md`・学習=00-hq feedback/learning-pr3-finder-process.md・実装はGO後の波でT-42/V3-UIX-82と統合)
 1. **裁定待ち3件の解消**(ユーザー回答後に実装): V3-SEC-03 / V3-AUT-15 / V3-AIP-92(推奨は§0参照。未回答時はQ-META-01により推奨採用可だが、凍結契約・セキュリティ境界・機能削除を含むため回答を待つ扱いにした)
 2. **Platform自動控除**(PAY.JP照会回答後): payjp-connector拡張(tenant作成・platform_fee)・取引画面のカード決済オプション
 3. **in_progress 26件の残余消化**: progress.md の各note参照。大半は (a)CV解析アーキ(OBS-45/47/53: ブラウザ側マーカー検出+射影変換の方式選定) (b)物理印刷治具(IND-15: 91x55mm実寸合わせ=人間ゲート隣接) (c)クロスモジュール残余(IND-13所有者履歴=MKT-29連動済みの拡張等)
