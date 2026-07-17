@@ -18,7 +18,9 @@
 //        (V3-BBS-28)が +1 route(infra-route-081: GET /plaza/engagement/insights・
 //        protected)= 73 → 同レーン(V3-PPR-07)が +1 route(infra-route-082: POST
 //        /research/quadrant・protected)= 74 → 同レーン(V3-PPR-20)が +1 route
-//        (infra-route-083: POST /research/auto-draft・protected)= 75。
+//        (infra-route-083: POST /research/auto-draft・protected)= 75 → 同レーン
+//        (V3-PPR-23)が +1 route(infra-route-084: GET /research/content/{id}/export・
+//        protected)= 76。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -50,8 +52,8 @@ function concretePath(p: string): string {
 const rows = loadMatrix();
 
 describe("CL-04 route matrix (71 rows)", () => {
-  it("has exactly 75 route rows", () => {
-    expect(rows.length).toBe(75);
+  it("has exactly 76 route rows", () => {
+    expect(rows.length).toBe(76);
   });
 
   it("access column is only public|protected", () => {

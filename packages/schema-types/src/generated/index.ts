@@ -21,7 +21,7 @@ export * from "./events/envelope";
 export * from "./events/fee-invoice";
 export * from "./events/fee-settlement";
 export * from "./events/gmo-obligation";
-export * from "./events/gov-dispute";
+export type { GovDispute } from "./events/gov-dispute";
 export * from "./events/gov-flag";
 export * from "./events/gov-precedent";
 export * from "./events/gov-vote";

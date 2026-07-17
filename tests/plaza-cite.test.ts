@@ -8,7 +8,7 @@ import { citeUrl, parseCiteTokens, mergeCiteRefs, sha256Hex } from "../apps/api/
 
 const CITE_TYPES = [
   "observation", "individual", "paper", "thread", "post",
-  "user", "tag", "listing", "precedent", "fork",
+  "user", "tag", "listing", "precedent", "fork", "url", "book",
 ] as const;
 
 function post(env: ReturnType<typeof makeEnv>, body: unknown) {
@@ -53,9 +53,16 @@ describe("cite_refs is canonical and [ihl:cite] tokens are subordinate (BBS-20)"
     ]);
   });
 
-  it("citeUrl returns a stable, distinct, absolute URL for every CiteRef type", () => {
+  it("citeUrl returns a stable, distinct URL for every CiteRef type", () => {
     const urls = CITE_TYPES.map((type) => citeUrl({ type, id: "X-1" }));
-    for (const u of urls) expect(u.startsWith("/")).toBe(true);
+    // every type except "url" resolves to an internal "/"-rooted permalink; "url"
+    // citations (PPR-23) ARE already an external absolute URL, so citeUrl returns
+    // ref.id verbatim (a direct link) rather than wrapping it.
+    for (const type of CITE_TYPES) {
+      const u = citeUrl({ type, id: "X-1" });
+      if (type === "url") expect(u).toBe("X-1");
+      else expect(u.startsWith("/")).toBe(true);
+    }
     // stable: encodes the id and is distinct per type
     expect(new Set(urls).size).toBe(CITE_TYPES.length);
     // deterministic — same input, same output

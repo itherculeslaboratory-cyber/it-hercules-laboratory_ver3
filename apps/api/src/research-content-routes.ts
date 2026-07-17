@@ -8,8 +8,9 @@
 import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN } from "./research-constants";
+import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN, PAPER_SECTIONS } from "./research-constants";
 import { computeSectionsCompleteness, type SectionState } from "./paper-match";
+import { citeUrl, type CiteRef } from "./plaza-routes";
 
 export const researchContentRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -51,8 +52,13 @@ function envelope(type: string, schema: string, actorId: string, data: Record<st
 const OPTIONAL_KEYS = [
   "body_markdown", "cited_paper_ids", "cited_session_ids", "project_id", "individual_id",
   "skin_id", "client_content_digest", "observed_at", "system_tags", "ai_tags", "user_tags",
-  "sections", "completeness_pct", "conditions", "claims", "measurements",
+  "sections", "completeness_pct", "conditions", "claims", "measurements", "citations", "visibility",
 ] as const;
+
+// PPR-23: 論文の引用管理は CiteRef 単一正本(cite-ref.schema.json)を再利用しつつ、
+// 論文の引用は observation/paper/url/book の4タイプに限定する(schema 側は他 CiteRef
+// 消費者=plaza/gov と型を共有するため広い enum のまま・制限はここでのみ検証)。
+const PAPER_CITATION_TYPES = ["observation", "paper", "url", "book"] as const;
 
 // ── content 3 層タグ投影（都度再計算・純関数）──────────────────────────────────
 // frozen tag-event を tag_type(system/ai/user) で層分けし、層ごとに tag の最新 action を
@@ -175,8 +181,21 @@ export async function chatIndex(s: TruthStore): Promise<ChatIndexRow[]> {
 
 // POST /research/content — content 作成（INSERT ONLY・同一 content_id 再 put=409・WIK-16）。
 // paper は content.schema.json の if/then で sections/completeness_pct 必須（PPR-03）。
+// citations(PPR-23): observation/paper/url/book 以外の type は 400(schema 側は他 CiteRef
+// 消費者と型共有のため広い enum・制限は route 側のみ)。
 researchContentRoutes.post("/research/content", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  if (Array.isArray(body.citations)) {
+    const badType = (body.citations as { type?: string }[]).find(
+      (ref) => !(PAPER_CITATION_TYPES as readonly string[]).includes(String(ref?.type)),
+    );
+    if (badType) {
+      return c.json(
+        { error: "INVALID_CITATION", details: [`citation type must be one of ${PAPER_CITATION_TYPES.join("/")}`] },
+        400,
+      );
+    }
+  }
   const actorId = c.get("actorId");
   const contentId = typeof body.content_id === "string" && body.content_id ? body.content_id : ulid();
   const data: Record<string, unknown> = {
@@ -195,11 +214,15 @@ researchContentRoutes.post("/research/content", async (c) => {
 });
 
 // GET /research/content — 一覧投影（?type= フィルタ・content_id 昇順決定論・WIK-16/13）。
+// PPR-23 公開範囲設定: visibility="private" は本人(actor_id一致)以外の結果から除外する
+// (plaza-fork の visibility 規約と同じ=一覧のみ絞り込み・詳細 route は既存どおり素通し)。
 researchContentRoutes.get("/research/content", async (c) => {
   const type = c.req.query("type");
+  const actorId = c.get("actorId");
   const items = (await store(c).listEvents(`truth/${CONTENT_TYPE}/`))
     .map(dataOf)
     .filter((d) => !type || d.content_type === type)
+    .filter((d) => d.visibility !== "private" || d.actor_id === actorId)
     .sort((a, b) => String(a.content_id).localeCompare(String(b.content_id)));
   return c.json({ items });
 });
@@ -217,6 +240,61 @@ researchContentRoutes.get("/research/content/:id", async (c) => {
     ? { sections_completeness_pct: computeSectionsCompleteness(data.sections as Record<string, SectionState>) }
     : {};
   return c.json({ ...data, tags, ...extra });
+});
+
+// escapeHtml — UGC を HTML へ埋め込む前の最小エスケープ(XSS 対策・PPR-23 export)。
+function escapeHtml(v: unknown): string {
+  return String(v ?? "").replace(/[&<>"']/g, (ch) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] as string
+  ));
+}
+
+/**
+ * renderContentHtml — 論文(章構成=PaperSectionsV1・引用・図表)を自己完結 HTML へ変換する
+ * (PPR-23「PDF/HTML変換できるようにする」)。PDF 化はブラウザ標準の印刷機能(Ctrl+P→
+ * PDFで保存)を再利用し、サーバ側に新規 PDF ライブラリ依存を追加しない(既製プラットフォーム
+ * 機能の再利用・reuse-first)。paper 以外(article/blog等)は本文のみの簡易 HTML。
+ */
+export function renderContentHtml(data: Record<string, unknown>): string {
+  const title = escapeHtml(data.title);
+  const parts: string[] = [`<article><h1>${title}</h1>`];
+  const sections = data.sections as Record<string, SectionState> | undefined;
+  if (sections) {
+    for (const key of PAPER_SECTIONS) {
+      const s = sections[key];
+      if (!s) continue;
+      parts.push(`<section><h2>${escapeHtml(key)}</h2><p>${escapeHtml(s.text)}</p></section>`);
+    }
+  } else if (typeof data.body_markdown === "string") {
+    parts.push(`<section><p>${escapeHtml(data.body_markdown)}</p></section>`);
+  }
+  const measurements = Array.isArray(data.measurements) ? (data.measurements as Record<string, unknown>[]) : [];
+  if (measurements.length) {
+    const rows = measurements
+      .map((m) => `<tr><td>${escapeHtml(m.item)}</td><td>${escapeHtml(m.value)}</td><td>${escapeHtml(m.unit ?? "")}</td></tr>`)
+      .join("");
+    parts.push(`<section><h2>measurements</h2><table><thead><tr><th>item</th><th>value</th><th>unit</th></tr></thead><tbody>${rows}</tbody></table></section>`);
+  }
+  const citations = Array.isArray(data.citations) ? (data.citations as CiteRef[]) : [];
+  if (citations.length) {
+    const items = citations
+      .map((ref) => `<li>[${escapeHtml(ref.type)}] <a href="${escapeHtml(citeUrl(ref))}">${escapeHtml(ref.label || ref.id)}</a></li>`)
+      .join("");
+    parts.push(`<section><h2>citations</h2><ul>${items}</ul></section>`);
+  }
+  parts.push("</article>");
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body>${parts.join("")}</body></html>`;
+}
+
+// GET /research/content/:id/export?format=html — 論文を自己完結 HTML へ変換(PPR-23)。
+// PDF は端末側ブラウザの印刷機能(reuse-first・新規依存を追加しない)。format 省略時も html。
+researchContentRoutes.get("/research/content/:id/export", async (c) => {
+  const id = c.req.param("id");
+  const ev = await store(c).readEvent(contentKey(id));
+  if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const format = c.req.query("format") || "html";
+  if (format !== "html") return c.json({ error: "UNSUPPORTED_FORMAT", details: ["only format=html is supported (PDF: browser print)"] }, 400);
+  return c.html(renderContentHtml(dataOf(ev)));
 });
 
 // POST /research/content/:id/tags — 確認 POST でのみ tag_event を append（WIK-14）。

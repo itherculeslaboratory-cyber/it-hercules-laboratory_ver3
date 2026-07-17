@@ -13,7 +13,8 @@
 #   (infra-route-081・V3-BBS-28・protected)を追加 → 73 rows、同レーンが研究4象限分析
 #   新規 1 route(infra-route-082・V3-PPR-07・protected)を追加 → 74 rows、同レーンが
 #   統一フォーマット論文自動下書き新規 1 route(infra-route-083・V3-PPR-20・protected)を
-#   追加 → 75 rows。
+#   追加 → 75 rows、同レーンが論文 HTML export 新規 1 route(infra-route-084・V3-PPR-23・
+#   protected)を追加 → 76 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -92,3 +93,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/plaza/engagement/insights,VPS,Workers,W2,infra-route-081,protected,implemented,V3-BBS-28 Engagement(公開Q&A/称賛/一括募集)・praise_points(観測データ変動係数)+predicted_questions(頻出質問+自動分類)・市場オファー機構(V3-MKT-06)とは非衝突
 —,POST,/api/v1/research/quadrant,VPS,Workers,W2,infra-route-082,protected,implemented,V3-PPR-07 観測データ4象限モデル(n11/n10/n01/n00)で研究空白領域を検出・逆/裏/対偶を機械生成+仮説論文タイトル/要旨案
 —,POST,/api/v1/research/auto-draft,VPS,Workers,W2,infra-route-083,protected,implemented,V3-PPR-20 PaperSectionsV1拡張・統一フォーマット観測データ(measurements[])のみからconditions節+完了率を自動生成(非永続プレビュー)
+—,GET,/api/v1/research/content/{id}/export,VPS,Workers,W2,infra-route-084,protected,implemented,V3-PPR-23 論文(章構成+引用+図表)を自己完結HTMLへ変換・PDFはブラウザ標準印刷機能を再利用(新規依存を追加しない)

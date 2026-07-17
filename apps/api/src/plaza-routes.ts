@@ -112,6 +112,10 @@ export function citeUrl(ref: CiteRef): string {
     case "listing": return `/market/listings/${id}`;
     case "precedent": return `/gov/precedents/${id}`;
     case "fork": return `/knowledge/forks/${id}`;
+    // PPR-23: 論文引用管理の4タイプ(observation/paper/url/book)の残り2つ。url は
+    // ref.id 自体が外部 URL(そのまま返す=直リンク)。book は内部書誌 permalink。
+    case "url": return ref.id;
+    case "book": return `/knowledge/book/${id}`;
     default: return `/knowledge/cite/${encodeURIComponent(ref.type)}/${id}`;
   }
 }
