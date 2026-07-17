@@ -407,7 +407,7 @@
       "640fa3b"
     ],
     "tc": ["apps/web/src/renderer/screen-boards-footer.test.tsx"],
-    "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。thread画面再構築済み。追記(knowledge-g03レーン): Renderer本体に折り畳み式ScreenBoardsFooter(channel=screen-<screen_id>)を1回だけ差し込み、50本のscreen-def個別編集なしに全画面テンプレートへの必須付与を機械的に保証(既定は折り畳み=開くまでAPI呼び出しゼロ、既存レンダラテストのonAction呼び出し回数前提を壊さない設計)。残: コンポーネント編集/入れ替え/Fork一覧ポップアップ/IDE導線(identity/Fork lineage UIの設計待ち)は引き続きスコープ外。"
+    "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。thread画面再構築済み。追記(knowledge-g03レーン): Renderer本体に折り畳み式ScreenBoardsFooter(channel=screen-<screen_id>)を1回だけ差し込み、50本のscreen-def個別編集なしに全画面テンプレートへの必須付与を機械的に保証(既定は折り畳み=開くまでAPI呼び出しゼロ、既存レンダラテストのonAction呼び出し回数前提を壊さない設計)。残: コンポーネント編集/入れ替え/Fork一覧ポップアップ/IDE導線(identity/Fork lineage UIの設計待ち)は引き続きスコープ外。 追記(knowledge-finalレーン): 前セッションのnoteから追加のバックエンド増分は見つけられなかった。残余(全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ)は必要データが既存API(GET /plaza/channels/{channel}/threads・GET /plaza/forks)で既に揃っており、真に不足しているのは横断的なフロントエンド組み込み作業(apps/web/src/renderer/renderer.tsx全体・5000行超・全画面テンプレへの一律適用)。UI磨き第2弾(HANDOFF §3-1)は別レーン担当かつ「描画を確認できない媒体で完成と言うな」規約によりスクショ検証なしに手を出すべきでないと判断し、これ以上のバックエンド増分なしでnote据え置き。"
   },
   {
     "id": "V3-BBS-05",
@@ -436,10 +436,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["814c648"],
+    "tc": ["tests/plaza-improvement-queue.test.ts"],
+    "note": "改善要求(board_kind=improvement)をvoteableにした。新規投票機構は作らず既存プラチナ投票基盤(KRM-25・POST /social/platinum-votes・projectPlatinumVoteTally)を再利用。AI安全チェックは決定論キーワードブロックリスト(LLM既定OFF・不変条項①)。GET /plaza/channels/{channel}/improvement-queueでコイン降順の運営者向け優先度キュー+閾値(既定100票)到達でofficial/notify_adminフラグ。"
   },
   {
     "id": "V3-BBS-28",
@@ -449,10 +449,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["d005f3a"],
+    "tc": ["tests/engagement.test.ts"],
+    "note": "Engagement(公開Q&A/称賛/一括募集)をboard_kind=engagement(4板目)として掲示板側の募集スレ型に限定実装。市場のオファー機構(V3-MKT-06・別レーン)とは非衝突。classifyEngagementQuestion(決定論キーワード分類)・projectPraisePoints(観測データ変動係数から称賛ポイント自動抽出)・projectPredictedQuestions(過去Q&A頻度+自動分類)。GET /plaza/engagement/insights。"
   },
   {
     "id": "V3-CST-01",
@@ -1819,10 +1819,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["41600e4"],
+    "tc": ["tests/research-quadrant.test.ts"],
+    "note": "観測データ4象限モデル(n11/n10/n01/n00)で研究の空白領域を自動検出。P/Q判定は既存matchConditions/autoFillDescriptorを再利用。逆/裏/対偶をderivePropositionsで機械生成、薄い象限にhypothesisDraftsForGapsで仮説論文タイトル/要旨案。POST /research/quadrant。引用ネットワークグラフ上の強調表示はフロント側(対象外)。"
   },
   {
     "id": "V3-PPR-09",
@@ -1851,10 +1851,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "in_progress",
-    "commits": [],
-    "tc": [],
-    "note": "監査のみ実施・実装/明文化は未着手。apps/api/src配下にtorch/onnxruntime/tensorflow/opencv等サーバ側重処理依存が皆無であることをgrepで確認(完全ローカル計算原則に実装は既に整合)。ただし要件が求める「明文化」(原則を書いた文書)の置き場所が不明(constitution.mdは既に一般論として不変条項①を持つが、PPR固有の書き込み先は未確定) — 裁定待ち: どのファイルに明文化するか(推奨: 02-design/design-c5.md K5節への追記)。"
+    "status": "done",
+    "commits": ["f2ac74c"],
+    "tc": ["tests/research-ppr-12.test.ts", "tests/clutch.test.ts(境界値更新)"],
+    "note": "監査のみ実施・実装/明文化は未着手。apps/api/src配下にtorch/onnxruntime/tensorflow/opencv等サーバ側重処理依存が皆無であることをgrepで確認(完全ローカル計算原則に実装は既に整合)。ただし要件が求める「明文化」(原則を書いた文書)の置き場所が不明(constitution.mdは既に一般論として不変条項①を持つが、PPR固有の書き込み先は未確定) — 裁定待ち: どのファイルに明文化するか(推奨: 02-design/design-c5.md K5節への追記)。 追記(knowledge-finalレーン): 実解析(SIMD/LUT/ROI Lab変換等)は端末CPU/GPUで完結する設計を前提に、サーバ側は結果の保存+diff記録とCSV出力のみ実装。writeAnalysisFromReanalyzeBodyを抽出しPOST /observation/batch-commitのkind:\"reanalyze\"として再利用(Recompute All=既存バッチ経路の拡張・新規route無し)。BATCH_MAX_ITEMSを200→1000に引き上げ(1000枚一括要件)。GET /observation/exportで全captureのmeasurementsをCSV決定論シリアライズ(全データダウンロード)。"
   },
   {
     "id": "V3-PPR-13",
@@ -1927,10 +1927,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["ffa8eb1"],
+    "tc": ["tests/research-auto-draft.test.ts"],
+    "note": "PaperSectionsV1(実装済み)の拡張として、統一フォーマット観測データ(measurements[]=item/value/unit)のみからconditions節+完了率を自動生成する下書き機能。purpose/hypothesis/phase/gapは人間記述前提でfilled:falseのまま(機械が主張を捏造しない)。POST /research/auto-draft(非永続プレビュー)。"
   },
   {
     "id": "V3-PPR-23",
@@ -1940,10 +1940,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["c4af847"],
+    "tc": ["tests/research-citations-export.test.ts", "tests/plaza-cite.test.ts(拡張)"],
+    "note": "論文の章構成(PaperSectionsV1)+引用管理をCiteRef単一正本の再利用で実装。cite-ref.schema.jsonにurl/book型を追加(既存9タイプは変更なし)、論文の引用はobservation/paper/url/bookの4タイプにroute側で限定(400 INVALID_CITATION)。公開範囲設定(visibility public/private・plaza-forkと同じ規約)。GET /research/content/{id}/export?format=htmlで章構成+引用+measurementsを自己完結HTMLへ変換、PDFはブラウザ標準印刷機能を再利用(新規依存を追加しない)。"
   },
   {
     "id": "V3-PPR-30",
@@ -2282,10 +2282,10 @@
     "tier": "C",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["7c2049a"],
+    "tc": ["tests/knowledge-lint.test.ts"],
+    "note": "月次Lint(矛盾/孤立ページ/古い記述/リンク切れ)を既存機構の再利用のみで実装(専用常駐lintデーモンは作らない)。孤立ページ=knowledge-graph.tsの参照グラフ入出次数ゼロ、リンク切れ=plaza-routes.tsのciteTargetExists、矛盾=projectConsensus(BBS-36 divisive判定)、古い記述=created_at閾値(既定180日)。既存WIK-01 wiki_node型のlevel enumに\"lint_log\"を追加(新規event型は作らない)してlog.md形式で記録。POST /wiki/lint(手動実行)+GET /wiki/lint-log(履歴)。月次スケジューリング(wrangler.toml cron追加)はresearch-agent-batch.tsの新聞バッチと同じく人間ゲート(config/consented-crons.json同意)のため未配線。"
   },
   {
     "id": "V3-WIK-13",
@@ -2344,10 +2344,10 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["783b38f"],
+    "tc": ["tests/knowledge-graph.test.ts"],
+    "note": "設計書・コード・掲示板・論文・フォーク系統を同一の細胞構造で相互参照する横断投影(文明の図書館)。専用の常駐グラフDB(file-board-registry的な新規資産)は作らず、既存の各機能が持つ参照フィールド(plaza cite_refs・content cited_paper_ids/citations・fork/culture-template/proposal のforked_from)をprefix scanで束ねるだけ。buildReferenceIndex+projectKnowledgeCellで意図(intent)・系譜(lineage祖先/子孫)・被引用(referenced_by)を1クエリ(GET /knowledge/cell/{id})で返す。「OS自身が観測対象として自己成長する」は哲学的射程が広くAPI実装の対象外として明示的に据え置き。"
   },
   {
     "id": "V3-WIK-28",
@@ -2370,10 +2370,10 @@
     "tier": "C",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["bc4f513"],
+    "tc": ["tests/research-external-import.test.ts"],
+    "note": "anthropics/life-sciences等の外部GitHub公開リポジトリの本文をcontent(article)へ決定論正規化して取り込むアダプタ(adaptGithubSource)+手順書までを実装。常駐フェッチは行わない(呼び手が本文を供給・サーバは正規化+appendのみ)。system_tags(external/github/repo)+citations(PPR-23で追加したurl型を再利用)。POST /research/external-import。"
   },
   {
     "id": "V3-AIP-100",
