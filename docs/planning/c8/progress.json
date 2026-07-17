@@ -918,10 +918,15 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "3631352"
+    ],
+    "tc": [
+      "tests/karma-guard.test.ts",
+      "tests/karma-recovery.test.ts (describe \"KRM-06 value guard\")"
+    ],
+    "note": "既存実装で充足済み(新規コミットなし・検証のみ)。ledger-routes.ts appendKarma()のKRM-06ガードが『value正増加はreason=monthly_batchのみ許可』を強制し、いいね/人気/貢献等の主観評価経路はカルマ台帳を一切書けない構造(social-routes.tsはKARMA_TYPEをimportすらしない)。減少経路(dispute/fee_unpaid/gov flag)は全てgrantKarmaCountIncrease経由でFibonacciペナルティのみ。progress.jsonがtodoのままなのは記帳漏れ(3631352で実装済み・同コミットの他ID(KRM-10/11等)は既にdone表記)。(統合時にkarma-g04レーン報告より転記)"
   },
   {
     "id": "V3-KRM-10",
@@ -961,10 +966,14 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "9b5d1fa"
+    ],
+    "tc": [
+      "tests/contribution.test.ts (describe \"KRM-12 resolveLineage（round-16: フォーク10%=貢献度の分配・lineage全体へ）\")"
+    ],
+    "note": "3軸貢献度エンジン本体(Fib(n)*100逓増鋳造・軸独立・月次Fib降下・UTC暦月・上限キャップなし)は3631352で既存実装済み(記帳漏れ・KRM-10/11同様)。今回追加: round-16裁定『フォーク10%=金銭でなく貢献度の分配・lineageに沿って上流へ』を操作可能にするresolveLineage()純関数(forked_fromを多段(祖父母世代以前も)辿りancestors配列を作る・既存applyContributionDeltaにそのまま渡せば全上流へ10%均等配分)を追加。market-*routesは担当外のため実際の『フォーク使用』トリガ配線(market-template-routes.ts等)はスコープ外——本関数は他レーンがそのまま呼べる形で用意した。KRM-11(既存fork/voteリベート実装)との配分先範囲・配分物の相違(単一hop+コイン vs lineage全体+貢献スコア)は未裁定 — 運用方針(共存/置換)はオーケストレータ裁定待ち。"
   },
   {
     "id": "V3-KRM-18",
@@ -974,10 +983,12 @@
     "tier": "C",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "a6d90e7"
+    ],
     "tc": [],
-    "note": ""
+    "note": "旧設計(legacy経済カーネル)と現行Fibonacci二層カルマ/3軸貢献度モデルの整合ADRを新規作成(02-design/adr/adr-v3-krm-18-legacy-economy-kernel-reconcile.md)。5項目の対応表(カルマ+1/+5固定加点→Fibonacci逓増/貢献度単一軸100固定→3軸独立+Fib逓増/免罪符Fibonacci価格→そのまま継承/30日同時軽減→25日基準の相互排他モデル/GUI編集→policy table実装済み+画面は別要件)を作成し『現行が正』を明文で宣言。旧設計コード自体はリポジトリに存在しないため削除対象なし=純粋な文書整理タスクとして完結。"
   },
   {
     "id": "V3-KRM-19",
@@ -1047,10 +1058,14 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "7591a5f"
+    ],
+    "tc": [
+      "tests/krm-28-observation-contribution.test.ts"
+    ],
+    "note": "観測commit成功時の研究貢献度フックを実装: writeCaptureFromCommitBody(solid-observation/commit経路)にobservation_saved(+5・毎回)+observation_with_photo(+3・当該captureに既存写真ありなら追加加点)、createIndividualMaster(POST /individuals・clutch promote共有)にindividual_created(+10)。axis=research・source=observation(schemas/events/economy-contribution-event.schema.jsonへenum追加・非frozen)。いずれもベストエフォート(try/catchで貢献付与失敗がcommit自体を失敗させない)。サンドボックスCommunity Vote(FR-SBX-52)との連携は要件文にあるが、SBX-52自体がリポジトリ内に一切実装されていない(連携先が存在しない)ため対象外——推測実装せず見送り(裁定不要・単なる未着手依存機能)。individual-routes.ts(V3-IND-02所有・lane=L4-obs)へのフック追加はファイル越境(try/catch保護・既存テスト全緑確認済み)。"
   },
   {
     "id": "V3-KRM-32",
@@ -1060,10 +1075,14 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "in_progress",
+    "commits": [
+      "4cf360b"
+    ],
+    "tc": [
+      "tests/krm-32-platinum-no-purchase.test.ts"
+    ],
+    "note": "『プラチナコインの売買・交換(通貨化)や自動生成は禁止する』という否定不変条項は具体的に固定(coin_event.reason_codeがCL-12凍結schemaで4値enumに閉じており purchase/exchange 系reason_codeはスキーマレベルで構造的に不可能・grantPlatinum()のamount<0拒否・apps/api/src全ルートに『buy/purchase/exchange platinum/coin』のソース走査で該当なしを確認)。一方、要件文が挙げる6つの還元トリガのうち明確に生きているのは(a)司法での有益な証拠提出は別レーン(gov-routes.ts)未接続(b)観測/AIユニット改善はV3-KRM-28の研究軸貢献フックが間接的に満たす(直接PT付与ではなく軸蓄積→月次mintを経由)のみ。(c)改善案採用(proposal-routes.tsの公式ランク昇格には現状クライアント直指定403のみで実行用の管理route自体が存在しない)(d)プロジェクト完了(project-routes.tsはg03-知識/L4-knowledgeレーン所有・完了アクション自体が未定義)(e)OS差し替え成功(gov-routes.ts projectOsPromotionは投影のみで実行routeなし)(f)文化圏発展への貢献、の4トリガは付与フック未配線。残余理由: (c)(e)は実行用の管理route自体が他レーンにも存在しない新規機能追加になり、(d)はproject-routes.tsがg03-知識(L4-knowledge)レーン所有でファイル越境になるため見送った(推測実装せず・裁定は不要=判断の分かれ目ではなく単純に未着手インフラ)。"
   },
   {
     "id": "V3-MKT-02",
@@ -1172,10 +1191,14 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "adae1e9"
+    ],
+    "tc": [
+      "tests/gov-07-dispute-vote.test.ts"
+    ],
+    "note": "新規コミットなし(検証のみ)。gov-g05レーンが本ラン中に実装したV3-GOV-07(gov-routes.ts /gov/disputes/{id}/publicize+votes+vote-resolve)が要件文と一言一句近い内容(7日窓・1票=1PT・二択・多数決・同点はΔcountなし・敗者Δcount+5・判例R2蓄積)をそのまま満たしている——重複実装せず既存実装を確認して転記。担当範囲(投票基盤側のみ・market画面非接触)はGOV-07がmarket-*routesを一切触らず汎用dispute基盤として実装済みのため自動的に満たされている。"
   },
   {
     "id": "V3-MKT-20",
@@ -1271,10 +1294,16 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "c21bc00"
+    ],
+    "tc": [
+      "tests/economy-vote.test.ts",
+      "tests/cl-04-route-matrix.test.ts",
+      "tests/platinum-vote.test.ts (既存回帰確認)"
+    ],
+    "note": "POST /economy/vote を新設(target_id・target_layer(0-4必須)・coins・reason(必須)を指定)。レイヤー4(固定資産/ブランド/世界観)は403 LAYER4_NOT_VOTABLE、layer0-3は既存KRM-25の残高チェック(付与累計-投票済累計)をcastPlatinumVote()共有コアへ抽出して/social/platinum-votes(既存・後方互換で据置)と再利用——コピペ二重化なし。schemas/events/social-platinum-vote.schema.jsonへtarget_layer/reasonを追加(非frozen・additive)。tests/fixtures/route-matrix.csvに行追加しcl-04-route-matrix.test.tsを追随更新。ProjectRules/PlatinumCoinRulesの優先順位規定はProjectRules自体が別波未実装のためコード分岐なし(コメントで設計制約として記録のみ)。統合時注記: レーンはinfra-route-081として届いたが、同時期に統合済みのV3-AIP-67(GitHub Issues/掲示板→AI要約スレ)が先にinfra-route-081を占有していたため、統合作業でinfra-route-082へ採番をずらして解決(route-matrix.csv 73→74行・cl-04-route-matrix.test.tsも追随更新・両テスト緑を確認)。"
   },
   {
     "id": "V3-MKT-36",

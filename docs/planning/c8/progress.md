@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: █████░░░░░░░░░░░░░░░ 25%（83/334）
-- 第1波必達(required): █████████░░░░░░░░░░░ 43%（80/184）
+- 全体: █████░░░░░░░░░░░░░░░ 27%（89/334）
+- 第1波必達(required): █████████░░░░░░░░░░░ 47%（86/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 224 |
-| 着手中(in_progress) | 24 |
+| 未着手(todo) | 217 |
+| 着手中(in_progress) | 25 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
-| 完了(done) | 83 |
+| 完了(done) | 89 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -37,7 +37,7 @@
 | lane | 進捗 |
 |---|---|
 | CSV | ████████████████████ 100%（1/1） |
-| L1/PAY | █████░░░░░░░░░░░░░░░ 26%（16/61） |
+| L1/PAY | ███████░░░░░░░░░░░░░ 36%（22/61） |
 | L3/L4-auth | █████████░░░░░░░░░░░ 44%（12/27） |
 | L4 | ███████████░░░░░░░░░ 57%（29/51） |
 | L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
@@ -60,17 +60,17 @@
 | V3-KRM-03 | 毎月25日(クレジット締め日同型)を基準日に、カルマカウント≥1ならcount-… | required | done | 039a4c5 |
 | V3-KRM-04 | カルマ値≤-100で永久BAN(ログイン拒否)とし、アカウント・R2データは削除… | required | done | 3631352 |
 | V3-KRM-05 | 免罪符『黄金ヘラクレス教の免罪符』をプラチナコインマーケットで販売し、1購入=カ… | required | done | 3631352 |
-| V3-KRM-06 | カルマは『信用の残高』であり減少のみ・能動的上昇なし・時間経過(問題を起こさず生… | required | todo | — |
+| V3-KRM-06 | カルマは『信用の残高』であり減少のみ・能動的上昇なし・時間経過(問題を起こさず生… | required | done | 3631352 |
 | V3-KRM-10 | 貢献度(Contribution Score)はいいね・コピー・組み込み等のKe… | required | done | 3631352 |
 | V3-KRM-11 | applyContributionDeltaで子ノードにΔを反映後、依存グラフの… | required | done | 3631352 |
-| V3-KRM-12 | 貢献度をADR-H-38の3軸(research 研究/capital 資本(維… | required | todo | — |
-| V3-KRM-18 | (旧設計/legacy経済カーネル) カルマ計算(通常違反+1/重大違反+5)、… | required | todo | — |
+| V3-KRM-12 | 貢献度をADR-H-38の3軸(research 研究/capital 資本(維… | required | done | 9b5d1fa |
+| V3-KRM-18 | (旧設計/legacy経済カーネル) カルマ計算(通常違反+1/重大違反+5)、… | required | done | a6d90e7 |
 | V3-KRM-19 | 全付与イベント(プラチナ・カルマ・貢献・称号)をAppend-only履歴として… | required | done | 9229c57 |
 | V3-KRM-20 | 使用率・投票・いいね・悪いね・お気に入り・作者フォロー・フォーク数・改善案数の総… | required | done | 3631352 |
 | V3-KRM-21 | プロフィールではKarma(善良/取引/BAN)・Contribution(貢献… | required | done | 3631352 |
 | V3-KRM-24 | 文化サイクル(使う→不便→改善案を見る→採用→フォーク→評価→RAG学習→Bui… | required | done | 3631352 |
-| V3-KRM-28 | 観測commit成功時に研究貢献度フックを発火する(observation_sa… | required | todo | — |
-| V3-KRM-32 | 経済システム(Economy)としてプラチナコイン(通貨でなく貢献を示すメダル)… | required | todo | — |
+| V3-KRM-28 | 観測commit成功時に研究貢献度フックを発火する(observation_sa… | required | done | 7591a5f |
+| V3-KRM-32 | 経済システム(Economy)としてプラチナコイン(通貨でなく貢献を示すメダル)… | required | in_progress | 4cf360b |
 | V3-MKT-02 | Listingは状態機械(unlisted→listed_*→sold/deli… | required | done | 3631352 |
 | V3-MKT-03 | 取引ステージモデルを採用: マッチング前は公開(商品詳細+公開Q&A+ほめボード… | required | todo | — |
 | V3-MKT-04 | 取引成立を『配送完了確認(買い手受取申告) かつ 評価確定』と定義し、マッチング… | required | done | 3631352 |
@@ -78,14 +78,14 @@
 | V3-MKT-06 | オークション以外に、未出品個体への直接オファー(欲しい意思表示、拒否設定は現観測… | required | todo | — |
 | V3-MKT-10 | 取引成立時に売上5%を(旧8%から引き下げ)『システム維持費税』として売り手に負… | required | in_progress | 674a5dc, 1c5d912, bff1b98 |
 | V3-MKT-12 | 振込コードはuserIdから決定的に生成(SHA-256→uint24先頭3バイ… | required | todo | — |
-| V3-MKT-18 | マーケット争いは当事者opt-inの『公開して投票』を提供する。7日・1票=1P… | required | todo | — |
+| V3-MKT-18 | マーケット争いは当事者opt-inの『公開して投票』を提供する。7日・1票=1P… | required | done | adae1e9 |
 | V3-MKT-20 | 取引の配送では自社DBに送り手ID/受け手ID(システム内ニックネーム)と取引ス… | required | done | b070403 |
 | V3-MKT-22 | テンプレート(論文/UIスキン/グラフ/重み付け設定/AI設定パック/プロンプト… | required | done | 3631352 |
 | V3-MKT-23 | 出品は個体ID一覧の複数選択で9割完成させ、個体を選ぶだけで親個体画像・血統・成… | required | in_progress | 3631352 |
 | V3-MKT-25 | 観測データ(種・血統・サイズ・性別・産地・環境ログ)を素材に特徴量ベクトルの高次… | required | todo | — |
 | V3-MKT-27 | マーケット評価は自前スコアを発明せずADR-H-08の『良い/普通/悪い』件数モ… | required | done | 3631352 |
 | V3-MKT-29 | 取引成立後は所有者移転と観測データ(温度/重量/齢/成長速度/画像/取引履歴)引… | required | todo | — |
-| V3-MKT-35 | プラチナコインを投票通貨とし、認証ユーザーが/economy/voteで対象・枚… | required | todo | — |
+| V3-MKT-35 | プラチナコインを投票通貨とし、認証ユーザーが/economy/voteで対象・枚… | required | done | c21bc00 |
 | V3-MKT-36 | 経済層を3層構造とする: (1)IT.Hercules.Laboratoryマー… | required | in_progress | 674a5dc, 1c5d912, bff1b98 |
 | V3-MKT-40 | 市場台帳(ledger)を複式簿記(Σdebit=Σcredit一致・残高非負・… | required | todo | — |
 | V3-MKT-45 | 研究成果(projectId)に紐づく商品を出品し外部EC(BASE/Shopi… | required | todo | — |
