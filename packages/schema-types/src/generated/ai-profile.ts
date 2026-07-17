@@ -29,6 +29,10 @@ export interface AiProfile {
    */
   byok: boolean;
   /**
+   * Bring Your Own Compute（BYOC・V3-AIP-104）。実行場所の既定は device（スマホ/端末内完結・第一選択）。device に収まらない高度解析のみ docker（ユーザーローカルの任意レイヤー）へ段階委譲。cloud はユーザーが自分の鍵/契約で外部クラウドAPIを使う場合のみ（サーバ常駐は既定 OFF・不変条項①）。計算資源は常にユーザー側負担が原則。
+   */
+  compute_location?: "device" | "docker" | "cloud";
+  /**
    * 対応機能タグ（任意）。
    */
   capabilities?: string[];
