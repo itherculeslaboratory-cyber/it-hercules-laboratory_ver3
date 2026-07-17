@@ -68,7 +68,14 @@ export type NodeType =
   // 1画面に持つ。汎用 list の item_text(text+image のみ)では per-post
   // アクション行を表現できないため専用ノード化(既存7種と同格の一発物)。
   // GET /plaza/threads/{thread_id} + GET /me/profile を自前取得する。
-  | "thread-posts";
+  | "thread-posts"
+  // V3-OBS-02 観測対象ナビゲータ(obs-navigator): 学名検索(substring)/
+  // アキネーター式yes-no二分探索/分類ツリーの3経路を1ノードに持つ。3経路とも
+  // POST /observation/targets/search(mode:"name"|"yesno"|"tree")を叩く多段
+  // ローカル状態(yes-no の累積回答・ツリーの drill-down path)を要するため
+  // 宣言的 form/list 語彙では表現しきれず専用ノード化(search-navigator と同じ
+  // 縮退)。確定は末尾の1ボタンのみ(候補提示と確定の分離・AI は書かない)。
+  | "target-navigator";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported

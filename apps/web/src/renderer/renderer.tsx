@@ -3315,6 +3315,221 @@ function primaryMeasure(row: SearchRow): { text: string; unit: string } | null {
   return null;
 }
 
+// V3-OBS-02 観測対象ナビゲータ: 学名検索(substring) / アキネーター式yes-no
+// 二分探索 / 分類ツリー の3経路を1ノードに持つ(POST /observation/targets/search
+// の mode:"name"|"yesno"|"tree" 3モードを叩く — テキストのみ、画像/サムネイル
+// は出さない・design-c2 §3.2)。3経路とも「候補提示」止まりで、確定は末尾の
+// [この対象で観測を続ける] ボタン(navigate)がユーザー操作として行う — AI/API
+// 側は species_confirmed を一切書かない(候補提示と確定の分離)。選んだ学名は
+// obs-entry へ species_candidate として引き継ぐ(obs-entry の species_candidate
+// フィールドはユーザー編集可のプレフィルなので、確定は commit 側で改めて起きる)。
+type TargetCandidate = { qid: string; scientific_name: string };
+
+function TargetNavigatorNode() {
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+
+  // 選ばれた対象(3経路のどれで決まってもここに集約)。
+  const [chosen, setChosen] = useState<TargetCandidate | null>(null);
+
+  // 経路1: 学名検索。
+  const [nameQuery, setNameQuery] = useState("");
+  const [nameCandidates, setNameCandidates] = useState<TargetCandidate[]>([]);
+  const [namePending, setNamePending] = useState(false);
+  const searchByName = useCallback(async () => {
+    if (!nameQuery.trim()) return;
+    setNamePending(true);
+    try {
+      const r = (await execute({ kind: "api", method: "POST", path: "/api/v1/observation/targets/search" }, {
+        mode: "name",
+        query: nameQuery,
+      })) as { candidates?: TargetCandidate[] } | undefined;
+      setNameCandidates(r?.candidates ?? []);
+    } finally {
+      setNamePending(false);
+    }
+  }, [execute, nameQuery]);
+
+  // 経路2: はい・いいえ二分探索(サーバは状態を持たない — クライアントが
+  // 回答列を毎回まるごと再送する、targets.test.ts と同じステートレス方式)。
+  const [started, setStarted] = useState(false);
+  const [answers, setAnswers] = useState<boolean[]>([]);
+  const [question, setQuestion] = useState<{ pivot: string; remaining: number } | null>(null);
+  const [yesnoResolved, setYesnoResolved] = useState<TargetCandidate | null>(null);
+  const [yesnoAsked, setYesnoAsked] = useState(0);
+  const askYesNo = useCallback(
+    async (nextAnswers: boolean[]) => {
+      const r = (await execute({ kind: "api", method: "POST", path: "/api/v1/observation/targets/search" }, {
+        mode: "yesno",
+        answers: nextAnswers,
+      })) as { resolved?: { qid: string; taxonomy: { species?: string } } | null; questions_asked?: number; question?: { pivot: string; remaining: number } } | undefined;
+      setAnswers(nextAnswers);
+      if (r?.resolved) {
+        setYesnoResolved({ qid: r.resolved.qid, scientific_name: String(r.resolved.taxonomy?.species ?? r.resolved.qid) });
+        setQuestion(null);
+        setYesnoAsked(r.questions_asked ?? nextAnswers.length);
+      } else {
+        setQuestion(r?.question ?? null);
+        setYesnoResolved(null);
+      }
+    },
+    [execute],
+  );
+  const startYesNo = useCallback(() => {
+    setStarted(true);
+    setYesnoResolved(null);
+    void askYesNo([]);
+  }, [askYesNo]);
+  const answer = useCallback((yes: boolean) => void askYesNo([...answers, yes]), [answers, askYesNo]);
+
+  // 経路3: 分類ツリー(family → genus → species)。
+  const [treePath, setTreePath] = useState<string[]>([]);
+  const [treeChildren, setTreeChildren] = useState<string[]>([]);
+  const [treeResolved, setTreeResolved] = useState<TargetCandidate | null>(null);
+  const loadTreeLevel = useCallback(
+    async (path: string[]) => {
+      const r = (await execute({ kind: "api", method: "POST", path: "/api/v1/observation/targets/search" }, {
+        mode: "tree",
+        path,
+      })) as { children?: string[]; resolved?: { qid: string; taxonomy: { species?: string } } } | undefined;
+      setTreePath(path);
+      if (r?.resolved) {
+        setTreeResolved({ qid: r.resolved.qid, scientific_name: String(r.resolved.taxonomy?.species ?? r.resolved.qid) });
+        setTreeChildren([]);
+      } else {
+        setTreeResolved(null);
+        setTreeChildren(r?.children ?? []);
+      }
+    },
+    [execute],
+  );
+  useEffect(() => {
+    void loadTreeLevel([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const continueTo = useCallback(() => {
+    if (!chosen) return;
+    navigate("obs-entry", { species_candidate: chosen.scientific_name });
+  }, [chosen, navigate]);
+
+  return (
+    <div className="civ-target-navigator">
+      <h2 className="civ-heading">学名で探す</h2>
+      <div className="civ-field">
+        <input
+          className="civ-input"
+          value={nameQuery}
+          onChange={(e) => setNameQuery(e.target.value)}
+          placeholder="例: Dynastes"
+          aria-label="学名の一部"
+        />
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="secondary"
+          aria-busy={namePending || undefined}
+          onClick={() => void searchByName()}
+        >
+          候補を探す
+        </button>
+      </div>
+      {nameCandidates.length > 0 && (
+        <ul className="civ-list">
+          {nameCandidates.map((c) => (
+            <li key={c.qid}>
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant={chosen?.qid === c.qid ? "primary" : "ghost"}
+                onClick={() => setChosen(c)}
+              >
+                {c.scientific_name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="civ-heading">はい・いいえで絞る</h2>
+      <p className="civ-text" data-muted="true">
+        7〜12問のはい・いいえで対象を二分探索します。
+      </p>
+      {!started ? (
+        <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="secondary" onClick={startYesNo}>
+          はい・いいえ形式で始める
+        </button>
+      ) : yesnoResolved ? (
+        <div>
+          <p className="civ-text">{yesnoResolved.scientific_name}({yesnoAsked}問で確定)</p>
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant={chosen?.qid === yesnoResolved.qid ? "primary" : "ghost"}
+            onClick={() => setChosen(yesnoResolved)}
+          >
+            この候補を選ぶ
+          </button>
+        </div>
+      ) : question ? (
+        <div>
+          <p className="civ-text">{question.pivot} 以降ですか?(残り約{question.remaining}件)</p>
+          <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="secondary" onClick={() => answer(true)}>
+            はい
+          </button>
+          <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="secondary" onClick={() => answer(false)}>
+            いいえ
+          </button>
+        </div>
+      ) : null}
+
+      <h2 className="civ-heading">分類ツリーから選ぶ</h2>
+      {treePath.length > 0 && (
+        <p className="civ-text" data-muted="true">
+          {treePath.join(" › ")}
+        </p>
+      )}
+      {treeResolved ? (
+        <div>
+          <p className="civ-text">{treeResolved.scientific_name}</p>
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant={chosen?.qid === treeResolved.qid ? "primary" : "ghost"}
+            onClick={() => setChosen(treeResolved)}
+          >
+            この候補を選ぶ
+          </button>
+          <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="ghost" onClick={() => void loadTreeLevel([])}>
+            最初から選び直す
+          </button>
+        </div>
+      ) : (
+        <ul className="civ-list">
+          {treeChildren.map((child) => (
+            <li key={child}>
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="ghost"
+                onClick={() => void loadTreeLevel([...treePath, child])}
+              >
+                {child}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {chosen && (
+        <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="primary" onClick={continueTo}>
+          この対象で観測を続ける
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SearchNavigatorNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
@@ -5270,6 +5485,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <IndividualProfileNode />;
     case "thread-posts":
       return <ThreadPostsNode node={node} />;
+    case "target-navigator":
+      return <TargetNavigatorNode />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (
