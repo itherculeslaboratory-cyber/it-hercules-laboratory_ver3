@@ -12,6 +12,7 @@ import {
   CONFIDENCE_ORDER,
 } from "./observation-constants";
 import { ENV_QR_TYPE, projectOccupantAt, projectOpenOccupancy, projectLabEnvironmentAt } from "./source-routes";
+import { parseObservationFreetext } from "./freetext-parser";
 import type { Bindings, Variables } from "./env";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -699,6 +700,18 @@ obsRoutes.post("/observation/targets/search", async (c) => {
   }
 
   return c.json({ error: "INVALID_MODE" }, 400);
+});
+
+// POST /observation/parse-freetext — V3-OBS-61 最小観測入力UI: 自然言語の
+// フリーテキスト1つ+「解析する」ボタンを受け、日付・個体・温度・湿度・胸角・
+// エサの行パターンを決定論パーサ(freetext-parser.ts・LLM 既定OFF)でJSON化
+// して返すだけ(R2コミットは既存 obs-entry/solid-observation の役目・ここでは
+// 提案止まり — 候補提示と確定の分離と同じ原則)。
+obsRoutes.post("/observation/parse-freetext", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const text = typeof body?.text === "string" ? body.text : "";
+  if (!text.trim()) return c.json({ error: "MISSING_TEXT" }, 400);
+  return c.json(parseObservationFreetext(text));
 });
 
 // GET /observation/templates/{template_id} — one template with scope (OBS-18).

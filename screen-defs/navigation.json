@@ -22,6 +22,7 @@
     "obs-register-batch-confirm",
     "obs-register-batch-done",
     "obs-search",
+    "obs-freetext",
     "individual-detail",
     "cross",
     "bio-card",

@@ -87,3 +87,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-081,protected,implemented,研究室環境コンテキスト登録(V3-OBS-72・placement基盤の拡張・append-only履歴+最新1件投影)
 —,GET,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-082,protected,implemented,研究室環境コンテキスト投影読み出し(V3-OBS-72・未記録はnull・404にしない)
 —,GET,/api/v1/individuals/{individual_id}/lab-environment,VPS,Workers,W2,infra-route-083,protected,implemented,個体→occupancy→placement→研究室環境の連鎖投影(V3-OBS-72・obs-detail表示元)
+—,POST,/api/v1/observation/parse-freetext,VPS,Workers,W2,infra-route-084,protected,implemented,自然言語フリーテキスト観測の決定論パース(V3-OBS-61・LLM既定OFF・R2コミットはしない提案止まり)

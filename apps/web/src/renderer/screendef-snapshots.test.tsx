@@ -34,6 +34,7 @@ const SCREEN_IDS = [
   "obs-detail",
   "obs-domain-select",
   "obs-entry",
+  "obs-freetext",
   "obs-navigator",
   "obs-register",
   "obs-register-batch",
