@@ -386,6 +386,50 @@ export async function projectAuthenticity(s: TruthStore, id: string) {
   };
 }
 
+export interface LineageCheckIssue {
+  code: string;
+  detail?: string;
+}
+export interface LineageCheckResult {
+  consistent: boolean;
+  issues: LineageCheckIssue[];
+}
+
+/**
+ * V3-IND-21 出品血統照合: cross-checks a CLAIMED sire_id/dam_id/species (the
+ * only individual refs a market listing currently carries are the V3-IND-35
+ * reservation_sire_id/reservation_dam_id fields — general listing↔individual
+ * linkage for arbitrary sold individuals is MKT-29 territory, still todo/
+ * blocked on that lane's own schema decision, NOT reimplemented here) against
+ * actual Truth: do the referenced individuals exist, and does their recorded
+ * species match the claim? Buyers get concrete issues to record their doubt
+ * against, never a silently-trusted claim (誇張ゼロ). Read-only, pure fn of Truth.
+ */
+export async function checkLineageClaim(
+  s: TruthStore,
+  claim: { sire_id?: string; dam_id?: string; species?: string },
+): Promise<LineageCheckResult> {
+  const issues: LineageCheckIssue[] = [];
+  const checkParent = async (id: string | undefined, role: "sire" | "dam") => {
+    if (!id) return;
+    const rec = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
+    if (!rec) {
+      issues.push({ code: `${role.toUpperCase()}_UNKNOWN`, detail: id });
+      return;
+    }
+    const d = dataOf(rec);
+    if (claim.species && typeof d.species === "string" && d.species && d.species !== claim.species) {
+      issues.push({ code: `SPECIES_MISMATCH_${role.toUpperCase()}`, detail: `${d.species} != ${claim.species}` });
+    }
+  };
+  await checkParent(claim.sire_id, "sire");
+  await checkParent(claim.dam_id, "dam");
+  if (claim.sire_id && claim.dam_id && claim.sire_id === claim.dam_id) {
+    issues.push({ code: "SIRE_DAM_SAME_INDIVIDUAL" });
+  }
+  return { consistent: issues.length === 0, issues };
+}
+
 /**
  * individual-detail スライスA投影 (V3-AIP-101 c7-wireframes-core5 §4 F1/F2)。
  * 判断3指標(成長比較・血統健全度・近交リスク)とタイムラインが1レスポンスで
@@ -880,6 +924,22 @@ individualRoutes.get("/individuals", async (c) => {
     individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
   }
   return c.json({ individuals });
+});
+
+// GET /individuals/lineage-check?sire_id=&dam_id=&species= — 出品血統照合
+// (V3-IND-21)。少なくとも sire_id/dam_id のどちらかが必須(単体チェック用途)。
+// NOTE: must be registered BEFORE GET /individuals/:id below — Hono's router
+// resolves this same-depth static-vs-param overlap by REGISTRATION ORDER (first
+// match wins), not by static-precedence, so this has to come first or `:id`
+// would swallow "lineage-check" as a literal id (verified by TC).
+individualRoutes.get("/individuals/lineage-check", async (c) => {
+  const sireId = c.req.query("sire_id") || undefined;
+  const damId = c.req.query("dam_id") || undefined;
+  const species = c.req.query("species") || undefined;
+  if (!sireId && !damId) {
+    return c.json({ error: "INVALID_LINEAGE_CHECK", details: ["sire_id or dam_id required"] }, 400);
+  }
+  return c.json(await checkLineageClaim(store(c), { sire_id: sireId, dam_id: damId, species }));
 });
 
 // GET /individuals/{id} — whole-individual projection (6 文化 + timeline · IND-13).

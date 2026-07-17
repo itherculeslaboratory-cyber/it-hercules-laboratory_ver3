@@ -14,7 +14,8 @@
 //        .../misban-reversal/execute)= 70 → 知の広場レーン(round-16 OQ-PLZ-03)が
 //        +1 route(infra-route-079: POST /plaza/threads/{thread_id}/resolution・
 //        protected)= 71 → 観測個体レーン(C8 obs-individuals)が +1 route(infra-route-
-//        080: GET /match/convergence・protected)= 72。
+//        080: GET /match/convergence・protected)= 72 → 同レーンが +1 route(infra-route-
+//        081: GET /individuals/lineage-check・protected)= 73。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -45,9 +46,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (72 rows)", () => {
-  it("has exactly 72 route rows", () => {
-    expect(rows.length).toBe(72);
+describe("CL-04 route matrix (73 rows)", () => {
+  it("has exactly 73 route rows", () => {
+    expect(rows.length).toBe(73);
   });
 
   it("access column is only public|protected", () => {

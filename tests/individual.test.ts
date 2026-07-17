@@ -335,6 +335,47 @@ describe("IND-21 真正性(projectAuthenticity)", () => {
   });
 });
 
+describe("V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/lineage-check)", () => {
+  it("実在し種が一致すれば consistent=true・issuesは空", async () => {
+    const { env } = ctx();
+    const sire = await createInd(env, { species: "hercules" });
+    const res = await get(`/api/v1/individuals/lineage-check?sire_id=${sire}&species=hercules`, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { consistent: boolean; issues: unknown[] };
+    expect(body).toEqual({ consistent: true, issues: [] });
+  });
+
+  it("未知の sire_id は SIRE_UNKNOWN・種の食い違いは SPECIES_MISMATCH", async () => {
+    const { env } = ctx();
+    const sire = await createInd(env, { species: "hercules" });
+    const res = await get(`/api/v1/individuals/lineage-check?sire_id=ghost&dam_id=${sire}&species=grantii`, env);
+    const body = (await res.json()) as { consistent: boolean; issues: { code: string }[] };
+    expect(body.consistent).toBe(false);
+    expect(body.issues.map((i) => i.code).sort()).toEqual(["SIRE_UNKNOWN", "SPECIES_MISMATCH_DAM"]);
+  });
+
+  it("sire_id===dam_id は SIRE_DAM_SAME_INDIVIDUAL", async () => {
+    const { env } = ctx();
+    const one = await createInd(env);
+    const body = (await (await get(`/api/v1/individuals/lineage-check?sire_id=${one}&dam_id=${one}`, env)).json()) as {
+      issues: { code: string }[];
+    };
+    expect(body.issues.some((i) => i.code === "SIRE_DAM_SAME_INDIVIDUAL")).toBe(true);
+  });
+
+  it("sire_id/dam_id ともに無ければ400", async () => {
+    const { env } = ctx();
+    expect((await get("/api/v1/individuals/lineage-check?species=x", env)).status).toBe(400);
+  });
+
+  it("GET /individuals/:id (6文化投影) と /individuals/lineage-check は別ルートとして共存する(static優先)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    expect((await get(`/api/v1/individuals/${id}`, env)).status).toBe(200);
+    expect((await get(`/api/v1/individuals/lineage-check?sire_id=${id}`, env)).status).toBe(200);
+  });
+});
+
 describe("V3-AIP-101 GET /individuals?q= (観測登録スライス1 F1 検索)", () => {
   it("q なしは本人の全件を返す", async () => {
     const { env } = ctx();
