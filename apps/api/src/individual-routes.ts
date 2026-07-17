@@ -939,8 +939,9 @@ individualRoutes.get("/individuals/:id/bio-card", async (c) => {
 // sha256・バイナリ本体は含めない=CSV自体を軽量に保つ・実体は既存
 // GET /observation/{captureId}/thumbnail/{photoId} から個別に取得)。
 // grillingで確定した事項を要件へ環流させるCRフローは要件プロセス側の運用機構
-// であり(データではなくドキュメント作業フロー)本ルートのスコープ外
-// (誇張ゼロ: 未着手をここに書かない)。
+// であり(データではなくドキュメント作業フロー)本ルートのスコープ外。手順は
+// docs/planning/c8/requirement-cr-flow.md に formalize 済み(round-15/16裁定
+// 自体がこのフローの実例)。
 function csvEscape(v: string | number | null): string {
   const s = v === null ? "" : String(v);
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
