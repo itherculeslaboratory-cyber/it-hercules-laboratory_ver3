@@ -12,6 +12,7 @@ import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
 import { envImportRoutes } from "./env-import-routes";
 import { ledgerRoutes } from "./ledger-routes";
+import { ledgerAuditRoutes } from "./ledger-audit-routes";
 import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
 import { feeRoutes } from "./fee-routes";
@@ -208,6 +209,9 @@ app.route("/api/v1", collectorRoutes);
 // Economy ledger projection (design-c4 §1): GET /api/v1/me/ledger — 本人スコープ
 // karma(value/count 二層)+ platinum の都度再計算投影 (V3-KRM-01/02 / CL-12).
 app.route("/api/v1", ledgerRoutes);
+
+// V3-MKT-40 複式簿記検算バッチ: GET /api/v1/ledger/audit(健全性サマリ・都度再計算)。
+app.route("/api/v1", ledgerAuditRoutes);
 
 // Contribution 3-axis + PT projection (design-k3 §2.2 / V3-KRM-10/12): GET
 // /api/v1/me/contribution・GET /api/v1/me/pt。本人スコープ・非公開（他人の actor を

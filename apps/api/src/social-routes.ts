@@ -11,7 +11,7 @@ import { projectLedger } from "./ledger-routes";
 
 const EVAL_TYPE = "ihl.social.eval.v1";
 const EVAL_SCHEMA = "schemas/events/social-eval.schema.json";
-const VOTE_TYPE = "ihl.social.platinum_vote.v1";
+export const VOTE_TYPE = "ihl.social.platinum_vote.v1"; // export: V3-MKT-40 台帳検算バッチが再利用(debit 側の正本)
 const VOTE_SCHEMA = "schemas/events/social-platinum-vote.schema.json";
 const SCHEMA_VERSION = "1";
 

@@ -14,7 +14,9 @@
 //        .../misban-reversal/execute)= 70 → 知の広場レーン(round-16 OQ-PLZ-03)が
 //        +1 route(infra-route-079: POST /plaza/threads/{thread_id}/resolution・
 //        protected)= 71 → market-final レーン(C8 g04残todo)が V3-MKT-64 プリカ案内
-//        +1 route(infra-route-080: GET /market/payment-guidance・protected・静的)= 72。
+//        +1 route(infra-route-080: GET /market/payment-guidance・protected・静的)= 72 →
+//        同レーンが V3-MKT-40 複式簿記検算 +1 route(infra-route-081: GET /ledger/audit・
+//        protected)= 73。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -45,9 +47,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (72 rows)", () => {
-  it("has exactly 72 route rows", () => {
-    expect(rows.length).toBe(72);
+describe("CL-04 route matrix (73 rows)", () => {
+  it("has exactly 73 route rows", () => {
+    expect(rows.length).toBe(73);
   });
 
   it("access column is only public|protected", () => {
