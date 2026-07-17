@@ -77,6 +77,63 @@ describe("pricing routes", () => {
     expect(body.recommended_price.anchor).toBe(2000);
   });
 
+  // MKT-23 残作業: individuals 省略時に server-side で実観測(species/measurements)+
+  // 直系血統を自動集約する(client が組み立て済み observations を要求していた穴の埋め)。
+  it("POST /market/listings/draft: individuals省略 → 実個体データ(種/計測/血統)を自動集約", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    // 個体 KID(species=Hercules・weight計測)+ 親 SIRE(sire_role)を実 route 経由で作る。
+    const sire = (await (
+      await app.request("/api/v1/individuals", { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ species: "Dynastes hercules" }) }, env)
+    ).json()) as { individual_id: string };
+    const kid = (await (
+      await app.request("/api/v1/individuals", { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ species: "Dynastes hercules" }) }, env)
+    ).json()) as { individual_id: string };
+    await app.request(
+      `/api/v1/individuals/${kid.individual_id}/parents`,
+      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ parent_id: sire.individual_id, parent_role: "sire" }) },
+      env,
+    );
+    // capture(measurements=weight 82.5)を直接 Truth へ append(観測 route の body 形状に
+    // 依存せず、observations 投影が読む Truth の形だけを直接検証する=既存 individual.test.ts
+    // と同じ「TruthStore 直接 seed」パターン)。
+    const { TruthStore, ulid } = await import("@ihl/truth");
+    const s = new TruthStore(bucket);
+    const captureId = ulid();
+    await s.putEvent({
+      specversion: "1.0",
+      id: captureId,
+      source: "apps/api",
+      type: "ihl.obs.capture.v1",
+      time: new Date().toISOString(),
+      dataschema: "schemas/events/obs-capture.schema.json",
+      provenance: { generator_kind: "human", actor_id: "dev" },
+      data: {
+        capture_id: captureId,
+        actor_id: "dev",
+        domain: "biology",
+        subject_ref: `individual/${kid.individual_id}`,
+        measurements: [{ item: "weight", kind: "number", value: 82.5, unit: "g" }],
+      },
+    });
+
+    const res = await app.request(
+      "/api/v1/market/listings/draft",
+      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ individual_ids: [kid.individual_id], template: "種 {{species}} / 体重 {{weight}}g" }) },
+      env,
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      description: string;
+      cited_observations: { individual_id: string; species?: string; weight?: number; parents?: { individual_id: string; parent_role?: string }[] }[];
+    };
+    expect(body.description).toBe(`種 Dynastes hercules / 体重 82.5g`);
+    const cited = body.cited_observations[0];
+    expect(cited.species).toBe("Dynastes hercules");
+    expect(cited.weight).toBe(82.5);
+    expect(cited.parents).toEqual([{ individual_id: sire.individual_id, parent_role: "sire", known: true, photo_media_key: undefined }]);
+  });
+
   it("POST /market/listings/draft: individual_ids 欠如は 400", async () => {
     const res = await app.request(
       "/api/v1/market/listings/draft",
