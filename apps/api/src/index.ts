@@ -39,6 +39,7 @@ import { cusbRoutes } from "./cusb-routes";
 import { socialRoutes } from "./social-routes";
 import { proposalRoutes } from "./proposal-routes";
 import { profileRoutes } from "./profile-routes";
+import { consentRoutes } from "./consent-routes";
 import { githubWebhookRoutes } from "./github-webhook-routes";
 import { researchContentRoutes } from "./research-content-routes";
 import { paperMatchRoutes } from "./paper-match-routes";
@@ -375,6 +376,10 @@ app.route("/api/v1", proposalRoutes);
 // /users/{actor}/profile（3 指標個別・研究スコアは Contribution 配下・BAN 公開表示）・
 // GET /me/status（統合ステータス + append-only 履歴の読取投影・GUI 編集は後波）。
 app.route("/api/v1", profileRoutes);
+
+// Legal consent (V3-SEC-20仕上げ): GET /me/consent(投影)・POST /onboarding/agree
+// (MUST_AGREE_TO_TERMS ゲート・CL-05 consent-record append-only 永続化)。全て protected。
+app.route("/api/v1", consentRoutes);
 
 // GitHub webhook (design-k3 §2.5 / V3-KRM-13): POST /github/webhook。session 層 public
 // （PUBLIC_ROUTES）+ HMAC self-gate。行動→pt+axis 換算（config weights・policy 経由）を
