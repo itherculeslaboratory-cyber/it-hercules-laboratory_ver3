@@ -38,6 +38,10 @@ export interface GovDispute {
    */
   resolution?: "resolved" | "force_closed";
   /**
+   * 発言者の locale（V3-I18-06: UGC 原文タグ。message 時に actor の pref-set locale から刻印・翻訳しない・任意）。
+   */
+  lang?: string;
+  /**
    * event 時刻（RFC3339）。
    */
   created_at: string;

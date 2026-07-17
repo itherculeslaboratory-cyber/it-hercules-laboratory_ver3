@@ -8,6 +8,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { projectPreferences } from "./settings-routes";
 import {
   BOARD_KINDS,
   FORK_RANKS,
@@ -163,6 +164,9 @@ plazaRoutes.post("/plaza/posts", async (c) => {
   if (Array.isArray(body?.tags)) data.tags = body.tags;
   const refs = mergeCiteRefs(body?.cite_refs, parseCiteTokens(str(body?.body)));
   if (refs.length) data.cite_refs = refs;
+  // I18-06: UGC 原文の作者言語タグを actor の locale から刻印(翻訳はしない・market-routes.ts
+  // と同型・未設定は projectPreferences が DEFAULT_LOCALE=ja)。
+  data.lang = (await projectPreferences(store(c), actorId)).locale;
 
   const key = `truth/${POST_TYPE}/${channel}/${threadId}/${postId}.json`;
   const res = await store(c).putEventAt(key, envelope(POST_TYPE, POST_SCHEMA, postId, actorId, data));
