@@ -10,16 +10,27 @@
 
 ## サマリー
 
-- 全体: █████░░░░░░░░░░░░░░░ 25%（82/334）
-- 第1波必達(required): █████████░░░░░░░░░░░ 43%（79/184）
+- 全体: █████░░░░░░░░░░░░░░░ 25%（83/334）
+- 第1波必達(required): █████████░░░░░░░░░░░ 43%（80/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 228 |
+| 未着手(todo) | 224 |
 | 着手中(in_progress) | 24 |
-| 完了(done) | 82 |
+| ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
+| 完了(done) | 83 |
 | 検証済(verified) | 0 |
+
+## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
+
+- 件数: 3
+
+| id | title | lane | note |
+|---|---|---|---|
+| V3-AIP-92 | Builder(文明編集ツール)をOSDefinition/Component/… | L4 | 裁定待ち—実質解消提案: V3-AIP-92が前提とするBuilder(文明編集ツール)経由のKernel編集/OSDefinition差し替え一本道パイプラインは、round-16裁定で棄却済みのBuilder中心アーキテクチャに依拠している。推奨=(a) 既存codegenパイプライン(schemas/→generated一方向・npm run codegen:check GATE・scripts/codegen-*.mjs群)を『危険なDiffの拒否・検証・再現性』の機能的等価物として充足扱いとし、Builder UIそのものの新設は不要と裁定する。 |
+| V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | L3/L4-auth | 裁定待ち: V3-AUT-15が求める Scope A(観測search/list/detail/imageの未ログイン公開READ)は、CL-04 route-matrix(tests/fixtures/route-matrix.csv・cl-04-route-matrix.test.ts、現行73行)が凍結する『auth系3route+verify-code+payjp-webhook以外は全protected(deny-by-default)』契約と矛盾する。観測系routeをpublic化するとCL-04凍結契約・関連TC群の全面作り直しが要る。推奨=(a) 当面は全ログイン必須(現行route-matrix)を正としV3-AUT-15のScope A公開READ要件は将来波(CL-04契約緩和が別途承認された時点)へ先送り。 |
+| V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | L4-gov | 裁定待ち: device-routes.ts(POST/GET /devices・apps/api/src/device-routes.ts:38-156)が provider api_key を AES-GCM 暗号化のうえ R2(api_key_ciphertext)にサーバー側保持し、/devices/{id}/test route で復号使用しており、V3-SEC-03『外部サービスAPIキー・秘密はサーバー側に一切保持・使用せず』と直接矛盾する。推奨=(a) サーバー側保管/復号を廃止しユーザー側(Docker/.env/ブラウザlocalStorage)管理のみに一本化(WEB版は手入力/CSVインポートのみへ縮小)。影響範囲: device-routes.tsのAES-GCM実装+tests/devices.test.tsの作り直し。 |
 
 ## lane 別内訳
 
@@ -28,7 +39,7 @@
 | CSV | ████████████████████ 100%（1/1） |
 | L1/PAY | █████░░░░░░░░░░░░░░░ 26%（16/61） |
 | L3/L4-auth | █████████░░░░░░░░░░░ 44%（12/27） |
-| L4 | ███████████░░░░░░░░░ 55%（28/51） |
+| L4 | ███████████░░░░░░░░░ 57%（29/51） |
 | L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
 | L4-knowledge | ███░░░░░░░░░░░░░░░░░ 15%（8/54） |
 | L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/66） |
@@ -120,7 +131,7 @@
 | V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | in_progress | eda9946 |
 | V3-AUT-11 | 認証→初期設定フロー（登録→国/言語→利用規約→ホーム）を明示的に定義し、全画面… | required | done | 4295494 |
 | V3-AUT-12 | 保護ルートはProtectedApp/middlewareでガードし未ログイン時… | required | in_progress | db2bc69 |
-| V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | required | todo | — |
+| V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | required | blocked | — |
 | V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | in_progress | 987c5c3 |
 | V3-AUT-20 | APIエラーは機械可読なerrorコードで返し、クライアントはそれをユーザー向け… | required | done | 987c5c3 |
 | V3-AUT-46 | magic-link数字コードフォールバック: magic-link発行時に同一… | required | done | a49ca1c |
@@ -155,10 +166,10 @@
 | V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytestの正統な流… | required | in_progress | 124027b |
 | V3-AIP-57 | 繰り返し使うワークフロー・手順はまず1回手動で正しさを確認してからスキル/ルール… | required | done | b1511e4 |
 | V3-AIP-60 | ver1・ver2のコード・設計書・過去のAIとの要件整理やり取りを全て資料とし… | required | done | 91e2e17 |
-| V3-AIP-67 | GitHub Issues(label=improvement/feature-… | required | todo | — |
+| V3-AIP-67 | GitHub Issues(label=improvement/feature-… | required | done | 55f7fc7 |
 | V3-AIP-78 | 大量タスクを夜間overnight/週次実行パックとしてAI(Auto余力)に切… | required | done | 4883f25 |
 | V3-AIP-90 | RAG検索基盤を文明の脳とし全データ(観測・論文・掲示板・UI・テンプレート)を… | required | done | 91a782f |
-| V3-AIP-92 | Builder(文明編集ツール)をOSDefinition/Component/… | required | todo | — |
+| V3-AIP-92 | Builder(文明編集ツール)をOSDefinition/Component/… | required | blocked | — |
 | V3-AIP-93 | 各正本Markdown/画面1ファイルに開発掲示板スレ1本を1:1で紐づけ(fi… | required | done | 2219a99 |
 | V3-AIP-96 | 就寝中など人間不在の時間帯に、Claude Code の余剰セッション/スケジュ… | required | done | 26bbb23 |
 | V3-AIP-97 | D:\claude を Claude の本拠地（HQ）とするワークスペース階層を… | required | done | 4ac0d40 |
@@ -203,7 +214,7 @@
 | V3-GOV-07 | プラチナ投票は当事者が「公開して投票」を選んだ場合のみ開始し、7日間・1票=1P… | required | done | adae1e9 |
 | V3-GOV-10 | 掲示板・マーケットの指摘は30回ごとにプラチナ1枚を消費し(クールダウンなし)、… | required | in_progress | 0c866ff |
 | V3-GOV-11 | ホームは司法インボックスのプレビュー(最大5件)と環境IoT due予定(最大3… | required | done | 837b314 |
-| V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | required | todo | — |
+| V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | required | blocked | — |
 | V3-SEC-14 | ログイン系エンドポイントにレート制限(magiclink 20回/60秒/IP、… | required | done | 7c28a03 |
 | V3-SEC-20 | 利用規約(ToS)機能はサービスの性質・データの扱い・禁止行為をユーザーが理解し… | required | done | 067fd1d |
 | V3-SEC-41 | ValueCheck/好みセッションは本人JWTと組み合わせた検索ブーストのみに… | required | done | ec51ada |
