@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ind-lineage-doubt.schema.json",
+  "title": "Individual Lineage Doubt data (ihl.ind.lineage_doubt.v1)",
+  "description": "V3-IND-21 の「取引出品文の血統説明に矛盾がないか照合して疑義を購入者が確認・記録できる文化」を持つ append-only の疑義記録。projectAuthenticity(継続性/血統矛盾チェック)には書き込み手段が無かった(読取専用)ため新設。削除・訂正は不可(不変条項③)——撤回は新しい action:'withdrawn' レコードの追記で表現する。Truth キー truth/ihl.ind.lineage_doubt.v1/<individual_id>-<ulid>.json。",
+  "x_ihl_req": "V3-IND-21",
+  "x_ihl_source": "01-requirements/srs.md V3-IND-21",
+  "type": "object",
+  "required": ["doubt_id", "individual_id", "actor_id", "action", "created_at"],
+  "properties": {
+    "doubt_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "疑義の一意キー（ULID）。withdrawn レコードは元の raised と同じ doubt_id を持つ新規追記(LWW投影で最新action採用・元レコードは残る)。"
+    },
+    "individual_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "疑義の対象個体。"
+    },
+    "listing_id": {
+      "type": "string",
+      "description": "疑義の元になった出品(任意・取引に紐づかない疑義もありうる)。"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "疑義の内容(自由記述・購入者の言葉)。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["raised", "withdrawn"],
+      "description": "raised=疑義を記録 / withdrawn=撤回(元レコードは残る・新規追記で表現・不変条項③)。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "記録者(購入者)の actor_id（V3-AUT-17・セッション principal 強制）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "記録時刻（RFC3339）。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -30,6 +30,7 @@ export * from "./events/ind-clutch-event";
 export * from "./events/ind-clutch";
 export * from "./events/ind-cross-parent";
 export * from "./events/ind-life-event";
+export * from "./events/ind-lineage-doubt";
 export * from "./events/ind-master";
 export * from "./events/ind-name-event";
 export * from "./events/ind-qr";
