@@ -775,10 +775,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["145d78d"],
+    "tc": ["tests/match.test.ts describe(\"IND-08 projectMatchConvergence (evaluation log — Precision@K/AUC/separation)\")"],
+    "note": "GET /match/convergence(projectMatchConvergence・apps/api/src/match-routes.ts)を実装。append-only preference_event履歴からPrecision@K/AUC(Mann-Whitney rank-sum)/score separation/vector_change(直近更新ステップ量)/learning_stability_index(更新ステップの変動係数から算出)を都度再計算(GPU不要・O(events+distinct items)・ブラックボックス推論なし)。評価ログ専用の別テーブルは持たず、Truth append-onlyなpreference_eventそのものが再構築元(学習率/数式を変えても同じ履歴から再計算可能=DELETE禁止要件を自動充足)。converged=(auc>=MATCH_AUC_VALID_THRESHOLD=0.7)。route-matrix infra-route-080として登録・CL-04テスト整合。npx vitest run tests/match.test.tsで8/8 green再確認(wave-2 reconciliation)。"
   },
   {
     "id": "V3-IND-12",
@@ -788,12 +788,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "in_progress",
-    "commits": [
-      "e61f50b"
-    ],
-    "tc": [],
-    "note": "血統(Cross)画面の率カード計算を実装。apps/api/src/individual-routes.ts projectCross(): weight_by_instar(first/second/third_early/third_late)+size_extremes(max_weight/max_length/min_length)+rates(mortality/survival/completion/eclosion_failure/hatch_rate/sex_ratio)。GET /individuals/{id}/cross?metric=で同一コンポーネントが1枚だけ差し替え可能、ホームレベルの/cross route は存在しない(個体経由必須の設計どおり)。TC: tests/individual.test.ts describe(\"IND-12 交配結果(projectCross・決定論)\")。未実装: 率カードから詳細一覧へのドリルダウンrouteは無し(GET /individualsの?statusフィルタでは cohort/親単位の絞り込みができない)、color_reproducibility は色解析待ちでnull固定(コード内コメントで明示的に後波へ defer)。"
+    "status": "done",
+    "commits": ["e61f50b", "3f941f2"],
+    "tc": ["tests/individual.test.ts describe(\"IND-12 交配結果(projectCross・決定論)\")", "tests/individual.test.ts it(\"率カード→詳細一覧ドリルダウン: ?parent_id=+?status=でコホート絞り込み(V3-IND-12)\")"],
+    "note": "血統(Cross)画面の率カード計算(齢別平均体重/サイズ極値/死亡率・完品率・羽化不全率・生存率・孵化率・性比・?metric=差し替え・ホーム直接不可)はe61f50bで実装済み。wave-2(3f941f2)で残課題だった率カード→詳細一覧ドリルダウンを解消: GET /individualsに?parent_id=を追加しoffspringOf(parent_id)によるコホート絞り込み+既存?statusとのAND条件を実装。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: color_reproducibility は色解析パイプライン(V3-OBS-14/45/53等、システム全体で進行中)待ちのままnull固定—IND-12固有の設計不備ではなく系統的な後波依存。"
   },
   {
     "id": "V3-IND-13",
@@ -804,11 +802,9 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": [
-      "e61f50b"
-    ],
-    "tc": [],
-    "note": "個体詳細(A2)6文化集約の投影を実装。apps/api/src/individual-routes.ts projectIndividual()+GET /individuals/{id}: master/name/timeline(life-events時系列)/observations/schedules/templates/data_sources を1レスポンスに集約。TC: tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")—6ブロック全キー+timeline sort順を検証。未実装: market_offers/improvementsはコード内コメントで明示的に空配列固定(\"mkt-listing has no individual ref yet\" \"fork/improvement lineage is a later 波\")—マーケット/改善文化は未接続、所有者履歴・環境時系列の統合も未確認。"
+    "commits": ["e61f50b", "d49dcd9", "3d89c63"],
+    "tc": ["tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: placement_id → device_binding → telemetry を join(未配置は空配列)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)\")"],
+    "note": "個体詳細(A2)実装は2系統ある: (1) projectIndividual()+GET /individuals/{id}(6文化ブロックの薄い一覧・e61f50b)は0076681で「死にUI」判定されscreen-defs/individual-detail.jsonの実画面から外され現在UI到達不可(コードのみ残存)。(2) 実際にUIが呼ぶのはprojectIndividualProfile()+GET /individuals/{id}/profile(V3-AIP-101スライスA・screen-defs/individual-detail.json準拠)— wave-2(d49dcd9+批評家修正3d89c63)でここへenvironment(現placementのopen device_binding→telemetry join、unbind後の旧placementへのデータ漏れも根治)を追加。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: 所有者履歴(owner history)はどちらの投影にも未実装(フィールド自体が無い)、market_offers/improvementsはprojectIndividual側で空配列固定のまま(mkt-listingにindividual_ids欄なし・MKT-29待ち)、bio-card/cross統計は実画面(individual-detail.json)の設計判断でスコープA対象外(意図的除外・死にUIを出さない方針)、環境(時系列)は現placementのみで全履歴は後続波。"
   },
   {
     "id": "V3-IND-15",
@@ -847,11 +843,9 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": [
-      "e61f50b"
-    ],
-    "tc": [],
-    "note": "projectAuthenticity+TC実装済み・market-listing照合のみ未"
+    "commits": ["e61f50b", "8b05247"],
+    "tc": ["tests/individual.test.ts describe(\"IND-21 真正性(projectAuthenticity)\")", "tests/individual.test.ts describe(\"V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/lineage-check)\")"],
+    "note": "projectAuthenticity(画像sha256連鎖/成長単調性/血統矛盾検知→0..1連続性スコア)は既存実装済み(e61f50b)。wave-2(8b05247)でGET /individuals/lineage-check(checkLineageClaim)を追加: 申告sire_id/dam_id/speciesをTruthと照合しSIRE_UNKNOWN/DAM_UNKNOWN/SPECIES_MISMATCH_*/SIRE_DAM_SAME_INDIVIDUALを検出(read-only)。対象はV3-IND-35予約listingのreservation_sire_id/dam_idのみ(一般listing↔個体紐付けはmkt-listingにindividual_ids欄がなくMKT-29待ちのため対象外・推測実装なし)。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: (1) 一般出品(予約以外)への適用はMKT-29裁定待ち、(2)「疑義を購入者が確認・記録できる文化」に対応する永続化route(このチェック結果を根拠に指摘/記録を残す専用導線)は未実装(read-onlyチェックのみ・既存market-flag-routes.tsの汎用指摘機能との手動併用は可能だが自動連携なし)。"
   },
   {
     "id": "V3-IND-34",
@@ -861,10 +855,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["3f941f2"],
+    "tc": ["tests/individual.test.ts describe(\"V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)\")"],
+    "note": "lineage_id(任意タグ)をindividual master/clutchスキーマへ追加(schemas/events/ind-master.schema.json, ind-clutch.schema.json+codegen再生成)。GET /individuals・GET /clutchesに?lineage_id=完全一致フィルタ、clutch promoteで子個体へ継承。系統合流(異なるlineage_id同士の交配→子に新タグ)は既存parents APIがlineageを跨ぐ制約を課さないため追加実装なしで可能(ユーザーがタグを選ぶ運用・テストで確認)。成長ステージの自動更新(直近molt life-eventのto_stageから都度導出・常駐フィールドなし)・所有者(actor_id)・観測履歴・画像(subject_ref経由)は既存基盤で充足。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: タグ(feature_tags)自体はP4層として空配列のまま(IND-15と同じ系統的後波依存・IND-34固有の欠落ではない)。"
   },
   {
     "id": "V3-KRM-03",
