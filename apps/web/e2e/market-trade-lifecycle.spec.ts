@@ -136,11 +136,14 @@ test("market-trade lifecycle via real UI, 2 actors: draft -> publish -> apply(ma
   //    (受領10「画像を押せば詳細が出る」)以降は image-grid カード全体が
   //    リンクになっている(旧: table + 「詳細を開く」セルリンク)。この
   //    listing には写真を出品していないので placeholder glyph(📷)で表示される
-  //    (壊れた <img> ではなく正直な空スロット表示)。
+  //    (壊れた <img> ではなく正直な空スロット表示)。append-only Truth に
+  //    過去の e2e 実行分の出品が積み上がるため、📷 の存在確認はこの listing
+  //    のリンク配下に限定する(page全体だとstrict mode違反になる)。
   await page.goto(`${WEB}/s/market-trade`);
   await page.waitForLoadState("networkidle");
   await page.getByRole("tab", { name: "買う" }).click();
-  await expect(page.getByText("📷")).toBeVisible();
-  await page.getByRole("link", { name: new RegExp(title) }).click();
+  const listingLink = page.getByRole("link", { name: new RegExp(title) });
+  await expect(listingLink.getByText("📷")).toBeVisible();
+  await listingLink.click();
   await expect(page.getByText(`${title} / 12000 円`)).toBeVisible();
 });

@@ -187,7 +187,9 @@ test("API semantics guard: magic-link auth → capture → photo → detail → 
   });
 
   const sess = await api.get("/api/v1/auth/session");
-  expect(await sess.json()).toEqual({ authenticated: true, actor_id: actorId });
+  // V3-AUT-10: session now also reports onboarding_complete (handle+locale
+  // gate) — a fresh actor from this suite hasn't set either, so it's false.
+  expect(await sess.json()).toEqual({ authenticated: true, actor_id: actorId, onboarding_complete: false });
   expect((await anon.get(`/api/v1/individuals/${individualId}/observations`)).status()).toBe(401);
   await anon.dispose();
 
