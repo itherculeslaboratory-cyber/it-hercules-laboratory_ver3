@@ -24,6 +24,7 @@ import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
 import { marketRatingRoutes } from "./market-rating-routes";
+import { marketPaymentGuidanceRoutes } from "./market-payment-guidance-routes";
 import { marketTemplateRoutes } from "./market-template-routes";
 import { marketPricingRoutes } from "./market-pricing-routes";
 import { piiRoutes } from "./pii-routes";
@@ -246,6 +247,9 @@ app.route("/api/v1", marketBlockRoutes);
 // まるごと停止)・GET moderation 投影・POST /market/sellers/{id}/misban-reversal/execute
 // (カルマ80×5人判定で出品停止解除)。全て保護。
 app.route("/api/v1", marketFlagRoutes);
+
+// V3-MKT-64 プリカ案内(静的・照会結果非依存): GET /market/payment-guidance。全て保護。
+app.route("/api/v1", marketPaymentGuidanceRoutes);
 
 // Plaza / 知の広場書込 (design-c5.md §K6 §2.1 slot033-036 / V3-BBS-01/03/05/10/20/29/36):
 // POST posts/stances/forks/signals/summaries + 決定論投影(thread/consensus/fork-rank/
