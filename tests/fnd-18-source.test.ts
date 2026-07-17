@@ -176,3 +176,55 @@ describe("FND-18 placement + occupancy INSERT (put-if-absent)", () => {
     expect(list.occupancy).toHaveLength(1);
   });
 });
+
+// V3-OBS-72 研究室環境コンテキスト: placement 基盤の拡張(部屋/空調/センサー
+// 位置)。append-only history + 最新1件投影(projectLabEnvironmentAt)。
+describe("V3-OBS-72 lab environment (placement 拡張・append-only latest-wins projection)", () => {
+  it("room_label required -> 400; a valid record round-trips via GET", async () => {
+    const { app, env } = ctx();
+    const { placement_id } = (await (await post(app, env, "/api/v1/placements", { label: "棚A" })).json()) as {
+      placement_id: string;
+    };
+
+    expect((await post(app, env, `/api/v1/placements/${placement_id}/lab-environment`, {})).status).toBe(400);
+
+    const res = await post(app, env, `/api/v1/placements/${placement_id}/lab-environment`, {
+      room_label: "飼育室2・北側",
+      hvac_profile: "24℃・湿度55%設定",
+      sensor_position: "棚の中段",
+    });
+    expect(res.status).toBe(201);
+
+    const got = (await (await get(app, env, `/api/v1/placements/${placement_id}/lab-environment`)).json()) as {
+      lab_environment: { room_label: string; hvac_profile: string; sensor_position: string };
+    };
+    expect(got.lab_environment.room_label).toBe("飼育室2・北側");
+    expect(got.lab_environment.hvac_profile).toBe("24℃・湿度55%設定");
+    expect(got.lab_environment.sensor_position).toBe("棚の中段");
+  });
+
+  it("a placement with no recorded environment reads as null, not 404 (V3-UIX-03)", async () => {
+    const { app, env } = ctx();
+    const { placement_id } = (await (await post(app, env, "/api/v1/placements", { label: "空の棚" })).json()) as {
+      placement_id: string;
+    };
+    const res = await get(app, env, `/api/v1/placements/${placement_id}/lab-environment`);
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { lab_environment: unknown }).toEqual({ placement_id, lab_environment: null });
+  });
+
+  it("appending a second record supersedes the first on read (append-only latest-wins)", async () => {
+    const { app, env } = ctx();
+    const { placement_id } = (await (await post(app, env, "/api/v1/placements", { label: "棚B" })).json()) as {
+      placement_id: string;
+    };
+    await post(app, env, `/api/v1/placements/${placement_id}/lab-environment`, { room_label: "旧・飼育室1" });
+    await new Promise((r) => setTimeout(r, 2)); // distinct created_at ordering
+    await post(app, env, `/api/v1/placements/${placement_id}/lab-environment`, { room_label: "新・飼育室3" });
+
+    const got = (await (await get(app, env, `/api/v1/placements/${placement_id}/lab-environment`)).json()) as {
+      lab_environment: { room_label: string };
+    };
+    expect(got.lab_environment.room_label).toBe("新・飼育室3");
+  });
+});

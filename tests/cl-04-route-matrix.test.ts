@@ -1,8 +1,8 @@
-// CL-04: 74-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 80-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
-//   (iii) row count === 73. Lineage: base 68 (route-matrix.csv header comment) →
+//   (iii) row count === 80. Lineage: base 68 (route-matrix.csv header comment) →
 //        L-PAY レーン(round-16)が -6 GMO retired + 3 PAY.JP 新規 route(infra-route-
 //        069..071: POST /fees/{obligation_id}/invoice・POST /fees/payjp-webhook
 //        [PUBLIC]・GET /me/fees) = 65 → 認証レーン(round-16 OQ-ROUTE-01/V3-AUT-46)
@@ -20,7 +20,14 @@
 //        g04-経済レーン(V3-MKT-35)が +1 route(infra-route-082: POST
 //        /economy/vote・protected)= 74 → g02-観測レーン(C8 obs-analysis・
 //        V3-OBS-57)が +1 route(infra-route-083: GET /observation/{capture_id}/
-//        species-suggestions・protected)= 75。
+//        species-suggestions・protected)= 75 → obs-capture レーン(V3-OBS-20
+//        棚/場所QR)が +1 route(infra-route-084: POST /placements/
+//        {placement_id}/qr・protected)= 76 → obs-capture レーン(V3-OBS-72
+//        研究室環境コンテキスト)が +3 route(infra-route-085..087: POST/GET
+//        .../lab-environment・GET individuals/{id}/lab-environment・全
+//        protected)= 79 → obs-capture レーン(V3-OBS-61 自然言語フリーテキスト
+//        解析)が +1 route(infra-route-088: POST /observation/parse-freetext・
+//        protected)= 80。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -51,9 +58,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (75 rows)", () => {
-  it("has exactly 75 route rows", () => {
-    expect(rows.length).toBe(75);
+describe("CL-04 route matrix (80 rows)", () => {
+  it("has exactly 80 route rows", () => {
+    expect(rows.length).toBe(80);
   });
 
   it("access column is only public|protected", () => {

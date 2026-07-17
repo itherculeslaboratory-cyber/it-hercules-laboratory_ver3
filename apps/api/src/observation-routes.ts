@@ -14,6 +14,8 @@ import {
   NAVIGATOR_TARGET_QUESTIONS,
   CONFIDENCE_ORDER,
 } from "./observation-constants";
+import { ENV_QR_TYPE, projectOccupantAt, projectOpenOccupancy, projectLabEnvironmentAt } from "./source-routes";
+import { parseObservationFreetext } from "./freetext-parser";
 import type { Bindings, Variables } from "./env";
 import { appendContribution } from "./contribution";
 import { CONTRIB_OBSERVATION_SAVED, CONTRIB_OBSERVATION_WITH_PHOTO } from "./economy-constants";
@@ -797,6 +799,18 @@ obsRoutes.post("/observation/targets/search", async (c) => {
   return c.json({ error: "INVALID_MODE" }, 400);
 });
 
+// POST /observation/parse-freetext — V3-OBS-61 最小観測入力UI: 自然言語の
+// フリーテキスト1つ+「解析する」ボタンを受け、日付・個体・温度・湿度・胸角・
+// エサの行パターンを決定論パーサ(freetext-parser.ts・LLM 既定OFF)でJSON化
+// して返すだけ(R2コミットは既存 obs-entry/solid-observation の役目・ここでは
+// 提案止まり — 候補提示と確定の分離と同じ原則)。
+obsRoutes.post("/observation/parse-freetext", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const text = typeof body?.text === "string" ? body.text : "";
+  if (!text.trim()) return c.json({ error: "MISSING_TEXT" }, 400);
+  return c.json(parseObservationFreetext(text));
+});
+
 // GET /observation/templates/{template_id} — one template with scope (OBS-18).
 obsRoutes.get("/observation/templates/:template_id", async (c) => {
   const id = c.req.param("template_id");
@@ -1007,6 +1021,20 @@ obsRoutes.get("/individuals/:individual_id/observations", async (c) => {
   return c.json({ individual_id: individualId, observations });
 });
 
+// GET /individuals/{individual_id}/lab-environment — chains occupancy →
+// placement → lab-environment (V3-OBS-72): "where is this individual right
+// now, and what does its lab actually look like" (research-room layout/HVAC
+// profile), so an observation can be shown alongside the environment context
+// that explains it. No open occupancy / no recorded environment → honest
+// empty ({ lab_environment: null }), not 404.
+obsRoutes.get("/individuals/:individual_id/lab-environment", async (c) => {
+  const individualId = c.req.param("individual_id");
+  const open = await projectOpenOccupancy(c.env.TRUTH, `individual/${individualId}`);
+  if (!open) return c.json({ individual_id: individualId, placement_id: null, lab_environment: null });
+  const lab = await projectLabEnvironmentAt(c.env.TRUTH, open.placement_id);
+  return c.json({ individual_id: individualId, placement_id: open.placement_id, lab_environment: lab });
+});
+
 // POST /individuals/{individual_id}/qr — issue an ind.qr.v1 token.
 // token = 32 random bytes → base64url (43 chars). Keyed by token for O(1) resolve.
 obsRoutes.post("/individuals/:individual_id/qr", async (c) => {
@@ -1032,32 +1060,72 @@ obsRoutes.post("/individuals/:individual_id/qr", async (c) => {
   return c.json({ token, individual_id: individualId, expires_at: data.expires_at ?? null }, 202);
 });
 
-// GET /qr/{token} — resolve token → { individual_id } (observation re-entry).
-// With ?prefill=1 (OBS-20): also returns entry_mode=qr + last-observation prefill
-// (棚→個体→種→テンプレ連鎖) so the QR-resume form starts pre-filled. The bare
-// call keeps its original { individual_id } shape (existing contract).
-obsRoutes.get("/qr/:token", async (c) => {
-  const token = c.req.param("token");
-  const ev = await store(c).readEvent(`truth/${QR_TYPE}/${token}.json`);
-  if (!ev) return c.json({ error: "NOT_FOUND" }, 404);
-  const d = dataOf(ev);
-  if (typeof d.expires_at === "string" && Date.parse(d.expires_at) < Date.now()) {
-    return c.json({ error: "QR_EXPIRED" }, 410);
-  }
-  if (!c.req.query("prefill")) return c.json({ individual_id: d.individual_id });
-
-  const ref = `individual/${d.individual_id}`;
-  const caps = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
+// Last-observation prefill for an individual (棚→個体→種→前回テンプレ連鎖・
+// OBS-20). Shared by both QR flavors below so the chain is defined exactly once.
+async function buildIndividualPrefill(
+  st: TruthStore,
+  individualId: string,
+): Promise<{ template_id: unknown; species_candidate: unknown; measurements: unknown } | null> {
+  const ref = `individual/${individualId}`;
+  const caps = (await st.listEvents(`truth/${CAPTURE_TYPE}/`))
     .map(dataOf)
     .filter((x) => x.subject_ref === ref)
     .sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id)));
   const last = caps[caps.length - 1];
-  const prefill = last
+  return last
     ? {
         template_id: last.template_id ?? null,
         species_candidate: last.species_candidate ?? null,
         measurements: last.measurements ?? [],
       }
     : null;
-  return c.json({ individual_id: d.individual_id, entry_mode: "qr", prefill });
+}
+
+// GET /qr/{token} — resolve token → { individual_id } (observation re-entry).
+// With ?prefill=1 (OBS-20): also returns entry_mode=qr + last-observation prefill
+// (棚→個体→種→テンプレ連鎖) so the QR-resume form starts pre-filled. The bare
+// call keeps its original { individual_id } shape (existing contract).
+//
+// A token not found in the individual-QR store (ihl.ind.qr.v1) also falls back
+// to the placement/shelf-QR store (ihl.env.qr.v1, source-routes.ts POST
+// /placements/:id/qr — CL-10 env_qr_token_v1 shape): a shelf label resolves to
+// whichever individual currently occupies it (projectOccupantAt), then chains
+// the SAME prefill lookup. No current occupant (empty shelf) still resolves
+// (individual_id: null, entry_mode: qr_placement_empty) rather than 404 — the
+// shelf is still scannable to start a brand-new individual there.
+obsRoutes.get("/qr/:token", async (c) => {
+  const token = c.req.param("token");
+  const st = store(c);
+
+  const ev = await st.readEvent(`truth/${QR_TYPE}/${token}.json`);
+  if (ev) {
+    const d = dataOf(ev);
+    if (typeof d.expires_at === "string" && Date.parse(d.expires_at) < Date.now()) {
+      return c.json({ error: "QR_EXPIRED" }, 410);
+    }
+    if (!c.req.query("prefill")) return c.json({ individual_id: d.individual_id });
+    const prefill = await buildIndividualPrefill(st, String(d.individual_id));
+    return c.json({ individual_id: d.individual_id, entry_mode: "qr", prefill });
+  }
+
+  const envEv = await st.readEvent(`truth/${ENV_QR_TYPE}/${token}.json`);
+  if (!envEv) return c.json({ error: "NOT_FOUND" }, 404);
+  const ed = dataOf(envEv);
+  if (typeof ed.expires_at === "string" && Date.parse(ed.expires_at) < Date.now()) {
+    return c.json({ error: "QR_EXPIRED" }, 410);
+  }
+  const placementId = String(ed.placement_id);
+  const occupant = await projectOccupantAt(c.env.TRUTH, placementId);
+  const individualId =
+    occupant && occupant.subject_ref.startsWith("individual/")
+      ? occupant.subject_ref.slice("individual/".length)
+      : null;
+  if (!c.req.query("prefill")) return c.json({ placement_id: placementId, individual_id: individualId });
+  const prefill = individualId ? await buildIndividualPrefill(st, individualId) : null;
+  return c.json({
+    placement_id: placementId,
+    individual_id: individualId,
+    entry_mode: individualId ? "qr_placement" : "qr_placement_empty",
+    prefill,
+  });
 });

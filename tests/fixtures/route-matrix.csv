@@ -17,7 +17,14 @@
 #   採番をずらして解決)を追加 → 74 rows、g02-観測レーン(C8 obs-analysis)が
 #   OBS-57種候補提案の新規 1 route(infra-route-083・GET /api/v1/observation/
 #   {capture_id}/species-suggestions・protected・080は先に基盤コストレーンが
-#   採ったため採番をずらして解決)を追加 → 75 rows。
+#   採ったため採番をずらして解決)を追加 → 75 rows。obs-capture レーン(V3-OBS-20
+#   棚/場所QR)が新規 1 route(infra-route-084・POST /api/v1/placements/
+#   {placement_id}/qr・protected)を追加 → 76 rows、同レーン(V3-OBS-72 研究室
+#   環境コンテキスト)が新規 3 route(infra-route-085..087・POST/GET .../
+#   lab-environment・GET individuals/{id}/lab-environment・全 protected)を
+#   追加 → 79 rows、同レーン(V3-OBS-61 自然言語フリーテキスト解析)が新規 1
+#   route(infra-route-088・POST /observation/parse-freetext・protected)を
+#   追加 → 80 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -96,3 +103,8 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/ai-digest/sync,VPS,Workers,W2,infra-route-081,protected,implemented,V3-AIP-67 GitHub Issues/掲示板→AI要約スレ・requireRole operator/admin手動即時実行・ai-kernel LLMClient(既定AI_DISABLED)+ai-profiles/newspaper.json再利用・保存はihl.plaza.post.v1(channel=knowledge-board)を再利用し新イベント型を増やさない
 —,POST,/api/v1/economy/vote,VPS,Workers,W2,infra-route-082,protected,implemented,V3-MKT-35 プラチナコイン投票通貨(対象・レイヤー0-3・枚数・理由指定・レイヤー4は403)・KRM-25 castPlatinumVote共有コア再利用
 —,GET,/api/v1/observation/{capture_id}/species-suggestions,VPS,Workers,W2,infra-route-083,protected,implemented,OBS-57 種候補提案チェーン(ヒューリスティック→CLIP任意→Vision任意)・CLIP/Vision未設定(既定)でもヒューリスティックのみで完走・種の自動確定はしない(species_confirmed_byは既存frozen const"user"のまま不変)
+—,POST,/api/v1/placements/{placement_id}/qr,VPS,Workers,W2,infra-route-084,protected,implemented,棚/場所QR発行(V3-OBS-20・CL-10 env_qr_token_v1 frozen形状・GET /api/v1/qr/{token}が個体QRと同じ入口で解決・occupancy投影で現占有個体へ連鎖)
+—,POST,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-085,protected,implemented,研究室環境コンテキスト登録(V3-OBS-72・placement基盤の拡張・append-only履歴+最新1件投影)
+—,GET,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-086,protected,implemented,研究室環境コンテキスト投影読み出し(V3-OBS-72・未記録はnull・404にしない)
+—,GET,/api/v1/individuals/{individual_id}/lab-environment,VPS,Workers,W2,infra-route-087,protected,implemented,個体→occupancy→placement→研究室環境の連鎖投影(V3-OBS-72・obs-detail表示元)
+—,POST,/api/v1/observation/parse-freetext,VPS,Workers,W2,infra-route-088,protected,implemented,自然言語フリーテキスト観測の決定論パース(V3-OBS-61・LLM既定OFF・R2コミットはしない提案止まり)

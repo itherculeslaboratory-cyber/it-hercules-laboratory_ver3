@@ -1,0 +1,51 @@
+{
+  "screen_id": "obs-freetext",
+  "route": "/observe/freetext",
+  "title": "文章で観測を記録する",
+  "layout": "standard",
+  "notes": "V3-OBS-61 最小観測入力UI: 自然言語のフリーテキスト欄1つ+「解析する」ボタン。解析は決定論パーサ(apps/api/src/freetext-parser.ts・LLM 既定OFF・不変条項①)で日付・個体・温度・湿度・胸角・エサをJSON化するだけ(候補提示止まり・R2コミットはしない — obs-entry/solid-observation の既存フローと同じ「提案と確定の分離」原則)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "文章で観測を記録する", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "「2026-07-17 個体DHH-24 温度28.5℃ 湿度62% 胸角45mm エサ ゼリー」のように書いて解析します。", "muted": true } },
+            {
+              "id": "freetext-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/parse-freetext" },
+              "children": [
+                { "id": "text", "type": "field", "props": { "variant": "textarea", "name": "text", "label": "観測メモ", "placeholder": "例: 2026-07-17 個体DHH-24 温度28.5℃ 湿度62%", "required": true } },
+                { "id": "submit", "type": "button", "props": { "label": "解析する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            { "id": "result-title", "type": "heading", "props": { "text": "解析結果", "level": 2 } },
+            { "id": "result-date", "type": "text", "props": { "text": "日付: {{result.date}}" } },
+            { "id": "result-individual", "type": "text", "props": { "text": "個体: {{result.individual_id}}" } },
+            { "id": "result-food", "type": "text", "props": { "text": "エサ: {{result.food}}" } },
+            {
+              "id": "result-measurements",
+              "type": "list",
+              "props": {
+                "bind_items": "result.measurements",
+                "item_text": "{{item}}: {{value}} {{unit}}",
+                "empty_text": "計測値は見つかりませんでした。"
+              }
+            },
+            {
+              "id": "to-entry",
+              "type": "link",
+              "props": { "label": "観測入力へ(この内容を手入力で反映)", "href": "/s/obs-entry" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

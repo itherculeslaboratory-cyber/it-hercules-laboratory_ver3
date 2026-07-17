@@ -638,6 +638,70 @@ describe("Renderer — measurement-table node (V3-OBS-18)", () => {
   });
 });
 
+describe("Renderer — target-navigator node (V3-OBS-02)", () => {
+  const navDef = (): ScreenDef => screenDef([{ id: "navigator", type: "target-navigator" }]);
+
+  it("name path: search → pick a candidate → confirm carries species_candidate to obs-entry", async () => {
+    const onAction = vi.fn(async (action) => {
+      if ((action as { path?: string }).path === "/api/v1/observation/targets/search") {
+        return { mode: "name", candidates: [{ qid: "Q1", scientific_name: "Dynastes hercules", taxonomy: {} }] };
+      }
+      return {};
+    });
+    const onNavigate = vi.fn();
+    render(<Renderer def={navDef()} onAction={onAction} onNavigate={onNavigate} />);
+
+    fireEvent.change(screen.getByLabelText("学名の一部"), { target: { value: "Dynastes" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "候補を探す" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Dynastes hercules" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "この対象で観測を続ける" }));
+    });
+    expect(onNavigate).toHaveBeenCalledWith("obs-entry", { species_candidate: "Dynastes hercules" });
+  });
+
+  it("yes-no path: answering converges to a resolved candidate, selectable", async () => {
+    const onAction = vi.fn(async (action, body) => {
+      const b = body as { answers?: boolean[] };
+      if ((b?.answers ?? []).length >= 1) {
+        return { mode: "yesno", resolved: { qid: "Q9", taxonomy: { species: "Genus0 species0" } }, questions_asked: 1 };
+      }
+      return { mode: "yesno", resolved: null, question: { index: 0, pivot: "Genus5", remaining: 10 } };
+    });
+    render(<Renderer def={navDef()} onAction={onAction} onNavigate={vi.fn()} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "はい・いいえ形式で始める" }));
+    });
+    expect(screen.getByText(/Genus5 以降ですか/)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "はい" }));
+    });
+    expect(screen.getByText(/Genus0 species0/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "この候補を選ぶ" })).toBeInTheDocument();
+  });
+
+  it("tree path: drills into a family and resolves a leaf", async () => {
+    const onAction = vi.fn(async (_action, body) => {
+      const path = (body as { path?: string[] })?.path ?? [];
+      if (path.length === 0) return { mode: "tree", children: ["FamilyX"] };
+      if (path.length === 1) return { mode: "tree", resolved: { qid: "Q7", taxonomy: { species: "FamilyX leaf" } } };
+      return {};
+    });
+    render(<Renderer def={navDef()} onAction={onAction} onNavigate={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "FamilyX" })).toBeInTheDocument());
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "FamilyX" }));
+    });
+    expect(screen.getByText("FamilyX leaf")).toBeInTheDocument();
+  });
+});
+
 describe("Renderer — A層 badge/progress (c7 ui-parity-map §2-3/§2-4)", () => {
   it("renders a badge with the requested tone as a data attribute", () => {
     render(

@@ -96,6 +96,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "device-binding": "deviceBinding",
   occupancy: "occupancy",
   "telemetry-ingest": "telemetryIngest",
+  // V3-OBS-72 研究室環境コンテキスト(placement 基盤の拡張・design-k7 §1.2 系統)。
+  "lab-environment": "labEnvironment",
   "consent-record": "consentRecord",
   "embedding-manifest": "embeddingManifest",
   "individual-key": "individualKey",
@@ -219,6 +221,7 @@ const EVENT_NAMES = new Set([
   "device-binding",
   "occupancy",
   "telemetry-ingest",
+  "lab-environment",
   // C5 K8 — data validation MUST fire or putEvent stores unchecked data at 202
   // permanently (Truth is INSERT ONLY, unfixable). See design-k8 §1.2 批評家F2.
   "intent",

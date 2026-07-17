@@ -112,6 +112,8 @@ const SCHEMAS = [
   ["deviceBinding", "events/device-binding.schema.json"],
   ["occupancy", "events/occupancy.schema.json"],
   ["telemetryIngest", "events/telemetry-ingest.schema.json"],
+  // V3-OBS-72 研究室環境コンテキスト(placement 基盤の拡張)。
+  ["labEnvironment", "events/lab-environment.schema.json"],
   // C5 K8 process/culture events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
   ["intent", "events/intent.schema.json"],
   ["cultureTemplate", "events/culture-template.schema.json"],

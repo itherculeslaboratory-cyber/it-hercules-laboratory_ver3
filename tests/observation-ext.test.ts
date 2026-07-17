@@ -285,6 +285,131 @@ describe("OBS-20 qr prefill (?prefill=1) + entry_mode", () => {
   });
 });
 
+// V3-OBS-20 棚/場所からQR発行: a placement/shelf QR (issued via
+// POST /placements/:id/qr, CL-10 env_qr_token_v1 shape) resolves through the
+// SAME GET /qr/:token scan endpoint as an individual QR — 棚→個体→種→前回
+// テンプレの連鎖。
+describe("OBS-20 placement/shelf QR (棚→個体 連鎖)", () => {
+  it("issues a CL-10-shaped env_qr_token_v1 token for a placement", async () => {
+    const { env } = ctx();
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚A" }, env)).json()) as {
+      placement_id: string;
+    };
+    const res = await post(`/api/v1/placements/${placement_id}/qr`, {}, env);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { token: string; placement_id: string; expires_at: string };
+    expect(body.token).toMatch(/^[A-Za-z0-9_-]{20,}$/);
+    expect(body.placement_id).toBe(placement_id);
+  });
+
+  it("scanning a placement QR with an occupant resolves to that individual + prefill (?prefill=1)", async () => {
+    const { env } = ctx();
+    const indId = "ind-shelf";
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚B" }, env)).json()) as {
+      placement_id: string;
+    };
+    // "move" (kind:"move") is the phase:"start"/"end"-tagged occupancy path
+    // (moveOccupancy, source-routes.ts) — plain POST /occupancy writes a
+    // phase-less legacy record that is never "open" (see the ended-occupancy
+    // test below), so the QR-resolve occupant lookup needs this route.
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: placement_id }] },
+      env,
+    );
+    await post(
+      "/api/v1/observation/captures",
+      { capture_id: ulid(), domain: "biology", subject_ref: `individual/${indId}`, template_id: "tpl-shelf", measurements: [{ item: "len", kind: "number", value: 5 }] },
+      env,
+    );
+    const { token } = (await (await post(`/api/v1/placements/${placement_id}/qr`, {}, env)).json()) as { token: string };
+
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    const body = (await res.json()) as {
+      placement_id: string;
+      individual_id: string;
+      entry_mode: string;
+      prefill: { template_id: string; measurements: unknown[] };
+    };
+    expect(body.placement_id).toBe(placement_id);
+    expect(body.individual_id).toBe(indId);
+    expect(body.entry_mode).toBe("qr_placement");
+    expect(body.prefill.template_id).toBe("tpl-shelf");
+  });
+
+  it("scanning an empty placement (no occupant) resolves without a 404", async () => {
+    const { env } = ctx();
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "空の棚" }, env)).json()) as {
+      placement_id: string;
+    };
+    const { token } = (await (await post(`/api/v1/placements/${placement_id}/qr`, {}, env)).json()) as { token: string };
+
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { individual_id: unknown; entry_mode: string };
+    expect(body.individual_id).toBeNull();
+    expect(body.entry_mode).toBe("qr_placement_empty");
+  });
+
+  it("an ended occupancy (subject moved elsewhere) no longer resolves as the current occupant", async () => {
+    const { env } = ctx();
+    const indId = "ind-moved-out";
+    const { placement_id: shelfC } = (await (await post("/api/v1/placements", { label: "棚C" }, env)).json()) as {
+      placement_id: string;
+    };
+    const { placement_id: shelfC2 } = (await (await post("/api/v1/placements", { label: "棚C2" }, env)).json()) as {
+      placement_id: string;
+    };
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: shelfC }] },
+      env,
+    );
+    // move again → ends the shelfC occupancy (phase:"end"), starts one at shelfC2.
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: shelfC2 }] },
+      env,
+    );
+    const { token } = (await (await post(`/api/v1/placements/${shelfC}/qr`, {}, env)).json()) as { token: string };
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    const body = (await res.json()) as { individual_id: unknown };
+    expect(body.individual_id).toBeNull();
+  });
+
+  it("a phase-less legacy /occupancy record is not treated as a current occupant", async () => {
+    const { env } = ctx();
+    const indId = "ind-legacy";
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚C-legacy" }, env)).json()) as {
+      placement_id: string;
+    };
+    await post("/api/v1/occupancy", { placement_id, subject_ref: `individual/${indId}` }, env);
+    const { token } = (await (await post(`/api/v1/placements/${placement_id}/qr`, {}, env)).json()) as { token: string };
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    const body = (await res.json()) as { individual_id: unknown };
+    expect(body.individual_id).toBeNull();
+  });
+
+  it("expired placement token → 410", async () => {
+    const { env } = ctx();
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚D" }, env)).json()) as {
+      placement_id: string;
+    };
+    const past = new Date(Date.now() - 1000).toISOString();
+    const { token } = (await (
+      await post(`/api/v1/placements/${placement_id}/qr`, { expires_at: past }, env)
+    ).json()) as { token: string };
+    const res = await get(`/api/v1/qr/${token}`, env);
+    expect(res.status).toBe(410);
+  });
+
+  it("unknown token (neither individual nor placement store) → 404", async () => {
+    const { env } = ctx();
+    const res = await get("/api/v1/qr/not-a-real-token-at-all", env);
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("OBS-23 thumbnail serve, no raw bulk download", () => {
   it("serves the 512px JPEG thumbnail blob", async () => {
     const { bucket, env } = ctx();
@@ -302,6 +427,21 @@ describe("OBS-23 thumbnail serve, no raw bulk download", () => {
     expect((await get("/api/v1/observation/cap-1/thumbnail/none", env)).status).toBe(404);
     // there is no /images (plural) bulk route — only per-photo image/thumbnail.
     expect((await get("/api/v1/observation/cap-1/images", env)).status).toBe(404);
+  });
+
+  it("obs-detail.json's photo list binds the thumbnail endpoint, not raw /image/ (regression guard)", async () => {
+    // The screen-def contract itself, not just the API: obs-detail previously
+    // bound its photo-listing item_image to .../image/{photo_id} (the RAW
+    // full-size blob) — every detail-view render would bulk-download raw
+    // photos, exactly what OBS-23 forbids. Read the on-disk def directly so a
+    // future edit reintroducing /image/ here fails loudly.
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const defPath = path.join(process.cwd(), "..", "screen-defs", "obs-detail.json");
+    const def = JSON.parse(fs.readFileSync(defPath, "utf8")) as { nodes: unknown };
+    const json = JSON.stringify(def);
+    expect(json).toContain("/thumbnail/{{photo_id}}");
+    expect(json).not.toMatch(/\/image\/\{\{photo_id\}\}/);
   });
 });
 
@@ -387,5 +527,41 @@ describe("OBS-07 remeasure タグの自動付与 (reanalyze毎に必ず付与)",
     await post(`/api/v1/observation/${capId}/reanalyze`, { results: { len: 6 }, correction_semver: "1.1.0" }, env);
     const events = await new TruthStore(bucket).listEvents(`truth/ihl.obs.tag_event.v1/capture-${capId}-`);
     expect(events).toHaveLength(2);
+  });
+});
+
+// V3-OBS-72 研究室環境コンテキスト: GET /individuals/{id}/lab-environment は
+// occupancy → placement → lab-environment を連鎖する(観測詳細 obs-detail が
+// 表示する経路そのもの)。
+describe("OBS-72 individual → placement → lab-environment 連鎖", () => {
+  it("an individual with no open occupancy → placement_id/lab_environment both null", async () => {
+    const { env } = ctx();
+    const res = await get("/api/v1/individuals/ind-no-shelf/lab-environment", env);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ individual_id: "ind-no-shelf", placement_id: null, lab_environment: null });
+  });
+
+  it("chains through the individual's current placement to its recorded environment", async () => {
+    const { env } = ctx();
+    const indId = "ind-lab-ctx";
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚Z" }, env)).json()) as {
+      placement_id: string;
+    };
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: placement_id }] },
+      env,
+    );
+    await post(`/api/v1/placements/${placement_id}/lab-environment`, { room_label: "飼育室2・北側", hvac_profile: "24℃設定" }, env);
+
+    const res = await get(`/api/v1/individuals/${indId}/lab-environment`, env);
+    const body = (await res.json()) as {
+      individual_id: string;
+      placement_id: string;
+      lab_environment: { room_label: string; hvac_profile: string };
+    };
+    expect(body.placement_id).toBe(placement_id);
+    expect(body.lab_environment.room_label).toBe("飼育室2・北側");
+    expect(body.lab_environment.hvac_profile).toBe("24℃設定");
   });
 });

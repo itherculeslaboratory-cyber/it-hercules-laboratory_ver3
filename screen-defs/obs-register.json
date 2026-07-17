@@ -72,6 +72,11 @@
               "id": "new-individual",
               "type": "link",
               "props": { "label": "新規個体として登録 →", "href": "/s/obs-register-new" }
+            },
+            {
+              "id": "freetext-link",
+              "type": "link",
+              "props": { "label": "文章で記録する(自然言語入力) →", "href": "/s/obs-freetext" }
             }
           ]
         }
