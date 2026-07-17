@@ -1,0 +1,22 @@
+{
+  "_comment": "V3-AIP-28 加重機械採点プリセット(2例とも要件本文の「例:」を具体化したもの・排他ではなくBest-of-Nでどちらのpresetを使ってもよい)。各axisはmaxPoints(その軸の満点・全axis合計=100)+ 任意のmin(その軸の最低点。未達なら合計点に関係なくFAIL)。scorerが各axisのscore(0..maxPoints)を実測して入れ、scripts/scorecard-gate.mjs の evaluateScorecard() が合計とmin充足を判定する。",
+  "weighted-3axis": {
+    "_comment": "要件本文の例1: STRUCTURAL 25% / DESIGN-FULFILLMENT 50% / UX 25%(100点満点をこの比率で配点)。",
+    "totalMin": 80,
+    "axes": [
+      { "name": "STRUCTURAL", "maxPoints": 25 },
+      { "name": "DESIGN-FULFILLMENT", "maxPoints": 50 },
+      { "name": "UX", "maxPoints": 25 }
+    ]
+  },
+  "abcd-rtm": {
+    "_comment": "要件本文の例2: A完全性/B層分離/Cコード一致/D RTM。合計≥85 かつ B≥25 かつ C≥25。B/Cを層分離・コード一致という安全上重要な軸として厚めに配点(30点)し、A/Dは差分の10点。配点比率(30/30/30/10)は要件本文が明示しない部分の実装解釈 — 別配点にしたい場合は本ファイルを差し替えるだけでよい(scorer側のロジック変更は不要)。",
+    "totalMin": 85,
+    "axes": [
+      { "name": "A-completeness", "maxPoints": 30 },
+      { "name": "B-layer-separation", "maxPoints": 30, "min": 25 },
+      { "name": "C-code-fidelity", "maxPoints": 30, "min": 25 },
+      { "name": "D-rtm", "maxPoints": 10 }
+    ]
+  }
+}
