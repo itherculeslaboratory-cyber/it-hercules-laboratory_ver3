@@ -2,20 +2,23 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>UI レビュー(C8 見た目採点)</title>
+<title>UI レビュー(C8 見た目採点・新版 — 全画面)</title>
 <style>
   :root{--bg:#0f1216;--card:#171b22;--line:#272d38;--fg:#e7e9ee;--dim:#8a93a3;--acc:#ff7a1a;--a:#3fb950;--b:#d9a53b;}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 "Segoe UI",system-ui,sans-serif}
-  header{padding:24px 30px 16px;border-bottom:1px solid var(--line)}
+  header{padding:24px 30px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
   h1{margin:0 0 6px;font-size:22px}
   .sub{color:var(--dim);font-size:13.5px}
   main{max-width:980px;margin:0 auto;padding:22px 30px 130px}
+  h2.section{margin:34px 0 10px;font-size:18px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  h3.cluster{margin:26px 0 8px;font-size:14px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px}
   .ctitle{font-size:19px;font-weight:700;margin:0 0 4px}
-  .kanten{color:var(--dim);font-size:13.5px;margin:0 0 14px}
+  .kanten{color:var(--dim);font-size:13.5px;margin:0 0 10px}
   .kanten b{color:var(--fg)}
-  .thumbs{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 14px}
+  .kanten code{color:var(--fg);background:#0a0c10;border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  .thumbs{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 14px}
   .thumb{display:block;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0a0c10}
   .thumb img{display:block;max-width:420px;width:100%;height:auto}
   .thumb .cap{display:block;padding:6px 10px;color:var(--dim);font-size:12px;border-top:1px solid var(--line)}
@@ -27,52 +30,755 @@
   .fld .l{display:block;color:var(--dim);font-size:13px;margin-bottom:5px}
   .fld .l.good{color:var(--a)} .fld .l.bad{color:var(--b)}
   textarea{width:100%;min-height:56px;background:#0a0c10;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;font:14px/1.6 "Segoe UI",sans-serif;resize:vertical}
-  .bar{position:fixed;bottom:0;left:0;right:0;background:#11141a;border-top:1px solid var(--line);padding:12px 30px;display:flex;gap:14px;align-items:center}
+  .bar{position:fixed;bottom:0;left:0;right:0;background:#11141a;border-top:1px solid var(--line);padding:12px 30px;display:flex;gap:14px;align-items:center;z-index:6}
   button{background:var(--acc);color:#14181e;border:0;border-radius:7px;padding:10px 18px;font-weight:600;cursor:pointer}
   button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
   .msg{color:var(--dim);font-size:12px;white-space:pre-wrap}
   .note{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;color:var(--dim);font-size:13px;margin-bottom:18px}
+  table.prevfb{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:13px}
+  table.prevfb th,table.prevfb td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  table.prevfb th{color:var(--dim);background:#0a0c10}
 </style>
 </head>
 <body>
 <header>
-  <h1>C8 UI再構築(第1弾: 機能結線)の見た目レビュー — 磨き前の正直な状態です</h1>
-  <div class="sub">各カードに <b>点数 / 良い点 / 悪い点</b> を記入 → 下部「まとめをコピー」→ 貼り戻してください。画像はクリックで原寸表示(別タブ)できます。</div>
+  <h1>C8 UIレビュー新版 — 全画面(52) + 受領10再レビュー3画面(対応表つき)</h1>
+  <div class="sub">各カードに <b>点数 / 良い点 / 悪い点</b> を記入 → 下部「まとめをコピー」→ 貼り戻してください。画像はクリックで原寸表示(別タブ)できます。全画面 desktop(1440px)/mobile(390px) の2幅。</div>
 </header>
 <main>
-<div class="note">対象: market-trade-detail・market-trade-browse・knowledge-thread の各画面を desktop(1440px)/mobile(390px) の2幅でスクショ。全6枚。</div>
+<div class="note">全画面共通の基盤変更(個別記載なしの画面にも反映済み): ①ブランドクロム(ヘッダーnav+フッター板/投票リンク, V3-UIX-25/26/27/28) ②説明/愚痴/改善の折り畳み板フッター(V3-BBS-03) ③actor表示名(表示名優先/短縮ハッシュfallback, 磨き第2弾#5) ④テーブルの390px以下カードリスト化(磨き第2弾#7) ⑤全フォーム数値フィールドの型崩れ根治。</div>
+<h2 class="section">受領10 再レビュー対象(前回60/100の3画面 — 対応表つき)</h2>
 
-<div class="card" data-name="① market-trade-detail (1440 / 390)">
-  <div class="ctitle">① market-trade-detail(取引詳細画面)</div>
-  <p class="kanten"><b>観点</b>: 出品詳細・状態遷移・入札/取引ボードが desktop/mobile 双方で情報過不足なく操作できるか。</p>
-  <div class="thumbs">
-    <a class="thumb" href="market-trade-detail-1440.png" target="_blank"><img src="market-trade-detail-1440.png" alt="market-trade-detail 1440px"><span class="cap">1440px (desktop)</span></a>
-    <a class="thumb" href="market-trade-detail-390.png" target="_blank"><img src="market-trade-detail-390.png" alt="market-trade-detail 390px"><span class="cap">390px (mobile)</span></a>
-  </div>
+<div class="card" data-name="① market-trade — 取引ボード(成立後・買い手/売り手when出し分け)">
+  <div class="ctitle">① market-trade — 取引ボード(成立後・買い手/売り手when出し分け)</div>
+  <p class="kanten"><b>route</b>: <code>/market/trade</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 出品〜成立後の振込申告/入金確認/発送/受取を、当事者の役割(買い手/売り手)に応じて次に押すべきボタンだけを見せて貫く。</p>
+  <p class="kanten"><b>変更点要約</b>: #1 `when`プリミティブ(role eq/not_eq)で買い手専用/売り手専用ボタンを出し分け(旧: 両方常時表示)。#5 相手方候補の表示をactor表示名プリミティブへ。dispute相談室への導線を新設。</p>
+  <div class="thumbs"><a class="thumb" href="market-trade-detail-1440.png" target="_blank"><img src="market-trade-detail-1440.png" alt="market-trade-detail-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="market-trade-detail-390.png" target="_blank"><img src="market-trade-detail-390.png" alt="market-trade-detail-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <table class="prevfb">
+    <thead><tr><th>前回指摘(受領10・60/100)</th><th>今回の対応</th></tr></thead>
+    <tbody>
+      <tr><td>買い手/売り手で表示を出し分ける役割別ボタンが無い(両方常時表示)</td><td>対応済み — #1 `when`プリミティブで役割別に出し分け(本スクショで買い手には売り手専用ボタンが出ないことを確認可能)</td></tr>
+      <tr><td>加点分(統一感・機能明瞭・両幅対応)は維持する</td><td>維持 — ブランドクロム/フッターの全画面共通化で統一感をさらに強化</td></tr>
+    </tbody>
+  </table>
+  
   <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
   <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
   <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
 </div>
 
-<div class="card" data-name="② market-trade-browse (1440 / 390)">
-  <div class="ctitle">② market-trade-browse(出品一覧/検索画面)</div>
-  <p class="kanten"><b>観点</b>: 一覧の見やすさ・絞り込み導線・出品カードの情報密度が desktop/mobile 双方で妥当か。</p>
-  <div class="thumbs">
-    <a class="thumb" href="market-trade-browse-1440.png" target="_blank"><img src="market-trade-browse-1440.png" alt="market-trade-browse 1440px"><span class="cap">1440px (desktop)</span></a>
-    <a class="thumb" href="market-trade-browse-390.png" target="_blank"><img src="market-trade-browse-390.png" alt="market-trade-browse 390px"><span class="cap">390px (mobile)</span></a>
-  </div>
+<div class="card" data-name="② market-trade — 「買う」タブ(出品一覧・出品画像image-grid)">
+  <div class="ctitle">② market-trade — 「買う」タブ(出品一覧・出品画像image-grid)</div>
+  <p class="kanten"><b>route</b>: <code>/market/trade</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 全出品を一覧して気になる個体の詳細へ最短で移動する(購買の入口)。</p>
+  <p class="kanten"><b>変更点要約</b>: #2 mkt-listing-photo新設+出品フォームにphoto field追加。一覧をtable→image-gridへ差し替え(カードタップ=詳細)。写真未登録は壊れたimgでなく📷placeholderで正直表示。#4 モバイル「詳細を開く」ボタン潰れをカード化で根治。</p>
+  <div class="thumbs"><a class="thumb" href="market-trade-browse-1440.png" target="_blank"><img src="market-trade-browse-1440.png" alt="market-trade-browse-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="market-trade-browse-390.png" target="_blank"><img src="market-trade-browse-390.png" alt="market-trade-browse-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <table class="prevfb">
+    <thead><tr><th>前回指摘(受領10・60/100)</th><th>今回の対応</th></tr></thead>
+    <tbody>
+      <tr><td>出品一覧に画像が無い(listing写真フィールド新設が前提)</td><td>対応済み — mkt-listing-photo新設+image-gridで実サムネ表示(未登録分は📷placeholderで正直表示)</td></tr>
+      <tr><td>モバイルで「詳細を開く」ボタンが潰れる</td><td>対応済み — table+セルリンクをimage-gridカード全体クリックへ置換し崩れを根治</td></tr>
+      <tr><td>自明な説明文の削除</td><td>対応(追加を抑制) — 新規UIに冗長な説明文を足していない。既存文言の追加削除監査は未実施(残課題として明記)</td></tr>
+    </tbody>
+  </table>
+  
   <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
   <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
   <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
 </div>
 
-<div class="card" data-name="③ knowledge-thread (1440 / 390)">
-  <div class="ctitle">③ knowledge-thread(知の広場スレッド画面)</div>
-  <p class="kanten"><b>観点</b>: 投稿/立場表明/合意形成テーブルの構造が desktop/mobile 双方で読み取れるか。</p>
-  <div class="thumbs">
-    <a class="thumb" href="knowledge-thread-1440.png" target="_blank"><img src="knowledge-thread-1440.png" alt="knowledge-thread 1440px"><span class="cap">1440px (desktop)</span></a>
-    <a class="thumb" href="knowledge-thread-390.png" target="_blank"><img src="knowledge-thread-390.png" alt="knowledge-thread 390px"><span class="cap">390px (mobile)</span></a>
-  </div>
+<div class="card" data-name="③ knowledge-thread — スレッド(投稿ごと賛否ボタン+kebabメニュー)">
+  <div class="ctitle">③ knowledge-thread — スレッド(投稿ごと賛否ボタン+kebabメニュー)</div>
+  <p class="kanten"><b>route</b>: <code>/knowledge/thread</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 1スレッド内の投稿・引用・賛否表明(Agree/Disagree/Pass)・Polis型合意可視化を読み、必要なら相談室へエスカレーションする。</p>
+  <p class="kanten"><b>変更点要約</b>: #6 投稿ごとのインライン賛否ボタン化(「対象の投稿ID」手入力フォームを撤去)。#3 KebabMenu(⋮)新設・「この投稿を相談室へ」を常時表示から折り畳みへ。#5 投稿者をactor表示名プリミティブ化。</p>
+  <div class="thumbs"><a class="thumb" href="knowledge-thread-1440.png" target="_blank"><img src="knowledge-thread-1440.png" alt="knowledge-thread-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="knowledge-thread-390.png" target="_blank"><img src="knowledge-thread-390.png" alt="knowledge-thread-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <table class="prevfb">
+    <thead><tr><th>前回指摘(受領10・60/100)</th><th>今回の対応</th></tr></thead>
+    <tbody>
+      <tr><td>「この投稿を相談室へ」等の頻出導線が常時表示で煩雑</td><td>対応済み — KebabMenu(⋮)新設し既定非表示・「この投稿の操作」を開いて初めて見える</td></tr>
+      <tr><td>賛否投票が「対象の投稿ID」手入力でUXが悪い</td><td>対応済み — 投稿ごとのインラインAgree/Disagree/Passボタンに置換(ID手入力フォームは撤去)</td></tr>
+      <tr><td>表示名がactor_idの生ハッシュのまま</td><td>対応済み — actor表示名プリミティブ(display_name優先/短縮ハッシュfallback)を投稿者表示に適用</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h2 class="section">全画面(navigation.json 52画面。上記3画面は上のセクションで重複掲載しない)</h2>
+<h3 class="cluster">認証・初期設定</h3>
+
+<div class="card" data-name="login">
+  <div class="ctitle">login</div>
+  <p class="kanten"><b>route</b>: <code>/login</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: マジックリンク+dev-loginでの認証入口</p>
+  <p class="kanten"><b>変更点要約</b>: V3-AUT-46 数字コードverify(別端末/webview向け)+V3-AUT-19/20 INVALID_TOKEN区別を追加</p>
+  <div class="thumbs"><a class="thumb" href="login-1440.png" target="_blank"><img src="login-1440.png" alt="login-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="login-390.png" target="_blank"><img src="login-390.png" alt="login-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="login-sent">
+  <div class="ctitle">login-sent</div>
+  <p class="kanten"><b>route</b>: <code>/login/sent</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: マジックリンク送信後の待機画面</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="login-sent-1440.png" target="_blank"><img src="login-sent-1440.png" alt="login-sent-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="login-sent-390.png" target="_blank"><img src="login-sent-390.png" alt="login-sent-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="country-select">
+  <div class="ctitle">country-select</div>
+  <p class="kanten"><b>route</b>: <code>/onboarding/country</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 国選択(改稿方針は必須オンボーディングから除外・後回し推奨)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="country-select-1440.png" target="_blank"><img src="country-select-1440.png" alt="country-select-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="country-select-390.png" target="_blank"><img src="country-select-390.png" alt="country-select-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="language-select">
+  <div class="ctitle">language-select</div>
+  <p class="kanten"><b>route</b>: <code>/onboarding/language</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 表示言語(locale)選択。必須2ゲートの1つ</p>
+  <p class="kanten"><b>変更点要約</b>: V3-I18-01/03 登録済みlocaleへの追従+保存後即時切替を実装</p>
+  <div class="thumbs"><a class="thumb" href="language-select-1440.png" target="_blank"><img src="language-select-1440.png" alt="language-select-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="language-select-390.png" target="_blank"><img src="language-select-390.png" alt="language-select-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="terms">
+  <div class="ctitle">terms</div>
+  <p class="kanten"><b>route</b>: <code>/onboarding/terms</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 規約同意(版差分の再同意ゲート)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="terms-1440.png" target="_blank"><img src="terms-1440.png" alt="terms-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="terms-390.png" target="_blank"><img src="terms-390.png" alt="terms-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">認証・初期設定[新規]</h3>
+
+<div class="card" data-name="setup-profile">
+  <div class="ctitle">setup-profile</div>
+  <p class="kanten"><b>route</b>: <code>/onboarding/setup-profile</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 初回オンボーディング専用: handle(@id)確定+locale選択を1フォームで完結</p>
+  <p class="kanten"><b>変更点要約</b>: V3-AUT-10/12 新規screen-def。onboarding未完了ならmiddlewareが強制着地させる不可避第2ゲート</p>
+  <div class="thumbs"><a class="thumb" href="setup-profile-1440.png" target="_blank"><img src="setup-profile-1440.png" alt="setup-profile-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="setup-profile-390.png" target="_blank"><img src="setup-profile-390.png" alt="setup-profile-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">ホーム</h3>
+
+<div class="card" data-name="home">
+  <div class="ctitle">home</div>
+  <p class="kanten"><b>route</b>: <code>/</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 認証後司令塔。今日の状態(triage)+次の一手</p>
+  <p class="kanten"><b>変更点要約</b>: V3-UIX-25/26/27 18ボタン羅列から「今日の状態kpi+次の一手today_lines+文明の状態civ-minimap」の司令塔へ再構成</p>
+  <div class="thumbs"><a class="thumb" href="home-1440.png" target="_blank"><img src="home-1440.png" alt="home-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="home-390.png" target="_blank"><img src="home-390.png" alt="home-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">観測登録(旧世代)</h3>
+
+<div class="card" data-name="obs-domain-select">
+  <div class="ctitle">obs-domain-select</div>
+  <p class="kanten"><b>route</b>: <code>/observe</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 観測ドメイン(生体/環境等)を選ぶナビ</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-domain-select-1440.png" target="_blank"><img src="obs-domain-select-1440.png" alt="obs-domain-select-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-domain-select-390.png" target="_blank"><img src="obs-domain-select-390.png" alt="obs-domain-select-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-entry">
+  <div class="ctitle">obs-entry</div>
+  <p class="kanten"><b>route</b>: <code>/observe/entry</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: ドメイン選択後の観測入力フォーム</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-entry-1440.png" target="_blank"><img src="obs-entry-1440.png" alt="obs-entry-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-entry-390.png" target="_blank"><img src="obs-entry-390.png" alt="obs-entry-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-navigator">
+  <div class="ctitle">obs-navigator</div>
+  <p class="kanten"><b>route</b>: <code>/observe/navigator</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 対象特定(学名substring/二分探索/分類ツリーの3経路)</p>
+  <p class="kanten"><b>変更点要約</b>: V3-OBS-02 yes-no/分類ツリー経路を新規実装</p>
+  <div class="thumbs"><a class="thumb" href="obs-navigator-1440.png" target="_blank"><img src="obs-navigator-1440.png" alt="obs-navigator-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-navigator-390.png" target="_blank"><img src="obs-navigator-390.png" alt="obs-navigator-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-confirm">
+  <div class="ctitle">obs-confirm</div>
+  <p class="kanten"><b>route</b>: <code>/observe/confirm</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: obs-entry入力後の確認・登録</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-confirm-1440.png" target="_blank"><img src="obs-confirm-1440.png" alt="obs-confirm-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-confirm-390.png" target="_blank"><img src="obs-confirm-390.png" alt="obs-confirm-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-detail">
+  <div class="ctitle">obs-detail</div>
+  <p class="kanten"><b>route</b>: <code>/observe/detail</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 保存済み観測(capture)の詳細+類似個体サイドバー</p>
+  <p class="kanten"><b>変更点要約</b>: V3-OBS-23 写真一覧がraw画像を全件DLしていた欠落を修正</p>
+  <div class="thumbs"><a class="thumb" href="obs-detail-1440.png" target="_blank"><img src="obs-detail-1440.png" alt="obs-detail-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-detail-390.png" target="_blank"><img src="obs-detail-390.png" alt="obs-detail-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="qr-resume">
+  <div class="ctitle">qr-resume</div>
+  <p class="kanten"><b>route</b>: <code>/qr/resume</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: QRスキャンから個体文脈付きで観測入力へ即着地</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="qr-resume-1440.png" target="_blank"><img src="qr-resume-1440.png" alt="qr-resume-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="qr-resume-390.png" target="_blank"><img src="qr-resume-390.png" alt="qr-resume-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">観測登録</h3>
+
+<div class="card" data-name="obs-register">
+  <div class="ctitle">obs-register</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 「記録する」1ボタンから新規/追観測/一括へ分岐する入口</p>
+  <p class="kanten"><b>変更点要約</b>: スクショ注記: この開発環境はappend-only Truthに過去run分の観測が全て累積し一覧が巨大化するため、本画面のみviewport撮影(fullPage不使用)</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-1440.png" target="_blank"><img src="obs-register-1440.png" alt="obs-register-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-390.png" target="_blank"><img src="obs-register-390.png" alt="obs-register-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-new">
+  <div class="ctitle">obs-register-new</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/new</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 検索0件から来た新規個体登録(F1-N)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-new-1440.png" target="_blank"><img src="obs-register-new-1440.png" alt="obs-register-new-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-new-390.png" target="_blank"><img src="obs-register-new-390.png" alt="obs-register-new-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-entry">
+  <div class="ctitle">obs-register-entry</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/entry</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 既存個体への追観測。継承ヘッダ+今回の差分だけ入力(F2)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-entry-1440.png" target="_blank"><img src="obs-register-entry-1440.png" alt="obs-register-entry-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-entry-390.png" target="_blank"><img src="obs-register-entry-390.png" alt="obs-register-entry-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-confirm">
+  <div class="ctitle">obs-register-confirm</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/confirm</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 追観測1個体の保存前1画面確認(F5)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-confirm-1440.png" target="_blank"><img src="obs-register-confirm-1440.png" alt="obs-register-confirm-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-confirm-390.png" target="_blank"><img src="obs-register-confirm-390.png" alt="obs-register-confirm-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-done">
+  <div class="ctitle">obs-register-done</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/done</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 保存後に「測った甲斐」(成長差分)を返す完了画面(F6)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-done-1440.png" target="_blank"><img src="obs-register-done-1440.png" alt="obs-register-done-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-done-390.png" target="_blank"><img src="obs-register-done-390.png" alt="obs-register-done-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-clutch">
+  <div class="ctitle">obs-register-clutch</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/clutch</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: クラッチ(同腹)一括の割り出し登録(F3)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-clutch-1440.png" target="_blank"><img src="obs-register-clutch-1440.png" alt="obs-register-clutch-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-clutch-390.png" target="_blank"><img src="obs-register-clutch-390.png" alt="obs-register-clutch-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-batch">
+  <div class="ctitle">obs-register-batch</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/batch</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: お世話/移動/ペアリング/割り出しの一括記録(F4)</p>
+  <p class="kanten"><b>変更点要約</b>: 一括ケア表(体重/体長)にdata-label付与し390px幅でラベル付きカードへ積む専用CSS対応。スクショ注記: 一覧巨大化のためviewport撮影(fullPage不使用)</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-batch-1440.png" target="_blank"><img src="obs-register-batch-1440.png" alt="obs-register-batch-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-batch-390.png" target="_blank"><img src="obs-register-batch-390.png" alt="obs-register-batch-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-batch-confirm">
+  <div class="ctitle">obs-register-batch-confirm</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/batch/confirm</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 一括記録の1画面確認・異常だけ赤ハイライト(F5)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-batch-confirm-1440.png" target="_blank"><img src="obs-register-batch-confirm-1440.png" alt="obs-register-batch-confirm-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-batch-confirm-390.png" target="_blank"><img src="obs-register-batch-confirm-390.png" alt="obs-register-batch-confirm-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="obs-register-batch-done">
+  <div class="ctitle">obs-register-batch-done</div>
+  <p class="kanten"><b>route</b>: <code>/observe/register/batch/done</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 一括保存後の完了画面</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="obs-register-batch-done-1440.png" target="_blank"><img src="obs-register-batch-done-1440.png" alt="obs-register-batch-done-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-register-batch-done-390.png" target="_blank"><img src="obs-register-batch-done-390.png" alt="obs-register-batch-done-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">観測 — 個体画像検索</h3>
+
+<div class="card" data-name="obs-search">
+  <div class="ctitle">obs-search</div>
+  <p class="kanten"><b>route</b>: <code>/observe/search</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 頭の中の像から在庫個体集合へ最短着地(3段決定論梯子)</p>
+  <p class="kanten"><b>変更点要約</b>: スクショ注記: 一覧巨大化のためviewport撮影(fullPage不使用。obs-search.spec.tsの既存コメントと同じ既知事象)</p>
+  <div class="thumbs"><a class="thumb" href="obs-search-1440.png" target="_blank"><img src="obs-search-1440.png" alt="obs-search-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-search-390.png" target="_blank"><img src="obs-search-390.png" alt="obs-search-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">観測 — 個体画像検索[新規]</h3>
+
+<div class="card" data-name="obs-freetext">
+  <div class="ctitle">obs-freetext</div>
+  <p class="kanten"><b>route</b>: <code>/observe/freetext</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 自然言語フリーテキストでの観測入力</p>
+  <p class="kanten"><b>変更点要約</b>: V3-OBS-61 決定論パーサによる新規実装</p>
+  <div class="thumbs"><a class="thumb" href="obs-freetext-1440.png" target="_blank"><img src="obs-freetext-1440.png" alt="obs-freetext-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="obs-freetext-390.png" target="_blank"><img src="obs-freetext-390.png" alt="obs-freetext-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">個体詳細</h3>
+
+<div class="card" data-name="individual-detail">
+  <div class="ctitle">individual-detail</div>
+  <p class="kanten"><b>route</b>: <code>/individuals/detail</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 「次に動く」判断3指標(成長曲線/血統健全度/近交リスク)+血縁レール</p>
+  <p class="kanten"><b>変更点要約</b>: 個体単体QR発行を復活(0076681で延期→本波で復活)</p>
+  <div class="thumbs"><a class="thumb" href="individual-detail-1440.png" target="_blank"><img src="individual-detail-1440.png" alt="individual-detail-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="individual-detail-390.png" target="_blank"><img src="individual-detail-390.png" alt="individual-detail-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">血統統計</h3>
+
+<div class="card" data-name="cross">
+  <div class="ctitle">cross</div>
+  <p class="kanten"><b>route</b>: <code>/individuals/cross</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: この交配/系統の失敗率(死亡率/完品率/羽化不全率)を集合単位で判断</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="cross-1440.png" target="_blank"><img src="cross-1440.png" alt="cross-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="cross-390.png" target="_blank"><img src="cross-390.png" alt="cross-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="species">
+  <div class="ctitle">species</div>
+  <p class="kanten"><b>route</b>: <code>/species</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 種/形態(morph)の標準化・別名候補承認・産地統計</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="species-1440.png" target="_blank"><img src="species-1440.png" alt="species-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="species-390.png" target="_blank"><img src="species-390.png" alt="species-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">QR/物理運用</h3>
+
+<div class="card" data-name="bio-card">
+  <div class="ctitle">bio-card</div>
+  <p class="kanten"><b>route</b>: <code>/individuals/bio-card</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 即売会/現金譲渡で1匹1枚渡す名刺型QRカード</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="bio-card-1440.png" target="_blank"><img src="bio-card-1440.png" alt="bio-card-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="bio-card-390.png" target="_blank"><img src="bio-card-390.png" alt="bio-card-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">QR/物理運用[新規]</h3>
+
+<div class="card" data-name="placement-qr">
+  <div class="ctitle">placement-qr</div>
+  <p class="kanten"><b>route</b>: <code>/placements/qr</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 棚/場所からのQR発行(個体QRのみだった欠落を解消)</p>
+  <p class="kanten"><b>変更点要約</b>: V3-OBS-20 新規実装</p>
+  <div class="thumbs"><a class="thumb" href="placement-qr-1440.png" target="_blank"><img src="placement-qr-1440.png" alt="placement-qr-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="placement-qr-390.png" target="_blank"><img src="placement-qr-390.png" alt="placement-qr-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">マチアプ/ValueCheck</h3>
+
+<div class="card" data-name="match">
+  <div class="ctitle">match</div>
+  <p class="kanten"><b>route</b>: <code>/match</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 言語化できない好みをYES/NOで教え市場/検索のrerankに活かす</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="match-1440.png" target="_blank"><img src="match-1440.png" alt="match-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="match-390.png" target="_blank"><img src="match-390.png" alt="match-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">実績/信用/通貨</h3>
+
+<div class="card" data-name="economy-status">
+  <div class="ctitle">economy-status</div>
+  <p class="kanten"><b>route</b>: <code>/economy/status</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: カルマ・貢献度3軸・プラチナの現在地+履歴</p>
+  <p class="kanten"><b>変更点要約</b>: スクショ注記: 履歴一覧が過去run分で巨大化するためviewport撮影(fullPage不使用)</p>
+  <div class="thumbs"><a class="thumb" href="economy-status-1440.png" target="_blank"><img src="economy-status-1440.png" alt="economy-status-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="economy-status-390.png" target="_blank"><img src="economy-status-390.png" alt="economy-status-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="profile">
+  <div class="ctitle">profile</div>
+  <p class="kanten"><b>route</b>: <code>/me/profile</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 自分の公開ページ(相手から見えるあなた)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="profile-1440.png" target="_blank"><img src="profile-1440.png" alt="profile-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="profile-390.png" target="_blank"><img src="profile-390.png" alt="profile-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="platinum-shop">
+  <div class="ctitle">platinum-shop</div>
+  <p class="kanten"><b>route</b>: <code>/shop/platinum</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 免罪符購入(カルマカウント消費)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="platinum-shop-1440.png" target="_blank"><img src="platinum-shop-1440.png" alt="platinum-shop-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="platinum-shop-390.png" target="_blank"><img src="platinum-shop-390.png" alt="platinum-shop-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">fork×投票文化</h3>
+
+<div class="card" data-name="template-market">
+  <div class="ctitle">template-market</div>
+  <p class="kanten"><b>route</b>: <code>/market/templates</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 観測/論文/重みのfork一覧・複製・投票</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="template-market-1440.png" target="_blank"><img src="template-market-1440.png" alt="template-market-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="template-market-390.png" target="_blank"><img src="template-market-390.png" alt="template-market-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="theme-gallery">
+  <div class="ctitle">theme-gallery</div>
+  <p class="kanten"><b>route</b>: <code>/s/theme-gallery</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 配色/トークンのfork一覧・投票・適用</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="theme-gallery-1440.png" target="_blank"><img src="theme-gallery-1440.png" alt="theme-gallery-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="theme-gallery-390.png" target="_blank"><img src="theme-gallery-390.png" alt="theme-gallery-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="ui-templates">
+  <div class="ctitle">ui-templates</div>
+  <p class="kanten"><b>route</b>: <code>/s/ui-templates</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 画面レイアウトのfork/ビルダー(公開は人間ゲート)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="ui-templates-1440.png" target="_blank"><img src="ui-templates-1440.png" alt="ui-templates-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="ui-templates-390.png" target="_blank"><img src="ui-templates-390.png" alt="ui-templates-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="knowledge-github">
+  <div class="ctitle">knowledge-github</div>
+  <p class="kanten"><b>route</b>: <code>/knowledge/github</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 開発者貢献(OSS/PR)への意図的link-out(設計上ミニマルで完成扱い)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="knowledge-github-1440.png" target="_blank"><img src="knowledge-github-1440.png" alt="knowledge-github-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="knowledge-github-390.png" target="_blank"><img src="knowledge-github-390.png" alt="knowledge-github-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">機器/環境データ連携</h3>
+
+<div class="card" data-name="device">
+  <div class="ctitle">device</div>
+  <p class="kanten"><b>route</b>: <code>/devices</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: SwitchBot等IoT機器の棚join・環境連携</p>
+  <p class="kanten"><b>変更点要約</b>: V3-OBS-32 CSVインポータはバックエンド実装済みだが本画面へのUI結線は未着手(誇張ゼロ)。スクショ注記: 一覧が過去run分で巨大化するためviewport撮影(fullPage不使用)</p>
+  <div class="thumbs"><a class="thumb" href="device-1440.png" target="_blank"><img src="device-1440.png" alt="device-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="device-390.png" target="_blank"><img src="device-390.png" alt="device-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">知の広場</h3>
+
+<div class="card" data-name="knowledge-hub">
+  <div class="ctitle">knowledge-hub</div>
+  <p class="kanten"><b>route</b>: <code>/knowledge</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 3柱(公式掲示板/論文/GitHub掲示板)への入口ハブ</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="knowledge-hub-1440.png" target="_blank"><img src="knowledge-hub-1440.png" alt="knowledge-hub-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="knowledge-hub-390.png" target="_blank"><img src="knowledge-hub-390.png" alt="knowledge-hub-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="knowledge-board">
+  <div class="ctitle">knowledge-board</div>
+  <p class="kanten"><b>route</b>: <code>/knowledge/board</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: トピック軸ホーム(探す/書く+割れている論点ビュー)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="knowledge-board-1440.png" target="_blank"><img src="knowledge-board-1440.png" alt="knowledge-board-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="knowledge-board-390.png" target="_blank"><img src="knowledge-board-390.png" alt="knowledge-board-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">論文/研究</h3>
+
+<div class="card" data-name="knowledge-paper">
+  <div class="ctitle">knowledge-paper</div>
+  <p class="kanten"><b>route</b>: <code>/knowledge/paper</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 論文クラスタ入口(v1は「薄すぎ」で差し戻し済み)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="knowledge-paper-1440.png" target="_blank"><img src="knowledge-paper-1440.png" alt="knowledge-paper-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="knowledge-paper-390.png" target="_blank"><img src="knowledge-paper-390.png" alt="knowledge-paper-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="paper-detail">
+  <div class="ctitle">paper-detail</div>
+  <p class="kanten"><b>route</b>: <code>/research/paper/detail</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 実験計画(条件軸マトリクス)の充足度・仮説検証状況</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="paper-detail-1440.png" target="_blank"><img src="paper-detail-1440.png" alt="paper-detail-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="paper-detail-390.png" target="_blank"><img src="paper-detail-390.png" alt="paper-detail-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="paper-match">
+  <div class="ctitle">paper-match</div>
+  <p class="kanten"><b>route</b>: <code>/research/paper/match</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 実験計画の条件×観測の決定論突合</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="paper-match-1440.png" target="_blank"><img src="paper-match-1440.png" alt="paper-match-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="paper-match-390.png" target="_blank"><img src="paper-match-390.png" alt="paper-match-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="data-descriptor">
+  <div class="ctitle">data-descriptor</div>
+  <p class="kanten"><b>route</b>: <code>/research/descriptor</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 観測方法テンプレの6節記入</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="data-descriptor-1440.png" target="_blank"><img src="data-descriptor-1440.png" alt="data-descriptor-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="data-descriptor-390.png" target="_blank"><img src="data-descriptor-390.png" alt="data-descriptor-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="project-hub">
+  <div class="ctitle">project-hub</div>
+  <p class="kanten"><b>route</b>: <code>/research/project/hub</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 研究プロジェクトの版/ロット/引用集約ハブ</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="project-hub-1440.png" target="_blank"><img src="project-hub-1440.png" alt="project-hub-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="project-hub-390.png" target="_blank"><img src="project-hub-390.png" alt="project-hub-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="research-search">
+  <div class="ctitle">research-search</div>
+  <p class="kanten"><b>route</b>: <code>/research/search</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 論文/wiki横断統合検索(4本柱)</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="research-search-1440.png" target="_blank"><img src="research-search-1440.png" alt="research-search-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="research-search-390.png" target="_blank"><img src="research-search-390.png" alt="research-search-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="research-newspaper">
+  <div class="ctitle">research-newspaper</div>
+  <p class="kanten"><b>route</b>: <code>/research/newspaper</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 日次蒸留ダイジェストの新聞体裁配信</p>
+  <p class="kanten"><b>変更点要約</b>: 基盤変更のみ(上記共通ノート参照)。個別のUI磨きは未着手。</p>
+  <div class="thumbs"><a class="thumb" href="research-newspaper-1440.png" target="_blank"><img src="research-newspaper-1440.png" alt="research-newspaper-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="research-newspaper-390.png" target="_blank"><img src="research-newspaper-390.png" alt="research-newspaper-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">アカウント設定</h3>
+
+<div class="card" data-name="settings">
+  <div class="ctitle">settings</div>
+  <p class="kanten"><b>route</b>: <code>/s/settings</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: AI接続/取引前PII/通知/バックアップの自己管理</p>
+  <p class="kanten"><b>変更点要約</b>: 取引前PII保存は不変条項③(住所非保持)と衝突のため実装は人間裁定待ちのまま(未変更)</p>
+  <div class="thumbs"><a class="thumb" href="settings-1440.png" target="_blank"><img src="settings-1440.png" alt="settings-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="settings-390.png" target="_blank"><img src="settings-390.png" alt="settings-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+
+<div class="card" data-name="ai-profile-settings">
+  <div class="ctitle">ai-profile-settings</div>
+  <p class="kanten"><b>route</b>: <code>/s/ai-profile-settings</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 機能ごとのBYOK(自分のAPIキー)AI接続設定</p>
+  <p class="kanten"><b>変更点要約</b>: V3-AIP-104 compute_location select(device既定/docker/cloud)を追加</p>
+  <div class="thumbs"><a class="thumb" href="ai-profile-settings-1440.png" target="_blank"><img src="ai-profile-settings-1440.png" alt="ai-profile-settings-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="ai-profile-settings-390.png" target="_blank"><img src="ai-profile-settings-390.png" alt="ai-profile-settings-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
+  <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
+  <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
+  <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
+</div>
+<h3 class="cluster">市場/広場 共用[新規]</h3>
+
+<div class="card" data-name="dispute">
+  <div class="ctitle">dispute</div>
+  <p class="kanten"><b>route</b>: <code>/dispute</code></p>
+  <p class="kanten"><b>目的(なぜこの画面に来るのか)</b>: 相違・死着/Polis対立を二人部屋で解決する紛争相談室</p>
+  <p class="kanten"><b>変更点要約</b>: 新規screen-def。market-trade「相違・死着」・knowledge-thread kebabメニューの両方から遷移</p>
+  <div class="thumbs"><a class="thumb" href="dispute-1440.png" target="_blank"><img src="dispute-1440.png" alt="dispute-1440.png" loading="lazy"><span class="cap">1440px (desktop)</span></a>
+    <a class="thumb" href="dispute-390.png" target="_blank"><img src="dispute-390.png" alt="dispute-390.png" loading="lazy"><span class="cap">390px (mobile)</span></a></div>
+  
   <div class="row"><label>点数</label><input type="number" min="0" max="100" value=""><span class="unit">/100</span></div>
   <div class="fld"><span class="l good">良い点</span><textarea></textarea></div>
   <div class="fld"><span class="l bad">悪い点</span><textarea></textarea></div>
@@ -86,7 +792,7 @@
 </div>
 <script>
 function copyOut(){
-  const lines=["【UI レビュー結果(C8 第1弾)】"];
+  const lines=["【UI レビュー結果(C8 新版・全画面)】"];
   document.querySelectorAll(".card").forEach(c=>{
     const name=c.dataset.name;
     const score=c.querySelector('input[type=number]').value.trim();
