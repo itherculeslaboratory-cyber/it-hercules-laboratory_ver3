@@ -5283,6 +5283,152 @@ export function NodeView({ node }: { node: ScreenNode }) {
   }
 }
 
+// V3-BBS-03: 「全ファイル・全コンポーネント・全画面テンプレート」に説明/愚痴/改善の
+// 3板を必須付与する要求文の「全画面」側を、50 本の screen-def JSON を個別編集する
+// 代わりに Renderer 本体へ 1 回だけ差し込むことで機械的に満たす(per-file 手編集は
+// 増える screen-def ごとに漏れる・ここが唯一の差し込み点なら漏れようがない)。
+// channel = `screen-${screen_id}` に固定し、plaza-routes.ts の既存 3 板グルーピング
+// (projectChannelThreads・plaza-constants.ts BOARD_KINDS)をそのまま再利用する
+// (新 Truth 型なし・新 route なし)。コンポーネント編集/入れ替え/Fork一覧ポップアップ/
+// IDE 導線は要求文の別の柱で、identity/Fork lineage UI の設計待ち(progress.json note
+// に継続明記・捏造しない)。
+const FILE_BOARD_KINDS = [
+  { kind: "guide", label: "説明" },
+  { kind: "complaint", label: "愚痴" },
+  { kind: "improvement", label: "改善" },
+] as const;
+type FileBoardKind = (typeof FILE_BOARD_KINDS)[number]["kind"];
+
+interface FileBoardThread { thread_id: string; topic: string; board_kind: string; post_count: number }
+interface FileBoardsView { channel: string; threads: FileBoardThread[]; boards: Record<string, FileBoardThread[]> }
+
+function ScreenBoardsFooter({ screenId }: { screenId: string }) {
+  const execute = useContext(ExecuteCtx);
+  const channel = `screen-${screenId}`;
+  // ponytail: collapsed by default (same trigger convention as the `disclosure`
+  // node — V3-AIP-101 fix#5/#6) instead of auto-fetching on every screen mount.
+  // Firing a GET unconditionally on mount made this footer an invisible side
+  // effect that inflated onAction call-count assertions across ~100 unrelated
+  // renderer tests (form-submit-count checks, mock.calls[0] ordering) that
+  // were written before this footer existed. Gating the fetch behind an
+  // explicit tap keeps every existing screen's zero-interaction render at
+  // zero extra API calls, which is also the honest UX default (nobody wants
+  // a board panel auto-loading under every screen they open).
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<FileBoardsView | null>(null);
+  const [kind, setKind] = useState<FileBoardKind>("complaint");
+  const [topic, setTopic] = useState("");
+  const [body, setBody] = useState("");
+  const [pending, setPending] = useState(false);
+
+  const reload = useCallback(async () => {
+    try {
+      const v = await execute({ kind: "api", method: "GET", path: `/api/v1/plaza/channels/${channel}/threads` });
+      setView((v ?? null) as FileBoardsView | null);
+    } catch {
+      setView(null);
+    }
+  }, [execute, channel]);
+
+  useEffect(() => {
+    if (!open) return;
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel, open]);
+
+  const submit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!topic.trim() || !body.trim() || pending) return;
+      setPending(true);
+      try {
+        await execute(
+          { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
+          { channel, board_kind: kind, topic: topic.trim(), body: body.trim() },
+        );
+        setTopic("");
+        setBody("");
+        await reload();
+      } finally {
+        setPending(false);
+      }
+    },
+    [execute, channel, kind, topic, body, pending, reload],
+  );
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className={cn("civ-interactive", "civ-button")}
+        data-variant="secondary"
+        onClick={() => setOpen(true)}
+      >
+        このページの掲示板を開く(説明・愚痴・改善)
+      </button>
+    );
+  }
+
+  const boards = view?.boards ?? {};
+  return (
+    <section className="civ-card" aria-label="このページの掲示板(説明/愚痴/改善)">
+      <h2 className="civ-heading" data-level="2">
+        このページの掲示板
+      </h2>
+      {FILE_BOARD_KINDS.map(({ kind: k, label }) => {
+        const threads = boards[k] ?? [];
+        return (
+          <div key={k}>
+            <span className="civ-badge">
+              {label}（{threads.length}）
+            </span>
+            {threads.length === 0 ? (
+              <p className="civ-empty">まだ投稿がありません。</p>
+            ) : (
+              <ul className="civ-list">
+                {threads.map((t) => (
+                  <li key={t.thread_id}>
+                    <a className="civ-link" href={`/s/knowledge-thread?thread_id=${t.thread_id}`}>
+                      {t.topic}（{t.post_count}）
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+      <form className="civ-form" onSubmit={(e) => void submit(e)}>
+        <div className="civ-field">
+          <label htmlFor={`${screenId}-board-kind`}>板</label>
+          <select
+            id={`${screenId}-board-kind`}
+            value={kind}
+            onChange={(e) => setKind(e.target.value as FileBoardKind)}
+          >
+            {FILE_BOARD_KINDS.map(({ kind: k, label }) => (
+              <option key={k} value={k}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="civ-field">
+          <label htmlFor={`${screenId}-board-topic`}>話題</label>
+          <input id={`${screenId}-board-topic`} value={topic} onChange={(e) => setTopic(e.target.value)} />
+        </div>
+        <div className="civ-field">
+          <label htmlFor={`${screenId}-board-body`}>本文</label>
+          <textarea id={`${screenId}-board-body`} value={body} onChange={(e) => setBody(e.target.value)} />
+        </div>
+        <button type="submit" className={cn("civ-interactive", "civ-button")} data-variant="primary" disabled={pending}>
+          投稿する
+        </button>
+      </form>
+    </section>
+  );
+}
+
 export interface RendererProps {
   def: ScreenDef;
   onAction?: Execute;
@@ -5337,6 +5483,7 @@ export function Renderer({
                   {def.nodes.map((n) => (
                     <NodeView key={n.id} node={n} />
                   ))}
+                  <ScreenBoardsFooter screenId={def.screen_id} />
                 </DataSinkCtx.Provider>
               </NavigateCtx.Provider>
             </TransitionsCtx.Provider>
