@@ -9,9 +9,11 @@ import type { Bindings, Variables } from "./env";
 import { DEFAULT_LOCALE, DEFAULT_TEMPLATE_ID, DEFAULT_THEME_PACK_ID } from "./ui-constants";
 import { listThemePacks } from "./theme-routes";
 
-const PREF_TYPE = "ihl.pref.set.v1";
-const PREF_SCHEMA = "schemas/events/pref-set.schema.json";
-const SCHEMA_VERSION = "1";
+// exported for auth-routes.ts's dev-login (seeds the same shape onboarding
+// completion would produce — see the /dev-login handler for why).
+export const PREF_TYPE = "ihl.pref.set.v1";
+export const PREF_SCHEMA = "schemas/events/pref-set.schema.json";
+export const SCHEMA_VERSION = "1";
 
 // 投影が畳み込む選好フィールド(per-field last-write-wins)。country は round-16裁定
 // (V3-AUT-35/I18-02)の内部必須属性(UI非表示)。KRM-21 profile-routes.ts の

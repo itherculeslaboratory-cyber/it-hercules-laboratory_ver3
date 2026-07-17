@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { TruthStore, deriveActorId } from "@ihl/truth";
+import { TruthStore, deriveActorId, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import type { KVNamespaceLite } from "./kv";
 import { isBanned } from "./ledger-routes";
 import { sendMagicLink } from "./mail";
 import { ensureAccount, projectOnboardingStatus } from "./account";
+import { PREF_SCHEMA, PREF_TYPE, SCHEMA_VERSION, projectPreferences } from "./settings-routes";
 import { checkRateLimit, clientIp } from "./rate-limit";
 import {
   MAGIC_TTL,
@@ -204,6 +205,33 @@ authRoutes.post("/dev-login", async (c) => {
   }
   // V3-AUT-09: dev-login も同じ open registration 経路を通す(dev actor も一貫)。
   await ensureAccount(devStore, actorId);
+  // V3-AUT-10: onboarding gate (apps/web/middleware.ts) sends any logged-in
+  // visitor with no preferences.handle to /s/setup-profile. dev-login is
+  // 1-click test tooling predating that gate — every e2e spec assumes it
+  // lands straight on ホーム — so seed the same handle+locale a completed
+  // setup-profile submission would produce, exactly once (guarded on the
+  // projection so append-only Truth doesn't grow an event per dev-login call;
+  // screen-sweep alone calls this dozens of times per run).
+  if (!(await projectPreferences(devStore, actorId)).handle) {
+    const prefId = ulid();
+    await devStore.putEvent({
+      specversion: "1.0",
+      id: prefId,
+      source: "apps/api",
+      type: PREF_TYPE,
+      time: new Date().toISOString(),
+      dataschema: PREF_SCHEMA,
+      provenance: { generator_kind: "human", actor_id: actorId },
+      data: {
+        handle: "dev",
+        locale: "ja",
+        pref_set_id: prefId,
+        actor_id: actorId,
+        created_at: new Date().toISOString(),
+        schema_version: SCHEMA_VERSION,
+      },
+    });
+  }
   const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
   setCookie(c, "ihl_session", session, {
     httpOnly: true,

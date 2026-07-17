@@ -40,6 +40,15 @@ async function secondActorPage(browser: Browser, email: string): Promise<Page> {
   const setCookie = verifyRes.headersArray().find((h) => h.name.toLowerCase() === "set-cookie");
   expect(setCookie, "verify must Set-Cookie ihl_session").toBeTruthy();
   const sessionToken = setCookie!.value.split(";")[0].slice("ihl_session=".length);
+  // V3-AUT-10 onboarding gate: a brand-new actor has no handle yet, so
+  // apps/web/middleware.ts 307s every /s/* visit to /s/setup-profile before
+  // the buyer ever reaches market-trade. Complete the same handle+locale
+  // PATCH a real onboarding submission would (mirrors the seed auth-routes.ts
+  // already does for the dev-login seller — see /dev-login there).
+  await anon.patch("/api/v1/me/preferences", {
+    headers: { cookie: `ihl_session=${sessionToken}` },
+    data: { handle: "e2e-buyer", locale: "ja" },
+  });
   await anon.dispose();
 
   const context = await browser.newContext();
