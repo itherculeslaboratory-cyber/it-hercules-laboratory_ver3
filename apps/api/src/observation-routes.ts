@@ -547,6 +547,50 @@ obsRoutes.get("/observation/measurement-dictionary", async (c) => {
   return c.json({ dictionary: [...byHash.values()] });
 });
 
+// csvField — RFC4180 最小エスケープ(カンマ/ダブルクォート/改行を含む値のみクォート)。
+function csvField(v: unknown): string {
+  const s = String(v ?? "");
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+// PPR-12「全データCSVダウンロード」— capture の measurements[] を1行1計測値に展開した
+// フラットCSV(研究者向け・決定論・重処理なしのI/Oのみ=不変条項①のサーバ負荷ゼロと矛盾しない)。
+const CSV_COLUMNS = ["capture_id", "subject_ref", "domain", "item", "value", "unit", "value_origin", "observed_at"] as const;
+
+export function capturesToCsv(captures: Record<string, unknown>[]): string {
+  const header = CSV_COLUMNS.join(",");
+  const rows: string[] = [];
+  for (const cap of captures) {
+    const measurements = Array.isArray(cap.measurements) ? (cap.measurements as Record<string, unknown>[]) : [];
+    for (const m of measurements) {
+      rows.push(
+        CSV_COLUMNS.map((col) =>
+          csvField(
+            col === "capture_id" ? cap.capture_id
+              : col === "subject_ref" ? cap.subject_ref
+              : col === "domain" ? cap.domain
+              : m[col],
+          ),
+        ).join(","),
+      );
+    }
+  }
+  return [header, ...rows].join("\n") + "\n";
+}
+
+// GET /observation/export — 全 capture の measurements を CSV でダウンロード(PPR-12)。実解析
+// (SIMD/LUT/ROI Lab変換)は端末側で完結する設計のため、本 route は既存 Truth データの決定論
+// シリアライズのみ(重処理なし・サーバ負荷ゼロを維持)。静的パス(/observation/:capture_id 等
+// 動的routeより前に登録=パス衝突回避・OBS-18 系の他の静的routeと同じ配置規約)。
+obsRoutes.get("/observation/export", async (c) => {
+  const captures = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id)));
+  return new Response(capturesToCsv(captures), {
+    headers: { "content-type": "text/csv", "content-disposition": 'attachment; filename="observations.csv"' },
+  });
+});
+
 // POST /observation/dictionary-extensions — register an unregistered item
 // (OBS-18: はい/今回だけ/常に). mode=always persists (append a single-item
 // template so the item_hash joins the dictionary); mode=once acknowledges only.
@@ -740,16 +784,20 @@ obsRoutes.post("/observation/annotations", async (c) => {
   return c.json({ annotation_id: annotationId }, 202);
 });
 
-// POST /observation/{capture_id}/reanalyze — append a NEW analysis (OBS-48). Never
-// overwrites a prior analysis; records delta + correction_semver; the original
-// image is untouched.
-obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
-  const captureId = c.req.param("capture_id");
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
-  if (typeof body.results !== "object" || body.results === null) return c.json({ error: "MISSING_RESULTS" }, 400);
-  if (typeof body.correction_semver !== "string") return c.json({ error: "MISSING_SEMVER" }, 400);
-  const actorId = c.get("actorId");
+// Shared reanalyze write (OBS-48), reused by both the standalone route and
+// POST /observation/batch-commit kind:"reanalyze" (PPR-12 Recompute All・
+// コピペ二重化しない・同一ゲート). The heavy per-image compute (SIMD/LUT/ROI Lab
+// 変換・マルチスレッド)runs on the CLIENT device (PPR-12「完全ローカル計算で
+// サーバー負荷ゼロ」); this function only appends the already-computed result +
+// logs the diff(delta) — it never re-derives results server-side.
+export async function writeAnalysisFromReanalyzeBody(
+  s: TruthStore,
+  actorId: string,
+  captureId: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: true; analysis_id: string } | { ok: false; error: string; details?: string[] }> {
+  if (typeof body.results !== "object" || body.results === null) return { ok: false, error: "MISSING_RESULTS" };
+  if (typeof body.correction_semver !== "string") return { ok: false, error: "MISSING_SEMVER" };
   const analysisId = ulid();
   const data: Record<string, unknown> = {
     analysis_id: analysisId,
@@ -762,13 +810,26 @@ obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
   };
   if (body.delta !== undefined) data.delta = body.delta;
   const key = `truth/${ANALYSIS_TYPE}/${captureId}-${analysisId}.json`;
-  const res = await store(c).putEventAt(
+  const res = await s.putEventAt(
     key,
     envelope(ANALYSIS_TYPE, analysisId, "schemas/events/obs-analysis.schema.json", actorId, data),
   );
-  if (res.status === "invalid") return c.json({ error: "INVALID_ANALYSIS", details: res.errors }, 400);
-  if (res.status === "conflict") return c.json({ error: "DUPLICATE_ANALYSIS", key: res.key }, 409);
-  return c.json({ analysis_id: analysisId }, 202);
+  if (res.status === "invalid") return { ok: false, error: "INVALID_ANALYSIS", details: res.errors };
+  if (res.status === "conflict") return { ok: false, error: "DUPLICATE_ANALYSIS" };
+  return { ok: true, analysis_id: analysisId };
+}
+
+// POST /observation/{capture_id}/reanalyze — append a NEW analysis (OBS-48). Never
+// overwrites a prior analysis; records delta + correction_semver; the original
+// image is untouched.
+obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
+  const actorId = c.get("actorId");
+  const r = await writeAnalysisFromReanalyzeBody(store(c), actorId, captureId, body);
+  if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_ANALYSIS" ? 409 : 400);
+  return c.json({ analysis_id: r.analysis_id }, 202);
 });
 
 // GET /observation/{capture_id}/reanalysis-manifest — every analysis for a capture

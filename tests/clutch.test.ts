@@ -291,10 +291,10 @@ describe("observation/batch-commit — F4/F5 一括保存", () => {
     expect(occList.occupancy.filter((o) => o.phase === "start" && o.placement_id === placeB)).toHaveLength(1);
   });
 
-  it("rejects a body with no items array, and more than 200 items", async () => {
+  it("rejects a body with no items array, and more than BATCH_MAX_ITEMS(1000) items (PPR-12 raised the cap for Recompute All 1000枚一括)", async () => {
     const { env } = ctx();
     expect((await post("/api/v1/observation/batch-commit", {}, env)).status).toBe(400);
-    const items = Array.from({ length: 201 }, () => ({ kind: "capture", body: { domain: "biology" } }));
+    const items = Array.from({ length: 1001 }, () => ({ kind: "capture", body: { domain: "biology" } }));
     const res = await post("/api/v1/observation/batch-commit", { items }, env);
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe("TOO_MANY_ITEMS");
