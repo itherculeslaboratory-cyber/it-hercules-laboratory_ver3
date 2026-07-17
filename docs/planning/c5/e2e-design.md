@@ -92,7 +92,25 @@ dev-login → ledger screen-def を Renderer で描画 → append-only 台帳の
 | V3-AIP-49 staging 昇格 | 実 UI E2E は用意。staging 実デプロイは対外操作＝人間ゲート | 昇格の実施は分母除外 |
 | V3-AIP-80 OSS 公開の実施 | 公開文書は起草済（`docs/public/*`）。公開日の実施は人間ゲート | 実公開は分母除外 |
 | V3-AIP-34 スレッド spec | 検証 TC は用意。spec 正本 = K6 成果物 | K6 未達の間 skip |
-| market / ledger 実走 | ハーネス + skip ガード用意。実走は K3/K4 screen-def landed 後 | 依存未達の間 skip |
+| market / ledger 実走 | **C8時点で依存解消・skipなし実走**（下記2.7参照。本節2.3/2.4は執筆時点=C5のskip状態の記録として残す） | — |
+
+> **鮮度注記(2026-07-17・C8)**: 上記表の「market / ledger 実走」行は C5 執筆時点(K3/K4未着地でskip)の記録。C8 現在は `npm run e2e -w apps/web` で **60/60 全緑**(HANDOFF-c8-session2.md §0)。2.3/2.4 の本文はC5当時の設計意図として保持し、実行状態は本節末尾2.7を正とする。
+
+### 2.7 C5 以降に追加された E2E spec の網羅索引（V3-AIP-49 残余仕上げ）
+
+C5 執筆時点の本設計書は observation/ugc-translate/market/ledger/spec-thread/screendefの6件のみを個別記述していたが、C6〜C8で以下5件が追加された。**個別の条件分岐網羅節（2.1〜2.6 と同粒度の記述）はまだ未執筆** — 本表はその存在と一文要約のみを機械的に索引化したもの(ギャップを見える化する目的。プレースホルダの空節を新設して「網羅した」と偽装しない)。
+
+| spec | 一文要約 |
+|---|---|
+| `individual-detail.spec.ts` | 個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip差替→タイムライン訂正 |
+| `knowledge-thread.spec.ts` | 知の広場スレッド: 閲覧(avatar/body/cite)→返信→stance投票→スレ主resolve |
+| `market-trade-lifecycle.spec.ts` | market-trade 2アクター通貫: draft→publish→apply(match)→pay_declare→pay_confirm→ship→receive |
+| `obs-register-batch.spec.ts` | 観測登録スライス2: F3(割り出し)→F4(まとめて記録)→F5b(確認)→F6b(完了) |
+| `obs-register.spec.ts` | 観測登録スライス1: F1(検索)→F2(Δ)→F5→F6(Δ+次の目安)→F1(候補チップ) |
+| `obs-search.spec.ts` | 検索スライスA: 着地→絞り込み(体長レンジ)→0件緩和→保存検索→バスケット→計測グリッドへ |
+| `screen-sweep.spec.ts` | 全screen-def横断スイープ(resource-load エラー検出) |
+
+残余: 上記7件それぞれに 2.1〜2.6 と同粒度の「条件分岐網羅」節を書く作業（決済フロー・GOV-35・クラッチ二層等、C4以降に追加された機能の分は本表にすら未索引 — さらに広い残課題）。1セッションでの網羅完了は見積り超過のため、次点の担当がこの表に追記する形で継続する。
 
 ## 4. 実行
 
