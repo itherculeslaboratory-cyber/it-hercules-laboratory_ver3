@@ -129,6 +129,12 @@ const SCHEMAS = [
   // V3-SEC-57 zero-knowledge 鍵バンドル+オフラインリカバリコード
   ["secKeyBundle", "events/sec-key-bundle.schema.json"],
   ["secKeyBundleRecovery", "events/sec-key-bundle-recovery.schema.json"],
+  // 市場フォローレーン(C8 g04残todo・V3-MKT-03/06)
+  ["mktComment", "events/mkt-comment.schema.json"],
+  ["mktOfferPolicy", "events/mkt-offer-policy.schema.json"],
+  ["mktIndividualOffer", "events/mkt-individual-offer.schema.json"],
+  ["mktStoreItem", "events/mkt-store-item.schema.json"],
+  ["mktStoreOrder", "events/mkt-store-order.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

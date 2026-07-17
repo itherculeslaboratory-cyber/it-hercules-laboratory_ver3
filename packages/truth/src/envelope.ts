@@ -124,6 +124,17 @@ const VALIDATOR_NAME: Record<string, string> = {
   // V3-SEC-57 zero-knowledge 鍵バンドル+オフラインリカバリコード。
   "sec-key-bundle": "secKeyBundle",
   "sec-key-bundle-recovery": "secKeyBundleRecovery",
+  // V3-MKT-03(市場フォローレーン C8 g04): 公開Q&A+ほめボード(マッチング前公開の
+  // 唯一の掲示欄)。
+  "mkt-comment": "mktComment",
+  // V3-MKT-06(市場フォローレーン C8 g04): 未出品個体への直接オファー + 個体ごと
+  // オファーポリシー(拒否設定は現観測者=個体の actor_id)。
+  "mkt-offer-policy": "mktOfferPolicy",
+  "mkt-individual-offer": "mktIndividualOffer",
+  // V3-MKT-45(市場フォローレーン C8 g04): 研究支援ストア(project_id 紐づけ・
+  // プラチナ/代引き/外部EC誘導の3方式)。
+  "mkt-store-item": "mktStoreItem",
+  "mkt-store-order": "mktStoreOrder",
 };
 
 const FROZEN_NAMES = new Set([
@@ -242,6 +253,13 @@ const EVENT_NAMES = new Set([
   // permanently (Truth is INSERT ONLY, unfixable).
   "sec-key-bundle",
   "sec-key-bundle-recovery",
+  // 市場フォローレーン(C8 g04残todo) — data validation MUST fire or putEvent
+  // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
+  "mkt-comment",
+  "mkt-offer-policy",
+  "mkt-individual-offer",
+  "mkt-store-item",
+  "mkt-store-order",
 ]);
 
 function validatorFor(name: string): ValidateFn {

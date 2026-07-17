@@ -44,7 +44,17 @@
 #   新規 1 route(infra-route-098・V3-WIK-20・protected)を追加 → 90 rows、同レーンが
 #   月次Lint新規 2 route(infra-route-099/100・V3-WIK-07・protected)を追加 → 92 rows、
 #   同レーンが外部知識取り込み新規 1 route(infra-route-101・V3-WIK-29・protected)を
-#   追加 → 93 rows。
+#   追加 → 93 rows。market-final レーン(C8 g04残todo)が V3-MKT-64 プリカ案内 +1 route
+#   (infra-route-102・GET /market/payment-guidance・protected・静的。分岐時点では
+#   080として採番していたが101までは他レーンが既に採取済みのため統合時に102へ
+#   採番替え)→ 94 rows、同レーンが V3-MKT-40 複式簿記検算 +1 route(infra-route-103・
+#   GET /ledger/audit・protected)→ 95 rows、同レーンが V3-MKT-03 公開Q&A+ほめボード
+#   +2 route(infra-route-104..105・POST/GET /market/listings/{id}/comments・
+#   protected)→ 97 rows、同レーンが V3-MKT-06 個体直接オファー+ポリシー +4 route
+#   (infra-route-106..109・POST/GET /individuals/{id}/offer-policy・POST/GET
+#   /individuals/{id}/offers・protected)→ 101 rows、同レーンが V3-MKT-45 研究支援
+#   ストア +3 route(infra-route-110..112・POST/GET /research/store/items・POST
+#   /research/store/items/{id}/orders・protected)→ 104 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -141,3 +151,14 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/wiki/lint,VPS,Workers,W2,infra-route-099,protected,implemented,V3-WIK-07 月次Lint(矛盾/孤立ページ/古い記述/リンク切れ)を手動実行しWIK-01 wiki_node(level=lint_log)へlog.md形式で記録・月次cron配線は人間ゲート
 —,GET,/api/v1/wiki/lint-log,VPS,Workers,W2,infra-route-100,protected,implemented,V3-WIK-07 月次Lint実行履歴(created_at降順)
 —,POST,/api/v1/research/external-import,VPS,Workers,W2,infra-route-101,protected,implemented,V3-WIK-29 外部知識(GitHub公開リポジトリ)をcontent(article)へ決定論正規化して取り込み・常駐フェッチ無し(呼び手が本文供給)・citations型はPPR-23のurlを再利用
+—,GET,/api/v1/market/payment-guidance,VPS,Workers,W2,infra-route-102,protected,implemented,V3-MKT-64 プリカ案内(静的・PAY.JP/PayPay照会結果に非依存・非強制ガイダンス)・080はlane分岐時点の仮番号、統合時に102へ採番替え(101までは他レーンが既に採取済みのため)
+—,GET,/api/v1/ledger/audit,VPS,Workers,W2,infra-route-103,protected,implemented,V3-MKT-40 複式簿記検算バッチ(貸方=coin_event/借方=platinum_vote・都度再計算の健全性サマリ)
+—,POST,/api/v1/market/listings/{listing_id}/comments,VPS,Workers,W2,infra-route-104,protected,implemented,V3-MKT-03 公開Q&A(question/answer)+ほめボード(praise)投稿・answerは出品者のみ
+—,GET,/api/v1/market/listings/{listing_id}/comments,VPS,Workers,W2,infra-route-105,protected,implemented,V3-MKT-03 公開Q&A+ほめボード一覧(マッチング前後を問わず常時公開)
+—,POST,/api/v1/individuals/{individual_id}/offer-policy,VPS,Workers,W2,infra-route-106,protected,implemented,V3-MKT-06 個体オファー拒否設定(現観測者=個体マスタactor_idのみ設定可・open/closed/research_only)
+—,GET,/api/v1/individuals/{individual_id}/offer-policy,VPS,Workers,W2,infra-route-107,protected,implemented,V3-MKT-06 個体オファーポリシー投影(誰でも閲覧可・未設定は既定open)
+—,POST,/api/v1/individuals/{individual_id}/offers,VPS,Workers,W2,infra-route-108,protected,implemented,V3-MKT-06 未出品個体への直接オファー/告白方式(love_letter値段非開示・policy=closed/研究限定を拒否)
+—,GET,/api/v1/individuals/{individual_id}/offers,VPS,Workers,W2,infra-route-109,protected,implemented,V3-MKT-06 個体宛オファー一覧(現観測者のみ・love_letterは金額非開示)
+—,POST,/api/v1/research/store/items,VPS,Workers,W2,infra-route-110,protected,implemented,V3-MKT-45 研究支援ストア出品(project_id紐づけ・プラチナ/代引き/外部EC誘導の許可リスト)
+—,GET,/api/v1/research/store/items,VPS,Workers,W2,infra-route-111,protected,implemented,V3-MKT-45 研究支援ストア一覧(可用在庫を都度算出)
+—,POST,/api/v1/research/store/items/{item_id}/orders,VPS,Workers,W2,infra-route-112,protected,implemented,V3-MKT-45 注文(在庫チェック必須・プラチナは残高チェック後にのみ確定・外部EC同期は実鍵無しで縮退)

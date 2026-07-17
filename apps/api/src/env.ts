@@ -60,6 +60,10 @@ export type Bindings = {
   // 無認証でも読めるため TOKEN は任意(レート制限緩和用のみ・必須シークレットではない)。
   GITHUB_API_BASE?: string;
   GITHUB_TOKEN?: string;
+  // V3-MKT-45 外部EC(BASE/Shopify)アダプタ(research-ec-adapter.ts)。未設定=在庫同期
+  // なし(縮退・注文自体はブロックしない)。実鍵投入は人間ゲート。
+  BASE_EC_API_KEY?: string;
+  SHOPIFY_EC_API_KEY?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

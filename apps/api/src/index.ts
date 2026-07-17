@@ -13,6 +13,7 @@ import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
 import { envImportRoutes } from "./env-import-routes";
 import { ledgerRoutes } from "./ledger-routes";
+import { ledgerAuditRoutes } from "./ledger-audit-routes";
 import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
 import { feeRoutes } from "./fee-routes";
@@ -28,6 +29,10 @@ import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
 import { marketRatingRoutes } from "./market-rating-routes";
+import { marketPaymentGuidanceRoutes } from "./market-payment-guidance-routes";
+import { marketCommentRoutes } from "./market-comment-routes";
+import { marketIndividualOfferRoutes } from "./market-individual-offer-routes";
+import { researchStoreRoutes } from "./research-store-routes";
 import { marketTemplateRoutes } from "./market-template-routes";
 import { marketPricingRoutes } from "./market-pricing-routes";
 import { piiRoutes } from "./pii-routes";
@@ -271,6 +276,9 @@ app.route("/api/v1", collectorRoutes);
 // karma(value/count 二層)+ platinum の都度再計算投影 (V3-KRM-01/02 / CL-12).
 app.route("/api/v1", ledgerRoutes);
 
+// V3-MKT-40 複式簿記検算バッチ: GET /api/v1/ledger/audit(健全性サマリ・都度再計算)。
+app.route("/api/v1", ledgerAuditRoutes);
+
 // Contribution 3-axis + PT projection (design-k3 §2.2 / V3-KRM-10/12): GET
 // /api/v1/me/contribution・GET /api/v1/me/pt。本人スコープ・非公開（他人の actor を
 // 渡す経路なし）。score→minted/next_threshold は投影で都度導出（常駐 DB 禁止）。
@@ -309,6 +317,13 @@ app.route("/api/v1", marketBlockRoutes);
 // まるごと停止)・GET moderation 投影・POST /market/sellers/{id}/misban-reversal/execute
 // (カルマ80×5人判定で出品停止解除)。全て保護。
 app.route("/api/v1", marketFlagRoutes);
+
+// V3-MKT-64 プリカ案内(静的・照会結果非依存): GET /market/payment-guidance。全て保護。
+app.route("/api/v1", marketPaymentGuidanceRoutes);
+
+// V3-MKT-03 公開Q&A + ほめボード(マッチング前の公開面): POST/GET
+// /market/listings/{id}/comments。全て保護・kind=answer は出品者のみ。
+app.route("/api/v1", marketCommentRoutes);
 
 // Plaza / 知の広場書込 (design-c5.md §K6 §2.1 slot033-036 / V3-BBS-01/03/05/10/20/29/36):
 // POST posts/stances/forks/signals/summaries + 決定論投影(thread/consensus/fork-rank/
@@ -367,6 +382,11 @@ app.route("/api/v1", piiRoutes);
 // master / parents(血統) / pedigree / cross / name / brand-templates / bio-card /
 // qr-batch / authenticity / life-events. All protected (not in PUBLIC_ROUTES).
 app.route("/api/v1", individualRoutes);
+
+// V3-MKT-06 未出品個体への直接オファー(個体詳細画面から送信)+ オファーポリシー
+// (拒否設定は現観測者=個体マスタの actor_id が設定): POST/GET
+// /individuals/{id}/offer-policy・POST/GET /individuals/{id}/offers。全て保護。
+app.route("/api/v1", marketIndividualOfferRoutes);
 
 // Taxon system (design-k1 §1.1 / V3-IND-19): species / morphs / aliases +
 // alias-candidates(決定論類似度提案). put-if-absent 409. All protected.
@@ -464,6 +484,11 @@ app.route("/api/v1", paperMatchRoutes);
 // 全て protected・書込 actor_id はセッション principal。GET /:id/... はセグメント数が多く
 // researchContentRoutes の GET /research/content/:id を侵さない(fall-through で本 route が拾う)。
 app.route("/api/v1", projectRoutes);
+
+// V3-MKT-45 研究支援ストア(project_id 紐づけ・プラチナ/代引き/外部EC誘導の3方式):
+// POST/GET /research/store/items・POST /research/store/items/{id}/orders。全て保護・
+// 在庫チェック必須(都度再計算)。外部EC同期は実鍵無しで縮退(research-ec-adapter.ts)。
+app.route("/api/v1", researchStoreRoutes);
 
 // Canonical mapping / Category (design-k5 §2.1 / V3-PPR-13): POST/GET /research/canonical/
 // mapping(+/:qid)・POST/GET /research/categories。Wikidata Q番号↔専門 DB 対応を append-only

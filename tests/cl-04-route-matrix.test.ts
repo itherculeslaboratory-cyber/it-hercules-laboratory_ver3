@@ -1,8 +1,8 @@
-// CL-04: 93-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 104-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
-//   (iii) row count === 93. Lineage: base 68 (route-matrix.csv header comment) →
+//   (iii) row count === 104. Lineage: base 68 (route-matrix.csv header comment) →
 //        L-PAY レーン(round-16)が -6 GMO retired + 3 PAY.JP 新規 route(infra-route-
 //        069..071: POST /fees/{obligation_id}/invoice・POST /fees/payjp-webhook
 //        [PUBLIC]・GET /me/fees) = 65 → 認証レーン(round-16 OQ-ROUTE-01/V3-AUT-46)
@@ -46,7 +46,18 @@
 //        protected)= 90 → 同レーン(V3-WIK-07)が +2 route(infra-route-099: POST
 //        /wiki/lint・infra-route-100: GET /wiki/lint-log・共に protected)= 92 →
 //        同レーン(V3-WIK-29)が +1 route(infra-route-101: POST
-//        /research/external-import・protected)= 93。
+//        /research/external-import・protected)= 93 → market-final レーン(C8
+//        g04残todo)が V3-MKT-64 プリカ案内 +1 route(infra-route-102: GET
+//        /market/payment-guidance・protected・静的。分岐時点は080で採番したが
+//        101までは他レーンが既に採取済みのため統合時に102へ採番替え)= 94 →
+//        同レーンが V3-MKT-40 複式簿記検算 +1 route(infra-route-103: GET
+//        /ledger/audit・protected)= 95 → 同レーンが V3-MKT-03 公開Q&A+ほめボード
+//        +2 route(infra-route-104..105: POST/GET /market/listings/{listing_id}/
+//        comments・protected)= 97 → 同レーンが V3-MKT-06 個体直接オファー+ポリシー
+//        +4 route(infra-route-106..109: POST/GET /individuals/{id}/offer-policy・
+//        POST/GET /individuals/{id}/offers・protected)= 101 → 同レーンが V3-MKT-45
+//        研究支援ストア +3 route(infra-route-110..112: POST/GET /research/store/
+//        items・POST /research/store/items/{id}/orders・protected)= 104。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -77,9 +88,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (93 rows)", () => {
-  it("has exactly 93 route rows", () => {
-    expect(rows.length).toBe(93);
+describe("CL-04 route matrix (104 rows)", () => {
+  it("has exactly 104 route rows", () => {
+    expect(rows.length).toBe(104);
   });
 
   it("access column is only public|protected", () => {
