@@ -22,7 +22,7 @@
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/placements/{{params.id}}/qr" }
             },
             { "id": "qr", "type": "qr-code", "props": { "value": "{{result.token}}" } },
-            { "id": "lab-env-title", "type": "heading", "props": { "text": "研究室の環境(V3-OBS-72)", "level": 2 } },
+            { "id": "lab-env-title", "type": "heading", "props": { "text": "研究室の環境", "level": 2 } },
             {
               "id": "lab-env-current",
               "type": "card",

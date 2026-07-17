@@ -82,7 +82,7 @@
   "obs-detail.photos-title.text": "写真",
   "obs-detail.similar-title.text": "類似個体",
   "obs-detail.to-individual.label": "個体詳細を開く",
-  "obs-detail.lab-env-title.text": "研究室の環境(V3-OBS-72)",
+  "obs-detail.lab-env-title.text": "研究室の環境",
   "obs-detail.lab-env-room.text": "部屋: {{data.lab-env.lab_environment.room_label}}",
   "obs-detail.lab-env-hvac.text": "空調: {{data.lab-env.lab_environment.hvac_profile}}",
   "obs-detail.lab-env-sensor.text": "センサー位置: {{data.lab-env.lab_environment.sensor_position}}",

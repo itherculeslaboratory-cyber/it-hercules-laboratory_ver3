@@ -82,7 +82,7 @@
               "id": "open-individual",
               "type": "button",
               "props": { "label_key": "home.open-individual.label", "label": "個体を開く", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "individual-detail" }
+              "action": { "kind": "navigate", "to": "obs-search" }
             },
             {
               "id": "open-match",
@@ -147,7 +147,7 @@
   "transitions": [
     { "from": "start-observe", "to_screen_id": "obs-entry", "label": "観測入力へ(V3-UIX-02 3クリック導線・domain は obs-entry が自前収集)" },
     { "from": "guide-select", "to_screen_id": "obs-domain-select", "label": "ガイド付きドメイン選択へ" },
-    { "from": "open-individual", "to_screen_id": "individual-detail", "label": "個体詳細へ" },
+    { "from": "open-individual", "to_screen_id": "obs-search", "label": "個体一覧(検索)へ・カードタップで個体詳細へ" },
     { "from": "open-match", "to_screen_id": "match", "label": "マッチングへ" },
     { "from": "open-species", "to_screen_id": "species", "label": "種の管理へ" },
     { "from": "open-device", "to_screen_id": "device", "label": "機器の管理へ" },

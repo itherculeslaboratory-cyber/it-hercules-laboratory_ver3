@@ -143,7 +143,10 @@ export function getPath(obj: unknown, path: string): unknown {
 
 /** Replace `{{ dotted.path }}` in `tpl` with values from `scope`. */
 export function interpolate(tpl: string, scope: unknown): string {
-  return tpl.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, p: string) => {
+  // ponytail: [\w.-]+ (not just \w.) so hyphenated path segments (e.g.
+  // data.lab-env-current) resolve instead of riding through as a raw
+  // "{{...}}" literal — confirmed bug on obs-detail/placement-qr (V3-OBS-72).
+  return tpl.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_m, p: string) => {
     const v = getPath(scope, p);
     return v == null ? "" : String(v);
   });

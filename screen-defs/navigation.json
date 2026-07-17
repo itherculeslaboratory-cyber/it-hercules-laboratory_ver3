@@ -215,8 +215,8 @@
     },
     {
       "from": "qr-resume",
-      "to": "obs-entry",
-      "label": "個体文脈付きで観測入力へ"
+      "to": "obs-register-entry",
+      "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)"
     },
     {
       "from": "economy-status",

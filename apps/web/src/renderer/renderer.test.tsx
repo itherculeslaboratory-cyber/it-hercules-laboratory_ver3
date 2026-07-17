@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen, cleanup, fireEvent, act, waitFor } from "@testing-library/react";
-import { Renderer } from "./renderer";
+import { Renderer, interpolate } from "./renderer";
 import { ApiError } from "@/lib/error-messages";
 import type { Action, ScreenDef } from "./types";
 import { allScreenDefs, loadScreenDef } from "@/lib/screendefs";
@@ -14,6 +14,17 @@ afterEach(() => cleanup());
 function screenDef(nodes: ScreenDef["nodes"]): ScreenDef {
   return { screen_id: "t", route: "/t", title: "t", nodes };
 }
+
+describe("interpolate() — hyphenated path segments (V3-OBS-72 regression)", () => {
+  it("resolves a {{data.lab-env-current}}-style hyphenated key instead of riding through raw", () => {
+    const scope = { data: { "lab-env-current": { temp_c: 24 } } };
+    expect(interpolate("{{data.lab-env-current.temp_c}}", scope)).toBe("24");
+  });
+
+  it("still resolves plain dotted keys (no regression on the common case)", () => {
+    expect(interpolate("{{params.id}}", { params: { id: "C1" } })).toBe("C1");
+  });
+});
 
 describe("Renderer — screen-defs", () => {
   // The single Renderer must draw EVERY screen-def (design-c5 §3, UIX-17). The

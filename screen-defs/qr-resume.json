@@ -28,7 +28,7 @@
               "id": "resume",
               "type": "button",
               "props": { "label_key": "qr-resume.resume.label", "label": "この個体で観測を続ける", "variant": "primary" },
-              "action": { "kind": "navigate", "to": "obs-entry" }
+              "action": { "kind": "navigate", "to": "obs-register-entry?id={{data.resolve.individual_id}}" }
             }
           ]
         }
@@ -36,6 +36,6 @@
     }
   ],
   "transitions": [
-    { "from": "resume", "to_screen_id": "obs-entry", "label": "個体文脈付きで観測入力へ" }
+    { "from": "resume", "to_screen_id": "obs-register-entry", "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)" }
   ]
 }

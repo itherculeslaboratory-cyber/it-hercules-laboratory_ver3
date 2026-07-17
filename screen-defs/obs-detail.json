@@ -65,7 +65,7 @@
                 "item_alt": "観測写真 {{photo_id}}"
               }
             },
-            { "id": "lab-env-title", "type": "heading", "props": { "text_key": "obs-detail.lab-env-title.text", "text": "研究室の環境(V3-OBS-72)", "level": 2 } },
+            { "id": "lab-env-title", "type": "heading", "props": { "text_key": "obs-detail.lab-env-title.text", "text": "研究室の環境", "level": 2 } },
             {
               "id": "lab-env",
               "type": "card",
