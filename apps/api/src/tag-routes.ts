@@ -121,6 +121,48 @@ export async function aggregateTags(
   };
 }
 
+/**
+ * Append one tag_event with server-supplied defaults (tag_event_id/created_at/
+ * schema_version/action) filled in — the shared write path for both the POST
+ * /tags route body and internal auto-tagging callers (OBS-07 remeasure).
+ */
+export async function appendTagEvent(
+  s: TruthStore,
+  actorId: string,
+  data: { target_type: string; target_id: string; tag: string; tag_type: string; source_type: string; action?: string; [k: string]: unknown },
+): Promise<{ tag_event_id: string }> {
+  const full: Record<string, unknown> = {
+    tag_event_id: ulid(),
+    action: "add",
+    created_at: new Date().toISOString(),
+    schema_version: 1,
+    ...data,
+  };
+  const key = `truth/${TAG_TYPE}/${String(full.target_type)}-${String(full.target_id)}-${ulid()}.json`;
+  await s.putEventAt(key, envelope(actorId, full));
+  return { tag_event_id: String(full.tag_event_id) };
+}
+
+/**
+ * OBS-07: auto-append the "再測定タグ"(remeasure tag)whenever a capture is
+ * reanalyzed — テンプレ/AI/技術向上後の再測定には必ずこのタグを付与しデータ信頼性を
+ * 担保する。best-effort: a tag-append failure must never block the reanalysis
+ * result itself (the analysis event is the OBS-48 source of truth).
+ */
+export async function tagRemeasured(s: TruthStore, actorId: string, captureId: string): Promise<void> {
+  try {
+    await appendTagEvent(s, actorId, {
+      target_type: "capture",
+      target_id: captureId,
+      tag: "remeasure",
+      tag_type: "quality",
+      source_type: "machine_suggested",
+    });
+  } catch {
+    // best-effort — see docstring.
+  }
+}
+
 // ── routes ─────────────────────────────────────────────────────────────────────
 
 // POST /tags — append one tag_event (OBS-07/52/63). Single-layer append; the

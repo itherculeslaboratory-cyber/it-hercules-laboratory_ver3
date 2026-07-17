@@ -18,7 +18,9 @@
 //        Issues/掲示板→AI要約スレ)が新規 1 route(infra-route-081: POST
 //        /ai-digest/sync・protected・requireRole operator/admin)= 73 →
 //        g04-経済レーン(V3-MKT-35)が +1 route(infra-route-082: POST
-//        /economy/vote・protected)= 74。
+//        /economy/vote・protected)= 74 → g02-観測レーン(C8 obs-analysis・
+//        V3-OBS-57)が +1 route(infra-route-083: GET /observation/{capture_id}/
+//        species-suggestions・protected)= 75。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -49,9 +51,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (74 rows)", () => {
-  it("has exactly 74 route rows", () => {
-    expect(rows.length).toBe(74);
+describe("CL-04 route matrix (75 rows)", () => {
+  it("has exactly 75 route rows", () => {
+    expect(rows.length).toBe(75);
   });
 
   it("access column is only public|protected", () => {

@@ -91,3 +91,54 @@ def test_searchable_capture_set_column_order_is_fixed():
     assert run.SEARCHABLE_CAPTURE_SET_COLUMNS[-1] == "shape"
     assert "embedding_locator" in run.SEARCHABLE_CAPTURE_SET_COLUMNS
     assert len(run.SEARCHABLE_CAPTURE_SET_COLUMNS) == 12
+
+
+# ── OBS-09 EmbeddingBackend Protocol一本化 ────────────────────────────────────
+def test_resolve_image_backend_defaults_to_dummy_protocol_shape():
+    backend = run.resolve_image_backend()
+    assert backend.model_name == "dummy-sha256-rng"
+    assert backend.embedding_dim == 384
+    vec = backend.embed_image(b"hello")
+    assert len(vec) == 384
+    assert vec == run.embed_dummy(b"hello")  # same math as the bare function
+
+
+def test_resolve_image_backend_dinov2_is_off_by_default():
+    backend = run.resolve_image_backend("dinov2")
+    assert backend.model_name == "dinov2_vits14"
+    with pytest.raises(RuntimeError):
+        backend.embed_image(b"x")
+
+
+# ── OBS-09 併算: 色ヒスト/透明感/黒割合 ───────────────────────────────────────
+def test_analyze_color_is_deterministic_and_bounded():
+    a = run.analyze_color(b"same-bytes")
+    b = run.analyze_color(b"same-bytes")
+    assert a == b  # deterministic
+    assert len(a["histogram"]) == 8
+    assert pytest.approx(sum(a["histogram"]), abs=1e-9) == 1.0
+    assert 0.0 <= a["transparency"] <= 1.0
+    assert 0.0 <= a["black_ratio"] <= 1.0
+    assert run.analyze_color(b"different-bytes") != a
+
+
+# ── OBS-08 derived-artifact metadata (run_id/schema_version/input_hash/provenance) ──
+def test_output_rows_and_run_info_carry_derived_artifact_metadata(tmp_path):
+    inputs = [{"image_id": "a", "bytes": b"aaa"}, {"image_id": "b", "bytes": b"bbb"}]
+    res = run.run_manifest(inputs, tmp_path, "run-meta", backend="dummy")
+    om = res["output_manifest"]
+    for row in om["rows"]:
+        assert row["run_id"] == "run-meta"
+        assert row["schema_version"] == run.MANIFEST_SCHEMA_VERSION
+        assert row["input_hash"] == row["sha256"]
+        assert row["provenance"]["generator_kind"] == "agent"
+        assert "histogram" in row["color"]
+
+    info = res["run_info"]
+    assert info["schema_version"] == run.MANIFEST_SCHEMA_VERSION
+    assert isinstance(info["input_hash"], str) and len(info["input_hash"]) == 64  # sha256 hex
+
+    # re-running with the SAME inputs (different run_id) yields the SAME
+    # run-level input_hash — it is a pure function of the input set.
+    res2 = run.run_manifest(inputs, tmp_path, "run-meta-2", backend="dummy")
+    assert res2["run_info"]["input_hash"] == info["input_hash"]

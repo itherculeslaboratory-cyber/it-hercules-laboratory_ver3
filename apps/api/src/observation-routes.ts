@@ -5,6 +5,9 @@
 import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity, canonicalJson, sha256Hex as truthSha256Hex } from "@ihl/truth";
 import { generateThumbnail } from "./thumbnail";
+import { tagRemeasured } from "./tag-routes";
+import { deriveDeviceBindingsForCapture, type DerivedDeviceBinding } from "./source-routes";
+import { projectSellerModeration } from "./market-flag-routes";
 import {
   RERANK_WEIGHTS,
   RERANK_MISSING,
@@ -147,6 +150,7 @@ const CAPTURE_FIELDS = [
   "subspecies_confirmed_by",
   "photo_conditions",
   "note",
+  "devices", // OBS-17: DeviceBinding/Occupancy自動派生のトリガー(commit1回で完結)
 ] as const;
 
 // ── OBS-11 rerank math (pure, deterministic; weights/defaults from constants) ──
@@ -532,6 +536,97 @@ obsRoutes.post("/observation/search", async (c) => {
   });
 });
 
+// ── OBS-57 種候補提案チェーン: ヒューリスティック → CLIP(任意) → Vision(任意) ──
+
+export interface SpeciesCandidate {
+  species: string;
+  score: number;
+  method: "heuristic" | "clip" | "vision";
+}
+export interface SpeciesSuggestionResult {
+  candidates: SpeciesCandidate[];
+  method_used: "heuristic" | "clip" | "vision";
+  degraded: string[];
+}
+
+/**
+ * Heuristic tier (always-on, zero-cost, no LLM/Vision — invariant①): nearest
+ * user-CONFIRMED captures (species_confirmed_by==="user") by cosine similarity,
+ * aggregated by species_candidate (mean of contributing scores). Pure reuse of
+ * the SAME embedding infra as /observation/search — no new index/model.
+ */
+export async function heuristicSpeciesCandidatesFromVector(
+  s: TruthStore,
+  bucket: Bindings["TRUTH"],
+  queryVec: Float32Array,
+  excludeCaptureId?: string,
+): Promise<SpeciesCandidate[]> {
+  const confirmed = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .filter((x) => x.species_confirmed_by === "user" && typeof x.species_candidate === "string" && x.capture_id !== excludeCaptureId);
+  const bySpecies = new Map<string, number[]>();
+  for (const cap of confirmed) {
+    const vec = await loadVector(bucket, String(cap.capture_id));
+    if (!vec || vec.length !== EMBEDDING_DIM) continue;
+    const cos = cosineSimilarity(queryVec, vec);
+    const species = String(cap.species_candidate);
+    (bySpecies.get(species) ?? bySpecies.set(species, []).get(species)!).push(cos);
+  }
+  return [...bySpecies.entries()]
+    .map(([species, scores]) => ({ species, score: scores.reduce((a, b) => a + b, 0) / scores.length, method: "heuristic" as const }))
+    .sort((a, b) => b.score - a.score || a.species.localeCompare(b.species));
+}
+
+/**
+ * OBS-57 chain: heuristic runs first (always). Only escalates to CLIP, then
+ * Vision, when the heuristic tier found NOTHING (no confirmed neighbors yet —
+ * a cold-start case). clip/vision are OPTIONAL injected async callables — the
+ * production route wires them from env-configured endpoints ONLY (both unset
+ * by default: invariant① LLM/Vision既定OFF). When a tier is unset OR returns
+ * no candidates, that is recorded in `degraded` (劣化運用を隠さない) and the
+ * chain still COMPLETES — it never throws/blocks on a missing optional tier.
+ * The caller NEVER auto-confirms a species from this result — species_confirmed_by
+ * stays a frozen `const: "user"` in the capture schema (V3-OBS-03, unchanged).
+ */
+export async function suggestSpeciesCandidates(
+  heuristicCandidates: SpeciesCandidate[],
+  opts: {
+    clip?: (() => Promise<SpeciesCandidate[] | null>) | null;
+    vision?: (() => Promise<SpeciesCandidate[] | null>) | null;
+  } = {},
+): Promise<SpeciesSuggestionResult> {
+  if (heuristicCandidates.length) {
+    return { candidates: heuristicCandidates, method_used: "heuristic", degraded: [] };
+  }
+  const degraded: string[] = ["heuristic_no_match"];
+  if (opts.clip) {
+    const r = await opts.clip();
+    if (r && r.length) return { candidates: r, method_used: "clip", degraded };
+    degraded.push("clip_no_match");
+  } else {
+    degraded.push("clip_not_configured");
+  }
+  if (opts.vision) {
+    const r = await opts.vision();
+    if (r && r.length) return { candidates: r, method_used: "vision", degraded };
+    degraded.push("vision_no_match");
+  } else {
+    degraded.push("vision_not_configured");
+  }
+  return { candidates: [], method_used: "heuristic", degraded };
+}
+
+// GET /observation/{capture_id}/species-suggestions — OBS-57 種候補提案(確定はしない・
+// 提示のみ)。CLIP/Vision未設定(既定)でもヒューリスティックのみで必ず完走する。
+obsRoutes.get("/observation/:capture_id/species-suggestions", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const queryVec = await loadVector(c.env.TRUTH, captureId);
+  if (!queryVec) return c.json({ error: "QUERY_EMBEDDING_NOT_FOUND" }, 404);
+  const heuristic = await heuristicSpeciesCandidatesFromVector(store(c), c.env.TRUTH, queryVec, captureId);
+  const result = await suggestSpeciesCandidates(heuristic); // clip/vision未設定(既定OFF)
+  return c.json(result);
+});
+
 // GET /observation/measurement-dictionary — item_hash 登録辞書 (OBS-18). Derived
 // from every template item that carries an item_hash (no dedicated dictionary
 // event; templates ARE the registry).
@@ -776,6 +871,7 @@ obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
   );
   if (res.status === "invalid") return c.json({ error: "INVALID_ANALYSIS", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_ANALYSIS", key: res.key }, 409);
+  await tagRemeasured(store(c), actorId, captureId); // OBS-07: 再測定タグ自動付与
   return c.json({ analysis_id: analysisId }, 202);
 });
 
@@ -801,16 +897,29 @@ obsRoutes.get("/observation/:capture_id/thumbnail/:photo_id", async (c) => {
 // Shared commit-path capture write (OBS-25/62/03), reused by
 // POST /observation/batch-commit kind:"capture" (body = 同一形状・同一ゲート —
 // コピペ二重化しない). Gates: subspecies 自動確定禁止 + value_origin(値あれば
-// enum内).
+// enum内). bucket (raw R2) is used ONLY for the OBS-17 device_bindings
+// derivation below — the capture write itself still goes through TruthStore s.
 export async function writeCaptureFromCommitBody(
   s: TruthStore,
+  bucket: Bindings["TRUTH"],
   actorId: string,
   body: Record<string, unknown>,
-): Promise<{ ok: true; capture_id: string } | { ok: false; error: string; details?: string[] }> {
+): Promise<
+  | { ok: true; capture_id: string; device_bindings: DerivedDeviceBinding[] }
+  | { ok: false; error: string; details?: string[] }
+> {
   const gateErr = subspeciesGateError(body);
   if (gateErr) return { ok: false, error: gateErr };
   const originErr = measurementValueOriginError(body.measurements);
   if (originErr) return { ok: false, error: originErr };
+  // GOV-35 観測モジュール側freeze: round-15裁定 #6/#7 の逐語「GOV-35=出品/観測の
+  // 機械的範囲停止・可逆」により、既存の出品側 suspended 投影(market-flag-routes)
+  // をそのまま観測commitの入口にも適用する(新しい設計を発明せず、既承認の signal
+  // を再利用するのみ)。suspended は誤BAN復帰(misban-reversal)で自動的に false へ
+  // 戻るため、観測側にも別の解除操作は不要(可逆性はprojectSellerModerationに一本化)。
+  if ((await projectSellerModeration(s, actorId)).suspended) {
+    return { ok: false, error: "OBSERVATION_FROZEN" };
+  }
   const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
   const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId };
   for (const k of CAPTURE_FIELDS) if (body[k] !== undefined) data[k] = body[k];
@@ -834,7 +943,14 @@ export async function writeCaptureFromCommitBody(
     console.error("KRM-28 contribution hook failed (commit itself already succeeded):", e);
   }
 
-  return { ok: true, capture_id: captureId };
+  // OBS-17: devices[] declared on the commit body auto-derives DeviceBinding/
+  // Occupancy — no separate binding API call needed (commit1回で完結).
+  const deviceIds = Array.isArray(body.devices) ? body.devices.filter((x): x is string => typeof x === "string") : [];
+  const deviceBindings = deviceIds.length
+    ? await deriveDeviceBindingsForCapture(bucket, actorId, typeof body.subject_ref === "string" ? body.subject_ref : "", deviceIds)
+    : [];
+
+  return { ok: true, capture_id: captureId, device_bindings: deviceBindings };
 }
 
 // POST /solid-observation/commit — the ONLY save path after the 3-screen confirm
@@ -844,9 +960,12 @@ obsRoutes.post("/solid-observation/commit", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return c.json({ error: "INVALID_BODY" }, 400);
   const actorId = c.get("actorId");
-  const r = await writeCaptureFromCommitBody(store(c), actorId, body);
-  if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_CAPTURE" ? 409 : 400);
-  return c.json({ capture_id: r.capture_id, committed: true }, 202);
+  const r = await writeCaptureFromCommitBody(store(c), c.env.TRUTH, actorId, body);
+  if (!r.ok) {
+    const status = r.error === "DUPLICATE_CAPTURE" ? 409 : r.error === "OBSERVATION_FROZEN" ? 403 : 400;
+    return c.json({ error: r.error, details: r.details }, status);
+  }
+  return c.json({ capture_id: r.capture_id, committed: true, device_bindings: r.device_bindings }, 202);
 });
 
 // GET /observation/{capture_id} — detail projection: capture + photos[].

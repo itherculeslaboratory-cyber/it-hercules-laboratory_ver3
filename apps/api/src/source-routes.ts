@@ -15,6 +15,7 @@ import { Hono } from "hono";
 import { TruthStore, ulid, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { bucketize, type TelemetryBucket } from "./telemetry-merge";
+import { DEVICE_TYPE } from "./device-routes";
 
 export const sourceRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -296,6 +297,92 @@ export async function moveOccupancy(
     envelope(OCCUPANCY_TYPE, OCCUPANCY_SCHEMA, actorId, startData),
   );
   return { occupancy_id: newId, ended_previous: endedPrevious };
+}
+
+// ── OBS-17: DeviceBinding/Occupancy auto-derivation at observation commit ───────
+
+export interface DerivedDeviceBinding {
+  device_id: string;
+  binding_id: string | null;
+  binding_opened: boolean;
+  occupancy_id: string | null;
+  occupancy_opened: boolean;
+}
+
+/**
+ * OBS-17: observation commit時にdevices[]を宣言すると、専用binding APIを別途
+ * 呼ばずにDeviceBinding/Occupancyの区間を自動派生する(commit1回で完結)。
+ *
+ * best-effort per device — 未登録デバイス/placement_ref未設定は自動派生できない
+ * ので何もせず飛ばす(observationの成立自体をブロックしない)。既に open な
+ * binding/occupancy があれば再利用し新規INSERTしない(環境の二重POST防止 —
+ * projectOpenBindings/projectOpenOccupancyのGLOBAL open判定をそのまま使う)。
+ */
+export async function deriveDeviceBindingsForCapture(
+  bucket: R2BucketLite,
+  actorId: string,
+  subjectRef: string,
+  deviceIds: string[],
+): Promise<DerivedDeviceBinding[]> {
+  const s = new TruthStore(bucket);
+  const out: DerivedDeviceBinding[] = [];
+  for (const deviceId of deviceIds) {
+    const deviceRec = await s.readEvent(`truth/${DEVICE_TYPE}/${deviceId}.json`);
+    const placementId = deviceRec ? (dataOf(deviceRec).placement_ref as string | undefined) : undefined;
+    if (!placementId) {
+      out.push({ device_id: deviceId, binding_id: null, binding_opened: false, occupancy_id: null, occupancy_opened: false });
+      continue;
+    }
+
+    // binding: reuse the already-open one for this device (device-GLOBAL, same
+    // rule as POST /device-bindings), else open a new one.
+    const openBindingIds = await projectOpenBindings(bucket, deviceId);
+    let bindingId = openBindingIds[0] ?? null;
+    let bindingOpened = false;
+    if (!bindingId) {
+      bindingId = ulid();
+      const data: Record<string, unknown> = {
+        binding_id: bindingId,
+        actor_id: actorId,
+        device_id: deviceId,
+        placement_id: placementId,
+        phase: "start",
+        effective_at: new Date().toISOString(),
+        schema_version: BINDING_TYPE,
+      };
+      if (subjectRef) data.subject_ref = subjectRef;
+      const res = await s.putEventAt(`truth/${BINDING_TYPE}/${bindingId}-start.json`, envelope(BINDING_TYPE, BINDING_SCHEMA, actorId, data));
+      bindingOpened = res.status === "inserted";
+    }
+
+    // occupancy: only if the capture names a subject and it has no open
+    // occupancy yet (a subject already elsewhere is a "move", not this route's
+    // concern — batch-commit kind:"move" / moveOccupancy handles that).
+    let occupancyId: string | null = null;
+    let occupancyOpened = false;
+    if (subjectRef) {
+      const open = await projectOpenOccupancy(bucket, subjectRef);
+      if (open) {
+        occupancyId = open.occupancy_id;
+      } else {
+        occupancyId = ulid();
+        const data = {
+          occupancy_id: occupancyId,
+          actor_id: actorId,
+          placement_id: placementId,
+          subject_ref: subjectRef,
+          phase: "start",
+          effective_at: new Date().toISOString(),
+          schema_version: OCCUPANCY_TYPE,
+        };
+        const res = await s.putEventAt(`truth/${OCCUPANCY_TYPE}/${occupancyId}-start.json`, envelope(OCCUPANCY_TYPE, OCCUPANCY_SCHEMA, actorId, data));
+        occupancyOpened = res.status === "inserted";
+      }
+    }
+
+    out.push({ device_id: deviceId, binding_id: bindingId, binding_opened: bindingOpened, occupancy_id: occupancyId, occupancy_opened: occupancyOpened });
+  }
+  return out;
 }
 
 // ── telemetry ───────────────────────────────────────────────────────────────

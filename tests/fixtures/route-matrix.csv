@@ -14,7 +14,10 @@
 #   (infra-route-081・protected)を追加 → 73 rows。g04-経済レーン(V3-MKT-35)が
 #   プラチナ投票通貨の専用route新規 1 route(infra-route-082・POST
 #   /api/v1/economy/vote・protected・infra-route-081とAIP-67統合が先取したため
-#   採番をずらして解決)を追加 → 74 rows。
+#   採番をずらして解決)を追加 → 74 rows、g02-観測レーン(C8 obs-analysis)が
+#   OBS-57種候補提案の新規 1 route(infra-route-083・GET /api/v1/observation/
+#   {capture_id}/species-suggestions・protected・080は先に基盤コストレーンが
+#   採ったため採番をずらして解決)を追加 → 75 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -92,3 +95,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/costs,VPS,Workers,W2,infra-route-080,protected,implemented,V3-CST-02ランニングコスト透明性ダッシュボード・Sakura VPS手動値+R2使用量(CF API未配線=config/running-costs.jsonのmanual_override_yenへdegrade)・ログイン済み全ユーザー閲覧可(追加ロール制限なし)
 —,POST,/api/v1/ai-digest/sync,VPS,Workers,W2,infra-route-081,protected,implemented,V3-AIP-67 GitHub Issues/掲示板→AI要約スレ・requireRole operator/admin手動即時実行・ai-kernel LLMClient(既定AI_DISABLED)+ai-profiles/newspaper.json再利用・保存はihl.plaza.post.v1(channel=knowledge-board)を再利用し新イベント型を増やさない
 —,POST,/api/v1/economy/vote,VPS,Workers,W2,infra-route-082,protected,implemented,V3-MKT-35 プラチナコイン投票通貨(対象・レイヤー0-3・枚数・理由指定・レイヤー4は403)・KRM-25 castPlatinumVote共有コア再利用
+—,GET,/api/v1/observation/{capture_id}/species-suggestions,VPS,Workers,W2,infra-route-083,protected,implemented,OBS-57 種候補提案チェーン(ヒューリスティック→CLIP任意→Vision任意)・CLIP/Vision未設定(既定)でもヒューリスティックのみで完走・種の自動確定はしない(species_confirmed_byは既存frozen const"user"のまま不変)

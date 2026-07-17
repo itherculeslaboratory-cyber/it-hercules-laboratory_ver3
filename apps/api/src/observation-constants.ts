@@ -46,6 +46,27 @@ export const SCALE_PAPER = {
 export const EMBEDDING_DIM = 384;
 
 /**
+ * OBS-45/53 pixel->mm calibration: realLength = pixelLength × mmPerPixel,
+ * where mmPerPixel is derived from the scale paper's KNOWN physical marker
+ * size (SCALE_PAPER.marker_mm) measured in pixels. The corner-detection +
+ * projective-transform step that PRODUCES markerPixelLength runs client-side
+ * (browser Canvas/WASM, OFF the server — V3-AIP-104/invariant①); this function
+ * is the shared, pure formula both a client implementation and a test/design
+ * doc can point at. Returns null on a degenerate/failed detection
+ * (markerPixelLength <= 0) rather than silently producing a bogus scale.
+ */
+export function calibratedRealLengthMm(
+  pixelLength: number,
+  markerPixelLength: number,
+  markerRealMm: number = SCALE_PAPER.marker_mm,
+): number | null {
+  if (!Number.isFinite(markerPixelLength) || markerPixelLength <= 0) return null;
+  if (!Number.isFinite(pixelLength)) return null;
+  const mmPerPixel = markerRealMm / markerPixelLength;
+  return pixelLength * mmPerPixel;
+}
+
+/**
  * value_origin → confidence grade (OBS-07). Covers ALL 9 frozen provenance
  * value_origin enum values (schemas/frozen/provenance.schema.json) so
  * confidenceGrade() is total and never returns undefined for a valid

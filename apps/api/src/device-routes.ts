@@ -13,7 +13,7 @@ import type { Bindings, Variables } from "./env";
 
 export const deviceRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-const DEVICE_TYPE = "ihl.obs.device.v1";
+export const DEVICE_TYPE = "ihl.obs.device.v1";
 const DEVICE_SCHEMA = "schemas/events/obs-device.schema.json";
 
 function store(c: { env: Bindings }): TruthStore {
