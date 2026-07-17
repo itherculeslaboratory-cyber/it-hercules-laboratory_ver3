@@ -11,6 +11,7 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES } from "./observation-constants";
+import { projectOpenBindings } from "./source-routes";
 
 export const individualRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -462,13 +463,27 @@ export interface EnvironmentReading {
  */
 async function projectEnvironment(s: TruthStore, placementId: string | null): Promise<EnvironmentReading[]> {
   if (!placementId) return [];
-  const deviceIds = new Set(
-    (await s.listEvents(`truth/${BINDING_TYPE}/`))
-      .map(dataOf)
-      .filter((d) => d.placement_id === placementId && d.phase === "start")
-      .map((d) => String(d.device_id)),
-  );
+  // 「open device_binding(s)」= このplacementでSTARTしたが、後からENDされていない
+  // もの(projectOpenBindings 再利用・source-routes.ts の 409 判定と同じ open/closed
+  // 意味論)。startイベント単独だとappend-onlyゆえ「昔ここにいた」痕跡が永遠に残る
+  // ため、デバイスが別placementへunbind→rebindされた後もそのまま拾ってしまい、
+  // 再配置先の最新テレメトリをこのindividualの環境として誤帰属してしまう
+  // (批評家指摘)。ここではopenのものだけをdeviceに採用する。
+  const candidates = (await s.listEvents(`truth/${BINDING_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.placement_id === placementId && d.phase === "start");
+  const deviceIds = new Set<string>();
+  for (const d of candidates) {
+    const deviceId = String(d.device_id);
+    const open = await projectOpenBindings(s, deviceId);
+    if (open.includes(String(d.binding_id))) deviceIds.add(deviceId);
+  }
   if (!deviceIds.size) return [];
+  // ponytail: 現在openなbindingのdeviceを対象に「全期間」のテレメトリを返す
+  // (bindingのeffective_atによる下限クランプはしない) — 同じdeviceが一度よそへ
+  // 出て「同じplacementへ」戻ってきた場合、その中抜け期間の読み取りが混ざる
+  // ケースは残るが、今回の指摘(=別placementへ出たまま戻らないケース)はopen
+  // 判定だけで解消する。必要になったらbindingごとのeffective_at以降のみに絞る。
   const readings: EnvironmentReading[] = [];
   for (const e of await s.listEvents(`truth/${TELEMETRY_TYPE}/`)) {
     const d = dataOf(e);

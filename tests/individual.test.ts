@@ -867,6 +867,32 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     expect(environment).toHaveLength(1);
     expect(environment[0]).toMatchObject({ device_id: "dev-env-1", metric: "temp", mean: 28 });
   });
+
+  it("V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    const place = ((await (await post("/api/v1/placements", { label: "Shelf B" }, env)).json()) as { placement_id: string }).placement_id;
+    await post("/api/v1/occupancy", { placement_id: place, subject_ref: `individual/${id}` }, env);
+
+    const bind = (await (await post("/api/v1/device-bindings", { device_id: "dev-move-1", placement_id: place }, env)).json()) as {
+      binding_id: string;
+    };
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-move-1", ts_ms: 0, metric: "temp", value: 20 }] }, env);
+
+    let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as { environment: unknown[] };
+    expect(body.environment).toHaveLength(1); // まだ P にバインドされている間は写る
+
+    // unbind(end) → 別 placement へ再バインド。start イベント自体は append-only で残る。
+    await post("/api/v1/device-bindings/end", { binding_id: bind.binding_id }, env);
+    const otherPlace = ((await (await post("/api/v1/placements", { label: "Shelf Q" }, env)).json()) as { placement_id: string }).placement_id;
+    await post("/api/v1/device-bindings", { device_id: "dev-move-1", placement_id: otherPlace }, env);
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-move-1", ts_ms: 900000, metric: "temp", value: 99 }] }, env);
+
+    body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as { environment: unknown[] };
+    // individual は依然 place にいる(occupancy 未移動)。dev-move-1 はもう otherPlace の
+    // openバインド — place の環境に otherPlace の新データが混ざってはいけない。
+    expect(body.environment).toEqual([]);
+  });
 });
 
 describe("V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)", () => {
