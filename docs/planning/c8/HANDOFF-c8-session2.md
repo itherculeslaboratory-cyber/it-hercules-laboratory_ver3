@@ -9,12 +9,15 @@ status: active
 
 > 新スレッドはこのファイルだけ読めば続行できる。前セッション(2026-07-16夜〜07-17朝)は round-16 裁定確定+夜間実装ラン(約50コミット)を完了した。台帳: `D:\claude\00-hq\TASK-LEDGER.md` T-38。
 
-## §0 現在地(2026-07-17朝・main=211a47f 時点)
+## §0 現在地(2026-07-17夜・**セッション2完走(§7 DoD達成)**・main=8c708fe push済み)
 
-- **テスト**: unit 全緑(apps/api 970超+web 115)・**E2E 60/60 全緑**・lint 20 GATE 全緑・pytest 11 passed
-- **要件**: 735→**749件**(round-16で+14採番・srs v1.10・検算済み)
-- **進捗正本**: `docs/planning/c8/progress.md`(必達184件: done 約45 / in_progress 18 / todo 約121)— **実装コミットは同コミットでprogress.jsonを更新し render 再生成する規約**(PLAN §9)
-- 実装済みハイライト: CSVインポータ(V3-OBS-32)・市場バックエンド一式(予約V3-IND-35/ブロック/状態機械5脚/no-pay)・PAY.JP 5%請求フロー+PT廃止+GMO退役・認証(数字コードV3-AUT-46+失効denylist V3-AUT-03)・GOV-35国別自治・匿名配送URL中継・クラッチ二層V3-IND-36・広場round-16パラメータ・market-trade/knowledge-thread UI再構築(通貫E2E)+dispute新設・QR発行復活・全フォーム数値型バグ根治
+- **§7 DoD 達成(最終独立批評家PASS・blocking 0)**: required 184件 = **done 155 / in_progress 26(全件残余note付き) / blocked 3(裁定待ち) / todo 0**
+- **テスト**: lint 21ゲート全緑・unit 1357(api)+167(web)全緑・**E2E 174/174 全緑**・pytest 49 passed
+- **UI**: 受領10の必須3点+7項目(when役割出し分け/出品写真/kebab/表示名/投稿別投票/カード化/モバイル修正)実装済み。**ui-review.html新版(56カード・390/1440両幅・採点欄つき)**=`docs/planning/c8/screens/` — **採点はユーザー(DoD外)**
+- **裁定待ち(blocked 3件・推奨付き)**: V3-SEC-03(デバイス鍵サーバ保持がV3-SEC-03文言と矛盾・推奨=(a)サーバ側保管/復号の廃止) / V3-AUT-15(観測の公開READがCL-04凍結routeマトリクスと矛盾・推奨=(a)当面全ログイン必須を正とし公開READは将来波) / V3-AIP-92(Builder前提のKernel設計はround-16で棄却済み・推奨=既存codegenパイプラインを機能等価として充足扱い)
+- **照会待ち**: PAY.JP/PayPay(返答が来たら `inquiry-drafts.md` に貼付→Platform自動控除の実装ゲート解除)
+- 文書正本: 進捗=`progress.md` / TC対応=`tc-coverage-c8.md` / 全体=`docs/planning/status.md`(いずれも2026-07-17更新済み)
+- セッション2実装ハイライト: 市場fulfillment配線+相互承認キャンセル・取引ステージモデル・所有者移転+観測データ引継・複式簿記検証・フォーク10%貢献度上流分配・GOV-35観測凍結・観測3画面フロー+計測行UI配線・信頼度モデル・EmbeddingBackend(既定OFF)・ホーム司令塔+ブランドクローム+setup-profile・オンボーディング判定SSOT統一・PaperSections拡張+引用管理+研究空白4象限・GitHub Actions CI・RTM 100%紐づけ・レート制限+クォータ・ToS必須検証ゲート
 
 ## §1 確定裁定の要点(迷ったらここに照らす)
 
@@ -31,14 +34,13 @@ status: active
 2. **認定方式=(a)実績による自動認定で確定** → 広場の重み付き票(認定2.0/一次観測1.5)の実装解禁。自動認定の閾値設計(実観測cite数・追試実績)は実装時にAI設計→運用調整
 3. **照会=送信済み・回答待ち**(PAY.JP/PayPay)。返答が来たら inquiry-drafts.md に貼ってもらう→Platform自動控除の実装ゲート解除
 
-## §3 残作業(優先順・lane別)
+## §3 残作業(セッション3以降 — §0の旧1/2/4/5項はセッション2で消化済み)
 
-1. **UI磨き第2弾**(最優先・受領10の60点評価を反映): **(1)役割別ボタン出し分け(`when`プリミティブ=買い手/売り手/スレ主)** **(2)出品画像 — mkt-listingスキーマに写真フィールド新設(新イベント型追加・型リネーム禁止)→browseカードに表示** **(3)頻出導線の「…」メニュー化(相談室へ等)** (4)モバイル「詳細を開く」潰れ修正・自明な説明文削除 (5)表示名フィールド設計(actor_id生ハッシュ解消) (6)投票の投稿ID手入力→投稿ごとのボタン化 (7)モバイルのテーブル→カードリスト化。加点された「画面間の統一感」を壊さないこと。対象拡大: ホーム/経済ステータス3画面統合/検索F3類似・F1L・テンプレfork 3ステップ等(ui-asset-catalog.md の優先度表)
-2. **L4残クラスタ消化**: progress.md の todo(必達121件)。大半はg07-UIUX薄画面群(カタログ適用の横展開)+g05ガバナンス+g01/g09。参照ゼロの93件は本当に未着手(実態同期済みなので信用してよい)
-3. **Platform自動控除**(PAY.JP照会回答後): payjp-connector拡張(tenant作成・platform_fee)・取引画面のカード決済オプション
-4. 市場の残り: 予約成立後のfulfillment配線・相互承認キャンセル依頼フロー・GOV-35の観測モジュール側freeze(クロスモジュール設計)
-5. `docs/planning/c8/tc-coverage-c8.md` 生成(PLAN §6)・status.md の鮮度維持
-6. デプロイ準備(人間ゲート隣接): KV namespace作成(AUTH_DENYLIST/AUTH_CODE_STATE)・Truthバックアップ(B2)接続
+1. **裁定待ち3件の解消**(ユーザー回答後に実装): V3-SEC-03 / V3-AUT-15 / V3-AIP-92(推奨は§0参照。未回答時はQ-META-01により推奨採用可だが、凍結契約・セキュリティ境界・機能削除を含むため回答を待つ扱いにした)
+2. **Platform自動控除**(PAY.JP照会回答後): payjp-connector拡張(tenant作成・platform_fee)・取引画面のカード決済オプション
+3. **in_progress 26件の残余消化**: progress.md の各note参照。大半は (a)CV解析アーキ(OBS-45/47/53: ブラウザ側マーカー検出+射影変換の方式選定) (b)物理印刷治具(IND-15: 91x55mm実寸合わせ=人間ゲート隣接) (c)クロスモジュール残余(IND-13所有者履歴=MKT-29連動済みの拡張等)
+4. best-effort 147件(required外・第2波扱い)
+5. デプロイ準備(人間ゲート隣接): KV namespace作成(AUTH_DENYLIST/AUTH_CODE_STATE/RATE_LIMIT)・Truthバックアップ(B2)実契約・接続
 
 ## §4 人間ゲート(触らない・一覧提出のみ)
 
