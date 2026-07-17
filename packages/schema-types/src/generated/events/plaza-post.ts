@@ -25,9 +25,9 @@ export interface PlazaPost {
    */
   topic: string;
   /**
-   * 3板の別（説明/愚痴/改善・BBS-03）。
+   * 板の別（説明/愚痴/改善・BBS-03 + Engagement=公開Q&A/称賛/未出品オファー一括募集・BBS-28）。
    */
-  board_kind: "guide" | "complaint" | "improvement";
+  board_kind: "guide" | "complaint" | "improvement" | "engagement";
   /**
    * スレッドキー（root 投稿は post_id 自身）。
    */

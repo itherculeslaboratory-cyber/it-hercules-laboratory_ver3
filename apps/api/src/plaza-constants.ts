@@ -3,8 +3,30 @@
 // 出典: docs/planning/c5/design-c5.md §K6 §2.5 / 01-requirements/registry.json
 // V3-BBS-03/10/29/36・V3-GOV-01/09/19/23。
 
-// BBS-03: 3板の別(説明/愚痴/改善)。plaza-post.board_kind enum の正本。
-export const BOARD_KINDS = ["guide", "complaint", "improvement"] as const;
+// BBS-03: 3板の別(説明/愚痴/改善)+BBS-28: Engagement板(公開Q&A/称賛/未出品オファー
+// 一括募集の募集スレ型・subject_key=channel単位)。plaza-post.board_kind enum の正本。
+export const BOARD_KINDS = ["guide", "complaint", "improvement", "engagement"] as const;
+
+// BBS-28: Engagement 板の投稿サブ種別。tags[0] に "engagement:<kind>" 形式で載せる
+// (新規フィールドを増やさず既存 tags[] を再利用・ponytail: rung2)。
+// qna=公開Q&A / praise=称賛 / solicitation=未出品オファー・ラブレター等の一括募集。
+export const ENGAGEMENT_KINDS = ["qna", "praise", "solicitation"] as const;
+export const ENGAGEMENT_TAG_PREFIX = "engagement:";
+
+// BBS-28: 質問自動分類(研究的/飼育方法/血統管理/矛盾指摘/初心者/無意味)のキーワード辞書。
+// LLM 既定OFF(不変条項①)の決定論フォールバック。実鍵配線後は ai-kernel.ts の
+// classify task へ差し替え可能(upgrade path)。
+export const QUESTION_CATEGORIES = [
+  "research", "care", "lineage", "contradiction", "beginner", "meaningless",
+] as const;
+export const QUESTION_CATEGORY_KEYWORDS: Record<(typeof QUESTION_CATEGORIES)[number], readonly string[]> = {
+  research: ["データ", "論文", "統計", "有意", "相関", "仮説"],
+  care: ["餌", "温度", "湿度", "マット", "飼育", "世話"],
+  lineage: ["血統", "系統", "親", "産地", "ライン"],
+  contradiction: ["矛盾", "違う", "おかしい", "本当ですか"],
+  beginner: ["初めて", "初心者", "わかりません", "教えてください"],
+  meaningless: ["笑", "www", "age", "上げ"],
+};
 
 // BBS-29: fork の表示ランク(左=最上位)。projectForkRanks の整列順。
 export const FORK_RANKS = ["official", "recommended", "popular", "beginner", "minor"] as const;
