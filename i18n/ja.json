@@ -26,6 +26,7 @@
   "home.open-settings.label": "設定を開く",
   "home.chip-status.label": "ステータス",
   "home.chip-market.label": "取引",
+  "home.chip-costs.label": "運営コスト",
   "login.title.text": "IHL にログイン",
   "login.lead.text": "メールアドレスにログインリンクを送ります。",
   "login.email.label": "メールアドレス",

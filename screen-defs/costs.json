@@ -1,0 +1,61 @@
+{
+  "screen_id": "costs",
+  "route": "/costs",
+  "title": "運営コスト",
+  "layout": "standard",
+  "notes": "V3-MKT-49/V3-CST-02 ランニングコスト透明性ダッシュボード。GET /api/v1/costs(Sakura VPS 手動値 + Cloudflare R2 使用量。R2 は CF_API_TOKEN/CF_ACCOUNT_ID 未設定 → manual_override_yen へ縮退)。要件の『ただし…』条件に従い、収益/銀行残高は個人事業主のプライバシーとして一切表示しない(ランニングコストのみ)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "運営コスト", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "IHL の運営にかかる月額のランニングコスト(サーバー・ストレージ)を公開します。収益・銀行残高は個人事業主のプライバシーとして非公開です。", "muted": true } },
+
+            {
+              "id": "vps-card",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/costs",
+                "title": "サーバー",
+                "bind_text": "{{vps.label}}: 月額 {{vps.monthly_yen}} 円（{{vps.source}}入力）"
+              }
+            },
+            {
+              "id": "r2-card",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/costs",
+                "title": "ストレージ(R2)",
+                "bind_text": "月額 {{r2.monthly_yen}} 円（{{r2.source}}）"
+              }
+            },
+            {
+              "id": "total-card",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/costs",
+                "title": "合計",
+                "bind_text": "月額 {{total_monthly_yen}} {{currency}}"
+              }
+            },
+
+            {
+              "id": "back-status",
+              "type": "button",
+              "props": { "label": "ステータスへ戻る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "economy-status" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "back-status", "to_screen_id": "economy-status", "label": "ステータスへ戻る" }
+  ]
+}

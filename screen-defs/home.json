@@ -133,6 +133,11 @@
               "id": "chip-market",
               "type": "link",
               "props": { "label_key": "home.chip-market.label", "label": "取引", "href": "/s/market-trade", "variant": "chip" }
+            },
+            {
+              "id": "chip-costs",
+              "type": "link",
+              "props": { "label_key": "home.chip-costs.label", "label": "運営コスト", "href": "/s/costs", "variant": "chip" }
             }
           ]
         }

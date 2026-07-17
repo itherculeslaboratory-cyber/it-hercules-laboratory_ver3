@@ -32,6 +32,7 @@
     "placement-qr",
     "qr-resume",
     "economy-status",
+    "costs",
     "profile",
     "platinum-shop",
     "market-trade",
@@ -132,6 +133,11 @@
     },
     {
       "from": "home",
+      "to": "costs",
+      "label": "運営コストへ"
+    },
+    {
+      "from": "home",
       "to": "profile",
       "label": "プロフィールへ"
     },
@@ -209,6 +215,16 @@
       "from": "economy-status",
       "to": "profile",
       "label": "プロフィールへ"
+    },
+    {
+      "from": "economy-status",
+      "to": "costs",
+      "label": "運営コストへ"
+    },
+    {
+      "from": "costs",
+      "to": "economy-status",
+      "label": "ステータスへ戻る"
     },
     {
       "from": "profile",

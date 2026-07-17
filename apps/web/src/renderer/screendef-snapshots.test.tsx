@@ -12,6 +12,7 @@ import { allScreenDefIds, loadScreenDef } from "@/lib/screendefs";
 const SCREEN_IDS = [
   "ai-profile-settings",
   "bio-card",
+  "costs",
   "country-select",
   "cross",
   "data-descriptor",
