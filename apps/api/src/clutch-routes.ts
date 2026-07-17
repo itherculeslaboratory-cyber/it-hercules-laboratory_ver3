@@ -175,6 +175,7 @@ clutchRoutes.post("/clutches", async (c) => {
     "subspecies_confirmed_by",
     "container_label",
     "placement_id",
+    "lineage_id", // V3-IND-34 複数系統並行管理タグ(promote で子個体へ継承)
   ] as const) {
     if (body[k] !== undefined) data[k] = body[k];
   }
@@ -188,11 +189,16 @@ clutchRoutes.post("/clutches", async (c) => {
   return c.json({ clutch_id: clutchId, initial_count: initialCount, current_count: initialCount }, 201);
 });
 
-// GET /clutches — 本人一覧。current_count は都度再計算(§1 参照)。
+// GET /clutches — 本人一覧。current_count は都度再計算(§1 参照)。?lineage_id=
+// で複数系統並行管理(V3-IND-34)の完全一致フィルタ。
 clutchRoutes.get("/clutches", async (c) => {
   const actorId = c.get("actorId");
+  const lineageFilter = c.req.query("lineage_id") ?? "";
   const s = store(c);
-  const rows = (await s.listEvents(`truth/${CLUTCH_TYPE}/`)).map(dataOf).filter((d) => d.actor_id === actorId);
+  const rows = (await s.listEvents(`truth/${CLUTCH_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.actor_id === actorId)
+    .filter((d) => !lineageFilter || d.lineage_id === lineageFilter);
   const clutches: Record<string, unknown>[] = [];
   for (const d of rows) {
     const id = String(d.clutch_id ?? "");
@@ -335,6 +341,11 @@ clutchRoutes.post("/clutches/:id/promote", async (c) => {
     const { individualId, res } = await createIndividualMaster(s, actorId, {
       species: typeof cd.species === "string" ? cd.species : undefined,
       birth_or_hatch_date: typeof cd.harvested_at === "string" ? cd.harvested_at : undefined,
+      // V3-IND-34: 子個体は既定でクラッチの lineage_id を継承する。系統合流
+      // (異なる系統の親を交配)の場合はクラッチ作成時に新しい lineage_id
+      // (例 "AC")をユーザーが選んで指定する運用 — 継承ロジック自体は単純な
+      // コピーのまま(合流の判断はユーザー、システムは自動判定しない)。
+      lineage_id: typeof cd.lineage_id === "string" ? cd.lineage_id : undefined,
     });
     if (res.status !== "inserted") continue; // ULID衝突は事実上不到達(128bit)
     individualIds.push(individualId);

@@ -240,6 +240,25 @@ describe("IND-12 交配結果(projectCross・決定論)", () => {
     const { env } = ctx();
     expect((await get("/api/v1/cross", env)).status).toBe(404);
   });
+
+  it("率カード→詳細一覧ドリルダウン: ?parent_id=+?status=でコホート絞り込み(V3-IND-12)", async () => {
+    const { env } = ctx();
+    const pa = await seedCross(env); // kids[0] は death・他3体は生存側
+    const cohort = (await (await get(`/api/v1/individuals?parent_id=${pa}`, env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(cohort.individuals).toHaveLength(4);
+    const dead = (await (await get(`/api/v1/individuals?parent_id=${pa}&status=dead`, env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(dead.individuals).toHaveLength(1);
+    // 親でない個体は他に登録があっても混ざらない。
+    const stranger = await createInd(env);
+    const strangerCohort = (await (await get(`/api/v1/individuals?parent_id=${stranger}`, env)).json()) as {
+      individuals: unknown[];
+    };
+    expect(strangerCohort.individuals).toEqual([]);
+  });
 });
 
 describe("IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)", () => {
@@ -847,5 +866,52 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     const environment = body.environment as { device_id: string; metric: string; mean: number }[];
     expect(environment).toHaveLength(1);
     expect(environment[0]).toMatchObject({ device_id: "dev-env-1", metric: "temp", mean: 28 });
+  });
+});
+
+describe("V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)", () => {
+  it("individual master に lineage_id を付与でき、?lineage_id= で完全一致フィルタできる", async () => {
+    const { env } = ctx();
+    const a = await createInd(env, { lineage_id: "A" });
+    const c = await createInd(env, { lineage_id: "C" });
+    await createInd(env); // タグなし個体は対象外(絞り込みで漏れない)
+
+    const lineA = (await (await get("/api/v1/individuals?lineage_id=A", env)).json()) as {
+      individuals: { individual_id: string; lineage_id: string | null }[];
+    };
+    expect(lineA.individuals.map((i) => i.individual_id)).toEqual([a]);
+    expect(lineA.individuals[0].lineage_id).toBe("A");
+
+    // 系統合流: 別系統の親を交配し、子に新しい lineage_id("AC")をユーザーが付ける。
+    // 交配自体は既存 parents API がそのまま許す(lineage を跨ぐ制約はない)。
+    const merged = await createInd(env, { lineage_id: "AC" });
+    await post(`/api/v1/individuals/${merged}/parents`, { parent_id: a, parent_role: "sire" }, env);
+    await post(`/api/v1/individuals/${merged}/parents`, { parent_id: c, parent_role: "dam" }, env);
+    const lineAC = (await (await get("/api/v1/individuals?lineage_id=AC", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(lineAC.individuals.map((i) => i.individual_id)).toEqual([merged]);
+  });
+
+  it("クラッチの lineage_id は promote で子個体へ継承される", async () => {
+    const { env } = ctx();
+    const clutchRes = await post(
+      "/api/v1/clutches",
+      { initial_count: 5, harvested_at: "2026-07-01", lineage_id: "A" },
+      env,
+    );
+    const clutchId = ((await clutchRes.json()) as { clutch_id: string }).clutch_id;
+    // ?lineage_id= フィルタは clutch 一覧にも効く。
+    const clutchList = (await (await get("/api/v1/clutches?lineage_id=A", env)).json()) as {
+      clutches: { clutch_id: string }[];
+    };
+    expect(clutchList.clutches.map((c) => c.clutch_id)).toEqual([clutchId]);
+
+    const promoteRes = await post(`/api/v1/clutches/${clutchId}/promote`, { count: 2, at: "2026-07-05T00:00:00Z" }, env);
+    const { individual_ids } = (await promoteRes.json()) as { individual_ids: string[] };
+    const list = (await (await get("/api/v1/individuals?lineage_id=A", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(list.individuals.map((i) => i.individual_id).sort()).toEqual([...individual_ids].sort());
   });
 });

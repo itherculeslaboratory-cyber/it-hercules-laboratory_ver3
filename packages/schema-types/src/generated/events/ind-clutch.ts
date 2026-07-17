@@ -53,6 +53,10 @@ export interface IndClutch {
    */
   placement_id?: string;
   /**
+   * V3-IND-34: 複数系統並行管理タグ（ind-master と同じ意味・promote 時に子個体へ継承・任意）。
+   */
+  lineage_id?: string;
+  /**
    * 登録時刻（RFC3339）。
    */
   created_at: string;

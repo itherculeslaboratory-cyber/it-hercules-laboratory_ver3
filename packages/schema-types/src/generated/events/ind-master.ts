@@ -29,6 +29,10 @@ export interface IndMaster {
    */
   source_type?: string;
   /**
+   * V3-IND-34: 複数系統並行管理タグ（例: "A"=体格重視・"C"=色重視・任意）。系統間で理想個体が出て合流した場合はユーザーが新しい lineage_id（例 "AC"）を選んで子に付け直す運用（親の系統を跨いだ交配自体は既存 parents API で制約なく可能・本フィールドは表示上の分類タグ）。
+   */
+  lineage_id?: string;
+  /**
    * 登録者の actor_id（セッション principal 強制・V3-AUT-17）。
    */
   actor_id: string;

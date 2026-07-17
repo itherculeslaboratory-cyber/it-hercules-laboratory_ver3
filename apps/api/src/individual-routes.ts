@@ -658,6 +658,7 @@ export async function createIndividualMaster(
     species?: string;
     birth_or_hatch_date?: string;
     source_type?: string;
+    lineage_id?: string; // V3-IND-34 複数系統並行管理タグ
   },
 ): Promise<{ individualId: string; res: Awaited<ReturnType<TruthStore["putEventAt"]>> }> {
   const individualId =
@@ -667,7 +668,7 @@ export async function createIndividualMaster(
     actor_id: actorId,
     created_at: nowIso(),
   };
-  for (const k of ["local_label_text", "species", "birth_or_hatch_date", "source_type"] as const) {
+  for (const k of ["local_label_text", "species", "birth_or_hatch_date", "source_type", "lineage_id"] as const) {
     if (fields[k] !== undefined) data[k] = fields[k];
   }
   const res = await s.putEventAt(
@@ -710,6 +711,7 @@ individualRoutes.post("/individuals", async (c) => {
     species: body.species as string | undefined,
     birth_or_hatch_date: body.birth_or_hatch_date as string | undefined,
     source_type: body.source_type as string | undefined,
+    lineage_id: typeof body.lineage_id === "string" ? body.lineage_id : undefined,
   });
   if (res.status === "invalid") return c.json({ error: "INVALID_INDIVIDUAL", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_INDIVIDUAL", key: res.key }, 409);
@@ -778,18 +780,27 @@ const LIST_SORT_FIELDS = new Set([
 // ponytail: O(n) full master + capture/life-event/occupancy/photo/schedule
 // scan(1回ずつ、計5本), per-actor/individual index は在庫が伸びたら昇格(既存
 // /observation/search 前例と同じ縮退)。
+// V3-IND-12 率カードドリルダウン: ?parent_id=+?status= の組合せで血統(Cross)画面
+// の率カード(死亡率/羽化不全率等)から「この親のコホートで死亡した子」のような
+// 詳細一覧へ遷移できる(cohort=offspringOf(parent_id)・既存 status フィルタと
+// AND)。lineage_id は別軸(V3-IND-34・複数系統タグ)— こちらは血統(親子関係)の
+// コホート、lineage_id は横断タグで意味が違うため別 query param のまま併存する。
 individualRoutes.get("/individuals", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
   const stageFilter = c.req.query("stage") ?? "";
   const statusFilter = c.req.query("status") ?? "";
+  const parentIdFilter = c.req.query("parent_id") ?? ""; // V3-IND-12 率カード→詳細一覧ドリルダウン(?parent_id=+?status=でコホート絞り込み)
+  const lineageFilter = c.req.query("lineage_id") ?? ""; // V3-IND-34 複数系統並行管理(完全一致)
   const sortKey = c.req.query("sort") ?? "";
   const sortOrder = c.req.query("order") === "asc" ? 1 : -1; // 既定 desc(新しい/多い/大きい順)
   const actorId = c.get("actorId");
   const s = store(c);
+  const cohortIds = parentIdFilter ? new Set(await offspringOf(s, parentIdFilter)) : null;
   const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
     .map(dataOf)
-    .filter((m) => m.actor_id === actorId);
+    .filter((m) => m.actor_id === actorId)
+    .filter((m) => !cohortIds || cohortIds.has(String(m.individual_id ?? "")));
   const capturesByIndividual = new Map<string, { data: Record<string, unknown>; time: string }[]>();
   for (const e of await s.listEvents(`truth/${CAPTURE_TYPE}/`)) {
     const d = dataOf(e);
@@ -880,6 +891,8 @@ individualRoutes.get("/individuals", async (c) => {
     if (speciesFilter && species.toLowerCase() !== speciesFilter) continue;
     if (stageFilter && stage !== stageFilter) continue;
     if (statusFilter && lifeStatus !== statusFilter) continue;
+    const lineageId = typeof m.lineage_id === "string" ? m.lineage_id : null;
+    if (lineageFilter && lineageId !== lineageFilter) continue; // V3-IND-34 完全一致
     // 最新観測から遡って最初に写真がある capture のサムネ URL(無ければ null)。
     let thumbnailPath: string | null = null;
     for (let i = caps.length - 1; i >= 0; i--) {
@@ -907,6 +920,7 @@ individualRoutes.get("/individuals", async (c) => {
       thumbnail_path: thumbnailPath,
       life_status: lifeStatus,
       next_observation_at: nextObservationAt,
+      lineage_id: lineageId, // V3-IND-34 複数系統並行管理タグ
     });
   }
   if (LIST_SORT_FIELDS.has(sortKey)) {
