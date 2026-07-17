@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import { generateThumbnail } from "./thumbnail";
 import { tagRemeasured } from "./tag-routes";
+import { deriveDeviceBindingsForCapture, type DerivedDeviceBinding } from "./source-routes";
 import {
   RERANK_WEIGHTS,
   RERANK_MISSING,
@@ -146,6 +147,7 @@ const CAPTURE_FIELDS = [
   "subspecies_confirmed_by",
   "photo_conditions",
   "note",
+  "devices", // OBS-17: DeviceBinding/Occupancy自動派生のトリガー(commit1回で完結)
 ] as const;
 
 // ── OBS-11 rerank math (pure, deterministic; weights/defaults from constants) ──
@@ -795,12 +797,17 @@ obsRoutes.get("/observation/:capture_id/thumbnail/:photo_id", async (c) => {
 // Shared commit-path capture write (OBS-25/62/03), reused by
 // POST /observation/batch-commit kind:"capture" (body = 同一形状・同一ゲート —
 // コピペ二重化しない). Gates: subspecies 自動確定禁止 + value_origin(値あれば
-// enum内).
+// enum内). bucket (raw R2) is used ONLY for the OBS-17 device_bindings
+// derivation below — the capture write itself still goes through TruthStore s.
 export async function writeCaptureFromCommitBody(
   s: TruthStore,
+  bucket: Bindings["TRUTH"],
   actorId: string,
   body: Record<string, unknown>,
-): Promise<{ ok: true; capture_id: string } | { ok: false; error: string; details?: string[] }> {
+): Promise<
+  | { ok: true; capture_id: string; device_bindings: DerivedDeviceBinding[] }
+  | { ok: false; error: string; details?: string[] }
+> {
   const gateErr = subspeciesGateError(body);
   if (gateErr) return { ok: false, error: gateErr };
   const originErr = measurementValueOriginError(body.measurements);
@@ -813,7 +820,15 @@ export async function writeCaptureFromCommitBody(
   );
   if (res.status === "invalid") return { ok: false, error: "INVALID_CAPTURE", details: res.errors };
   if (res.status === "conflict") return { ok: false, error: "DUPLICATE_CAPTURE" };
-  return { ok: true, capture_id: captureId };
+
+  // OBS-17: devices[] declared on the commit body auto-derives DeviceBinding/
+  // Occupancy — no separate binding API call needed (commit1回で完結).
+  const deviceIds = Array.isArray(body.devices) ? body.devices.filter((x): x is string => typeof x === "string") : [];
+  const deviceBindings = deviceIds.length
+    ? await deriveDeviceBindingsForCapture(bucket, actorId, typeof body.subject_ref === "string" ? body.subject_ref : "", deviceIds)
+    : [];
+
+  return { ok: true, capture_id: captureId, device_bindings: deviceBindings };
 }
 
 // POST /solid-observation/commit — the ONLY save path after the 3-screen confirm
@@ -823,9 +838,9 @@ obsRoutes.post("/solid-observation/commit", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return c.json({ error: "INVALID_BODY" }, 400);
   const actorId = c.get("actorId");
-  const r = await writeCaptureFromCommitBody(store(c), actorId, body);
+  const r = await writeCaptureFromCommitBody(store(c), c.env.TRUTH, actorId, body);
   if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_CAPTURE" ? 409 : 400);
-  return c.json({ capture_id: r.capture_id, committed: true }, 202);
+  return c.json({ capture_id: r.capture_id, committed: true, device_bindings: r.device_bindings }, 202);
 });
 
 // GET /observation/{capture_id} — detail projection: capture + photos[].

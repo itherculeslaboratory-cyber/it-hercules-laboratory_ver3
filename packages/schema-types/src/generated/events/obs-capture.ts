@@ -115,4 +115,8 @@ export interface ObsCapture {
    * 自由記述メモ（任意）。
    */
   note?: string;
+  /**
+   * commit時に宣言するデバイスID配列（任意・V3-OBS-17）。宣言するとDeviceBinding/Occupancyの区間が自動派生され、専用binding APIを別途呼ぶ必要がない（commit1回で完結）。
+   */
+  devices?: string[];
 }

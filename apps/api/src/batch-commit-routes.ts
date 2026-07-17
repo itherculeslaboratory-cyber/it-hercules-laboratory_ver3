@@ -14,13 +14,13 @@ import type { Bindings, Variables } from "./env";
 import { writeCaptureFromCommitBody } from "./observation-routes";
 import { writeLifeEvent } from "./individual-routes";
 import { writeClutchEvent } from "./clutch-routes";
-import { moveOccupancy } from "./source-routes";
+import { moveOccupancy, type DerivedDeviceBinding } from "./source-routes";
 
 export const batchCommitRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 export const BATCH_MAX_ITEMS = 200;
 
-type BatchResult = { ok: true; id: string } | { ok: false; error: string };
+type BatchResult = { ok: true; id: string; device_bindings?: DerivedDeviceBinding[] } | { ok: false; error: string };
 
 async function commitOne(
   bucket: R2BucketLite,
@@ -32,8 +32,8 @@ async function commitOne(
   const body = (item.body ?? {}) as Record<string, unknown>;
 
   if (kind === "capture") {
-    const r = await writeCaptureFromCommitBody(s, actorId, body);
-    return r.ok ? { ok: true, id: r.capture_id } : { ok: false, error: r.error };
+    const r = await writeCaptureFromCommitBody(s, bucket, actorId, body);
+    return r.ok ? { ok: true, id: r.capture_id, device_bindings: r.device_bindings } : { ok: false, error: r.error };
   }
 
   if (kind === "life-event") {
