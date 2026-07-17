@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: █████████░░░░░░░░░░░ 45%（150/334）
-- 第1波必達(required): ████████████████░░░░ 80%（147/184）
+- 全体: █████████░░░░░░░░░░░ 46%（154/334）
+- 第1波必達(required): ████████████████░░░░ 82%（151/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 158 |
-| 着手中(in_progress) | 23 |
+| 未着手(todo) | 151 |
+| 着手中(in_progress) | 26 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
-| 完了(done) | 150 |
+| 完了(done) | 154 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -43,7 +43,7 @@
 | L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
 | L4-knowledge | █████████░░░░░░░░░░░ 46%（25/54） |
 | L4-obs | ██████████░░░░░░░░░░ 48%（32/66） |
-| L6-ui | ███░░░░░░░░░░░░░░░░░ 13%（5/39） |
+| L6-ui | █████░░░░░░░░░░░░░░░ 23%（9/39） |
 
 ## lane 別明細
 
@@ -381,20 +381,20 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-UIX-04 | 色は意味のみに用いる(緑=成功/生存、赤=失敗、青=情報、黄=注意)。装飾的な多… | required | todo | — |
-| V3-UIX-21 | ユーザーの好み・価値観を離散信号として記録し検索rerankに反映するマチアプ機… | required | todo | — |
-| V3-UIX-24 | stub段階のMatchApp/画面は『サンプルデータ』と分かる表示にし本番デー… | required | todo | — |
+| V3-UIX-04 | 色は意味のみに用いる(緑=成功/生存、赤=失敗、青=情報、黄=注意)。装飾的な多… | required | done | 72eccff |
+| V3-UIX-21 | ユーザーの好み・価値観を離散信号として記録し検索rerankに反映するマチアプ機… | required | in_progress | 25dbfe5 |
+| V3-UIX-24 | stub段階のMatchApp/画面は『サンプルデータ』と分かる表示にし本番デー… | required | done | a5c8c86 |
 | V3-UIX-25 | ホーム画面を認証後に着地するWorldレイヤーの司令塔とし、今日の状態(現在地カ… | required | done | 3f5012a |
 | V3-UIX-26 | ホームの文明ミニマップは非PII集計(観測ペース/信頼度平均/テンプレ文化成長の… | required | done | 3f5012a |
 | V3-UIX-27 | 次回観測upcoming/overdueをホームのtoday_linesへ最大3… | required | done | 3f5012a |
 | V3-UIX-28 | 全画面共通のブランドクロムを採用する:ヘッダーに観測対象ナビゲータ・マイページ・… | required | done | 3f5012a |
-| V3-UIX-32 | UIはOSSベース(Next.js 15 + shadcn/ui、掲示板は5ch… | required | todo | — |
-| V3-UIX-43 | 設定機能を/me/settingsに集約し、AI接続(OpenAI互換BYOK)… | required | todo | — |
+| V3-UIX-32 | UIはOSSベース(Next.js 15 + shadcn/ui、掲示板は5ch… | required | done | 0499a80 |
+| V3-UIX-43 | 設定機能を/me/settingsに集約し、AI接続(OpenAI互換BYOK)… | required | done | 25abe42 |
 | V3-UIX-50 | 観測入力の操作フローを観測対象選択画面・テンプレート入力画面・条件リクエスト画面… | required | todo | — |
-| V3-UIX-68 | マイページはシンプルにし、透明性の文化としてその人の作品を相手のマイページで全て… | required | todo | — |
+| V3-UIX-68 | マイページはシンプルにし、透明性の文化としてその人の作品を相手のマイページで全て… | required | in_progress | 4af2f0e |
 | V3-UIX-80 | 取引前PII設定(局留め受取・配送先・銀行振込口座)が未完の場合、取引フロー内で… | required | todo | — |
 | V3-UIX-81 | ScreenDef Renderer の共通層で WCAG 2.2 AA 相当の… | required | done | f565128 |
-| V3-UIX-82 | 検索グラフビュー+ホバー簡易カード: 近さ(画像類似/形質/血縁)のエンティティ… | required | todo | — |
+| V3-UIX-82 | 検索グラフビュー+ホバー簡易カード: 近さ(画像類似/形質/血縁)のエンティティ… | required | in_progress | a45ae3e |
 | V3-UIX-09 | UIビルダーはWeb版を簡易版(forkテンプレ/ボタン宣言的操作)、Docke… | best-effort | todo | — |
 | V3-UIX-10 | 任意の編集可能画面から『この画面を編集』でUIビルダーを開き、現在の画面を対象に… | best-effort | todo | — |
 | V3-UIX-11 | UIビルダーのパネル(Canvas/LayerPanel/Inspector/T… | best-effort | todo | — |

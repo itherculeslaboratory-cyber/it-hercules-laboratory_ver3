@@ -2061,10 +2061,10 @@
     "tier": "B",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["72eccff"],
+    "tc": ["tests/theme-codegen.test.ts", "tests/theme-packs.test.ts", "apps/web/src/renderer/renderer.test.tsx"],
+    "note": "caution(黄=注意)がdanger(赤=失敗)と同一トークンで見分けがつかなかった実装済みの退行を発見・修正。ThemePackトークンにinfo/info-bg/caution/caution-bg(4キー・11→15)を新設しconfig/design-tokens.json正本→codegen一式(tokens.generated.css/theme-packs/*.json)を再生成。両テーマでWCAG AA(4.5:1)維持。"
   },
   {
     "id": "V3-UIX-21",
@@ -2074,10 +2074,10 @@
     "tier": "B",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["25dbfe5"],
     "tc": [],
-    "note": ""
+    "note": "V3-IND-08のマチアプ数式エンジン(match-routes.tsの決定論線形学習w←w+α·y·x)を再利用し、/observation/search に personalize=true フラグを新設。OBS-11のcompositeScore(ADR-H-12・sum=1.0)は変更せず、preferenceScore(ロジスティック飽和で[0,1]収束・決定論)をPERSONALIZE_WEIGHT=0.25で後段ブレンドする独立レイヤーとして実装、好み未学習時は中立0.5に安全縮退。TC2件で実証。残余: obs-search.json(UIのpersonalizeトグル露出)はobs-finalレーンが編集中のscreen-defのため未着手(エンジン+API接続のみ完了・残りはboolean1個の配線)。"
   },
   {
     "id": "V3-UIX-24",
@@ -2087,10 +2087,10 @@
     "tier": "C",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["a5c8c86"],
     "tc": [],
-    "note": ""
+    "note": "全screen-defsを監査し、実在する「本番データを装う」唯一の箇所(POST /devices/{id}/test の dummy discovery)を特定。device.json画面に疎通確認フローを配線し、結果表示の直前に必ず「サンプルデータです(実プロバイダ未接続)」を明示。他のstub画面は監査の結果、実データ(APIバック)のみで現状違反なしと確認(誇張ゼロ)。"
   },
   {
     "id": "V3-UIX-25",
@@ -2152,10 +2152,10 @@
     "tier": "A",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": ["0499a80"],
     "tc": [],
-    "note": ""
+    "note": "docs/planning/c8/oss-stack-audit.md を新設し1枚で棚卸し。Next.js15は実採用、Tailwind v4は導入済みだが実質未使用(civ-*トークンCSS運用)、shadcn/ui・tldraw・flexlayout-react・5ch型テンプレは0件と確認。ver2資産(packages/ihl-ui-catalog等)は本repoに非存在と明記。判断: 974本超テスト+E2E全緑の自作レンダラの全面破棄は不変条項①⑤に照らし非推奨、ui-asset-catalog.mdのPath A/B継続+shadcn/ui個別つまみ食いを推奨として記録。"
   },
   {
     "id": "V3-UIX-43",
@@ -2165,10 +2165,10 @@
     "tier": "B",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["25abe42"],
+    "tc": ["tests/settings-preferences.test.ts"],
+    "note": "既存settings画面(screen-defs/settings.json)を拡張し、AI接続(ai-profile-settings)・機器連携(device)・テーマ(theme-gallery)への導線+新規選好2項目(ui_exposure/push_notifications_enabled・pref-setスキーマ追記)+CSV自己データ持出し導線(GET /export/facts.csv・photos.csv)を1画面に集約した。Push実配信基盤(VAPID鍵)とアカウント統合は対象外(理由をnotesに明記・裁定待ちではなく設計判断として除外)。"
   },
   {
     "id": "V3-UIX-50",
@@ -2191,10 +2191,10 @@
     "tier": "C",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["4af2f0e"],
     "tc": [],
-    "note": ""
+    "note": "実装済み: (1)GET /users/{actor}/individuals新設(既存GET /individualsとロジック共用)でprofile.jsonに他者作品全表示+自分の作品一覧を追加(透明性の文化) (2)economy-status.jsonのhistory listが実在しないフィールド({{created_at}}/{{label}})をbindしていた退行(常に空表示)を修正し{{at}}/{{kind}}へ (3)称号(title)表示・PT残高(GET /me/pt・非公開)を同一画面に集約(新規画面を増やさない)。残余(裁定/設計待ち): お気に入り2種(推し作者=通知あり/推し作品=保存のみ)は永続化方式(既存social-eval kind=favorite/follow流用 vs 専用schema新設)の設計判断が必要なため未実装。他画面(広場投稿者名・出品者名等)からprofile?actor=へのリンク配線(送り手側)も未着手。統合時にroute番号をinfra-route-113へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。"
   },
   {
     "id": "V3-UIX-80",
@@ -4557,9 +4557,9 @@
     "tier": "B",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["a45ae3e"],
     "tc": [],
-    "note": ""
+    "note": "大物のため部分実装(ブリーフで明示許容)。GET /individuals/{id}/graph新設: 血縁(既存buildPedigree再利用)+画像類似(既存loadVector/cosineSimilarityをobservation-routes.tsからexportし再利用)を統合したnodes/edges投影を実装・TC2件で検証(血縁+類似の統合/埋め込み無し個体でも壊れない)。残余: SVG/Canvasでのグラフ描画・ホバー簡易カード・クリック遷移のレンダラ新ノード型、およびscreen-def配線(データ投影のみ実装・次段の土台として設計済み)。統合時にroute番号をinfra-route-114へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。"
   }
 ]
