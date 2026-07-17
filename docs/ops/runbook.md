@@ -3,7 +3,7 @@ id: V3-DOC-OPS-RUNBOOK
 title: 運用ランブック — VPS/HTTPS/本番 R2/cutover 手順
 date: "2026-07-11"
 status: active
-requirement_ids: [V3-CST-05, V3-FND-11]
+requirement_ids: [V3-CST-05, V3-FND-11, V3-CST-09]
 ---
 
 # 運用ランブック（V3-CST-05）
@@ -138,7 +138,35 @@ npx wrangler r2 bucket create ihl-ver3-truth-prod
 - 証明書更新: `certbot.timer`（自動）。手動確認は `sudo certbot renew --dry-run`。
 - lint/GATE: `npm run lint`（filename・生成物・schema・frontmatter・secrets 等の機械 GATE）。
 
-## 7. トラブルシュート早見
+## 7. Truth バックアップ二重化(B2・人間ゲート・手動・V3-CST-09)
+
+> 単一 Cloudflare アカウント集約(V3-CST-04)はアカウント凍結/侵害/誤削除で Truth
+> 全損のリスクを持つ。Truth 正本(R2)を別プロバイダ(Backblaze B2 等)へ複製 + ローカル
+> `D:\バックアップ` へ定期 pull する二重化は**設備投資型**(一度きりセットアップ)。
+> アダプタ実装は `apps/api/src/truth-backup-connector.ts`(`planTruthBackup`)。
+> **本ランのスコープは dry-run(実ネットワーク呼び出しなしの複製計画算出)まで** — 実
+> B2 接続(`TRUTH_BACKUP_MODE=live`)は明示的に `TruthBackupLiveNotImplementedError`
+> を投げる(人間ゲート: B2 契約作成+実鍵投入まで未実装)。
+
+1. **B2 バケット作成**(運用者・Backblaze コンソール): バケット名例
+   `ihl-ver3-truth-backup`。プライベート(非公開)で作成。
+2. **アプリケーションキー発行**(運用者): 上記バケットに書込権限を持つ Application
+   Key ID/Key を発行(Backblaze コンソール → App Keys)。
+3. **env 設定**(`.env.platform` へ実値・コミット禁止):
+   - `TRUTH_BACKUP_MODE=dry-run`(既定・実接続前は常にこの値のまま)
+   - `TRUTH_BACKUP_B2_BUCKET` / `TRUTH_BACKUP_B2_KEY_ID` / `TRUTH_BACKUP_B2_APP_KEY`
+     (live 昇格時に使う値。dry-run 段階では未設定のままでよい)
+4. **dry-run 検証**(可逆・AI 実行可): `planTruthBackup(bucket, env)` が Truth の現在
+   キー一覧を返すことを確認する(`tests/cst-09-truth-backup.test.ts` が機械検証済み)。
+5. **live 昇格(実装未着手・人間ゲート)**: 実 B2 S3 互換 API での複製コード追加+
+   `TRUTH_BACKUP_MODE=live` への切替+初回全量複製+以後の差分同期スケジュール
+   (cron 化する場合は `config/consented-crons.json` の human consent artifact も必要
+   — §V3-SEC-52 unconsented-cron GATE)。
+6. **ローカル `D:\バックアップ` への定期 pull**(運用者・手動または OS タスクスケジューラ):
+   B2 バケットから `D:\バックアップ\ihl-ver3-truth\` へ rclone 等でミラーする(手順は
+   live 昇格後に本節を追記)。
+
+## 8. トラブルシュート早見
 
 | 症状 | 一次切り分け |
 |------|--------------|
