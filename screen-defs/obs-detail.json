@@ -3,6 +3,7 @@
   "route": "/observe/detail",
   "title": "観測の詳細",
   "layout": "standard",
+  "notes": "V3-OBS-72 研究室環境コンテキスト: この観測の個体が現在どの設置場所(棚)にいるかを occupancy から辿り、その棚に紐づく研究室環境(部屋/空調/センサー位置・placement-qr.json で記録)を表示する。個体が現在どこにも占有記録されていない/環境未記録なら空欄(honest empty state)。",
   "nodes": [
     {
       "id": "shell",
@@ -40,6 +41,17 @@
                 "item_image": "/api/v1/observation/{{capture_id}}/image/{{photo_id}}",
                 "item_alt": "観測写真 {{photo_id}}"
               }
+            },
+            { "id": "lab-env-title", "type": "heading", "props": { "text_key": "obs-detail.lab-env-title.text", "text": "研究室の環境(V3-OBS-72)", "level": 2 } },
+            {
+              "id": "lab-env",
+              "type": "card",
+              "props": { "source_path": "/api/v1/individuals/{{data.detail.individual_id}}/lab-environment" },
+              "children": [
+                { "id": "lab-env-room", "type": "text", "props": { "text_key": "obs-detail.lab-env-room.text", "text": "部屋: {{data.lab-env.lab_environment.room_label}}", "muted": true } },
+                { "id": "lab-env-hvac", "type": "text", "props": { "text_key": "obs-detail.lab-env-hvac.text", "text": "空調: {{data.lab-env.lab_environment.hvac_profile}}", "muted": true } },
+                { "id": "lab-env-sensor", "type": "text", "props": { "text_key": "obs-detail.lab-env-sensor.text", "text": "センサー位置: {{data.lab-env.lab_environment.sensor_position}}", "muted": true } }
+              ]
             },
             {
               "id": "to-individual",

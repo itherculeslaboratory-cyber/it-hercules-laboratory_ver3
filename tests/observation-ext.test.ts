@@ -468,3 +468,39 @@ describe("OBS-48 reanalyze appends (never overwrites) + manifest", () => {
     expect(res.status).toBe(400);
   });
 });
+
+// V3-OBS-72 研究室環境コンテキスト: GET /individuals/{id}/lab-environment は
+// occupancy → placement → lab-environment を連鎖する(観測詳細 obs-detail が
+// 表示する経路そのもの)。
+describe("OBS-72 individual → placement → lab-environment 連鎖", () => {
+  it("an individual with no open occupancy → placement_id/lab_environment both null", async () => {
+    const { env } = ctx();
+    const res = await get("/api/v1/individuals/ind-no-shelf/lab-environment", env);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ individual_id: "ind-no-shelf", placement_id: null, lab_environment: null });
+  });
+
+  it("chains through the individual's current placement to its recorded environment", async () => {
+    const { env } = ctx();
+    const indId = "ind-lab-ctx";
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚Z" }, env)).json()) as {
+      placement_id: string;
+    };
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: placement_id }] },
+      env,
+    );
+    await post(`/api/v1/placements/${placement_id}/lab-environment`, { room_label: "飼育室2・北側", hvac_profile: "24℃設定" }, env);
+
+    const res = await get(`/api/v1/individuals/${indId}/lab-environment`, env);
+    const body = (await res.json()) as {
+      individual_id: string;
+      placement_id: string;
+      lab_environment: { room_label: string; hvac_profile: string };
+    };
+    expect(body.placement_id).toBe(placement_id);
+    expect(body.lab_environment.room_label).toBe("飼育室2・北側");
+    expect(body.lab_environment.hvac_profile).toBe("24℃設定");
+  });
+});

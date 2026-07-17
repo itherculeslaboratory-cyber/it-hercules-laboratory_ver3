@@ -3,7 +3,7 @@
   "route": "/placements/qr",
   "title": "設置場所のQR",
   "layout": "standard",
-  "notes": "V3-OBS-20 棚/場所からQR発行: individual-detail.json のQR発行(POST /individuals/{id}/qr + qr-code)と同じ2ノード構成をplacement向けに置く(POST /placements/{id}/qr)。発行したQRをスキャンすると GET /api/v1/qr/{token} が個体QRと同じ入口で解決し、現在この棚を占有している個体の前回観測をプレフィルする(空の棚は individual_id:null で新規個体登録に進める・observation-routes.ts GET /qr/:token 参照)。",
+  "notes": "V3-OBS-20 棚/場所からQR発行: individual-detail.json のQR発行(POST /individuals/{id}/qr + qr-code)と同じ2ノード構成をplacement向けに置く(POST /placements/{id}/qr)。発行したQRをスキャンすると GET /api/v1/qr/{token} が個体QRと同じ入口で解決し、現在この棚を占有している個体の前回観測をプレフィルする(空の棚は individual_id:null で新規個体登録に進める・observation-routes.ts GET /qr/:token 参照)。V3-OBS-72 研究室環境コンテキストの記録もここに同居(params.id がそのまま使える唯一の placement スコープ画面のため): 部屋・空調・センサー位置を追記すると、この棚を占有する個体の観測詳細(obs-detail)に環境説明として現れる。",
   "nodes": [
     {
       "id": "shell",
@@ -22,6 +22,30 @@
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/placements/{{params.id}}/qr" }
             },
             { "id": "qr", "type": "qr-code", "props": { "value": "{{result.token}}" } },
+            { "id": "lab-env-title", "type": "heading", "props": { "text": "研究室の環境(V3-OBS-72)", "level": 2 } },
+            {
+              "id": "lab-env-current",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/placements/{{params.id}}/lab-environment"
+              },
+              "children": [
+                { "id": "lab-env-room", "type": "text", "props": { "text": "部屋: {{data.lab-env-current.lab_environment.room_label}}" } },
+                { "id": "lab-env-hvac", "type": "text", "props": { "text": "空調: {{data.lab-env-current.lab_environment.hvac_profile}}", "muted": true } },
+                { "id": "lab-env-sensor", "type": "text", "props": { "text": "センサー位置: {{data.lab-env-current.lab_environment.sensor_position}}", "muted": true } }
+              ]
+            },
+            {
+              "id": "lab-env-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/placements/{{params.id}}/lab-environment" },
+              "children": [
+                { "id": "lab-env-room-input", "type": "field", "props": { "variant": "text", "name": "room_label", "label": "部屋・研究室", "placeholder": "例: 飼育室2・北側", "required": true } },
+                { "id": "lab-env-hvac-input", "type": "field", "props": { "variant": "text", "name": "hvac_profile", "label": "空調設定(任意)", "placeholder": "例: 24℃・湿度55%設定" } },
+                { "id": "lab-env-sensor-input", "type": "field", "props": { "variant": "text", "name": "sensor_position", "label": "センサー設置位置(任意)", "placeholder": "例: 棚の中段・吹出口から2m" } },
+                { "id": "lab-env-submit", "type": "button", "props": { "label": "環境を記録する", "variant": "secondary", "type": "submit" } }
+              ]
+            },
             {
               "id": "back",
               "type": "link",

@@ -84,3 +84,6 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/me/fees,VPS,Workers,W2,infra-route-071,protected,implemented,L-PAY 本人の未払い/支払い済み投影(round-16裁定・期限超過の自動ペナルティは発火させない・既存カルマ機構は不接続)
 —,POST,/api/v1/plaza/threads/{thread_id}/resolution,VPS,Workers,W2,infra-route-079,protected,implemented,知の広場スレ解決マーク(round-16裁定OQ-PLZ-03)・権限=スレ主のみ・append-only supersedeパターン(resolution_id ULID昇順の最後が現在値)
 —,POST,/api/v1/placements/{placement_id}/qr,VPS,Workers,W2,infra-route-080,protected,implemented,棚/場所QR発行(V3-OBS-20・CL-10 env_qr_token_v1 frozen形状・GET /api/v1/qr/{token}が個体QRと同じ入口で解決・occupancy投影で現占有個体へ連鎖)
+—,POST,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-081,protected,implemented,研究室環境コンテキスト登録(V3-OBS-72・placement基盤の拡張・append-only履歴+最新1件投影)
+—,GET,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-082,protected,implemented,研究室環境コンテキスト投影読み出し(V3-OBS-72・未記録はnull・404にしない)
+—,GET,/api/v1/individuals/{individual_id}/lab-environment,VPS,Workers,W2,infra-route-083,protected,implemented,個体→occupancy→placement→研究室環境の連鎖投影(V3-OBS-72・obs-detail表示元)

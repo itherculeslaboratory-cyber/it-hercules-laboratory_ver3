@@ -11,7 +11,7 @@ import {
   NAVIGATOR_TARGET_QUESTIONS,
   CONFIDENCE_ORDER,
 } from "./observation-constants";
-import { ENV_QR_TYPE, projectOccupantAt } from "./source-routes";
+import { ENV_QR_TYPE, projectOccupantAt, projectOpenOccupancy, projectLabEnvironmentAt } from "./source-routes";
 import type { Bindings, Variables } from "./env";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -864,6 +864,20 @@ obsRoutes.get("/individuals/:individual_id/observations", async (c) => {
     .map(dataOf)
     .filter((d) => d.subject_ref === ref);
   return c.json({ individual_id: individualId, observations });
+});
+
+// GET /individuals/{individual_id}/lab-environment — chains occupancy →
+// placement → lab-environment (V3-OBS-72): "where is this individual right
+// now, and what does its lab actually look like" (research-room layout/HVAC
+// profile), so an observation can be shown alongside the environment context
+// that explains it. No open occupancy / no recorded environment → honest
+// empty ({ lab_environment: null }), not 404.
+obsRoutes.get("/individuals/:individual_id/lab-environment", async (c) => {
+  const individualId = c.req.param("individual_id");
+  const open = await projectOpenOccupancy(c.env.TRUTH, `individual/${individualId}`);
+  if (!open) return c.json({ individual_id: individualId, placement_id: null, lab_environment: null });
+  const lab = await projectLabEnvironmentAt(c.env.TRUTH, open.placement_id);
+  return c.json({ individual_id: individualId, placement_id: open.placement_id, lab_environment: lab });
 });
 
 // POST /individuals/{individual_id}/qr — issue an ind.qr.v1 token.

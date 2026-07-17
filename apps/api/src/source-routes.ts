@@ -31,6 +31,9 @@ const BINDING_SCHEMA = "schemas/events/device-binding.schema.json";
 const OCCUPANCY_SCHEMA = "schemas/events/occupancy.schema.json";
 const TELEMETRY_SCHEMA = "schemas/events/telemetry-ingest.schema.json";
 const ENV_QR_SCHEMA = "schemas/frozen/qr-token.schema.json";
+// V3-OBS-72 研究室環境コンテキスト(placement 基盤の拡張)。
+const LAB_ENV_TYPE = "ihl.src.lab_environment.v1";
+const LAB_ENV_SCHEMA = "schemas/events/lab-environment.schema.json";
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -364,6 +367,78 @@ sourceRoutes.post("/placements/:placement_id/qr", async (c) => {
   if (res.status === "invalid") return c.json({ error: "INVALID_QR", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_QR", key: res.key }, 409);
   return c.json({ token, placement_id: placementId, expires_at: expiresAt }, 201);
+});
+
+// ── lab environment (V3-OBS-72 研究室環境コンテキスト) ─────────────────────
+// Extends the placement 基盤 (K7): the room/shelf layout and HVAC/sensor
+// description a placement sits in, so an observation can point at "the most
+// reliable Hercules-beetle husbandry data" (round-16 ruling round-13
+// citation) — environment that EXPLAINS the reading, not just a bare number.
+// Append-only history per placement_id; a read projects the latest record
+// (same "recompute, no resident index" shape as projectTelemetryLatest).
+
+/** Latest lab-environment description recorded for a placement, or null. */
+export async function projectLabEnvironmentAt(
+  bucket: R2BucketLite,
+  placementId: string,
+): Promise<{
+  room_label: string;
+  hvac_profile: string | null;
+  sensor_position: string | null;
+  created_at: string;
+} | null> {
+  const events = (await new TruthStore(bucket).listEvents(`truth/${LAB_ENV_TYPE}/`)).map(dataOf);
+  let latest: Record<string, unknown> | null = null;
+  for (const d of events) {
+    if (d.placement_id !== placementId) continue;
+    if (!latest || String(d.created_at) > String(latest.created_at)) latest = d;
+  }
+  if (!latest) return null;
+  return {
+    room_label: String(latest.room_label),
+    hvac_profile: typeof latest.hvac_profile === "string" ? latest.hvac_profile : null,
+    sensor_position: typeof latest.sensor_position === "string" ? latest.sensor_position : null,
+    created_at: String(latest.created_at),
+  };
+}
+
+// POST /placements/{placement_id}/lab-environment — append a room/HVAC/sensor
+// description. room_label required; hvac_profile/sensor_position free-text/任意.
+sourceRoutes.post("/placements/:placement_id/lab-environment", async (c) => {
+  const placementId = c.req.param("placement_id");
+  const actorId = c.get("actorId");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const roomLabel = str(body.room_label);
+  if (!roomLabel) return c.json({ error: "INVALID_LAB_ENVIRONMENT", details: ["room_label required"] }, 400);
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    lab_environment_id: id,
+    actor_id: actorId,
+    placement_id: placementId,
+    room_label: roomLabel,
+    created_at: new Date().toISOString(),
+    schema_version: LAB_ENV_TYPE,
+  };
+  const hvac = str(body.hvac_profile);
+  if (hvac) data.hvac_profile = hvac;
+  const sensor = str(body.sensor_position);
+  if (sensor) data.sensor_position = sensor;
+  const res = await store(c).putEventAt(
+    `truth/${LAB_ENV_TYPE}/${id}.json`,
+    envelope(LAB_ENV_TYPE, LAB_ENV_SCHEMA, actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_LAB_ENVIRONMENT", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_LAB_ENVIRONMENT", key: res.key }, 409);
+  return c.json({ lab_environment_id: id, placement_id: placementId }, 201);
+});
+
+// GET /placements/{placement_id}/lab-environment — latest description. A
+// placement legitimately starts with none recorded yet (honest empty state,
+// not 404 — V3-UIX-03).
+sourceRoutes.get("/placements/:placement_id/lab-environment", async (c) => {
+  const placementId = c.req.param("placement_id");
+  const latest = await projectLabEnvironmentAt(c.env.TRUTH, placementId);
+  return c.json({ placement_id: placementId, lab_environment: latest });
 });
 
 // ── telemetry ───────────────────────────────────────────────────────────────

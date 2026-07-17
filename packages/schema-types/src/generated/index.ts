@@ -34,6 +34,7 @@ export * from "./events/ind-master";
 export * from "./events/ind-name-event";
 export * from "./events/ind-qr";
 export * from "./events/intent";
+export * from "./events/lab-environment";
 export * from "./events/mapping-event";
 export * from "./events/match-preference";
 export * from "./events/mkt-block";
