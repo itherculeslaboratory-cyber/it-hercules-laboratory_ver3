@@ -25,6 +25,7 @@ export * from "./events/gov-dispute";
 export * from "./events/gov-flag";
 export * from "./events/gov-precedent";
 export * from "./events/gov-vote";
+export * from "./events/handle-claim";
 export * from "./events/ind-brand-template";
 export * from "./events/ind-clutch-event";
 export * from "./events/ind-clutch";

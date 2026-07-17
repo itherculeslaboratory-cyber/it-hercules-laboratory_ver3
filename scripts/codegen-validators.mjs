@@ -115,6 +115,8 @@ const SCHEMAS = [
   // L-PAY PAY.JP 5%請求フロー events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
   ["feeInvoice", "events/fee-invoice.schema.json"],
   ["feeSettlement", "events/fee-settlement.schema.json"],
+  // V3-AUT-08 @ID(handle)確定(must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
+  ["handleClaim", "events/handle-claim.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

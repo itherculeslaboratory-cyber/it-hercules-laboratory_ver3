@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/handle-claim.schema.json",
+  "title": "Handle claim data (ihl.aut.handle.v1)",
+  "description": "@ユーザーID（handle）確定イベント。Truth キー truth/ihl.aut.handle.v1/<handle>.json に put-if-absent（V3-AUT-08: 3〜30文字・限定文字種・一意・不変=HANDLE_IMMUTABLE）。本人が明示タップで確定し、OS は自動生成しない。確定は一意性の権威的担保（CL-01 同型・storage 層 put-if-absent 409）で、常駐 handle→user index は持たない。",
+  "x_ihl_req": "V3-AUT-08",
+  "x_ihl_source": "docs/planning/c7/usecase-driven-design.md §auth-onboarding-locale",
+  "type": "object",
+  "required": ["handle", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "handle": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_]{3,30}$",
+      "description": "確定した @ID 本体（限定文字種・3〜30文字）。この文字列自体が Truth キーの一部＝一意性の実体。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "確定した本人の actor_id（セッション principal 強制刻印・V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "確定時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

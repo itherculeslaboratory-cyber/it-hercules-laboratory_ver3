@@ -39,6 +39,7 @@ import { cusbRoutes } from "./cusb-routes";
 import { socialRoutes } from "./social-routes";
 import { proposalRoutes } from "./proposal-routes";
 import { profileRoutes } from "./profile-routes";
+import { handleRoutes } from "./handle-routes";
 import { githubWebhookRoutes } from "./github-webhook-routes";
 import { researchContentRoutes } from "./research-content-routes";
 import { paperMatchRoutes } from "./paper-match-routes";
@@ -353,6 +354,11 @@ app.route("/api/v1", proposalRoutes);
 // /users/{actor}/profile（3 指標個別・研究スコアは Contribution 配下・BAN 公開表示）・
 // GET /me/status（統合ステータス + append-only 履歴の読取投影・GUI 編集は後波）。
 app.route("/api/v1", profileRoutes);
+
+// @ID(handle)確定(V3-AUT-08 / docs/planning/c7/usecase-driven-design.md
+// §auth-onboarding-locale): GET/POST /me/handle。3〜30文字・限定文字種・一意・不変
+// (put-if-absent 409)。OS は自動生成せず本人の明示タップで確定する。
+app.route("/api/v1", handleRoutes);
 
 // GitHub webhook (design-k3 §2.5 / V3-KRM-13): POST /github/webhook。session 層 public
 // （PUBLIC_ROUTES）+ HMAC self-gate。行動→pt+axis 換算（config weights・policy 経由）を
