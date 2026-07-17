@@ -128,7 +128,9 @@ export async function sha256Hex(text: string): Promise<string> {
 
 // cite target の実在解決。scan 可能な post/fork のみ検証(欠落→tombstone)。外部型
 // (observation/paper/user/tag/listing/precedent/individual/thread)はここでは検証せず存置。
-async function citeTargetExists(s: TruthStore, ref: CiteRef): Promise<boolean> {
+// exported: V3-WIK-07(月次Lint)が壊れたリンク検出に同じ実在チェックを再利用する
+// (knowledge-lint.ts・重複実装を避ける)。
+export async function citeTargetExists(s: TruthStore, ref: CiteRef): Promise<boolean> {
   if (ref.type === "post") {
     const posts = await s.listEvents(`truth/${POST_TYPE}/`);
     return posts.some((e) => dataOf(e).post_id === ref.id);

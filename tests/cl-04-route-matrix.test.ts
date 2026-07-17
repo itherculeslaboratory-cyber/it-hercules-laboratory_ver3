@@ -23,7 +23,9 @@
 //        protected)= 76 → 同レーン(V3-PPR-12)が +1 route(infra-route-085: GET
 //        /observation/export・protected。reanalyze バッチは既存 batch-commit 拡張のため
 //        新規 route 無し)= 77 → 同レーン(V3-WIK-20)が +1 route(infra-route-086: GET
-//        /knowledge/cell/{id}・protected)= 78。
+//        /knowledge/cell/{id}・protected)= 78 → 同レーン(V3-WIK-07)が +2 route
+//        (infra-route-087: POST /wiki/lint・infra-route-088: GET /wiki/lint-log・
+//        共に protected)= 80。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -55,8 +57,8 @@ function concretePath(p: string): string {
 const rows = loadMatrix();
 
 describe("CL-04 route matrix (71 rows)", () => {
-  it("has exactly 78 route rows", () => {
-    expect(rows.length).toBe(78);
+  it("has exactly 80 route rows", () => {
+    expect(rows.length).toBe(80);
   });
 
   it("access column is only public|protected", () => {

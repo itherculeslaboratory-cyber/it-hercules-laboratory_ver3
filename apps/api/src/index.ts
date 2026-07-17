@@ -22,6 +22,7 @@ import { marketFlagRoutes } from "./market-flag-routes";
 import { plazaRoutes } from "./plaza-routes";
 import { engagementRoutes } from "./engagement-routes";
 import { knowledgeGraphRoutes } from "./knowledge-graph-routes";
+import { knowledgeLintRoutes } from "./knowledge-lint-routes";
 import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
@@ -262,6 +263,11 @@ app.route("/api/v1", engagementRoutes);
 // を1クエリで返す横断投影・既存の cite_refs/cited_paper_ids/citations/forked_from を
 // 束ねるだけ・常駐グラフDBなし・決定論)。
 app.route("/api/v1", knowledgeGraphRoutes);
+
+// Wiki lint (V3-WIK-07): POST /wiki/lint(月次Lintの手動実行=矛盾/孤立ページ/古い記述/
+// リンク切れ・既存 WIK-01 wiki_node[level=lint_log] へ log.md 形式で記録)・
+// GET /wiki/lint-log(履歴)。月次スケジューリングは §6 人間ゲート(常駐なし)。
+app.route("/api/v1", knowledgeLintRoutes);
 
 // Governance / ガバナンス (design-c5.md §K6 §2.1 slot037-040 / V3-GOV-01/09/12/19/23): POST
 // votes/disputes(+messages/close)/flags + 決定論投影(threshold/os-promotion/dispute/
