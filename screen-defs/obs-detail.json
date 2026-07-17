@@ -38,7 +38,7 @@
               "type": "list",
               "props": {
                 "bind_items": "data.detail.photos",
-                "item_image": "/api/v1/observation/{{capture_id}}/image/{{photo_id}}",
+                "item_image": "/api/v1/observation/{{capture_id}}/thumbnail/{{photo_id}}",
                 "item_alt": "観測写真 {{photo_id}}"
               }
             },

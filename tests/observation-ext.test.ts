@@ -408,6 +408,21 @@ describe("OBS-23 thumbnail serve, no raw bulk download", () => {
     // there is no /images (plural) bulk route — only per-photo image/thumbnail.
     expect((await get("/api/v1/observation/cap-1/images", env)).status).toBe(404);
   });
+
+  it("obs-detail.json's photo list binds the thumbnail endpoint, not raw /image/ (regression guard)", async () => {
+    // The screen-def contract itself, not just the API: obs-detail previously
+    // bound its photo-listing item_image to .../image/{photo_id} (the RAW
+    // full-size blob) — every detail-view render would bulk-download raw
+    // photos, exactly what OBS-23 forbids. Read the on-disk def directly so a
+    // future edit reintroducing /image/ here fails loudly.
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const defPath = path.join(process.cwd(), "..", "screen-defs", "obs-detail.json");
+    const def = JSON.parse(fs.readFileSync(defPath, "utf8")) as { nodes: unknown };
+    const json = JSON.stringify(def);
+    expect(json).toContain("/thumbnail/{{photo_id}}");
+    expect(json).not.toMatch(/\/image\/\{\{photo_id\}\}/);
+  });
 });
 
 describe("OBS-25/62 commit is the confirmed save path with the subspecies gate", () => {
