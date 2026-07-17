@@ -18,11 +18,14 @@ const SSOT = "config/design-tokens.json";
 const CSS_OUT = "apps/web/src/app/tokens.generated.css";
 const PACK_OUT = (id) => `theme-packs/${id}.json`;
 
-// The 11 color tokens a ThemePack may fork (design-k4 §1.5). Order is canonical and
+// The 15 color tokens a ThemePack may fork (design-k4 §1.5). Order is canonical and
 // MUST match apps/api/src/ui-constants.ts ThemePack token列 (separate file, same values).
+// info/info-bg/caution/caution-bg added by V3-UIX-04 (色は意味のみ: 緑=成功/赤=失敗に加え
+// 青=情報/黄=注意を区別可能にする。旧実装は caution が danger と同色で失敗と混同していた)。
 export const COLOR_KEYS = [
   "bg", "surface", "surface-2", "text", "text-muted", "border",
   "primary", "primary-text", "focus", "danger", "danger-bg",
+  "info", "info-bg", "caution", "caution-bg",
 ];
 // Pack-invariant tokens (never forked; shared by every screen).
 export const INVARIANT_KEYS = ["radius", "tap", "motion", "font", "fs-1", "fs-2", "fs-3", "fs-4"];

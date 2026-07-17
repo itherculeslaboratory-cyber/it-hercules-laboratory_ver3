@@ -15,6 +15,10 @@
     "primary-text": "#06231a",
     "focus": "#2dd4a7",
     "danger": "#ff6b5e",
-    "danger-bg": "#2a1512"
+    "danger-bg": "#2a1512",
+    "info": "#7ab8ff",
+    "info-bg": "#132436",
+    "caution": "#ffcf5c",
+    "caution-bg": "#332600"
   }
 }

@@ -417,8 +417,11 @@ body {
   outline-offset: 2px;
 }
 
-/* status badge / chip (§2-3): success/warning/caution/neutral tones, all
- * derived from the existing primary/danger/danger-bg/text-muted tokens. */
+/* status badge / chip (§2-3): success/warning/caution/info/neutral tones, all
+ * derived from the theme tokens (色は意味のみ・V3-UIX-04: 緑=成功/生存・赤=失敗・
+ * 青=情報・黄=注意). caution used to share the danger token with warning (visually
+ * indistinguishable from an actual failure) — it now has its own caution/caution-bg
+ * pair so "注意" never reads as "失敗". info is new (blue) for informational badges. */
 .civ-badge {
   display: inline-flex;
   align-items: center;
@@ -443,9 +446,14 @@ body {
   background: var(--civ-danger-bg);
 }
 .civ-badge[data-tone="caution"] {
-  border-color: var(--civ-danger);
-  color: var(--civ-danger);
-  background: transparent;
+  border-color: var(--civ-caution);
+  color: var(--civ-caution);
+  background: var(--civ-caution-bg);
+}
+.civ-badge[data-tone="info"] {
+  border-color: var(--civ-info);
+  color: var(--civ-info);
+  background: var(--civ-info-bg);
 }
 
 /* progress bar / gauge (§2-4) */

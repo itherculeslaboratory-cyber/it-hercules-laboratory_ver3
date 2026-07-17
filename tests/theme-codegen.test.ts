@@ -37,8 +37,21 @@ describe("V3-UIX-16 theme-token codegen", () => {
     expect(css).toContain("@media (prefers-color-scheme: dark) {");
     expect(css).toContain(':root[data-theme="light"] {');
     expect(css).toContain(':root[data-theme="dark"] {');
-    // every one of the 11 colour tokens is emitted
+    // every one of the (now 15) colour tokens is emitted
     for (const k of COLOR_KEYS) expect(css).toContain(`--civ-${k}:`);
+  });
+
+  // V3-UIX-04(色は意味のみ): caution(黄=注意)は以前 danger(赤=失敗)と同色で、badge の
+  // "attention" 表示が「失敗」と見分けがつかなかった。両パックとも caution が danger と
+  // 別値であることを固定し、この退行を再発防止する。
+  it("caution/info トークンは danger/primary と別色(意味の混同を防ぐ・V3-UIX-04)", () => {
+    const doc = loadTokens(ROOT);
+    for (const id of BUILTIN_PACK_IDS) {
+      const t = doc.packs[id].tokens;
+      expect(t.caution.toLowerCase()).not.toBe(t.danger.toLowerCase());
+      expect(t.info.toLowerCase()).not.toBe(t.primary.toLowerCase());
+      expect(t.info.toLowerCase()).not.toBe(t.danger.toLowerCase());
+    }
   });
 
   it("detects a hand-edit to a generated file (逆流禁止)", () => {
@@ -49,7 +62,7 @@ describe("V3-UIX-16 theme-token codegen", () => {
     expect(diffAgainst(tampered, ROOT)).toContain(`stale: ${css}`);
   });
 
-  it("each built-in pack JSON carries a GENERATED header and the 11 colour tokens", () => {
+  it("each built-in pack JSON carries a GENERATED header and the 15 colour tokens", () => {
     for (const id of BUILTIN_PACK_IDS) {
       const raw = read(`theme-packs/${id}.json`);
       expect(raw).toContain("GENERATED");

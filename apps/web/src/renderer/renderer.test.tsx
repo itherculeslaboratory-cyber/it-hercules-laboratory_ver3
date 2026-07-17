@@ -597,6 +597,25 @@ describe("Renderer — A層 badge/progress (c7 ui-parity-map §2-3/§2-4)", () =
     expect(screen.getByText("草案")).toHaveAttribute("data-tone", "neutral");
   });
 
+  // V3-UIX-04: 色は意味のみ(緑=成功/赤=失敗/青=情報/黄=注意)。caution は以前 danger
+  // (warning tone)と同色で「失敗」と見分けがつかなかった — caution/info は各々の
+  // tone として素通しされ neutral へフォールバックしない(=専用トークンで描画される)こと。
+  it("caution と info は neutral にフォールバックしない専用トーンとして通る", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        def={screenDef([
+          { id: "b1", type: "badge", props: { text: "注意", tone: "caution" } },
+          { id: "b2", type: "badge", props: { text: "情報", tone: "info" } },
+          { id: "b3", type: "badge", props: { text: "失敗", tone: "warning" } },
+        ])}
+      />,
+    );
+    expect(screen.getByText("注意")).toHaveAttribute("data-tone", "caution");
+    expect(screen.getByText("情報")).toHaveAttribute("data-tone", "info");
+    expect(screen.getByText("失敗")).toHaveAttribute("data-tone", "warning");
+  });
+
   it("renders a progressbar with the correct aria values and rounded percentage", () => {
     render(
       <Renderer
