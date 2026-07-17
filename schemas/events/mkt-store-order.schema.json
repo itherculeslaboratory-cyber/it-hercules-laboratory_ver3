@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-store-order.schema.json",
+  "title": "Research support store order (ihl.mkt.store_order.v1)",
+  "description": "研究支援ストア商品への注文(V3-MKT-45)。append-only。Truth キー truth/ihl.mkt.store_order.v1/<item_id>/<order_id>.json。在庫チェック必須(route が可用在庫=inventory_count−Σ既存注文quantityを都度再計算して不足なら拒否)。決済成功時に在庫を自動減算=このイベント自体の append が減算(プラチナ決済はroute側で残高チェック後にのみ append=コイン減算)。",
+  "x_ihl_req": "V3-MKT-45",
+  "x_ihl_source": "docs/planning/c5/design-k5.md(research)/06-マーケット.md",
+  "type": "object",
+  "required": ["order_id", "item_id", "actor_id", "payment_method", "quantity", "created_at", "schema_version"],
+  "properties": {
+    "order_id": { "type": "string", "minLength": 1, "description": "注文の一意キー(ULID)。" },
+    "item_id": { "type": "string", "minLength": 1, "description": "対象商品の item_id。" },
+    "actor_id": { "type": "string", "minLength": 1, "description": "注文者の actor_id(セッション principal 強制・V3-AUT-17)。" },
+    "payment_method": { "type": "string", "enum": ["platinum", "cod", "external_ec"], "description": "決済方式。" },
+    "quantity": { "type": "integer", "minimum": 1, "description": "注文個数。" },
+    "unit_price_platinum": { "type": "integer", "minimum": 0, "description": "payment_method=platinum のときの注文時点単価スナップショット(監査用・コイン消費計算の正本)。" },
+    "created_at": { "type": "string", "format": "date-time", "description": "注文時刻(RFC3339)。" },
+    "schema_version": { "type": "string", "minLength": 1, "description": "data スキーマ版。" }
+  },
+  "additionalProperties": false
+}

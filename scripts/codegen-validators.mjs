@@ -119,6 +119,8 @@ const SCHEMAS = [
   ["mktComment", "events/mkt-comment.schema.json"],
   ["mktOfferPolicy", "events/mkt-offer-policy.schema.json"],
   ["mktIndividualOffer", "events/mkt-individual-offer.schema.json"],
+  ["mktStoreItem", "events/mkt-store-item.schema.json"],
+  ["mktStoreOrder", "events/mkt-store-order.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

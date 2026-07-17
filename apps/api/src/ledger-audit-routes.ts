@@ -7,7 +7,9 @@
 // ledger-routes.ts の誤BAN復帰 karma のみが呼ぶ・クライアントが直接 amount を指定して
 // 自己付与できる route は存在しない)。
 // 借方(debit)= ihl.social.platinum_vote.v1(投票 coins・social-routes.ts projectCoinsSpent
-// が正本)。残高 = 貸方累計(projectLedger.platinum_coins) − 借方累計(projectCoinsSpent)。
+// が正本)+ ihl.mkt.store_order.v1(V3-MKT-45 研究支援ストアのプラチナ決済注文・
+// research-store-routes.ts projectStoreCoinsSpent が正本)。残高 = 貸方累計
+// (projectLedger.platinum_coins) − 借方累計(投票 + ストア注文)。
 // 「idempotency_key の UNIQUE 制約」は Truth の putEvent(ULID キー・同一キー再 put 409)が
 // 既に保証している(design-c2 §2 CL-01)ので、本バッチはその保証が実際に破れていないか
 // (ULID 衝突等)を defensive に再確認するだけに留める(二重実装しない=reuse-first)。
@@ -16,6 +18,7 @@ import { TruthStore } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { KARMA_TYPE, COIN_TYPE, projectLedger } from "./ledger-routes";
 import { VOTE_TYPE, projectCoinsSpent } from "./social-routes";
+import { ORDER_TYPE, projectStoreCoinsSpent } from "./research-store-routes";
 
 export const ledgerAuditRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -46,15 +49,17 @@ export async function auditLedger(s: TruthStore): Promise<LedgerAuditReport> {
   const coinEvents = (await s.listEvents(`truth/${COIN_TYPE}/`)).map(dataOf);
   const karmaEvents = (await s.listEvents(`truth/${KARMA_TYPE}/`)).map(dataOf);
   const voteEvents = (await s.listEvents(`truth/${VOTE_TYPE}/`)).map(dataOf);
+  const storeOrderEvents = (await s.listEvents(`truth/${ORDER_TYPE}/`)).map(dataOf);
 
   const actorIds = new Set<string>();
   for (const d of coinEvents) if (typeof d.actor_id === "string") actorIds.add(d.actor_id);
   for (const d of voteEvents) if (typeof d.voter_id === "string") actorIds.add(d.voter_id);
+  for (const d of storeOrderEvents) if (d.payment_method === "platinum" && typeof d.actor_id === "string") actorIds.add(d.actor_id);
 
   const negative: NegativeBalanceRow[] = [];
   for (const actorId of actorIds) {
     const { platinum_coins } = await projectLedger(s, actorId);
-    const spent = await projectCoinsSpent(s, actorId);
+    const spent = (await projectCoinsSpent(s, actorId)) + (await projectStoreCoinsSpent(s, actorId));
     const balance = platinum_coins - spent;
     if (balance < 0) negative.push({ actor_id: actorId, granted: platinum_coins, spent, balance });
   }

@@ -91,3 +91,6 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/individuals/{individual_id}/offer-policy,VPS,Workers,W2,infra-route-085,protected,implemented,V3-MKT-06 個体オファーポリシー投影(誰でも閲覧可・未設定は既定open)
 —,POST,/api/v1/individuals/{individual_id}/offers,VPS,Workers,W2,infra-route-086,protected,implemented,V3-MKT-06 未出品個体への直接オファー/告白方式(love_letter値段非開示・policy=closed/研究限定を拒否)
 —,GET,/api/v1/individuals/{individual_id}/offers,VPS,Workers,W2,infra-route-087,protected,implemented,V3-MKT-06 個体宛オファー一覧(現観測者のみ・love_letterは金額非開示)
+—,POST,/api/v1/research/store/items,VPS,Workers,W2,infra-route-088,protected,implemented,V3-MKT-45 研究支援ストア出品(project_id紐づけ・プラチナ/代引き/外部EC誘導の許可リスト)
+—,GET,/api/v1/research/store/items,VPS,Workers,W2,infra-route-089,protected,implemented,V3-MKT-45 研究支援ストア一覧(可用在庫を都度算出)
+—,POST,/api/v1/research/store/items/{item_id}/orders,VPS,Workers,W2,infra-route-090,protected,implemented,V3-MKT-45 注文(在庫チェック必須・プラチナは残高チェック後にのみ確定・外部EC同期は実鍵無しで縮退)

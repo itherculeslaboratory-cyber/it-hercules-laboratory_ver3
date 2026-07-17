@@ -28,6 +28,7 @@ import { marketRatingRoutes } from "./market-rating-routes";
 import { marketPaymentGuidanceRoutes } from "./market-payment-guidance-routes";
 import { marketCommentRoutes } from "./market-comment-routes";
 import { marketIndividualOfferRoutes } from "./market-individual-offer-routes";
+import { researchStoreRoutes } from "./research-store-routes";
 import { marketTemplateRoutes } from "./market-template-routes";
 import { marketPricingRoutes } from "./market-pricing-routes";
 import { piiRoutes } from "./pii-routes";
@@ -388,6 +389,11 @@ app.route("/api/v1", paperMatchRoutes);
 // 全て protected・書込 actor_id はセッション principal。GET /:id/... はセグメント数が多く
 // researchContentRoutes の GET /research/content/:id を侵さない(fall-through で本 route が拾う)。
 app.route("/api/v1", projectRoutes);
+
+// V3-MKT-45 研究支援ストア(project_id 紐づけ・プラチナ/代引き/外部EC誘導の3方式):
+// POST/GET /research/store/items・POST /research/store/items/{id}/orders。全て保護・
+// 在庫チェック必須(都度再計算)。外部EC同期は実鍵無しで縮退(research-ec-adapter.ts)。
+app.route("/api/v1", researchStoreRoutes);
 
 // Canonical mapping / Category (design-k5 §2.1 / V3-PPR-13): POST/GET /research/canonical/
 // mapping(+/:qid)・POST/GET /research/categories。Wikidata Q番号↔専門 DB 対応を append-only

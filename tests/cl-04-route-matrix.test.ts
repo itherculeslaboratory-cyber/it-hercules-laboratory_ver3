@@ -20,7 +20,9 @@
 //        082..083: POST/GET /market/listings/{listing_id}/comments・protected)= 75 →
 //        同レーンが V3-MKT-06 個体直接オファー+ポリシー +4 route(infra-route-084..087:
 //        POST/GET /individuals/{id}/offer-policy・POST/GET /individuals/{id}/offers・
-//        protected)= 79。
+//        protected)= 79 → 同レーンが V3-MKT-45 研究支援ストア +3 route(infra-route-
+//        088..090: POST/GET /research/store/items・POST /research/store/items/{id}/orders・
+//        protected)= 82。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -51,9 +53,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (79 rows)", () => {
-  it("has exactly 79 route rows", () => {
-    expect(rows.length).toBe(79);
+describe("CL-04 route matrix (82 rows)", () => {
+  it("has exactly 82 route rows", () => {
+    expect(rows.length).toBe(82);
   });
 
   it("access column is only public|protected", () => {

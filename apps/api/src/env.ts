@@ -44,6 +44,10 @@ export type Bindings = {
   // AI プロバイダ名(design-k7 FND-21 §1.6). 未設定=AI_DISABLED(既定 OFF・不変条項①)。
   // 実プロバイダの鍵投入は人間ゲート。実値は env のみ。
   IHL_AI_PROVIDER?: string;
+  // V3-MKT-45 外部EC(BASE/Shopify)アダプタ(research-ec-adapter.ts)。未設定=在庫同期
+  // なし(縮退・注文自体はブロックしない)。実鍵投入は人間ゲート。
+  BASE_EC_API_KEY?: string;
+  SHOPIFY_EC_API_KEY?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

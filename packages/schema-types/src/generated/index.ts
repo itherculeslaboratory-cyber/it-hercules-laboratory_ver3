@@ -46,6 +46,8 @@ export * from "./events/mkt-post-office";
 export * from "./events/mkt-rating";
 export * from "./events/mkt-reservation-event";
 export * from "./events/mkt-reservation";
+export * from "./events/mkt-store-item";
+export * from "./events/mkt-store-order";
 export * from "./events/mkt-template";
 export * from "./events/mkt-transaction-event";
 export * from "./events/obs-analysis";

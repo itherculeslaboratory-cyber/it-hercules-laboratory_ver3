@@ -116,6 +116,10 @@ const VALIDATOR_NAME: Record<string, string> = {
   // オファーポリシー(拒否設定は現観測者=個体の actor_id)。
   "mkt-offer-policy": "mktOfferPolicy",
   "mkt-individual-offer": "mktIndividualOffer",
+  // V3-MKT-45(市場フォローレーン C8 g04): 研究支援ストア(project_id 紐づけ・
+  // プラチナ/代引き/外部EC誘導の3方式)。
+  "mkt-store-item": "mktStoreItem",
+  "mkt-store-order": "mktStoreOrder",
 };
 
 const FROZEN_NAMES = new Set([
@@ -226,6 +230,8 @@ const EVENT_NAMES = new Set([
   "mkt-comment",
   "mkt-offer-policy",
   "mkt-individual-offer",
+  "mkt-store-item",
+  "mkt-store-order",
 ]);
 
 function validatorFor(name: string): ValidateFn {
