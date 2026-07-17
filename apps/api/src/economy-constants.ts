@@ -38,6 +38,7 @@ export const CONTRIBUTION_PER_PLATINUM = 100; // V3-KRM-11/12 1PT鋳造基礎
 export const CONTRIBUTION_TITLE_THRESHOLD = 10000; // V3-KRM-11 称号(GUI可変)
 export const KARMA_BAN_THRESHOLD = -100; // V3-KRM-04 永久BAN
 export const SOCIAL_EVAL_LAYER_MAX = 3; // V3-KRM-20 layer0-3のみ
+export const LAYER4_FIXED_ASSET = 4; // V3-MKT-35 固定資産/ブランド/世界観(投票・フォーク・お気に入り不可)
 export const LOW_RATING_BAD_THRESHOLD = 5; // V3-MKT-27
 export const LOW_RATING_KARMA_MAX = 0; // V3-MKT-27
 export const LOW_RATING_STAR_MAX = 2; // V3-MKT-27
@@ -50,6 +51,13 @@ export const RANKING_WEIGHTS = {
 } as const; // V3-MKT-22
 export const INTL_TRUST_MIN = 0; // V3-KRM-21
 export const INTL_TRUST_MAX = 100; // V3-KRM-21
+
+// V3-KRM-28 観測commit成功時の研究貢献度フック(axis=research・source=observation)。
+// 数値は要件文の固定アンカー(observation_saved +5 / observation_with_photo +3 /
+// individual_created +10)。with_photo は saved に対する追加加点(排他ではない)。
+export const CONTRIB_OBSERVATION_SAVED = 5;
+export const CONTRIB_OBSERVATION_WITH_PHOTO = 3;
+export const CONTRIB_INDIVIDUAL_CREATED = 10;
 
 // ─── round-16 裁定(D節 OQ-MKT-01〜04・決済裁定受領7)市場状態機械パラメータ ─────
 // V3-MKT-01/02 成立2方式+状態機械5脚+P2P決済(銀行振込既定・IHL非関与)。数値は全て

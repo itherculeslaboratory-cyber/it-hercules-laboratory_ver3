@@ -1,7 +1,7 @@
 // KRM-10/11/12 3 軸貢献度エンジン + PT 影響力投影 + 免罪符ステージ（非 cron 部分）。
 // 全て純関数 or prefix-scan+reduce の projectLedger 型・都度再計算（常駐 DB 禁止・
 // 不変条項①）。月次還元（KRM-11 rebate）/ 月次 Fib 降下（KRM-12）は cron=P6 に分離。
-import { TruthStore } from "@ihl/truth";
+import { TruthStore, ulid, type PutEventResult } from "@ihl/truth";
 import { fib } from "./ledger-routes";
 import {
   CONTRIBUTION_PER_PLATINUM,
@@ -11,6 +11,8 @@ import {
 
 export const PT_TYPE = "ihl.economy.pt_event.v1";
 export const CONTRIBUTION_TYPE = "ihl.economy.contribution_event.v1";
+const CONTRIBUTION_SCHEMA = "schemas/events/economy-contribution-event.schema.json";
+const SCHEMA_VERSION = "1";
 
 export type Axis = "research" | "capital" | "development";
 export const AXES: readonly Axis[] = ["research", "capital", "development"];
@@ -83,6 +85,44 @@ export async function projectContribution(
   return { actor_id: actorId, axes, axis_list };
 }
 
+// 貢献イベントを append する共有ヘルパ(github-webhook-routes.ts はそれ以前から独自に
+// envelope を組んでいるため据置・新規呼び出し元=V3-KRM-28 観測commit/個体作成フックは
+// これを再利用しコピペ二重化しない)。delta<=0 は何もしない(schema minimum:0 と
+// 同じ non-negative invariant をルート側で守るための早期 no-op)。
+export async function appendContribution(
+  s: TruthStore,
+  actorId: string,
+  nodeId: string,
+  axis: Axis,
+  delta: number,
+  source: string,
+  sourceRef?: string,
+): Promise<PutEventResult | null> {
+  if (!(delta > 0)) return null;
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    contribution_event_id: id,
+    node_id: nodeId,
+    actor_id: actorId,
+    axis,
+    delta,
+    source,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (sourceRef) data.source_ref = sourceRef;
+  return s.putEvent({
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: CONTRIBUTION_TYPE,
+    time: new Date().toISOString(),
+    dataschema: CONTRIBUTION_SCHEMA,
+    provenance: { generator_kind: "human", actor_id: actorId },
+    data,
+  });
+}
+
 // ── 依存グラフ配分（KRM-11・純関数 reducer）─────────────────────────────
 // 子ノードへ delta を加算。祖先があれば UPSTREAM_PERCENT を祖先へ均等配分し、子は
 // その分を減額（保存＝総和は delta のまま）。祖先無しは配分せず子に全額残す。
@@ -110,6 +150,33 @@ export function applyContributionDelta(
     for (const a of ancestors) bump(a, per);
   }
   return scores;
+}
+
+// ── フォーク系譜解決（KRM-12・round-16裁定「フォーク10%=金銭でなく貢献度の分配」）──
+// フォークされたテンプレ/部品が使われた時、使用者に付与される貢献度の10%を
+// 「上流(部品/コンポーネント作者・処理/技術開発者・元テンプレ作者)へlineageに
+// 沿って」分配する — 単純に親1件だけでなく forked_from を辿れるだけ辿った
+// 全上流（祖父母世代以前も含む）を ancestors として集める。applyContributionDelta
+// は既に ancestors 配列全体へ 10% を均等配分する汎用実装（KRM-11 と共有）なので、
+// 本関数はその配列を「lineage 全体」から機械的に作るだけの純関数(ドメイン非依存:
+// market テンプレート/proposal フォーク等、forked_from を持つ任意のノード列を渡せる
+// — market-*routes 自体はこのレーンの担当外のため配線しない。呼び出し側で
+// この関数の戻り値を applyContributionDelta(..., ancestors) に渡すだけでよい)。
+// 循環参照は visited セットで防御（壊れた/自己参照データでも無限ループしない）。
+export function resolveLineage(
+  nodes: { node_id: string; forked_from?: string }[],
+  nodeId: string,
+): string[] {
+  const byId = new Map(nodes.map((n) => [n.node_id, n]));
+  const lineage: string[] = [];
+  const visited = new Set<string>([nodeId]);
+  let cur = byId.get(nodeId)?.forked_from;
+  while (cur && !visited.has(cur)) {
+    lineage.push(cur);
+    visited.add(cur);
+    cur = byId.get(cur)?.forked_from;
+  }
+  return lineage;
 }
 
 // ── PT 影響力投影（KRM-10・非公開＝本人のみ）─────────────────────────────

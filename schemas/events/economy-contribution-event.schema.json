@@ -35,8 +35,8 @@
     },
     "source": {
       "type": "string",
-      "enum": ["github", "board", "fork", "vote", "tax", "manual"],
-      "description": "貢献の出所（github / board / fork / vote / tax / manual）。"
+      "enum": ["github", "board", "fork", "vote", "tax", "manual", "observation"],
+      "description": "貢献の出所（github / board / fork / vote / tax / manual / observation＝V3-KRM-28 観測commit/個体作成フック）。"
     },
     "source_ref": {
       "type": "string",

@@ -11,7 +11,10 @@
 #   追加 → 71 rows。g01-基盤コストレーン(V3-CST-02)がランニングコスト透明性
 #   ダッシュボード新規 1 route(infra-route-080・GET /api/v1/costs・protected)を
 #   追加 → 72 rows、V3-AIP-67(GitHub Issues/掲示板→AI要約スレ)が新規 1 route
-#   (infra-route-081・protected)を追加 → 73 rows。
+#   (infra-route-081・protected)を追加 → 73 rows。g04-経済レーン(V3-MKT-35)が
+#   プラチナ投票通貨の専用route新規 1 route(infra-route-082・POST
+#   /api/v1/economy/vote・protected・infra-route-081とAIP-67統合が先取したため
+#   採番をずらして解決)を追加 → 74 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -88,3 +91,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/plaza/threads/{thread_id}/resolution,VPS,Workers,W2,infra-route-079,protected,implemented,知の広場スレ解決マーク(round-16裁定OQ-PLZ-03)・権限=スレ主のみ・append-only supersedeパターン(resolution_id ULID昇順の最後が現在値)
 —,GET,/api/v1/costs,VPS,Workers,W2,infra-route-080,protected,implemented,V3-CST-02ランニングコスト透明性ダッシュボード・Sakura VPS手動値+R2使用量(CF API未配線=config/running-costs.jsonのmanual_override_yenへdegrade)・ログイン済み全ユーザー閲覧可(追加ロール制限なし)
 —,POST,/api/v1/ai-digest/sync,VPS,Workers,W2,infra-route-081,protected,implemented,V3-AIP-67 GitHub Issues/掲示板→AI要約スレ・requireRole operator/admin手動即時実行・ai-kernel LLMClient(既定AI_DISABLED)+ai-profiles/newspaper.json再利用・保存はihl.plaza.post.v1(channel=knowledge-board)を再利用し新イベント型を増やさない
+—,POST,/api/v1/economy/vote,VPS,Workers,W2,infra-route-082,protected,implemented,V3-MKT-35 プラチナコイン投票通貨(対象・レイヤー0-3・枚数・理由指定・レイヤー4は403)・KRM-25 castPlatinumVote共有コア再利用

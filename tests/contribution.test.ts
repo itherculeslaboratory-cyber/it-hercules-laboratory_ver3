@@ -14,6 +14,7 @@ import {
   mintFromScore,
   projectContribution,
   projectPt,
+  resolveLineage,
 } from "../apps/api/src/contribution";
 import { FakeR2Bucket } from "./helpers";
 
@@ -145,6 +146,42 @@ describe("KRM-10 3 軸貢献度投影 projectContribution", () => {
     await s.putEvent(contribEnvelope(other, "research", 500));
     const p = await projectContribution(s, ACTOR);
     for (const axis of AXES) expect(p.axes[axis].score).toBe(0);
+  });
+});
+
+describe("KRM-12 resolveLineage（round-16: フォーク10%=貢献度の分配・lineage全体へ）", () => {
+  const nodes = [
+    { node_id: "grandparent" }, // 元テンプレ作者(祖先の終端・forked_from なし)
+    { node_id: "parent", forked_from: "grandparent" }, // 部品/コンポーネント作者
+    { node_id: "child", forked_from: "parent" }, // 使用者がフォークした版
+  ];
+
+  it("forked_from を全て辿り、親だけでなく祖父母世代も ancestors に含む", () => {
+    expect(resolveLineage(nodes, "child")).toEqual(["parent", "grandparent"]);
+  });
+
+  it("forked_from が無いノード（元祖）は空配列（配分先なし＝全額本人）", () => {
+    expect(resolveLineage(nodes, "grandparent")).toEqual([]);
+  });
+
+  it("戻り値を applyContributionDelta の ancestors にそのまま渡すと lineage 全体で 10% 均等分配される", () => {
+    const ancestors = resolveLineage(nodes, "child");
+    const scores = applyContributionDelta({}, "child", "research", 100, ancestors);
+    expect(scores.child.research).toBe(90);
+    expect(scores.parent.research).toBe(5);
+    expect(scores.grandparent.research).toBe(5);
+  });
+
+  it("循環参照があっても無限ループせず安全に止まる（壊れたデータへの防御）", () => {
+    const cyclic = [
+      { node_id: "a", forked_from: "b" },
+      { node_id: "b", forked_from: "a" },
+    ];
+    expect(resolveLineage(cyclic, "a")).toEqual(["b"]);
+  });
+
+  it("未知ノード指定は forked_from が引けず空配列", () => {
+    expect(resolveLineage(nodes, "unknown")).toEqual([]);
   });
 });
 

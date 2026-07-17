@@ -6,6 +6,7 @@
 "01-requirements/retracted.md","e99bd99236",""
 "01-requirements/srs.md","4009757904",""
 "02-design/adr/adr-v3-emb-01-embedding-dimension.md","78bdadd05e",""
+"02-design/adr/adr-v3-krm-18-legacy-economy-kernel-reconcile.md","242cb238f8",""
 "02-design/adr/adr-v3-layer-01-truth-projection.md","aaa7c64811",""
 "02-design/adr/adr-v3-sec-56-listing-registry-boundary.md","6333c37cd5",""
 "02-design/adr/adr-v3-wasm-01-script-driver.md","318e86e27f",""

@@ -28,6 +28,17 @@
       "minimum": 1,
       "description": "投じたコイン枚数（1票=1coin・任意枚数）。"
     },
+    "target_layer": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4,
+      "description": "投票対象のレイヤー（0=コード〜3=機能/OS構成が投票可能域。4=固定資産/ブランド/世界観は投票・フォーク・お気に入り不可＝V3-MKT-35。/economy/vote 経由の投票のみ必須供給、/social/platinum-votes 経由は任意=既存互換）。"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投票理由（V3-MKT-35 /economy/vote が枚数と併せて要求する自由記述）。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

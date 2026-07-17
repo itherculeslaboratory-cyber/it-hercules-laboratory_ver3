@@ -25,6 +25,14 @@ export interface SocialPlatinumVote {
    */
   coins: number;
   /**
+   * 投票対象のレイヤー（0=コード〜3=機能/OS構成が投票可能域。4=固定資産/ブランド/世界観は投票・フォーク・お気に入り不可＝V3-MKT-35。/economy/vote 経由の投票のみ必須供給、/social/platinum-votes 経由は任意=既存互換）。
+   */
+  target_layer?: number;
+  /**
+   * 投票理由（V3-MKT-35 /economy/vote が枚数と併せて要求する自由記述）。
+   */
+  reason?: string;
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;
