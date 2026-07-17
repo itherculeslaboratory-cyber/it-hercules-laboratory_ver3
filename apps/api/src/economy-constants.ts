@@ -51,6 +51,13 @@ export const RANKING_WEIGHTS = {
 export const INTL_TRUST_MIN = 0; // V3-KRM-21
 export const INTL_TRUST_MAX = 100; // V3-KRM-21
 
+// V3-KRM-28 観測commit成功時の研究貢献度フック(axis=research・source=observation)。
+// 数値は要件文の固定アンカー(observation_saved +5 / observation_with_photo +3 /
+// individual_created +10)。with_photo は saved に対する追加加点(排他ではない)。
+export const CONTRIB_OBSERVATION_SAVED = 5;
+export const CONTRIB_OBSERVATION_WITH_PHOTO = 3;
+export const CONTRIB_INDIVIDUAL_CREATED = 10;
+
 // ─── round-16 裁定(D節 OQ-MKT-01〜04・決済裁定受領7)市場状態機械パラメータ ─────
 // V3-MKT-01/02 成立2方式+状態機械5脚+P2P決済(銀行振込既定・IHL非関与)。数値は全て
 // ここだけを直す(V3-GOV-17 将来調整 GUI 化を見越し集約・ハードコード散在禁止)。

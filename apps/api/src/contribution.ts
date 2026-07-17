@@ -1,7 +1,7 @@
 // KRM-10/11/12 3 軸貢献度エンジン + PT 影響力投影 + 免罪符ステージ（非 cron 部分）。
 // 全て純関数 or prefix-scan+reduce の projectLedger 型・都度再計算（常駐 DB 禁止・
 // 不変条項①）。月次還元（KRM-11 rebate）/ 月次 Fib 降下（KRM-12）は cron=P6 に分離。
-import { TruthStore } from "@ihl/truth";
+import { TruthStore, ulid, type PutEventResult } from "@ihl/truth";
 import { fib } from "./ledger-routes";
 import {
   CONTRIBUTION_PER_PLATINUM,
@@ -11,6 +11,8 @@ import {
 
 export const PT_TYPE = "ihl.economy.pt_event.v1";
 export const CONTRIBUTION_TYPE = "ihl.economy.contribution_event.v1";
+const CONTRIBUTION_SCHEMA = "schemas/events/economy-contribution-event.schema.json";
+const SCHEMA_VERSION = "1";
 
 export type Axis = "research" | "capital" | "development";
 export const AXES: readonly Axis[] = ["research", "capital", "development"];
@@ -81,6 +83,44 @@ export async function projectContribution(
   }
   const axis_list = AXES.map((axis) => ({ axis, ...axes[axis] }));
   return { actor_id: actorId, axes, axis_list };
+}
+
+// 貢献イベントを append する共有ヘルパ(github-webhook-routes.ts はそれ以前から独自に
+// envelope を組んでいるため据置・新規呼び出し元=V3-KRM-28 観測commit/個体作成フックは
+// これを再利用しコピペ二重化しない)。delta<=0 は何もしない(schema minimum:0 と
+// 同じ non-negative invariant をルート側で守るための早期 no-op)。
+export async function appendContribution(
+  s: TruthStore,
+  actorId: string,
+  nodeId: string,
+  axis: Axis,
+  delta: number,
+  source: string,
+  sourceRef?: string,
+): Promise<PutEventResult | null> {
+  if (!(delta > 0)) return null;
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    contribution_event_id: id,
+    node_id: nodeId,
+    actor_id: actorId,
+    axis,
+    delta,
+    source,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (sourceRef) data.source_ref = sourceRef;
+  return s.putEvent({
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: CONTRIBUTION_TYPE,
+    time: new Date().toISOString(),
+    dataschema: CONTRIBUTION_SCHEMA,
+    provenance: { generator_kind: "human", actor_id: actorId },
+    data,
+  });
 }
 
 // ── 依存グラフ配分（KRM-11・純関数 reducer）─────────────────────────────

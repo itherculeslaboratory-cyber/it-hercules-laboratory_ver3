@@ -12,6 +12,8 @@ import {
   CONFIDENCE_ORDER,
 } from "./observation-constants";
 import type { Bindings, Variables } from "./env";
+import { appendContribution } from "./contribution";
+import { CONTRIB_OBSERVATION_SAVED, CONTRIB_OBSERVATION_WITH_PHOTO } from "./economy-constants";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -817,6 +819,21 @@ export async function writeCaptureFromCommitBody(
   );
   if (res.status === "invalid") return { ok: false, error: "INVALID_CAPTURE", details: res.errors };
   if (res.status === "conflict") return { ok: false, error: "DUPLICATE_CAPTURE" };
+
+  // V3-KRM-28: 観測commit成功時の研究貢献度フック(axis=research・source=observation)。
+  // observation_saved は毎回固定 +5、その上で当該 capture に既存の写真(先に
+  // /observation/upload 済み)があれば with_photo 追加 +3(排他ではなく加算)。
+  // ベストエフォート: 貢献付与の失敗でcommit自体を失敗させない(観測の保存が主目的)。
+  try {
+    await appendContribution(s, actorId, captureId, "research", CONTRIB_OBSERVATION_SAVED, "observation");
+    const photos = await s.listEvents(`truth/${PHOTO_TYPE}/${captureId}-`);
+    if (photos.length > 0) {
+      await appendContribution(s, actorId, captureId, "research", CONTRIB_OBSERVATION_WITH_PHOTO, "observation");
+    }
+  } catch (e) {
+    console.error("KRM-28 contribution hook failed (commit itself already succeeded):", e);
+  }
+
   return { ok: true, capture_id: captureId };
 }
 

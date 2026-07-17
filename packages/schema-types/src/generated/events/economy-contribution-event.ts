@@ -29,9 +29,9 @@ export interface EconomyContributionEvent {
    */
   delta: number;
   /**
-   * 貢献の出所（github / board / fork / vote / tax / manual）。
+   * 貢献の出所（github / board / fork / vote / tax / manual / observation＝V3-KRM-28 観測commit/個体作成フック）。
    */
-  source: "github" | "board" | "fork" | "vote" | "tax" | "manual";
+  source: "github" | "board" | "fork" | "vote" | "tax" | "manual" | "observation";
   /**
    * 出所イベント／対象の参照（任意）。
    */

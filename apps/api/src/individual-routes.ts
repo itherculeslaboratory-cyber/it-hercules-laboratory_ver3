@@ -11,6 +11,8 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES } from "./observation-constants";
+import { appendContribution } from "./contribution";
+import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
 
 export const individualRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -583,6 +585,15 @@ export async function createIndividualMaster(
     `truth/${MASTER_TYPE}/${individualId}.json`,
     envelope(MASTER_TYPE, SCHEMA.master, actorId, data),
   );
+  // V3-KRM-28: 個体作成成功時の研究貢献度フック(axis=research・source=observation・
+  // +10)。ベストエフォート(失敗しても個体作成自体は成立済み・呼び出し元を壊さない)。
+  if (res.status === "inserted") {
+    try {
+      await appendContribution(s, actorId, individualId, "research", CONTRIB_INDIVIDUAL_CREATED, "observation");
+    } catch (e) {
+      console.error("KRM-28 individual_created contribution hook failed:", e);
+    }
+  }
   return { individualId, res };
 }
 
