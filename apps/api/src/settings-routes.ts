@@ -17,7 +17,15 @@ const SCHEMA_VERSION = "1";
 // (V3-AUT-35/I18-02)の内部必須属性(UI非表示)。KRM-21 profile-routes.ts の
 // CONFIGURABLE_FIELDS が既に "country" を宣言済みで、この pref-set 経路が実体を持つ
 // (V3-GOV-35 の同国スコープ判定が最初の利用先)。
-const PREF_FIELDS = ["locale", "theme_pack_id", "template_id", "reduced_motion_override", "country"] as const;
+const PREF_FIELDS = [
+  "locale",
+  "theme_pack_id",
+  "template_id",
+  "reduced_motion_override",
+  "country",
+  "ui_exposure",
+  "push_notifications_enabled",
+] as const;
 
 export const settingsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -34,6 +42,8 @@ export type Preferences = {
   template_id: string;
   reduced_motion_override: string;
   country: string;
+  ui_exposure: string;
+  push_notifications_enabled: string;
 };
 
 // 選好投影(都度再計算)。pref-set を prefix scan → actor 一致のみ → created_at/ULID
@@ -58,6 +68,8 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
     template_id: DEFAULT_TEMPLATE_ID,
     reduced_motion_override: "system",
     country: "", // 未設定(round-16: 国籍は任意の内部属性・既定は非選択)
+    ui_exposure: "user", // V3-UIX-43: 既定は一般ユーザー表示(dev/adminは自己申告トグル)
+    push_notifications_enabled: "off", // V3-UIX-43: 配信基盤は人間ゲート・既定オフ
   };
   for (const e of events) {
     for (const k of PREF_FIELDS) {

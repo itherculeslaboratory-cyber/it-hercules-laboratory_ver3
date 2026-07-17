@@ -55,6 +55,8 @@ describe("UIX-16 選好 append + LWW 投影", () => {
       template_id: "default",
       reduced_motion_override: "system",
       country: "",
+      ui_exposure: "user",
+      push_notifications_enabled: "off",
     });
   });
 
@@ -98,5 +100,17 @@ describe("UIX-16/I18-08 負の validation(write-time 検証配線・批評家修
     expect((await patchPrefs(env, h, { country: "JP" })).status).toBe(200);
     const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
     expect(p.country).toBe("JP");
+  });
+
+  // V3-UIX-43: /me/settings 集約の一部として追加した2フィールド(UI露出トグル・push選好)。
+  it("ui_exposure/push_notifications_enabled は enum のみ許可し append される", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("dave");
+    expect((await patchPrefs(env, h, { ui_exposure: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { push_notifications_enabled: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { ui_exposure: "dev", push_notifications_enabled: "on" })).status).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.ui_exposure).toBe("dev");
+    expect(p.push_notifications_enabled).toBe("on");
   });
 });

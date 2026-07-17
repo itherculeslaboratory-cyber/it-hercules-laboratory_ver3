@@ -37,6 +37,14 @@ export interface PrefSet {
    */
   country?: string;
   /**
+   * UI 露出レベル(V3-UIX-43・/me/settings 集約)。dev/admin は screen-def の開発者向けノード(未整備計測・内部ID等)の表示切替に使う自己申告フラグ。サーバ側の権限判定を置き換えない(表示のみ・任意・既定 user)。
+   */
+  ui_exposure?: "user" | "dev" | "admin";
+  /**
+   * Push 通知の利用者選好(V3-UIX-43)。実際の配信基盤(VAPID鍵・購読エンドポイント)は本番鍵投入を伴う人間ゲート(§5)であり本フィールドは自己管理設定の保持のみ(任意・既定 off)。
+   */
+  push_notifications_enabled?: "on" | "off";
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;

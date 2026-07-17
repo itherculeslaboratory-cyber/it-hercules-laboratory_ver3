@@ -43,6 +43,16 @@
       "pattern": "^[A-Z]{2}$",
       "description": "所属国(ISO 3166-1 alpha-2・任意・round-16裁定 V3-AUT-35/I18-02: UI非表示の内部属性。用途は規制/合法性の国別フィルタリング・行政介入スコープ(V3-GOV-35)・翻訳/通関/送料判定(V3-I18-17)に限定。国際信頼スコア等への汎用拡張は未裁定=対象外)。"
     },
+    "ui_exposure": {
+      "type": "string",
+      "enum": ["user", "dev", "admin"],
+      "description": "UI 露出レベル(V3-UIX-43・/me/settings 集約)。dev/admin は screen-def の開発者向けノード(未整備計測・内部ID等)の表示切替に使う自己申告フラグ。サーバ側の権限判定を置き換えない(表示のみ・任意・既定 user)。"
+    },
+    "push_notifications_enabled": {
+      "type": "string",
+      "enum": ["on", "off"],
+      "description": "Push 通知の利用者選好(V3-UIX-43)。実際の配信基盤(VAPID鍵・購読エンドポイント)は本番鍵投入を伴う人間ゲート(§5)であり本フィールドは自己管理設定の保持のみ(任意・既定 off)。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",
