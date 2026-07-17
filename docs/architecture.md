@@ -3,7 +3,7 @@ id: V3-DOC-ARCHITECTURE
 title: アーキテクチャ 1 ページ骨格
 date: "2026-07-10"
 status: approved
-requirement_ids: [V3-AIP-61, V3-FND-01, V3-FND-02, V3-FND-14, V3-UIX-17]
+requirement_ids: [V3-AIP-61, V3-FND-01, V3-FND-02, V3-FND-14, V3-UIX-17, V3-AIP-104]
 ---
 
 # アーキテクチャ 1 ページ骨格
@@ -44,6 +44,16 @@ screen-defs/（データ）──読まれる──► apps/web の単一 Render
 - **apps → apps 禁止**（D1）。`libs/ packages/ components/ → apps` 禁止（D2）。`*/shared/` 禁止（D3）。
 - `schemas/` は葉。codegen の向きは schemas → generated の一方向（D4）。
 - `screen-defs/` はデータ。import せず Renderer だけが読む（D5）。UI はロジックを持たず transform は components/libs 側（D6）。
+
+## 写真解析/embedding 実行場所（BYOC・V3-AIP-104）
+
+第16回裁定（受領5補足）の確定方針。V3-AIP-40（BYOK＝鍵は持ち込み）と同型の **BYOC（Bring Your Own Compute＝計算資源も持ち込み）**。段階委譲の3層（`schemas/ai-profile.schema.json` の `compute_location`）:
+
+1. **device（既定・第一選択）**: 撮影後の写真解析・embedding は端末（スマホ）内で完結させる。骨格 #3 の「端末 ONNX オフロード」（DINOv2 384 / ruri-v3-70m 384、WASM/WebGPU/ONNX）がこの既定を実装で担保する。
+2. **docker（収まらない高度解析のみ）**: 端末に収まらない重い解析だけ、ユーザー自身のローカル Docker（任意レイヤー）へ委譲。`components/collector-switchbot` と同じ C-USB 部品契約（骨格 #4）で境界を固定。SwitchBot 収集は Docker collector の従用途、写真解析が主用途（第16回裁定で再定義）。
+3. **cloud（ユーザー opt-in の BYOK）**: `ai-profiles/image-analysis.json` のようにユーザー自身の鍵で外部 API を使う場合のみ。サーバ常駐 LLM/Vision は既定 OFF（不変条項①）。
+
+計算資源はどの層でも **ユーザー側負担が原則**。IHL はサーバ側で常時稼働する解析基盤を持たない。
 
 ## デプロイ端点
 

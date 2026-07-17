@@ -1,5 +1,5 @@
 {
-  "$comment": "RTM 正本 (hand-authored). K8 traceability closure — every C5 K8 implementation-target requirement (13) closes on the five V-model gates (req/det/test/trn_ui/retrofit). The TEST gate is load-bearing (テスト設計免除不可・V3-AIP-05). rtm.csv/rtm.md are GENERATED from this file by scripts/gen-rtm-views.mjs (--check gates drift); never hand-edit those two. check-rtm.mjs reads `mode`: warn = print unclosed gates but exit 0 (C5 in flight); enforce = exit 1. The warn→enforce flip and check-commit-msg BASELINE_REF are set by the coordinator once ALL clusters' TC are green (§1.8/§5).",
+  "$comment": "RTM 正本 (hand-authored). Started as C5 K8 traceability closure (13 requirements) and is extended incrementally by any lane that can back a new entry with a REAL test reference (V3-AIP-07 — RTM 100%紐づけ。全749件の一括充足は1レーンでは不可能なため、各レーンが自分の実装分を正直に足す運用。捏造禁止 — testの無いIDは足さない). Every entry closes on the five V-model gates (req/det/test/trn_ui/retrofit). The TEST gate is load-bearing (テスト設計免除不可・V3-AIP-05). rtm.csv/rtm.md are GENERATED from this file by scripts/gen-rtm-views.mjs (--check gates drift); never hand-edit those two. check-rtm.mjs reads `mode`: warn = print unclosed gates but exit 0 (C5 in flight); enforce = exit 1. The warn→enforce flip and check-commit-msg BASELINE_REF are set by the coordinator once ALL clusters' TC are green (§1.8/§5).",
   "mode": "warn",
   "requirements": [
     {
@@ -119,6 +119,46 @@
       "test": ["tests/check-public-docs.test.ts"],
       "trn_ui": ["docs/public/protocol.md"],
       "retrofit": ["docs/planning/c5/c5-cluster-table.md#k8"]
+    },
+    {
+      "id": "V3-AIP-104",
+      "title": "写真解析/embedding実行場所のBYOC3層設計(device既定/docker/cloud)",
+      "note": "C8 g09 レーンで追加(round-16裁定・受領5補足)。",
+      "req": ["01-requirements/srs.md#V3-AIP-104"],
+      "det": ["docs/architecture.md#写真解析embedding-実行場所byocv3-aip-104"],
+      "test": ["tests/ai-profile.test.ts"],
+      "trn_ui": ["screen-defs/ai-profile-settings.json"],
+      "retrofit": ["ai-profiles/image-analysis.json"]
+    },
+    {
+      "id": "V3-AIP-93",
+      "title": "file-board linkage レジストリ(repo_path+sha256短縮・CI一致検証)",
+      "note": "C8 g09 レーンで追加。board_thread_id の実スレ紐づけ自体は継続運用(本エントリはレジストリ機構の閉包)。",
+      "req": ["01-requirements/srs.md#V3-AIP-93"],
+      "det": ["scripts/gen-file-board-registry.mjs"],
+      "test": ["tests/file-board-registry.test.ts"],
+      "trn_ui": ["04-traceability/file-board-registry.csv"],
+      "retrofit": ["package.json#lint"]
+    },
+    {
+      "id": "V3-AIP-31",
+      "title": "人間ゲート必須・ワンクリック全自動禁止のauto-gate-bypass機械ガード",
+      "note": "C8 g09 レーンで追加(check-danger-code.mjs拡張)。",
+      "req": ["01-requirements/srs.md#V3-AIP-31"],
+      "det": ["scripts/check-danger-code.mjs"],
+      "test": ["tests/guards.test.ts"],
+      "trn_ui": ["docs/onboarding.md#4-最初のpr残り"],
+      "retrofit": ["AGENTS.md#人間ゲート-5-種ai-は完成品まで作れここだけ止まれ"]
+    },
+    {
+      "id": "V3-AIP-28",
+      "title": "加重スコアカードゲート(合計+各軸最低点の同時判定)",
+      "note": "C8 g09 レーンで追加。軸スコアの実測(採点そのもの)は批評家ゲート運用側の継続作業 — 本エントリはゲート機構の閉包。",
+      "req": ["01-requirements/srs.md#V3-AIP-28"],
+      "det": ["scripts/scorecard-gate.mjs"],
+      "test": ["tests/scorecard-gate.test.ts"],
+      "trn_ui": ["config/scorecard-presets.json"],
+      "retrofit": ["config/scorecard-presets.json"]
     }
   ]
 }

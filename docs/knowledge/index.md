@@ -11,6 +11,7 @@
 | 知の広場 | [topics/knowledge-plaza.md](./topics/knowledge-plaza.md) | 3 柱 IA（掲示板/論文/GitHub）と汎用引用スキーマの設計要約（PROVISIONAL） |
 | 研究ノートモデル | [topics/research-notes-model.md](./topics/research-notes-model.md) | 論文 6 節スキーマ・5 ステップ進行・append-only 研究フロー（PROVISIONAL） |
 | 標準撮影チャンバー | [topics/shooting-chamber.md](./topics/shooting-chamber.md) | 全国参加者がスマホで同一品質のヘラクレス画像を撮る標準化撮影ボックス仕様 |
+| 文明の脳(統合検索RAG) | [topics/unified-search-rag.md](./topics/unified-search-rag.md) | 観測/wiki/掲示板/UI/テンプレートを同一384次元embedding空間で検索する多段複合検索設計(V3-AIP-90・新規ベクトルDBなし) |
 
 ## sources
 

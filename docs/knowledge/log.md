@@ -2,6 +2,10 @@
 
 `## YYYY-MM-DD` 見出し + `**Initialization**` / `**Ingest**` / `**Lint**` / `**Creation**` エントリ。月次 Lint もここに残す。
 
+## 2026-07-17
+
+* **Creation**: [unified-search-rag](./topics/unified-search-rag.md)(V3-AIP-90)を新設 — 観測パイプラインの決定論梯子(metadata→cosine→rerank)と wiki 統合基盤の技術選定(ruri-v3-70m・384次元)を、掲示板/UI/テンプレートへ「新規ベクトルDBなし」で横展開する設計。index.md に1行追加(同一変更)。
+
 ## 2026-07-09
 
 * **Ingest**: `python tools/knowledge_ingest.py scan` を本番環境で実行 — 新規 board/research イベント 0 件（ローカルに Truth ストリームなし）。スタブ生成なし。蒸留サイクルの実演は tmp バンドルの合成イベントで別途検証（本バンドルには非混入）。

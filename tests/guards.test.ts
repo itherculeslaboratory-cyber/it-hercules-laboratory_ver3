@@ -134,3 +134,28 @@ describe("V3-AIP-68 classifyDangerousDiff(staging physical gate)", () => {
     expect(classifyDangerousDiff(diff)).toEqual([]);
   });
 });
+
+describe("V3-AIP-31 classifyDangerousDiff(auto-gate-bypass — human gate required)", () => {
+  it("flags an auto-approve identifier", () => {
+    const diff = "+  function autoApprove(request) { return true; }";
+    const f = classifyDangerousDiff(diff);
+    expect(f.some((x) => x.category === "auto-gate-bypass")).toBe(true);
+  });
+
+  it("flags a skip-human-gate flag", () => {
+    const diff = "+  const skipHumanGate = true;";
+    const f = classifyDangerousDiff(diff);
+    expect(f.some((x) => x.category === "auto-gate-bypass")).toBe(true);
+  });
+
+  it("flags a one-click-deploy identifier", () => {
+    const diff = "+  async function oneClickDeploy() { await cutover(); }";
+    const f = classifyDangerousDiff(diff);
+    expect(f.some((x) => x.category === "auto-gate-bypass")).toBe(true);
+  });
+
+  it("ignores auto-gate-bypass patterns on REMOVED lines", () => {
+    const diff = "-  const skipHumanGate = true;";
+    expect(classifyDangerousDiff(diff)).toEqual([]);
+  });
+});

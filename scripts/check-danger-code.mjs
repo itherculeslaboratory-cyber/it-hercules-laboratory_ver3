@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // GATE: dangerous-code classifier (V3-AIP-68 — staging 昇格の物理ゲート). A PR diff
-// that adds money-moving API calls, DNS / domain-registrar operations, or self-
-// permission changes must not sail through unreviewed: the gate fails so a human
-// runs the staging-promotion review (10 人規模レビュー・試験運用は人間運用ゲート・§5).
+// that adds money-moving API calls, DNS / domain-registrar operations, self-
+// permission changes, or a one-click/auto-approve bypass of a human gate
+// (V3-AIP-31 — ワンクリック全自動禁止・自動処理は opt-in) must not sail through
+// unreviewed: the gate fails so a human runs the staging-promotion review
+// (10 人規模レビュー・試験運用は人間運用ゲート・§5).
 //
 // Only ADDED lines are classified (removing dangerous code is fine). The input may
 // be a real unified diff or a plain snippet. classifyDangerousDiff(diffText) is
@@ -42,6 +44,19 @@ const DANGER_PATTERNS = [
       /bypassPermissions/,
       /dangerouslyDisableSandbox/i,
       /\.claude[\\/]settings/,
+    ],
+  },
+  {
+    // ワンクリック全自動・人間ゲートの機械的バイパス(V3-AIP-31)。「候補を示し人間が選ぶ」を
+    // 崩す identifier — 承認/確認ステップを飛ばす関数・フラグの新規追加を検出する。
+    category: "auto-gate-bypass",
+    res: [
+      /\bauto[_-]?[Aa]pprove\b/,
+      /\bskip[_-]?[Hh]uman[_-]?[Gg]ate\b/,
+      /\bbypass[_-]?[Hh]uman[_-]?[Gg]ate\b/,
+      /\bone[_-]?[Cc]lick[_-]?[Dd]eploy\b/,
+      /\bno[_-]?[Cc]onfirm[_-]?[Rr]equired\b/,
+      /\bfully[_-]?[Aa]utomatic\b/,
     ],
   },
 ];

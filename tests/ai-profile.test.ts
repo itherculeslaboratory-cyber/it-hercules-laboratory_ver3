@@ -63,3 +63,18 @@ describe("V3-AIP-40 ai-profile.schema.json", () => {
     }
   });
 });
+
+describe("V3-AIP-104 BYOC compute_location (device-first, docker overflow, cloud opt-in)", () => {
+  it("only allows the device/docker/cloud ladder when compute_location is set", () => {
+    for (const { name, doc } of loadProfiles()) {
+      if ("compute_location" in doc) {
+        expect(["device", "docker", "cloud"], `${name}: bad compute_location`).toContain(doc.compute_location);
+      }
+    }
+  });
+
+  it("image-analysis declares its real execution location (cloud BYOK today)", () => {
+    const doc = loadProfiles().find((p) => p.feature === "image-analysis")!.doc;
+    expect(doc.compute_location).toBe("cloud");
+  });
+});

@@ -3,9 +3,30 @@ id: V3-CONTRIBUTING
 title: 貢献規約（最小）
 date: "2026-07-10"
 status: draft
+requirement_ids: [V3-AIP-23]
 ---
 
 # 貢献規約
+
+## セットアップ（30 分パス — repo ルート相対）
+
+clone は常に repo ルート相対で辿る（絶対パス・ローカル配置依存の手順は書かない — design-impl parity 不整合の原因）。
+
+```bash
+git clone https://github.com/itherculeslaboratory-cyber/it-hercules-laboratory_ver3.git ihl-ver3
+cd ihl-ver3
+npm install
+npm test                    # apps/api + tests + apps/web
+python -m pytest -q         # components/*/tests・libs
+```
+
+詳細な読む順・30 分オンボーディングは `docs/onboarding.md` を正本とする（ここでは重複させない）。
+
+## `#NN` の選び方（次に何をやるか）
+
+- 要件 ID（`V3-XXX-NN`）が唯一の作業単位。GitHub Issue の `#NN` を切る場合も本文に対応する要件 ID を 1 件以上記載する（`.github/ISSUE_TEMPLATE/bug-report.md` の「関連 ID」欄を参照）。
+- 優先順は `docs/planning/c8/progress.json`（`tier`: S > A > B > C、`scope: "required"` を先に）→ `docs/planning/status.md`（今どこ・人間ゲート）で確認する。
+- 迷ったら tier が高く `status: "todo"` のものから 1 件ずつ着手する。実装単位は要件 ID ごとに 1 実装 + 1 テスト + 1 コミット。
 
 ## PR 規約
 

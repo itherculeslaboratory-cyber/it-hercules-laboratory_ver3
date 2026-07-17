@@ -34,7 +34,7 @@ status: active
 ## 禁止事項（違反はコミット・PR を止める）
 
 - **シークレット実値**を読む・出力する・コミットする（`.env` 実値・API キー・GMO 開発キー）。置いてよいのは `.env.example` の型だけ。
-- **生成物の手編集**（`docs/generated/**`・`packages/**/generated/**`・`04-traceability/rtm.csv|md`）。`<!-- GENERATED -->` ヘッダを消すな。直すなら正本を直せ。
+- **生成物の手編集**（`docs/generated/**`・`packages/**/generated/**`・`04-traceability/rtm.csv|md`・`04-traceability/file-board-registry.csv`）。`<!-- GENERATED -->` ヘッダを消すな。直すなら正本を直せ。
 - **`schemas/frozen/` の変更を対応 TC 緑化前に行う**（CL-01〜13 形式凍結）。
 - **ファイル名に版番号サフィックス**（`-v1.md` 等）を付ける。版は frontmatter `status` + git 履歴で持て。
 - **非 ASCII・空白・日本語のパス名**。ディレクトリ・ファイル名は英語 kebab-case。日本語は frontmatter `title` と本文へ。
