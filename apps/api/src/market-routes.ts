@@ -12,6 +12,7 @@ import {
   projectOwnershipLineage,
   projectPayment,
   projectShippingLink,
+  projectCancelRequest,
   isAllowedEdge,
   isNoPayCancelDue,
   isGraceCancelWindowOpen,
@@ -56,6 +57,7 @@ const TRANSITION_KINDS = new Set<MarketKind>([
   "list_fixed", "list_auction", "list_lottery", "list_platinum",
   "bid", "match", "ship", "receive", "rate", "delist", "transfer",
   "pay_declare", "pay_confirm", "cancel", "ship_link",
+  "cancel_request", "cancel_approve", "cancel_decline",
 ]);
 
 export const marketRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -240,6 +242,14 @@ function transitionActorGuard(
   }
   if (kind === "cancel") {
     if (cur.matched_with && actorId !== cur.matched_with) return "matched buyer only";
+    return null;
+  }
+  if (kind === "cancel_request" || kind === "cancel_approve" || kind === "cancel_decline") {
+    // 相互承認キャンセル依頼(HANDOFF §3.4): request/approve/decline いずれも当事者
+    // (出品者/落札者)のみ。requester 本人が自分の request を承認/却下できない制約は
+    // 別途 route 側(projectCancelRequest 参照後)でチェックする(ここは party 判定のみ)。
+    const isParty = (!!cur.seller_id && actorId === cur.seller_id) || (!!cur.matched_with && actorId === cur.matched_with);
+    if (!isParty) return "party only";
     return null;
   }
   const sellerOnly =
@@ -450,12 +460,29 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
     return c.json({ error: "BLOCKED" }, 403);
   }
   if (kind === "cancel" && cur.state === "matched" && actorId === cur.matched_with) {
-    // 猶予キャンセル(成立後60分)。窓が閉じた後の相手承認制キャンセル依頼フローは
-    // 本波対象外(残課題・open_questions)。
+    // 猶予キャンセル(成立後60分・買い手無条件)。窓が閉じた後は cancel_request/
+    // cancel_approve/cancel_decline(相互承認フロー・HANDOFF §3.4)を使う。
     if (!isGraceCancelWindowOpen(events, now)) {
-      return c.json({ error: "GRACE_WINDOW_CLOSED" }, 409);
+      return c.json({ error: "GRACE_WINDOW_CLOSED", details: ["use cancel_request (mutual approval) after the grace window"] }, 409);
     }
     extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), cancel_reason: "grace" };
+  }
+  // HANDOFF §3.4 残作業: 猶予キャンセル窓が閉じた後の相手承認制キャンセル依頼フロー。
+  // request は「pending 中の request が無いこと」、approve/decline は「pending 中で
+  // かつ自分が requester でないこと」を要求する(自分の request を自分で承認/却下
+  // できない=対等な相互承認)。
+  if (kind === "cancel_request") {
+    const existing = projectCancelRequest(events);
+    if (existing.status === "pending") return c.json({ error: "CANCEL_REQUEST_PENDING" }, 409);
+    const reason = (extra.payload as { reason?: unknown } | undefined)?.reason;
+    extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), reason: typeof reason === "string" ? reason : undefined };
+  }
+  if (kind === "cancel_approve" || kind === "cancel_decline") {
+    const existing = projectCancelRequest(events);
+    if (existing.status !== "pending") return c.json({ error: "NO_PENDING_CANCEL_REQUEST" }, 409);
+    if (existing.requested_by === actorId) {
+      return c.json({ error: "FORBIDDEN", details: ["requester cannot resolve own cancel request"] }, 403);
+    }
   }
   // V3-MKT-13(round-15裁定・金額相違自己申告): pay_confirm の payload.mismatch は
   // partial(部分入金=残債の再申告待ち)/over(過入金=クレジット記録のみ)の2値限定。
@@ -510,6 +537,7 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
     payment: projectPayment(events),
     no_pay_cancel_due: isNoPayCancelDue(events, now),
     grace_cancel_window_open: isGraceCancelWindowOpen(events, now),
+    cancel_request: projectCancelRequest(events), // HANDOFF §3.4 相互承認キャンセル依頼
   });
 });
 
