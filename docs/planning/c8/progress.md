@@ -128,7 +128,7 @@
 | V3-AUT-06 | ログイン画面はメールアドレス入力と利用規約同意チェックを必須とし、未同意/未入力… | required | done | 4295494 |
 | V3-AUT-08 | @ユーザーID（handle）は3〜30文字の限定文字種で一意・不変（確定後変更… | required | done | e9db7f7 |
 | V3-AUT-09 | 新規登録は独立サインアップ画面を持たず、ログイン画面のマジックリンク初回検証時に… | required | done | eda9946 |
-| V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | done | eda9946, 2126232 |
+| V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | done | eda9946, 2126232, 8e792cb |
 | V3-AUT-11 | 認証→初期設定フロー（登録→国/言語→利用規約→ホーム）を明示的に定義し、全画面… | required | done | 4295494 |
 | V3-AUT-12 | 保護ルートはProtectedApp/middlewareでガードし未ログイン時… | required | done | db2bc69, 3f5012a, 2126232 |
 | V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | required | blocked | — |
@@ -161,7 +161,7 @@
 | V3-AIP-23 | CONTRIBUTINGのcloneパスをrepoルート相対に統一しdesign… | required | done | 567a554 |
 | V3-AIP-28 | 成果物はスコアカードで加重機械採点する(例: STRUCTURAL25%・DES… | required | done | 3d21a73, 8e00920(cwd依存バグ修正) |
 | V3-AIP-31 | 人間ゲート/human-in-the-loopを必須とする：ワンクリック全自動を… | required | done | b88a0f6 |
-| V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を採り、憲… | required | in_progress | 124027b |
+| V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を採り、憲… | required | in_progress | 124027b, fc2fada |
 | V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | in_progress | 124027b, a0c631d |
 | V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytestの正統な流… | required | in_progress | 124027b |
 | V3-AIP-57 | 繰り返し使うワークフロー・手順はまず1回手動で正しさを確認してからスキル/ルール… | required | done | b1511e4 |

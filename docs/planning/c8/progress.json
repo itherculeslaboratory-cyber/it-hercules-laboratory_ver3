@@ -74,10 +74,11 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [
-      "124027b"
+      "124027b",
+      "fc2fada"
     ],
-    "tc": [],
-    "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。 追加(g09レーン): in_progress残余(他ドメインへの拡張)には今回も着手できず。他18項目を優先した時間配分上の判断で、内容の困難さによるスキップではない。次セッションでの継続を推奨。"
+    "tc": ["tests/spec-market-trade.test.ts (6 tests, market-trade画面へのspec/base契約横展開)"],
+    "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。 追加(g09レーン): in_progress残余(他ドメインへの拡張)には今回も着手できず。他18項目を優先した時間配分上の判断で、内容の困難さによるスキップではない。次セッションでの継続を推奨。\n\n[統合cleanup-final追記] 同型の契約(schema適合+deny-by-default route matrix+navigation到達可能性の3点)をmarket-trade画面へ横展開(fc2fada・tests/spec-market-trade.test.ts新設)。これで2ドメイン目まで実装済み。残りは他ドメイン(データモデル全般・付与条件・ナビ・権限)への横断適用で、in_progressのまま据え置く(status=doneへの昇格は見送り — 要件が求める全ドメイン横断にはまだ届いていないため)。"
   },
   {
     "id": "V3-AIP-49",
@@ -320,9 +321,9 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["eda9946", "2126232"],
-    "tc": ["apps/web/src/middleware.test.ts > skipsOnboardingCheck — V3-AUT-10 onboarding gate (pure)", "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior (onboarding系4件)", "tests/settings-preferences.test.ts > handle は1〜40文字のみ許可(空文字/超過は400)"],
-    "note": "バックエンド契約は完成: projectOnboardingStatus(handle確定+locale明示選択の両方=必須2ゲート)をGET /api/v1/me/onboardingとGET /api/v1/auth/sessionのonboarding_completeで公開・テスト済み。表示名/タイムゾーン/テーマはゲート対象外(usecase-driven-design.md §auth-onboarding-locale準拠)。未完了部分: クライアント側で「オンボーディング未完了の間はアプリ全体を専用フローに閉じる」実際のUI(setup-profile統合画面)がまだ存在しない(ui-asset-catalog.mdが指摘する既知ギャップ「handle確定専用ステップ」画面未作成)。V3-AUT-12のmiddlewareは未ログインのみ/s/loginへ誘導し、ログイン済みだがonboarding未完了のケースはまだガードしていない。\n\n[統合uiux-g07追記] setup-profile画面新設(handle確定+locale明示選択を1フォームでPATCH /me/preferences)。既存ihl.pref.set.v1にhandleフィールド追加(1-40文字必須・新規イベント型は増やさない)。middleware.tsにonboarding gate追加(handle未設定の間は/s/setup-profileへ307誘導・setup-profile自体は除外してリダイレクトループ回避・onboarding判定fetch失敗時はfail-open)。前回note記載の未完了部分は本レーンで解消。"
+    "commits": ["eda9946", "2126232", "8e792cb"],
+    "tc": ["apps/web/src/middleware.test.ts > skipsOnboardingCheck — V3-AUT-10 onboarding gate (pure)", "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior (onboarding系4件)", "tests/settings-preferences.test.ts > handle は1〜40文字のみ許可(空文字/超過は400)", "tests/auth.test.ts > V3-AUT-05/V3-AUT-10: dev-login's seeded handle+locale satisfies the SAME onboarding SSOT middleware reads (regression guard)"],
+    "note": "バックエンド契約は完成: projectOnboardingStatus(handle確定+locale明示選択の両方=必須2ゲート)をGET /api/v1/me/onboardingとGET /api/v1/auth/sessionのonboarding_completeで公開・テスト済み。表示名/タイムゾーン/テーマはゲート対象外(usecase-driven-design.md §auth-onboarding-locale準拠)。未完了部分: クライアント側で「オンボーディング未完了の間はアプリ全体を専用フローに閉じる」実際のUI(setup-profile統合画面)がまだ存在しない(ui-asset-catalog.mdが指摘する既知ギャップ「handle確定専用ステップ」画面未作成)。V3-AUT-12のmiddlewareは未ログインのみ/s/loginへ誘導し、ログイン済みだがonboarding未完了のケースはまだガードしていない。\n\n[統合uiux-g07追記] setup-profile画面新設(handle確定+locale明示選択を1フォームでPATCH /me/preferences)。既存ihl.pref.set.v1にhandleフィールド追加(1-40文字必須・新規イベント型は増やさない)。middleware.tsにonboarding gate追加(handle未設定の間は/s/setup-profileへ307誘導・setup-profile自体は除外してリダイレクトループ回避・onboarding判定fetch失敗時はfail-open)。前回note記載の未完了部分は本レーンで解消。\n\n[統合cleanup-final追記] wave-2最終検証で設計債を発見・修正(8e792cb): projectOnboardingStatusのhandleゲートがfindOwnHandle(HANDLE_TYPE・V3-AUT-08の別機能、どのUI画面からも到達しない)を見ており、setup-profile画面が実際に書く先(PATCH /me/preferences・pref-set)と一致していなかったため、このSSOT関数は実運用フローでは永久にfalseのままになる欠陥があった(dev-loginのseedも本物のonboarding完了もどちらも反映されない)。projectOnboardingStatusのhandle判定をprojectPreferencesのhandleフィールド参照へ修正し、setup-profile/dev-loginと一致させた。middleware.tsは/auth/session 1回のonboarding_completeのみで判定するよう単純化(2回目fetch廃止)。dev-login→onboarding_complete:trueの回帰ガードをtests/auth.test.tsに追加。"
   },
   {
     "id": "V3-AUT-11",
