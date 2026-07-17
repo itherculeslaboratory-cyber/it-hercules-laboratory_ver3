@@ -4,7 +4,7 @@
 // data.actor_id をセッション principal で強制刻印(V3-AUT-17)。取引遷移(match/
 // transition)・決済連動は C4 対象外(matrix ver3_note)。
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, deriveTransferCode } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import {
   reduceMarket,
@@ -23,6 +23,7 @@ import {
 import { projectPreferences } from "./settings-routes";
 import { isBlockedPair } from "./market-block-routes";
 import { projectSellerModeration, projectListingModeration } from "./market-flag-routes";
+import { OBLIGATION_TYPE, safeKeyPart } from "./gmo-routes";
 import {
   NO_PAY_LIMIT_COUNT,
   NO_PAY_LIMIT_WINDOW_DAYS,
@@ -30,6 +31,8 @@ import {
   GRACE_CANCEL_LIMIT_COUNT,
   GRACE_CANCEL_LIMIT_WINDOW_DAYS,
   GRACE_CANCEL_RESTRICT_DAYS,
+  FEE_MAINTENANCE_TAX_RATE,
+  TAX_GRACE_DAYS,
 } from "./economy-constants";
 
 const LISTING_TYPE = "ihl.mkt.listing.v1";
@@ -287,6 +290,54 @@ async function settleNoPayCancel(
   return [...events, data as unknown as TxnEvent];
 }
 
+// V3-MKT-10: 取引成立(receive∧rate 揃う=MKT-04)時に 5% 維持費税を義務台帳へ自動計上
+// (「取引成立からの義務自動計上」=これまでの partial の残り)。fee-routes.ts(PAY.JP
+// ゆる請求フロー)が読む既存義務台帳(OBLIGATION_TYPE)をそのまま継承する(型リネーム禁止・
+// round-16裁定=強制収集しない/ゆる請求のため自動ペナルティ・Fibonacci課金は付けない)。
+// gross(成約額)は「実際に動いた金額」を優先する決定的順位: pay_confirm確認額 >
+// pay_declare申告額 > listing.price 表示価格。全て欠落なら課税せず記録もしない(ゆる請求=
+// 取り逃し許容の精神・強制しない)。1 listing = 1 obligation(deterministic key の
+// put-if-absent で冪等・再実行や rate→receive 逆順でも二重計上しない)。
+async function settleFeeObligation(
+  s: TruthStore,
+  listingId: string,
+  sellerId: string | undefined,
+  events: TxnEvent[],
+  settledAt: string,
+): Promise<void> {
+  if (!sellerId) return;
+  const payment = projectPayment(events);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const listingPrice = listingEv ? Number(dataOf(listingEv).price) : NaN;
+  const gross = payment.confirmed_amount ?? payment.declared_amount ?? (Number.isFinite(listingPrice) ? listingPrice : undefined);
+  if (!gross || gross <= 0) return;
+  const amount = Math.round(gross * FEE_MAINTENANCE_TAX_RATE);
+  if (amount <= 0) return; // schema: amount exclusiveMinimum 0
+
+  const id = ulid();
+  const dueDate = new Date(new Date(settledAt).getTime() + TAX_GRACE_DAYS * DAY_MS).toISOString();
+  const data: Record<string, unknown> = {
+    obligation_id: id,
+    actor_id: sellerId,
+    transfer_code: await deriveTransferCode(sellerId),
+    amount,
+    obligation_kind: "fee_tax",
+    due_date: dueDate,
+    created_at: new Date().toISOString(),
+    schema_version: "1",
+  };
+  await s.putEventAt(`truth/${OBLIGATION_TYPE}/mkt-fee-${safeKeyPart(listingId)}.json`, {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: OBLIGATION_TYPE,
+    time: new Date().toISOString(),
+    dataschema: "schemas/events/gmo-obligation.schema.json",
+    provenance: { generator_kind: "agent", agent_name: "market-settle" },
+    data,
+  });
+}
+
 // no-pay/猶予キャンセルの回数投影(round-16 OQ-MKT-03/04)。cancel イベントの
 // payload.cancel_reason で判別: no_pay_auto は counterparty(=買い手)、grace は
 // actor_id(=自己申告した買い手本人)が対象者。ponytail: 取引型を全走査 O(n)(既存の
@@ -433,7 +484,14 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   if (res.status === "invalid") return c.json({ error: "INVALID_TRANSITION", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_TRANSITION", key: res.key }, 409);
 
-  const next = reduceMarket(listingId, [...events, data]);
+  const merged = [...events, data];
+  const next = reduceMarket(listingId, merged);
+  if (kind === "receive" || kind === "rate") {
+    const settlement = projectSettlement(merged, now);
+    if (settlement.settled && settlement.settled_at) {
+      await settleFeeObligation(s, listingId, next.seller_id, merged, settlement.settled_at);
+    }
+  }
   return c.json({ listing_id: listingId, state: next.state, stage: next.stage }, 201);
 });
 
