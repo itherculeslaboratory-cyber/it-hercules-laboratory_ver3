@@ -73,14 +73,32 @@ researchCanonicalRoutes.post("/research/canonical/mapping", async (c) => {
   return c.json({ mapping_id, key: res.key }, 201);
 });
 
-// ── GET /research/canonical/mapping/:qid — その Q番号の全対応先を投影（PPR-13）──────────────
+// ── 世界接続層 第3要素「使用時発行の内部Index」（PPR-13）────────────────────────────────
+// Wikidata の全QID空間を先回りして採番せず（不変条項①「ID/Index は使う瞬間だけ発行」）、
+// 新しい Truth 型・常駐カウンタも持たない: そのQIDが実際に「使われた」最初の瞬間 = 最初の
+// mapping_event それ自体を、都度再計算（prefix scan）で内部Indexとして投影する（派生値は
+// 都度再計算・不変条項①）。1件もmappingが無いQIDは「まだ使われていない」= null。
+export interface CanonicalInternalIndex { mapping_id: string; issued_at: string }
+
+export function internalIndex(
+  mappings: Array<{ mapping_id: string; created_at: string }>,
+): CanonicalInternalIndex | null {
+  if (mappings.length === 0) return null;
+  const [first] = [...mappings].sort(
+    (a, b) => a.created_at.localeCompare(b.created_at) || a.mapping_id.localeCompare(b.mapping_id),
+  );
+  return { mapping_id: first.mapping_id, issued_at: first.created_at };
+}
+
+// ── GET /research/canonical/mapping/:qid — その Q番号の全対応先 + 内部Index を投影（PPR-13）
 researchCanonicalRoutes.get("/research/canonical/mapping/:qid", async (c) => {
   const qid = c.req.param("qid");
   const items = (await store(c).listEvents(`truth/${MAPPING_TYPE}/${qid}__`))
     .map(dataOf)
     .filter((d) => d.wikidata_qid === qid)
     .sort((a, b) => String(a.target_db).localeCompare(String(b.target_db)));
-  return c.json({ wikidata_qid: qid, mappings: items });
+  const idx = internalIndex(items.map((d) => ({ mapping_id: String(d.mapping_id), created_at: String(d.created_at) })));
+  return c.json({ wikidata_qid: qid, mappings: items, internal_index: idx });
 });
 
 // ── POST /research/categories — 学術分類の append-only 追加（PPR-13）──────────────────────
