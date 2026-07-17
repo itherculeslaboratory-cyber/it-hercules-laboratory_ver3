@@ -1367,10 +1367,10 @@
     "tier": "C",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["36bc43c"],
+    "tc": ["tests/cst-02-costs.test.ts(既存・再確認)", "apps/web screendef-snapshots(new screen counted)"],
+    "note": "運営コスト透明表示。バックエンド(GET /api/v1/costs・config/running-costs.json静的構成+fetchR2Usage no-opアダプタ)は既にmain上にV3-CST-02として実装済みだったため新規作成せず、その上に表示screen-def(screen-defs/costs.json)を新設。要件の『ただし』条件どおり収益/銀行残高は一切表示せずランニングコストのみ表示。home/economy-statusから導線+navigation.json/i18n登録。"
   },
   {
     "id": "V3-OBS-02",
@@ -2178,10 +2178,10 @@
     "tier": "B",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["269fe93"],
+    "tc": ["apps/web/src/renderer/screendef-snapshots.test.tsx(新規画面1件追加・green)"],
+    "note": "観測入力4画面フロー(観測対象選択=obs-domain-select/テンプレート入力=obs-entry/条件リクエスト=obs-entry内既存の+項目追加・+単位追加/フォーク管理=新設screen-defs/obs-templates.json)。フォーク管理画面は既存API(GET/POST /observation/templates・V3-OBS-18 forked_from)を再利用し新規route追加なし。既存3クリック・確認画面主CTA1つの主フローは変更せず、obs-entryに任意の側リンクを追加しただけ。スコープ決定(要エスカレーション相当・正直に記載): 要件文の『4画面』を厳密な4ルートではなく機能的に対応する既存画面群+1新設画面として実装。fork時の親項目自動コピーは既存APIの制約(呼び出し側が items を再送する設計)によりUIでは提供せず、テンプレ名+forked_from(手入力)+新規項目1行の保存フォームに留めた。"
   },
   {
     "id": "V3-UIX-68",
@@ -2204,10 +2204,10 @@
     "tier": "C",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["efac100"],
+    "tc": ["tests/settings-preferences.test.ts(新規2ケース)"],
+    "note": "取引前PII準備の完了ナッジ。重要な事前調査結果: 要件文が指す『取引前PII設定画面(局留め受取・配送先・銀行振込口座)』は現行コードベースに一切存在しなかった(V3-MKT-28は749件のprogress.json必須リストにも入っておらず未実装・実住所/実口座番号の保持はV3-SEC-06/V3-SEC-11/V3-MKT-20の既存不変条項が明確に禁じている)。よって実住所/実口座は保持しない設計で、①受取方法の選好(delivery_pref: 局留め受取/自宅配送のカテゴリのみ)②銀行振込の受け取り準備の自己申告(bank_transfer_ready: yes/no)の2フィールドを既存pref-set(append-only選好)へ追加し、settings.json(既存の設定画面)で編集可能にした。GET /me/profileにpii_readiness.all_setを追加し、market-tradeの取引詳細タブに非強制ナッジ(whenプリミティブ・viewer経由・renderer変更ゼロ)を表示、完了で自動的に消える。これは実装判断であり、本来の『配送先・銀行口座そのものの事前登録』を求める設計に立ち返る場合は人間裁定が必要な分岐だと考えるため、正直にここへ明記する。"
   },
   {
     "id": "V3-UIX-81",
@@ -2357,10 +2357,10 @@
     "tier": "C",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["36fa042"],
+    "tc": ["tests/research-ai-sessions.test.ts(新規7ケース)", "tests/cl-04-route-matrix.test.ts(107 rows)"],
+    "note": "AIセッション閲覧の最小構成を核心含め全て実装(itemsPartialではなくitemsDone)。既存の共通CMS基盤(ihl.research.content.v1・content_type=chat_log・research-content-routes.ts)を100%再利用し新規イベント型なし。POST /research/ai-sessions(決定論アダプタadaptAiSession・adaptGithubSourceと同型・JSONL→role別markdown整形・content_idはsha256(source:session_ref)導出で再投入409=重複しない)を新設。閲覧screen-defs/ai-sessions.jsonは一覧=既存GET /research/chat-index、本文=既存GET /research/content/{id}を再利用(新規route最小化)。ローカル抽出手順書docs/architecture/ai-session-ingest-howto.mdにCursor state.vscdbをfile:...?mode=ro&immutable=1で読み取り専用・開く→読む→閉じるの一度きり接続する手順を明記(常駐DB接続はしない)。route-matrix.csvにinfra-route-115追加・CL-04を107 rowsへ更新。"
   },
   {
     "id": "V3-WIK-29",
