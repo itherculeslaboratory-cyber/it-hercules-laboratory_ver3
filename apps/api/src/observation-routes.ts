@@ -7,6 +7,7 @@ import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import { generateThumbnail } from "./thumbnail";
 import { tagRemeasured } from "./tag-routes";
 import { deriveDeviceBindingsForCapture, type DerivedDeviceBinding } from "./source-routes";
+import { projectSellerModeration } from "./market-flag-routes";
 import {
   RERANK_WEIGHTS,
   RERANK_MISSING,
@@ -812,6 +813,14 @@ export async function writeCaptureFromCommitBody(
   if (gateErr) return { ok: false, error: gateErr };
   const originErr = measurementValueOriginError(body.measurements);
   if (originErr) return { ok: false, error: originErr };
+  // GOV-35 観測モジュール側freeze: round-15裁定 #6/#7 の逐語「GOV-35=出品/観測の
+  // 機械的範囲停止・可逆」により、既存の出品側 suspended 投影(market-flag-routes)
+  // をそのまま観測commitの入口にも適用する(新しい設計を発明せず、既承認の signal
+  // を再利用するのみ)。suspended は誤BAN復帰(misban-reversal)で自動的に false へ
+  // 戻るため、観測側にも別の解除操作は不要(可逆性はprojectSellerModerationに一本化)。
+  if ((await projectSellerModeration(s, actorId)).suspended) {
+    return { ok: false, error: "OBSERVATION_FROZEN" };
+  }
   const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
   const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId };
   for (const k of CAPTURE_FIELDS) if (body[k] !== undefined) data[k] = body[k];
@@ -839,7 +848,10 @@ obsRoutes.post("/solid-observation/commit", async (c) => {
   if (!body) return c.json({ error: "INVALID_BODY" }, 400);
   const actorId = c.get("actorId");
   const r = await writeCaptureFromCommitBody(store(c), c.env.TRUTH, actorId, body);
-  if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_CAPTURE" ? 409 : 400);
+  if (!r.ok) {
+    const status = r.error === "DUPLICATE_CAPTURE" ? 409 : r.error === "OBSERVATION_FROZEN" ? 403 : 400;
+    return c.json({ error: r.error, details: r.details }, status);
+  }
   return c.json({ capture_id: r.capture_id, committed: true, device_bindings: r.device_bindings }, 202);
 });
 
