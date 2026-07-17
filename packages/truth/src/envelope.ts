@@ -109,6 +109,9 @@ const VALIDATOR_NAME: Record<string, string> = {
   // round-16 裁定 — gmo-obligation を継承する新規イベント型(型リネーム禁止・append)。
   "fee-invoice": "feeInvoice",
   "fee-settlement": "feeSettlement",
+  // V3-SEC-57 zero-knowledge 鍵バンドル+オフラインリカバリコード。
+  "sec-key-bundle": "secKeyBundle",
+  "sec-key-bundle-recovery": "secKeyBundleRecovery",
 };
 
 const FROZEN_NAMES = new Set([
@@ -214,6 +217,10 @@ const EVENT_NAMES = new Set([
   // permanently (Truth is INSERT ONLY, unfixable). round-16 PAY.JP 請求フロー.
   "fee-invoice",
   "fee-settlement",
+  // V3-SEC-57 — data validation MUST fire or putEvent stores unchecked data at 201
+  // permanently (Truth is INSERT ONLY, unfixable).
+  "sec-key-bundle",
+  "sec-key-bundle-recovery",
 ]);
 
 function validatorFor(name: string): ValidateFn {

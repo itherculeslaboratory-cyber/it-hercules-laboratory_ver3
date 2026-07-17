@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/sec-key-bundle.schema.json",
+  "title": "Zero-knowledge key bundle (ihl.sec.key_bundle.v1)",
+  "description": "V3-SEC-57: BYOK鍵5本+振込口座パスフレーズの暗号バンドルを、IHLが復号不能なzero-knowledge blob(ciphertext)としてサーバ保管する。サーバ側コードは ciphertext の中身を一切解釈・復号しない(平文鍵・パスフレーズはサーバに到達しない=クライアント側で暗号化済みのopaque文字列を保管するのみ)。append-only(新バンドルは新レコード・最新が投影上の現行バンドル)。Truth キー truth/ihl.sec.key_bundle.v1/<actor_id>/<bundle_id>.json。",
+  "x_ihl_req": "V3-SEC-57",
+  "x_ihl_source": "01-requirements/registry.json V3-SEC-57",
+  "type": "object",
+  "required": ["bundle_id", "actor_id", "ciphertext", "created_at", "schema_version"],
+  "properties": {
+    "bundle_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "バンドルの一意キー(ULID推奨)。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "本人 actor_id(セッション principal 強制・V3-AUT-17)。"
+    },
+    "ciphertext": {
+      "type": "string",
+      "minLength": 1,
+      "description": "クライアント側で暗号化済みのopaque文字列(base64等)。サーバは中身を解釈・復号しない。"
+    },
+    "kdf_params": {
+      "type": "object",
+      "description": "クライアントの鍵導出関数パラメータ(salt/iterations等・任意・サーバは中身を解釈しない不透明値)。",
+      "additionalProperties": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "保管時刻(RFC3339)。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}
