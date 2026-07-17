@@ -61,7 +61,7 @@ describe("V3-AUT-46 数字コード verify — 正常系", () => {
       { headers: { Cookie: cookie } },
       env,
     );
-    expect(await write.json()).toEqual({ authenticated: true, actor_id });
+    expect(await write.json()).toEqual({ authenticated: true, actor_id, onboarding_complete: false });
   });
 
   it("email 大文字小文字/空白ゆらぎは同一 actor(第6回裁定③と同じ正規化)", async () => {

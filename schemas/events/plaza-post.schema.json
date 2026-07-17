@@ -80,6 +80,11 @@
       "format": "date-time",
       "description": "投稿時刻（RFC3339）。"
     },
+    "lang": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投稿者の locale（V3-I18-06: UGC 原文タグ。actor の pref-set locale から刻印・翻訳しない・任意=旧投稿は未刻印）。"
+    },
     "schema_version": {
       "type": "string",
       "minLength": 1,

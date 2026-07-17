@@ -54,3 +54,59 @@ describe("I18-06 UGC 原文保存 + 言語タグ刻印", () => {
     expect(r.status).toBe(201);
   });
 });
+
+// I18-06 part2: 知の広場投稿 + 二人部屋発言も同じ契約(actor locale から lang 刻印・
+// サーバ翻訳せず原文保存)を持つ(market listing と同型・market-routes.ts と同じ pattern)。
+describe("I18-06 part2 — plaza posts / dispute messages も原文保存 + lang 刻印", () => {
+  it("plaza post: locale 未設定なら lang=ja、原文は変更されない", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("dan");
+    const created = await app.request(
+      "/api/v1/plaza/posts",
+      { method: "POST", headers: h, body: JSON.stringify({ channel: "knowledge-board", topic: "t", board_kind: "guide", body: JP_DESC }) },
+      env,
+    );
+    expect(created.status).toBe(201);
+    const { post_id } = (await created.json()) as { post_id: string };
+    const detail = (await (await app.request(`/api/v1/plaza/posts/${post_id}`, { headers: h }, env)).json()) as {
+      post: { body: string; lang: string };
+    };
+    expect(detail.post.body).toBe(JP_DESC);
+    expect(detail.post.lang).toBe("ja");
+  });
+
+  it("plaza post: actor の locale=en を設定すると lang=en が刻印される", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("erin");
+    await patchPrefs(env, h, { locale: "en" });
+    const created = await app.request(
+      "/api/v1/plaza/posts",
+      { method: "POST", headers: h, body: JSON.stringify({ channel: "knowledge-board", topic: "t", board_kind: "guide", body: "english post" }) },
+      env,
+    );
+    const { post_id } = (await created.json()) as { post_id: string };
+    const detail = (await (await app.request(`/api/v1/plaza/posts/${post_id}`, { headers: h }, env)).json()) as {
+      post: { lang: string };
+    };
+    expect(detail.post.lang).toBe("en");
+  });
+
+  it("dispute message: actor の locale から lang が発言に刻印される", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("frank");
+    await patchPrefs(env, h, { locale: "en" });
+    const opened = (await (
+      await app.request("/api/v1/gov/disputes", { method: "POST", headers: h, body: JSON.stringify({ category: "board", respondent_id: "bob" }) }, env)
+    ).json()) as { dispute_id: string };
+    await app.request(
+      `/api/v1/gov/disputes/${opened.dispute_id}/messages`,
+      { method: "POST", headers: h, body: JSON.stringify({ body: "let's settle" }) },
+      env,
+    );
+    const view = (await (await app.request(`/api/v1/gov/disputes/${opened.dispute_id}`, { headers: h }, env)).json()) as {
+      messages: { lang: string; body: string }[];
+    };
+    expect(view.messages[0].lang).toBe("en");
+    expect(view.messages[0].body).toBe("let's settle");
+  });
+});

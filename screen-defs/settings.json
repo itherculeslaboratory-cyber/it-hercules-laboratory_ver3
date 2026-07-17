@@ -56,5 +56,7 @@
       ]
     }
   ],
-  "transitions": []
+  "transitions": [
+    { "from": "pref-form", "to_screen_id": "settings", "label": "保存後に再読込(I18-03: 新localeでUI全文を即時切替)" }
+  ]
 }

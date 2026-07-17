@@ -5,6 +5,7 @@ import type { Bindings, Variables } from "./env";
 import type { KVNamespaceLite } from "./kv";
 import { isBanned } from "./ledger-routes";
 import { sendMagicLink } from "./mail";
+import { ensureAccount, projectOnboardingStatus } from "./account";
 import {
   MAGIC_TTL,
   SESSION_TTL,
@@ -58,10 +59,14 @@ authRoutes.post("/verify", async (c) => {
   const payload = await verifyMagicToken(body.token, c.env.SESSION_SECRET);
   if (!payload) return c.json({ error: "INVALID_TOKEN" }, 401);
   const actorId = await deriveActorId(payload.email); // email already normalized at magic-link entry
+  const store = new TruthStore(c.env.TRUTH);
   // KRM-04: 永久 BAN は session 発行前に弾く（ログイン時のみ判定＝毎リクエスト走査回避）。
-  if (await isBanned(new TruthStore(c.env.TRUTH), actorId)) {
+  if (await isBanned(store, actorId)) {
     return c.json({ error: "BANNED" }, 403);
   }
+  // V3-AUT-09: 初回検証でオープン登録(アカウント行を put-if-absent・2回目以降は
+  // 既存キーとの衝突を無視するidempotent no-op)。独立サインアップ画面は持たない。
+  await ensureAccount(store, actorId);
   const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
   setCookie(c, "ihl_session", session, {
     httpOnly: true,
@@ -131,10 +136,13 @@ authRoutes.post("/verify-code", async (c) => {
   }
   if (kv) await writeCodeState(kv, email, { attempts: 0, consumed: [...state.consumed, iat] });
   const actorId = await deriveActorId(email);
+  const codeStore = new TruthStore(c.env.TRUTH);
   // KRM-04: /verify と同じ BAN ゲート(session 発行前に弾く)。
-  if (await isBanned(new TruthStore(c.env.TRUTH), actorId)) {
+  if (await isBanned(codeStore, actorId)) {
     return c.json({ error: "BANNED" }, 403);
   }
+  // V3-AUT-09: /verify と同じオープン登録(idempotent no-op が2回目以降)。
+  await ensureAccount(codeStore, actorId);
   const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
   setCookie(c, "ihl_session", session, {
     httpOnly: true,
@@ -146,12 +154,15 @@ authRoutes.post("/verify-code", async (c) => {
   return c.json({ actor_id: actorId });
 });
 
-// GET /session (公開): reports auth state, never 401.
+// GET /session (公開): reports auth state, never 401. 認証済みなら V3-AUT-10/I18-02
+// の必須2ゲート(handle+locale)充足状況(onboarding_complete)も同梱する — ProtectedApp
+// 側が別 route を叩かず1回の呼び出しで「ログイン済みか」と「初期設定済みか」を両方読める。
 authRoutes.get("/session", async (c) => {
   const token = getCookie(c, "ihl_session") ?? bearerToken(c.req.header("Authorization"));
   const payload = token ? await verifySessionToken(token, c.env.SESSION_SECRET) : null;
   if (!payload) return c.json({ authenticated: false });
-  return c.json({ authenticated: true, actor_id: payload.sub });
+  const status = await projectOnboardingStatus(new TruthStore(c.env.TRUTH), payload.sub);
+  return c.json({ authenticated: true, actor_id: payload.sub, onboarding_complete: status.onboarding_complete });
 });
 
 // POST /dev-login (公開・dev 限定): §1.4 V3-AUT-05「画面内トークン認証ボタン」の実体。
@@ -162,10 +173,13 @@ authRoutes.get("/session", async (c) => {
 authRoutes.post("/dev-login", async (c) => {
   if (!c.env.DEV_TOKEN) return c.json({ error: "NOT_FOUND" }, 404);
   const actorId = await deriveActorId("dev@ihl.local");
+  const devStore = new TruthStore(c.env.TRUTH);
   // KRM-04: dev 1-click login も session 発行前に BAN 判定（§2.6 と同契約）。
-  if (await isBanned(new TruthStore(c.env.TRUTH), actorId)) {
+  if (await isBanned(devStore, actorId)) {
     return c.json({ error: "BANNED" }, 403);
   }
+  // V3-AUT-09: dev-login も同じ open registration 経路を通す(dev actor も一貫)。
+  await ensureAccount(devStore, actorId);
   const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
   setCookie(c, "ihl_session", session, {
     httpOnly: true,

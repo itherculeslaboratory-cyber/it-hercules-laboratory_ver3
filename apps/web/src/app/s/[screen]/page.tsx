@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { Renderer } from "@/renderer/renderer";
 import { allScreenDefIds, loadScreenDef } from "@/lib/screendefs";
+import { loadCatalogs } from "@/lib/i18n";
+import { fetchViewerLocale } from "@/lib/viewer-locale";
 
 export function generateStaticParams() {
   return allScreenDefIds().map((screen) => ({ screen }));
@@ -21,5 +23,8 @@ export default async function ScreenPage({
     if (typeof v === "string") query[k] = v;
     else if (Array.isArray(v) && typeof v[0] === "string") query[k] = v[0];
   }
-  return <Renderer def={loadScreenDef(screen)} params={query} />;
+  const viewerLocale = await fetchViewerLocale();
+  return (
+    <Renderer def={loadScreenDef(screen)} params={query} catalogs={loadCatalogs()} viewerLocale={viewerLocale} />
+  );
 }

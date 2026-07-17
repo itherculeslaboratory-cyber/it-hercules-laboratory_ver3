@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/aut-account.schema.json",
+  "title": "Account creation marker (ihl.aut.account.v1)",
+  "description": "V3-AUT-09: 独立サインアップ画面を持たず、ログイン画面のマジックリンク（または数字コード・dev-login）初回検証時にオープン登録としてR2上に作成するアカウント行。Truth キー truth/ihl.aut.account.v1/<actor_id>.json に put-if-absent（初回のみ作成・2回目以降の検証は既存キーとの衝突=409を無視する idempotent no-op）。PII は持たない（email はここに保存しない・actor_id は deriveActorId のハッシュ）。",
+  "x_ihl_req": "V3-AUT-09",
+  "x_ihl_source": "docs/planning/c7/usecase-driven-design.md §auth-onboarding-locale",
+  "type": "object",
+  "required": ["actor_id", "created_at", "schema_version"],
+  "properties": {
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "初回検証で成立した本人の actor_id（キー本体にも使う）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "初回検証時刻（RFC3339・以後は不変=このアカウント行は再書込されない）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

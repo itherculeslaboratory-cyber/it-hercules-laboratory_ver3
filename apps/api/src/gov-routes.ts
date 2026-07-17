@@ -12,6 +12,7 @@ import { projectRanking, dedupVotes } from "./plaza-routes";
 import { requireRole } from "./authz";
 import { grantKarmaCountIncrease } from "./ledger-routes";
 import { revokeActor } from "./denylist";
+import { projectPreferences } from "./settings-routes";
 import { DISPUTE_TTL_DAYS, GOV_FLAG_COUNT_STEPS, OS_PROMOTION_MIN_SCORE } from "./plaza-constants";
 
 const VOTE_TYPE = "ihl.gov.vote.v1";
@@ -177,7 +178,7 @@ export async function projectDispute(s: TruthStore, disputeId: string) {
   const participants = { opener: str(open.actor_id), respondent: str(open.respondent_id) };
   const messages = events
     .filter((e) => e.action === "message")
-    .map((e) => ({ actor_id: str(e.actor_id), body: str(e.body), created_at: str(e.created_at) }));
+    .map((e) => ({ actor_id: str(e.actor_id), body: str(e.body), lang: str(e.lang), created_at: str(e.created_at) }));
   const close = events.find((e) => e.action === "close");
   const openedAt = str(open.created_at);
   let status: "open" | "resolved" | "force_closed" = "open";
@@ -219,6 +220,8 @@ govRoutes.post("/gov/disputes/:dispute_id/messages", async (c) => {
     schema_version: SCHEMA_VERSION,
   };
   if (body?.body !== undefined) data.body = body.body;
+  // I18-06: 二人部屋の発言も UGC 原文タグを刻印(翻訳しない・plaza-routes.ts と同型)。
+  data.lang = (await projectPreferences(s, actorId)).locale;
   const key = `truth/${DISPUTE_TYPE}/${disputeId}/${eventId}.json`;
   const res = await s.putEventAt(key, envelope(DISPUTE_TYPE, DISPUTE_SCHEMA, eventId, actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_DISPUTE", details: res.errors }, 400);

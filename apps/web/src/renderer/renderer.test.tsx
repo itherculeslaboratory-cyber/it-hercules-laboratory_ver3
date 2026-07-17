@@ -394,6 +394,33 @@ describe("Renderer — text_key i18n resolution (V3-I18-08)", () => {
     expect(screen.queryByText("t.missing.x")).not.toBeInTheDocument();
     expect(screen.queryByText("FALLBACK")).not.toBeInTheDocument();
   });
+
+  // I18-01/I18-03: page.tsx/[screen]/page.tsx pass serializable `catalogs` +
+  // `viewerLocale` (a resolver function itself can't cross the server/client
+  // boundary) instead of `resolveMessage` — the Renderer must build the same
+  // resolver internally so registered-locale text actually reaches the screen.
+  it("derives the resolver from catalogs+viewerLocale when resolveMessage is omitted", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        catalogs={{ ja: { "t.head.title": "設定" }, en: { "t.head.title": "Settings" } }}
+        viewerLocale="en"
+        def={screenDef([{ id: "h", type: "heading", props: { text_key: "t.head.title", text: "FALLBACK" } }])}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+  });
+
+  it("falls back to the ja catalog layer for an unauthenticated/default viewerLocale", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        catalogs={{ ja: { "t.head.title": "設定" } }}
+        def={screenDef([{ id: "h", type: "heading", props: { text_key: "t.head.title", text: "FALLBACK" } }])}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "設定" })).toBeInTheDocument();
+  });
 });
 
 describe("Renderer — empty state (V3-UIX-03)", () => {
@@ -473,6 +500,40 @@ describe("Renderer — API error copy (V3-UIX-03)", () => {
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(needle);
     expect(alert.textContent ?? "").not.toMatch(/api\s*\d/i);
+  });
+});
+
+describe("Renderer — defaultExecute forwards the server's machine-readable error code (V3-AUT-20)", () => {
+  it("reads body.error from a non-ok JSON response and shows the code-specific copy, not just the generic status copy", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ error: "INVALID_EMAIL" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      render(
+        <Renderer
+          def={screenDef([
+            {
+              id: "b",
+              type: "button",
+              props: { label: "送る" },
+              action: { kind: "api", method: "POST", path: "/api/v1/auth/magic-link" },
+            },
+          ])}
+        />,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "送る" }));
+      });
+      expect(fetchMock).toHaveBeenCalled();
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("メールアドレスの形式");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

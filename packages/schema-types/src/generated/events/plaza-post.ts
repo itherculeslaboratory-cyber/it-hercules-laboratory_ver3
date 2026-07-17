@@ -61,6 +61,10 @@ export interface PlazaPost {
    */
   created_at: string;
   /**
+   * 投稿者の locale（V3-I18-06: UGC 原文タグ。actor の pref-set locale から刻印・翻訳しない・任意=旧投稿は未刻印）。
+   */
+  lang?: string;
+  /**
    * data スキーマ版。
    */
   schema_version: string;
