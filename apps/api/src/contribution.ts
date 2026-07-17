@@ -112,6 +112,33 @@ export function applyContributionDelta(
   return scores;
 }
 
+// ── フォーク系譜解決（KRM-12・round-16裁定「フォーク10%=金銭でなく貢献度の分配」）──
+// フォークされたテンプレ/部品が使われた時、使用者に付与される貢献度の10%を
+// 「上流(部品/コンポーネント作者・処理/技術開発者・元テンプレ作者)へlineageに
+// 沿って」分配する — 単純に親1件だけでなく forked_from を辿れるだけ辿った
+// 全上流（祖父母世代以前も含む）を ancestors として集める。applyContributionDelta
+// は既に ancestors 配列全体へ 10% を均等配分する汎用実装（KRM-11 と共有）なので、
+// 本関数はその配列を「lineage 全体」から機械的に作るだけの純関数(ドメイン非依存:
+// market テンプレート/proposal フォーク等、forked_from を持つ任意のノード列を渡せる
+// — market-*routes 自体はこのレーンの担当外のため配線しない。呼び出し側で
+// この関数の戻り値を applyContributionDelta(..., ancestors) に渡すだけでよい)。
+// 循環参照は visited セットで防御（壊れた/自己参照データでも無限ループしない）。
+export function resolveLineage(
+  nodes: { node_id: string; forked_from?: string }[],
+  nodeId: string,
+): string[] {
+  const byId = new Map(nodes.map((n) => [n.node_id, n]));
+  const lineage: string[] = [];
+  const visited = new Set<string>([nodeId]);
+  let cur = byId.get(nodeId)?.forked_from;
+  while (cur && !visited.has(cur)) {
+    lineage.push(cur);
+    visited.add(cur);
+    cur = byId.get(cur)?.forked_from;
+  }
+  return lineage;
+}
+
 // ── PT 影響力投影（KRM-10・非公開＝本人のみ）─────────────────────────────
 export async function listPtEvents(
   s: TruthStore,
