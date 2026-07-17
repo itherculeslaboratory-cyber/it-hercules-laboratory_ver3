@@ -58,6 +58,8 @@ describe("UIX-16 選好 append + LWW 投影", () => {
       handle: "", // V3-AUT-10: 未設定 = onboardingComplete===false のゲート条件
       ui_exposure: "user",
       push_notifications_enabled: "off",
+      delivery_pref: "", // V3-UIX-80: 未設定 = 取引前ナッジの対象
+      bank_transfer_ready: "", // V3-UIX-80: 未設定 = 取引前ナッジの対象
     });
   });
 
@@ -124,5 +126,19 @@ describe("UIX-16/I18-08 負の validation(write-time 検証配線・批評家修
     const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
     expect(p.ui_exposure).toBe("dev");
     expect(p.push_notifications_enabled).toBe("on");
+  });
+
+  // V3-UIX-80: 取引前準備2フィールド(局留め受取/自宅配送の選好・銀行振込受け取り準備の自己申告)。
+  it("delivery_pref/bank_transfer_ready は enum のみ許可し append される", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("frank");
+    expect((await patchPrefs(env, h, { delivery_pref: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { bank_transfer_ready: "bogus" })).status).toBe(400);
+    expect(
+      (await patchPrefs(env, h, { delivery_pref: "post_office_hold", bank_transfer_ready: "yes" })).status,
+    ).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.delivery_pref).toBe("post_office_hold");
+    expect(p.bank_transfer_ready).toBe("yes");
   });
 });

@@ -10,6 +10,7 @@ import { projectLedger, isBanned, KARMA_TYPE, COIN_TYPE } from "./ledger-routes"
 import { projectContribution, PT_TYPE, CONTRIBUTION_TYPE } from "./contribution";
 import { projectRating } from "./market-rating-routes";
 import { INTL_TRUST_MIN, INTL_TRUST_MAX } from "./economy-constants";
+import { projectPreferences } from "./settings-routes";
 
 export const profileRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -59,6 +60,12 @@ export function canSetPrivate(field: string): boolean {
 
 const clampTrust = (v: number): number => Math.min(INTL_TRUST_MAX, Math.max(INTL_TRUST_MIN, v));
 
+export interface PiiReadiness {
+  delivery_pref: string;
+  bank_transfer_ready: string;
+  all_set: "yes" | "no";
+}
+
 export interface ProfileProjection {
   actor_id: string;
   display_name: string | null;
@@ -68,6 +75,20 @@ export interface ProfileProjection {
   public_safety_locked: readonly string[];
   configurable_public_fields: readonly string[];
   intl_trust: number; // 0-100
+  pii_readiness: PiiReadiness;
+}
+
+// V3-UIX-80: 取引前PII設定(局留め受取/自宅配送の選好・銀行振込受け取り準備)の完了判定。
+// 実住所・実口座番号は保持しない(V3-SEC-06/11) — delivery_pref/bank_transfer_ready は
+// settings-routes.ts の pref-set(既存 append-only 選好)の2フィールドのみを見る自己申告。
+// all_set は両方が非空("bank_transfer_ready"は"yes"必須)の時のみ"yes"(都度再計算)。
+export function computePiiReadiness(prefs: { delivery_pref: string; bank_transfer_ready: string }): PiiReadiness {
+  const complete = prefs.delivery_pref !== "" && prefs.bank_transfer_ready === "yes";
+  return {
+    delivery_pref: prefs.delivery_pref,
+    bank_transfer_ready: prefs.bank_transfer_ready,
+    all_set: complete ? "yes" : "no",
+  };
 }
 
 export async function projectProfile(s: TruthStore, actorId: string): Promise<ProfileProjection> {
@@ -76,6 +97,7 @@ export async function projectProfile(s: TruthStore, actorId: string): Promise<Pr
   const contribution = await projectContribution(s, actorId);
   const rating = await projectRating(s, actorId);
   const display_name = await projectDisplayName(s, actorId);
+  const prefs = await projectPreferences(s, actorId);
   // ponytail: intl_trust は karma 値からの決定論投影（0-100）。国境跨ぎ重み付けの本式は
   // 後波。karma_value∈[-100,100] → 50+value/2 ∈[0,100]（都度再計算・常駐 DB 禁止）。
   const intl_trust = clampTrust(50 + ledger.karma_value / 2);
@@ -88,6 +110,7 @@ export async function projectProfile(s: TruthStore, actorId: string): Promise<Pr
     public_safety_locked: PUBLIC_SAFETY_FIELDS,
     configurable_public_fields: CONFIGURABLE_FIELDS,
     intl_trust,
+    pii_readiness: computePiiReadiness(prefs),
   };
 }
 

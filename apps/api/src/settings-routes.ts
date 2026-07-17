@@ -30,6 +30,8 @@ const PREF_FIELDS = [
   "handle",
   "ui_exposure",
   "push_notifications_enabled",
+  "delivery_pref",
+  "bank_transfer_ready",
 ] as const;
 
 export const settingsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -50,6 +52,8 @@ export type Preferences = {
   handle: string;
   ui_exposure: string;
   push_notifications_enabled: string;
+  delivery_pref: string;
+  bank_transfer_ready: string;
 };
 
 // 選好投影(都度再計算)。pref-set を prefix scan → actor 一致のみ → created_at/ULID
@@ -77,6 +81,8 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
     handle: "", // 未設定 = V3-AUT-10 onboardingComplete===false のゲート条件
     ui_exposure: "user", // V3-UIX-43: 既定は一般ユーザー表示(dev/adminは自己申告トグル)
     push_notifications_enabled: "off", // V3-UIX-43: 配信基盤は人間ゲート・既定オフ
+    delivery_pref: "", // V3-UIX-80: 未設定 = 取引前ナッジの対象
+    bank_transfer_ready: "", // V3-UIX-80: 未設定(≠"yes") = 取引前ナッジの対象
   };
   for (const e of events) {
     for (const k of PREF_FIELDS) {

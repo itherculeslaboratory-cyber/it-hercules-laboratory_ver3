@@ -59,6 +59,16 @@
       "enum": ["on", "off"],
       "description": "Push 通知の利用者選好(V3-UIX-43)。実際の配信基盤(VAPID鍵・購読エンドポイント)は本番鍵投入を伴う人間ゲート(§5)であり本フィールドは自己管理設定の保持のみ(任意・既定 off)。"
     },
+    "delivery_pref": {
+      "type": "string",
+      "enum": ["post_office_hold", "home_delivery"],
+      "description": "V3-UIX-80 取引前準備: 受取方法の選好(局留め受取 or 自宅配送への配送先設定済み)。実住所は保持しない(V3-SEC-11/V3-MKT-20の郵便局留め・URL中継設計に整合するカテゴリのみ・任意)。"
+    },
+    "bank_transfer_ready": {
+      "type": "string",
+      "enum": ["yes", "no"],
+      "description": "V3-UIX-80 取引前準備: 銀行振込の受け取り準備(相手への口座共有・振込コード確認)が済んでいるかの自己申告(任意)。実口座番号はシステムが保持しない(V3-SEC-06)。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",
