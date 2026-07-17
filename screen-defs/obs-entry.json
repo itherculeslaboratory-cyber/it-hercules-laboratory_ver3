@@ -66,6 +66,11 @@
                   "type": "link",
                   "props": { "label_key": "obs-entry.device-hint.label", "label": "IoT機器が未登録の場合はこちら → 機器管理", "href": "/s/device" }
                 },
+                {
+                  "id": "templates-hint",
+                  "type": "link",
+                  "props": { "label_key": "obs-entry.templates-hint.label", "label": "テンプレートを管理する(フォーク・保存)", "href": "/s/obs-templates" }
+                },
                 { "id": "subject", "type": "field", "props": { "variant": "text", "name": "subject_ref", "label_key": "obs-entry.subject.label", "label": "対象個体 ID（任意）", "placeholder": "individual/..." } },
                 { "id": "sire", "type": "field", "props": { "variant": "text", "name": "sire_id", "label_key": "obs-entry.sire.label", "label": "父個体 ID（任意）", "placeholder": "individual/..." } },
                 { "id": "dam", "type": "field", "props": { "variant": "text", "name": "dam_id", "label_key": "obs-entry.dam.label", "label": "母個体 ID（任意）", "placeholder": "individual/..." } },

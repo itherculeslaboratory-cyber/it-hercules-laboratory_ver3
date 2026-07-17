@@ -9,6 +9,7 @@
     "home",
     "obs-domain-select",
     "obs-entry",
+    "obs-templates",
     "obs-navigator",
     "obs-confirm",
     "obs-detail",
@@ -32,11 +33,13 @@
     "placement-qr",
     "qr-resume",
     "economy-status",
+    "costs",
     "profile",
     "platinum-shop",
     "market-trade",
     "template-market",
     "settings",
+    "ai-sessions",
     "theme-gallery",
     "ui-templates",
     "paper-detail",
@@ -132,6 +135,11 @@
     },
     {
       "from": "home",
+      "to": "costs",
+      "label": "運営コストへ"
+    },
+    {
+      "from": "home",
       "to": "profile",
       "label": "プロフィールへ"
     },
@@ -154,6 +162,16 @@
       "from": "obs-entry",
       "to": "obs-confirm",
       "label": "確認画面へ"
+    },
+    {
+      "from": "obs-entry",
+      "to": "obs-templates",
+      "label": "テンプレートを管理する(フォーク・保存)"
+    },
+    {
+      "from": "obs-templates",
+      "to": "obs-entry",
+      "label": "観測入力へ戻る"
     },
     {
       "from": "obs-navigator",
@@ -211,6 +229,16 @@
       "label": "プロフィールへ"
     },
     {
+      "from": "economy-status",
+      "to": "costs",
+      "label": "運営コストへ"
+    },
+    {
+      "from": "costs",
+      "to": "economy-status",
+      "label": "ステータスへ戻る"
+    },
+    {
       "from": "profile",
       "to": "economy-status",
       "label": "ステータスへ"
@@ -249,6 +277,11 @@
       "from": "theme-gallery",
       "to": "settings",
       "label": "設定でテーマ適用へ"
+    },
+    {
+      "from": "settings",
+      "to": "ai-sessions",
+      "label": "AIセッション閲覧へ(サブ脳)"
     },
     {
       "from": "home",

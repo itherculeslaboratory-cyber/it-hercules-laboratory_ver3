@@ -1,0 +1,77 @@
+{
+  "screen_id": "obs-templates",
+  "route": "/observe/templates",
+  "title": "観測テンプレート管理",
+  "layout": "standard",
+  "notes": "V3-UIX-50 フォーク管理画面(観測入力4画面フローの4番目)。既存 GET/POST /observation/templates(V3-OBS-18・fork via forked_from)をUI化。観測対象選択(obs-domain-select)→テンプレート入力(obs-entry・条件リクエストは既存の+項目を追加/+単位を追加)に続く任意の側経路(主フロー3クリックの外・確認画面obs-confirmの主CTA『登録する』1つは不変)。フォークは既存テンプレのIDをforked_fromへ手入力(親の項目コピーはユーザー編集で再現・APIはforked_from連結のみを保証しitemsは呼び出し側が指定するV3-OBS-18の既定契約通り)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "観測テンプレート管理", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "既存のテンプレートを見て、フォーク(forked_from指定)または新規保存します。", "muted": true } },
+
+            { "id": "list-title", "type": "heading", "props": { "text": "既存のテンプレート", "level": 2 } },
+            {
+              "id": "templates",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/observation/templates",
+                "bind_items": "data.templates.templates",
+                "item_text": "{{title}} — id: {{template_id}}（{{items.length}}項目）",
+                "empty_text": "テンプレートはまだありません。"
+              }
+            },
+
+            { "id": "new-title", "type": "heading", "props": { "text": "テンプレートを保存する（新規 or フォーク）", "level": 2 } },
+            {
+              "id": "template-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/observation/templates" },
+              "children": [
+                { "id": "tpl-title", "type": "field", "props": { "variant": "text", "name": "title", "label": "テンプレート名", "required": true, "placeholder": "例: 三令後期の計測" } },
+                { "id": "tpl-forked-from", "type": "field", "props": { "variant": "text", "name": "forked_from", "label": "フォーク元のテンプレートID（任意）", "placeholder": "上の一覧の id をコピーして貼り付け" } },
+                { "id": "item-label", "type": "field", "props": { "variant": "text", "name": "items.0.label", "label": "項目名", "required": true, "placeholder": "例: 頭角幅" } },
+                {
+                  "id": "item-kind",
+                  "type": "field",
+                  "props": {
+                    "variant": "select",
+                    "name": "items.0.kind",
+                    "label": "入力種別",
+                    "required": true,
+                    "options": [
+                      { "value": "number", "label": "数値" },
+                      { "value": "text", "label": "テキスト" },
+                      { "value": "select", "label": "選択肢" },
+                      { "value": "image-annotation", "label": "画像注釈" },
+                      { "value": "api", "label": "API取得" },
+                      { "value": "calc", "label": "計算値" }
+                    ]
+                  }
+                },
+                { "id": "item-unit", "type": "field", "props": { "variant": "text", "name": "items.0.unit", "label": "単位（任意）", "placeholder": "例: mm" } },
+                { "id": "save", "type": "button", "props": { "label": "テンプレートを保存する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+
+            {
+              "id": "back-entry",
+              "type": "button",
+              "props": { "label": "観測入力へ戻る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "obs-entry" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "back-entry", "to_screen_id": "obs-entry", "label": "観測入力へ戻る" }
+  ]
+}

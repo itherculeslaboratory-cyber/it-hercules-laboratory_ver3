@@ -62,7 +62,8 @@
 //        GET /users/{actor}/individuals・protected・080/081は先に他レーンが
 //        採ったため統合時に113へ採番替え)= 105 → 同レーン(V3-UIX-82・検索
 //        グラフビュー)が +1 route(infra-route-114: GET /individuals/{id}/graph・
-//        protected)= 106。
+//        protected)= 106 → last-four レーン(C8・V3-WIK-28 AIセッション閲覧)が
+//        +1 route(infra-route-115: POST /research/ai-sessions・protected)= 107。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -93,9 +94,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (106 rows)", () => {
-  it("has exactly 106 route rows", () => {
-    expect(rows.length).toBe(106);
+describe("CL-04 route matrix (107 rows)", () => {
+  it("has exactly 107 route rows", () => {
+    expect(rows.length).toBe(107);
   });
 
   it("access column is only public|protected", () => {

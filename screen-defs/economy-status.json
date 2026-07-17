@@ -67,6 +67,12 @@
               "type": "button",
               "props": { "label": "プロフィールを見る", "variant": "secondary" },
               "action": { "kind": "navigate", "to": "profile" }
+            },
+            {
+              "id": "open-costs",
+              "type": "button",
+              "props": { "label": "運営コストを見る", "variant": "secondary" },
+              "action": { "kind": "navigate", "to": "costs" }
             }
           ]
         }
@@ -75,6 +81,7 @@
   ],
   "transitions": [
     { "from": "open-shop", "to_screen_id": "platinum-shop", "label": "プラチナコインショップへ" },
-    { "from": "open-profile", "to_screen_id": "profile", "label": "プロフィールへ" }
+    { "from": "open-profile", "to_screen_id": "profile", "label": "プロフィールへ" },
+    { "from": "open-costs", "to_screen_id": "costs", "label": "運営コストへ" }
   ]
 }

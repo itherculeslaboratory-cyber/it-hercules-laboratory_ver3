@@ -48,6 +48,26 @@
                   }
                 },
                 {
+                  "id": "pii-nudge",
+                  "type": "text",
+                  "props": {
+                    "tab_id": "detail",
+                    "when": { "not_eq": ["{{viewer.pii_readiness.all_set}}", "yes"] },
+                    "text": "取引前の準備が未完了です(受取方法・銀行振込の受け取り準備)。設定画面で残りを済ませられます(必須ではありません)。",
+                    "muted": true
+                  }
+                },
+                {
+                  "id": "pii-nudge-link",
+                  "type": "link",
+                  "props": {
+                    "tab_id": "detail",
+                    "when": { "not_eq": ["{{viewer.pii_readiness.all_set}}", "yes"] },
+                    "label": "設定で受取方法・銀行振込の受け取り準備を済ませる",
+                    "href": "/s/settings"
+                  }
+                },
+                {
                   "id": "stage-stepper",
                   "type": "stepper",
                   "props": {

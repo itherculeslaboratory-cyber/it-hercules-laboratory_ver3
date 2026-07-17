@@ -49,6 +49,14 @@ export interface PrefSet {
    */
   push_notifications_enabled?: "on" | "off";
   /**
+   * V3-UIX-80 取引前準備: 受取方法の選好(局留め受取 or 自宅配送への配送先設定済み)。実住所は保持しない(V3-SEC-11/V3-MKT-20の郵便局留め・URL中継設計に整合するカテゴリのみ・任意)。
+   */
+  delivery_pref?: "post_office_hold" | "home_delivery";
+  /**
+   * V3-UIX-80 取引前準備: 銀行振込の受け取り準備(相手への口座共有・振込コード確認)が済んでいるかの自己申告(任意)。実口座番号はシステムが保持しない(V3-SEC-06)。
+   */
+  bank_transfer_ready?: "yes" | "no";
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;

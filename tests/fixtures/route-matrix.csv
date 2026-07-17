@@ -58,7 +58,10 @@
 #   (V3-UIX-68・透明性の文化)が公開個体一覧新規 1 route(infra-route-113・
 #   080/081は先に基盤コスト/AIP-67レーンが採ったため統合時に113へ採番替え・
 #   protected)を追加 → 105 rows、同レーン(V3-UIX-82・検索グラフビュー)が近さ
-#   グラフ投影新規 1 route(infra-route-114・protected)を追加 → 106 rows。
+#   グラフ投影新規 1 route(infra-route-114・protected)を追加 → 106 rows。last-four
+#   レーン(C8・V3-WIK-28)が AI セッション閲覧の取り込み新規 1 route(infra-route-115・
+#   POST /research/ai-sessions・protected・既存 research-content-routes.ts の
+#   content(chat_log)/chat-index を再利用し閲覧側は新規route無し)を追加 → 107 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -168,3 +171,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/research/store/items/{item_id}/orders,VPS,Workers,W2,infra-route-112,protected,implemented,V3-MKT-45 注文(在庫チェック必須・プラチナは残高チェック後にのみ確定・外部EC同期は実鍵無しで縮退)
 —,GET,/api/v1/users/{actor}/individuals,VPS,Workers,W2,infra-route-113,protected,implemented,V3-UIX-68 透明性の文化: 他者のマイページでその人の作品(個体一覧)を全て見れる公開版(GET /users/{actor}/profile と同型・ロジックは本人用 GET /individuals と共用)・080/081は先に基盤コスト/AIP-67レーンが採ったため統合時に113へ採番替え
 —,GET,/api/v1/individuals/{id}/graph,VPS,Workers,W2,infra-route-114,protected,implemented,V3-UIX-82 検索グラフビュー: 血縁(buildPedigree再利用)+画像類似(observation-routes.tsのloadVector/cosineSimilarity再利用)のnodes/edgesを都度再計算で返す。UIのSVGノード描画は別途(データ投影のみ実装)
+—,POST,/api/v1/research/ai-sessions,VPS,Workers,W2,infra-route-115,protected,implemented,V3-WIK-28 AIセッション閲覧: Cursor等のローカルAIセッションログ(JSONL/markdown)を既存content(chat_log)へ決定論正規化して取り込み(adaptGithubSourceと同型)・content_idはsha256(source:session_ref)導出で再投入は409(重複しない)・常駐DB接続はしない(手順書に従い抽出したテキストを渡すのみ)。閲覧(一覧/本文)は既存GET /research/chat-index・/research/content/{id}を再利用

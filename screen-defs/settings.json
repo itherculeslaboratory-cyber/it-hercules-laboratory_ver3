@@ -24,7 +24,9 @@
                 { "id": "current-theme", "type": "text", "props": { "text_key": "settings.current-theme.text", "text": "テーマ: {{data.current.theme_pack_id}}", "muted": true } },
                 { "id": "current-motion", "type": "text", "props": { "text_key": "settings.current-motion.text", "text": "モーション設定: {{data.current.reduced_motion_override}}", "muted": true } },
                 { "id": "current-exposure", "type": "text", "props": { "text_key": "settings.current-exposure.text", "text": "UI露出: {{data.current.ui_exposure}}", "muted": true } },
-                { "id": "current-push", "type": "text", "props": { "text_key": "settings.current-push.text", "text": "Push通知: {{data.current.push_notifications_enabled}}", "muted": true } }
+                { "id": "current-push", "type": "text", "props": { "text_key": "settings.current-push.text", "text": "Push通知: {{data.current.push_notifications_enabled}}", "muted": true } },
+                { "id": "current-delivery", "type": "text", "props": { "text_key": "settings.current-delivery.text", "text": "受取方法: {{data.current.delivery_pref}}", "muted": true } },
+                { "id": "current-bank", "type": "text", "props": { "text_key": "settings.current-bank.text", "text": "銀行振込の受け取り準備: {{data.current.bank_transfer_ready}}", "muted": true } }
               ]
             },
             {
@@ -54,6 +56,14 @@
                   { "value": "off", "label": "オフ(既定)" },
                   { "value": "on", "label": "オン" }
                 ] } },
+                { "id": "delivery-pref", "type": "field", "props": { "variant": "select", "name": "delivery_pref", "label_key": "settings.delivery-pref.label", "label": "受取方法(取引前準備・V3-UIX-80)", "placeholder": "受取方法を選ぶ", "options": [
+                  { "value": "post_office_hold", "label": "郵便局留め・はこぽす(匿名受取)" },
+                  { "value": "home_delivery", "label": "自宅配送(相手と直接URLをやり取り)" }
+                ] } },
+                { "id": "bank-transfer-ready", "type": "field", "props": { "variant": "select", "name": "bank_transfer_ready", "label_key": "settings.bank-transfer-ready.label", "label": "銀行振込の受け取り準備(取引前準備・V3-UIX-80)", "placeholder": "選ぶ", "options": [
+                  { "value": "no", "label": "まだ(既定)" },
+                  { "value": "yes", "label": "準備できている" }
+                ] } },
                 { "id": "save", "type": "button", "props": { "label_key": "settings.save.label", "label": "設定を保存する", "variant": "primary", "type": "submit" } }
               ]
             },
@@ -61,6 +71,7 @@
             { "id": "hub-ai", "type": "link", "props": { "label_key": "settings.hub-ai.label", "label": "AI接続設定(BYOK・個体観測用LLM等)", "href": "/s/ai-profile-settings" } },
             { "id": "hub-device", "type": "link", "props": { "label_key": "settings.hub-device.label", "label": "機器連携(SwitchBot等IoT)", "href": "/devices" } },
             { "id": "hub-theme", "type": "link", "props": { "label_key": "settings.hub-theme.label", "label": "テーマのfork一覧", "href": "/s/theme-gallery" } },
+            { "id": "hub-ai-sessions", "type": "link", "props": { "label_key": "settings.hub-ai-sessions.label", "label": "AIセッション閲覧(サブ脳)", "href": "/s/ai-sessions" } },
             { "id": "backup-title", "type": "heading", "props": { "text_key": "settings.backup-title.text", "text": "自分のデータを持ち出す(バックアップ)", "level": 2 } },
             { "id": "backup-facts", "type": "link", "props": { "label_key": "settings.backup-facts.label", "label": "個体データをCSVで書き出す", "href": "/api/v1/export/facts.csv" } },
             { "id": "backup-photos", "type": "link", "props": { "label_key": "settings.backup-photos.label", "label": "写真参照一覧をCSVで書き出す", "href": "/api/v1/export/photos.csv" } },
