@@ -34,7 +34,7 @@ jobs:
       # component-venv-only; those TC importorskip cleanly here.
       - name: Python tests (components — .venv excluded)
         run: |
-          python -m pip install --upgrade pip pytest numpy cryptography
+          python -m pip install --upgrade pip pytest numpy cryptography polars
           PYTHONIOENCODING=utf-8 python -m pytest -q components/*/tests
 
       - name: Build web (V3-AIP-22)
