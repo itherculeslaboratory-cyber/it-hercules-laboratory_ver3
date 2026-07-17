@@ -83,7 +83,9 @@ describe("C2 auth — magic-link + verify", () => {
 });
 
 describe("C2 auth — negative (tamper / expiry / purpose)", () => {
-  it("tampered token → 401", async () => {
+  // V3-AUT-19: a v1.-shaped token that WAS presented but fails verification is
+  // INVALID_TOKEN (distinct from AUTH_REQUIRED = no credential presented at all).
+  it("tampered token → 401 INVALID_TOKEN", async () => {
     const good = await issueSessionToken(await deriveActorId("x@y.z"), SESSION_SECRET);
     const parts = good.split(".");
     // flip a char in the payload segment
@@ -92,27 +94,31 @@ describe("C2 auth — negative (tamper / expiry / purpose)", () => {
     expect(await verifySessionToken(tampered, SESSION_SECRET)).toBeNull();
     const res = await app.request("/events", { method: "POST", headers: bearer(tampered) }, makeEnv());
     expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "INVALID_TOKEN" });
   });
 
-  it("wrong secret → 401", async () => {
+  it("wrong secret → 401 INVALID_TOKEN", async () => {
     const foreign = await issueSessionToken(await deriveActorId("x@y.z"), "other-secret");
     const res = await app.request("/events", { method: "POST", headers: bearer(foreign) }, makeEnv());
     expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "INVALID_TOKEN" });
   });
 
-  it("expired token → 401", async () => {
+  it("expired token → 401 INVALID_TOKEN", async () => {
     const past = Math.floor(Date.now() / 1000) - 10;
     const expired = await signToken({ sub: "abc", iat: past - 60, exp: past }, SESSION_SECRET);
     expect(await verifySessionToken(expired, SESSION_SECRET)).toBeNull();
     const res = await app.request("/events", { method: "POST", headers: bearer(expired) }, makeEnv());
     expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "INVALID_TOKEN" });
   });
 
-  it("purpose mixing: magic token cannot authenticate a session → 401", async () => {
+  it("purpose mixing: magic token cannot authenticate a session → 401 INVALID_TOKEN", async () => {
     const magic = await issueMagicToken("user@example.com", SESSION_SECRET);
     expect(await verifySessionToken(magic, SESSION_SECRET)).toBeNull();
     const res = await app.request("/events", { method: "POST", headers: bearer(magic) }, makeEnv());
     expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "INVALID_TOKEN" });
   });
 
   it("verify with a session token (wrong purpose) → 401", async () => {

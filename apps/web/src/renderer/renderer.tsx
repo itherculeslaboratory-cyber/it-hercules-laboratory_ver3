@@ -341,8 +341,18 @@ function defaultExecute(onNavigate?: (to: string, query?: Record<string, string>
       return undefined;
     }
     const res = await fetch(apiUrl(action.path), requestInit(action.method, body));
-    if (!res.ok) throw new ApiError(res.status);
     const ct = res.headers.get("content-type") ?? "";
+    if (!res.ok) {
+      // V3-AUT-20: read the server's machine-readable `error` code (when the
+      // body is JSON) so mapError() can give distinct copy per code instead of
+      // only per HTTP status; falls back to the status when absent/unparsable.
+      const errBody = ct.includes("application/json") ? await res.json().catch(() => null) : null;
+      const code =
+        errBody && typeof errBody === "object" && typeof (errBody as { error?: unknown }).error === "string"
+          ? (errBody as { error: string }).error
+          : res.status;
+      throw new ApiError(code);
+    }
     return ct.includes("application/json") ? await res.json() : undefined;
   };
 }

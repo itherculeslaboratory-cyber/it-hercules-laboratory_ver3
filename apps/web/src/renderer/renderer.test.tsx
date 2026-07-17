@@ -503,6 +503,40 @@ describe("Renderer — API error copy (V3-UIX-03)", () => {
   });
 });
 
+describe("Renderer — defaultExecute forwards the server's machine-readable error code (V3-AUT-20)", () => {
+  it("reads body.error from a non-ok JSON response and shows the code-specific copy, not just the generic status copy", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ error: "INVALID_EMAIL" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      render(
+        <Renderer
+          def={screenDef([
+            {
+              id: "b",
+              type: "button",
+              props: { label: "送る" },
+              action: { kind: "api", method: "POST", path: "/api/v1/auth/magic-link" },
+            },
+          ])}
+        />,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "送る" }));
+      });
+      expect(fetchMock).toHaveBeenCalled();
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("メールアドレスの形式");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("Renderer — segmented toggle field (V3-OBS-18)", () => {
   it("checks the default option and carries the selected value in the submit body", async () => {
     const onAction = vi.fn(async () => ({}));

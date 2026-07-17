@@ -128,6 +128,12 @@ app.onError((err, c) => {
 // V3-AUT-03(round-16 Q-REQ-03): cookie/bearer セッションは denylist(KV)も毎リクエスト
 // 照会する — iat < 失効時刻なら 401(既発行トークンの唯一の強制失効経路)。DEV_TOKEN
 // 経路は対象外(既存契約通り・per-request BAN 判定もしない後波扱い)。
+// V3-AUT-19: 無Bearer/認識できない形式は AUTH_REQUIRED(既存契約・CL-04/CL-03 等が
+// 逐語 assert 済みにつき維持)、v1.形式のトークンが提示されたが署名・期限で失敗した
+// ケースだけ INVALID_TOKEN に区別する(「無効/期限切れ/改ざん」の機械可読化)。
+// USER_NOT_FOUND/KARMA_SUSPENDED は本波非対象(前者はアカウント行の存在概念が無く
+// V3-AUT-09 側の設計、後者は KRM-04 の「BAN はログイン時のみ判定・毎リクエスト走査
+// 回避」という既存コスト裁定と衝突するため不変条項①との整合を崩さず見送る)。
 app.use("*", async (c, next) => {
   if (PUBLIC_ROUTES.includes(c.req.path)) return next();
 
@@ -137,9 +143,15 @@ app.use("*", async (c, next) => {
   const rolesOf = (p: { roles?: unknown }): string[] =>
     Array.isArray(p.roles) ? p.roles.filter((x): x is string => typeof x === "string") : [];
 
+  // v1.形式(session/magic token 共通の envelope)が一つでも提示されたら true にする。
+  // 全経路が尽きた末の 401 を AUTH_REQUIRED(無提示)/INVALID_TOKEN(提示されたが不正)
+  // のどちらにするかを、この一撃で決める。
+  let presentedV1Token = false;
+
   // ② HttpOnly Cookie ihl_session
   const cookieTok = getCookie(c, "ihl_session");
   if (cookieTok && secret) {
+    presentedV1Token = presentedV1Token || cookieTok.startsWith("v1.");
     const p = await verifySessionToken(cookieTok, secret);
     if (p) {
       if (await isDenylisted(c.env.AUTH_DENYLIST, p.sub, p.iat)) {
@@ -156,6 +168,7 @@ app.use("*", async (c, next) => {
   const bearer = header.startsWith("Bearer ") ? header.slice(7) : "";
   if (bearer) {
     if (bearer.startsWith("v1.") && secret) {
+      presentedV1Token = true;
       const p = await verifySessionToken(bearer, secret);
       if (p) {
         if (await isDenylisted(c.env.AUTH_DENYLIST, p.sub, p.iat)) {
@@ -173,6 +186,7 @@ app.use("*", async (c, next) => {
     }
   }
 
+  if (presentedV1Token) return c.json({ error: "INVALID_TOKEN" }, 401);
   return c.json({ error: "AUTH_REQUIRED" }, 401);
 });
 
