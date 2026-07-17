@@ -10,8 +10,15 @@
 // per axis) live in config/scorecard-presets.json and are illustrative examples
 // from the requirement text, not the only allowed scheme (Best-of-N).
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join, dirname } from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
+
+// Repo root, resolved from this file's own location — NOT process.cwd(). Callers
+// (tests/, apps/api, apps/web) are each their own npm workspace with a different
+// cwd when `npm test` runs them, so cwd-based lookup silently breaks outside the
+// repo root.
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(SCRIPT_DIR, "..");
 
 /**
  * @param {{ name: string, maxPoints: number, score: number, min?: number }[]} axes
@@ -39,7 +46,7 @@ export function evaluateScorecard(axes, totalMin) {
 }
 
 /** Load a named preset from config/scorecard-presets.json (repo-root relative). */
-export function loadPreset(name, root = process.cwd()) {
+export function loadPreset(name, root = REPO_ROOT) {
   const presets = JSON.parse(readFileSync(join(root, "config", "scorecard-presets.json"), "utf8"));
   const preset = presets[name];
   if (!preset) throw new Error(`unknown scorecard preset: ${name}`);
