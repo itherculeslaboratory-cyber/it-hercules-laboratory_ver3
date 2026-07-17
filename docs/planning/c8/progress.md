@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: ███████░░░░░░░░░░░░░ 36%（119/334）
-- 第1波必達(required): █████████████░░░░░░░ 63%（116/184）
+- 全体: ███████░░░░░░░░░░░░░ 37%（125/334）
+- 第1波必達(required): █████████████░░░░░░░ 66%（122/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 186 |
-| 着手中(in_progress) | 26 |
+| 未着手(todo) | 182 |
+| 着手中(in_progress) | 24 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
-| 完了(done) | 119 |
+| 完了(done) | 125 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -38,12 +38,12 @@
 |---|---|
 | CSV | ████████████████████ 100%（1/1） |
 | L1/PAY | █████████░░░░░░░░░░░ 43%（26/61） |
-| L3/L4-auth | █████████░░░░░░░░░░░ 44%（12/27） |
+| L3/L4-auth | ██████████░░░░░░░░░░ 52%（14/27） |
 | L4 | ███████████░░░░░░░░░ 57%（29/51） |
 | L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
 | L4-knowledge | ██████░░░░░░░░░░░░░░ 30%（16/54） |
 | L4-obs | ███████░░░░░░░░░░░░░ 36%（24/66） |
-| L6-ui | █░░░░░░░░░░░░░░░░░░░ 3%（1/39） |
+| L6-ui | ███░░░░░░░░░░░░░░░░░ 13%（5/39） |
 
 ## lane 別明細
 
@@ -128,9 +128,9 @@
 | V3-AUT-06 | ログイン画面はメールアドレス入力と利用規約同意チェックを必須とし、未同意/未入力… | required | done | 4295494 |
 | V3-AUT-08 | @ユーザーID（handle）は3〜30文字の限定文字種で一意・不変（確定後変更… | required | done | e9db7f7 |
 | V3-AUT-09 | 新規登録は独立サインアップ画面を持たず、ログイン画面のマジックリンク初回検証時に… | required | done | eda9946 |
-| V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | in_progress | eda9946 |
+| V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | done | eda9946, 2126232 |
 | V3-AUT-11 | 認証→初期設定フロー（登録→国/言語→利用規約→ホーム）を明示的に定義し、全画面… | required | done | 4295494 |
-| V3-AUT-12 | 保護ルートはProtectedApp/middlewareでガードし未ログイン時… | required | in_progress | db2bc69 |
+| V3-AUT-12 | 保護ルートはProtectedApp/middlewareでガードし未ログイン時… | required | done | db2bc69, 3f5012a, 2126232 |
 | V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | required | blocked | — |
 | V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | in_progress | 987c5c3 |
 | V3-AUT-20 | APIエラーは機械可読なerrorコードで返し、クライアントはそれをユーザー向け… | required | done | 987c5c3 |
@@ -384,10 +384,10 @@
 | V3-UIX-04 | 色は意味のみに用いる(緑=成功/生存、赤=失敗、青=情報、黄=注意)。装飾的な多… | required | todo | — |
 | V3-UIX-21 | ユーザーの好み・価値観を離散信号として記録し検索rerankに反映するマチアプ機… | required | todo | — |
 | V3-UIX-24 | stub段階のMatchApp/画面は『サンプルデータ』と分かる表示にし本番デー… | required | todo | — |
-| V3-UIX-25 | ホーム画面を認証後に着地するWorldレイヤーの司令塔とし、今日の状態(現在地カ… | required | todo | — |
-| V3-UIX-26 | ホームの文明ミニマップは非PII集計(観測ペース/信頼度平均/テンプレ文化成長の… | required | todo | — |
-| V3-UIX-27 | 次回観測upcoming/overdueをホームのtoday_linesへ最大3… | required | todo | — |
-| V3-UIX-28 | 全画面共通のブランドクロムを採用する:ヘッダーに観測対象ナビゲータ・マイページ・… | required | todo | — |
+| V3-UIX-25 | ホーム画面を認証後に着地するWorldレイヤーの司令塔とし、今日の状態(現在地カ… | required | done | 3f5012a |
+| V3-UIX-26 | ホームの文明ミニマップは非PII集計(観測ペース/信頼度平均/テンプレ文化成長の… | required | done | 3f5012a |
+| V3-UIX-27 | 次回観測upcoming/overdueをホームのtoday_linesへ最大3… | required | done | 3f5012a |
+| V3-UIX-28 | 全画面共通のブランドクロムを採用する:ヘッダーに観測対象ナビゲータ・マイページ・… | required | done | 3f5012a |
 | V3-UIX-32 | UIはOSSベース(Next.js 15 + shadcn/ui、掲示板は5ch… | required | todo | — |
 | V3-UIX-43 | 設定機能を/me/settingsに集約し、AI接続(OpenAI互換BYOK)… | required | todo | — |
 | V3-UIX-50 | 観測入力の操作フローを観測対象選択画面・テンプレート入力画面・条件リクエスト画面… | required | todo | — |

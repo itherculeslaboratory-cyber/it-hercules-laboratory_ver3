@@ -319,10 +319,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "in_progress",
-    "commits": ["eda9946"],
-    "tc": [],
-    "note": "バックエンド契約は完成: projectOnboardingStatus(handle確定+locale明示選択の両方=必須2ゲート)をGET /api/v1/me/onboardingとGET /api/v1/auth/sessionのonboarding_completeで公開・テスト済み。表示名/タイムゾーン/テーマはゲート対象外(usecase-driven-design.md §auth-onboarding-locale準拠)。未完了部分: クライアント側で「オンボーディング未完了の間はアプリ全体を専用フローに閉じる」実際のUI(setup-profile統合画面)がまだ存在しない(ui-asset-catalog.mdが指摘する既知ギャップ「handle確定専用ステップ」画面未作成)。V3-AUT-12のmiddlewareは未ログインのみ/s/loginへ誘導し、ログイン済みだがonboarding未完了のケースはまだガードしていない。"
+    "status": "done",
+    "commits": ["eda9946", "2126232"],
+    "tc": ["apps/web/src/middleware.test.ts > skipsOnboardingCheck — V3-AUT-10 onboarding gate (pure)", "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior (onboarding系4件)", "tests/settings-preferences.test.ts > handle は1〜40文字のみ許可(空文字/超過は400)"],
+    "note": "バックエンド契約は完成: projectOnboardingStatus(handle確定+locale明示選択の両方=必須2ゲート)をGET /api/v1/me/onboardingとGET /api/v1/auth/sessionのonboarding_completeで公開・テスト済み。表示名/タイムゾーン/テーマはゲート対象外(usecase-driven-design.md §auth-onboarding-locale準拠)。未完了部分: クライアント側で「オンボーディング未完了の間はアプリ全体を専用フローに閉じる」実際のUI(setup-profile統合画面)がまだ存在しない(ui-asset-catalog.mdが指摘する既知ギャップ「handle確定専用ステップ」画面未作成)。V3-AUT-12のmiddlewareは未ログインのみ/s/loginへ誘導し、ログイン済みだがonboarding未完了のケースはまだガードしていない。\n\n[統合uiux-g07追記] setup-profile画面新設(handle確定+locale明示選択を1フォームでPATCH /me/preferences)。既存ihl.pref.set.v1にhandleフィールド追加(1-40文字必須・新規イベント型は増やさない)。middleware.tsにonboarding gate追加(handle未設定の間は/s/setup-profileへ307誘導・setup-profile自体は除外してリダイレクトループ回避・onboarding判定fetch失敗時はfail-open)。前回note記載の未完了部分は本レーンで解消。"
   },
   {
     "id": "V3-AUT-11",
@@ -347,10 +347,10 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "in_progress",
-    "commits": ["db2bc69"],
-    "tc": [],
-    "note": "apps/web/src/middleware.tsを新設: /s/login・/s/login-sent以外の全画面をセッション必須にし、未ログイン時は/s/loginへ307誘導(既存の公開GET /api/v1/auth/sessionを叩くのみでJWT検証を再実装しない・API不通時はfail-closed)。next buildで実際にコンパイル成功を確認済み。未実装: (a)ログイン済みだがonboarding未完了のケースをsetup-profile画面へ誘導する分岐(V3-AUT-10のonboarding_completeは取得済みなので追加は小さいが、誘導先のsetup-profile画面自体が無い) (b)ログイン/登録/ログアウトのナビリンクをAppShellヘッダーに常時表示する要件 — Renderer共通のapp-shell caseか全47screen-defへの追記が必要で、golden snapshot(screendef-snapshots.test.tsx 50件)への影響が大きく、UI磨き波(別レーン)に委ねる判断をした。"
+    "status": "done",
+    "commits": ["db2bc69", "3f5012a", "2126232"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx > Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)", "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior"],
+    "note": "apps/web/src/middleware.tsを新設: /s/login・/s/login-sent以外の全画面をセッション必須にし、未ログイン時は/s/loginへ307誘導(既存の公開GET /api/v1/auth/sessionを叩くのみでJWT検証を再実装しない・API不通時はfail-closed)。next buildで実際にコンパイル成功を確認済み。未実装: (a)ログイン済みだがonboarding未完了のケースをsetup-profile画面へ誘導する分岐(V3-AUT-10のonboarding_completeは取得済みなので追加は小さいが、誘導先のsetup-profile画面自体が無い) (b)ログイン/登録/ログアウトのナビリンクをAppShellヘッダーに常時表示する要件 — Renderer共通のapp-shell caseか全47screen-defへの追記が必要で、golden snapshot(screendef-snapshots.test.tsx 50件)への影響が大きく、UI磨き波(別レーン)に委ねる判断をした。\n\n[統合uiux-g07追記] (a)(b)とも本レーンで解消: middleware.tsにonboarding gate追加(setup-profileへ誘導)、AppShellヘッダーにログイン/登録/ログアウトの常時ナビリンク実装(V3-UIX-28コミットで充足)。middleware.tsはdb2bc69(基礎ガード)+本レーン(onboarding拡張)のスーパーセットとして統合担当がworktree版で解決、npm run lint/testとも緑を確認済み。"
   },
   {
     "id": "V3-AUT-15",
@@ -2105,10 +2105,10 @@
     "tier": "A",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["3f5012a"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx > home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)"],
+    "note": "home.jsonを18ボタン羅列から「今日の状態(kpi-tile: カルマ/超過/近接)+次の一手(today_lines table+deep link)+文明の状態(civ-minimap kpi)」の司令塔へ再構成。nav-reachability.test.ts のclick-budget契約・observation.spec.ts のラベル契約(観測を始める/ドメインから選んで始める等)は既存id/label/hrefを一切変更せず追加のみで維持。"
   },
   {
     "id": "V3-UIX-26",
@@ -2118,10 +2118,10 @@
     "tier": "B",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["3f5012a"],
+    "tc": ["tests/home-insights.test.ts > V3-UIX-26 ホーム文明ミニマップ(非PII集計3指標)", "apps/web/src/renderer/renderer.test.tsx > home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)"],
+    "note": "GET /api/v1/home/civ-minimap(新規route・非PII集計3指標: 直近7日観測件数/全ユーザーintl_trust平均/テンプレ文化版数)を返す。個別actorの値は一切出さない(テストで検証)。KpiTileNodeにprops.fallback追加、値が空の間(ロード中/取得失敗)は近似値(0/50/0)を表示。\n\n[統合uiux-g07追記] main側で既にinfra-route-080..090が別レーンに割り当て済みだったため、統合担当が本routeをinfra-route-091に採番し直し、route-matrix.csv / tests/cl-04-route-matrix.test.ts(83行)を更新した。"
   },
   {
     "id": "V3-UIX-27",
@@ -2131,10 +2131,10 @@
     "tier": "C",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["3f5012a"],
+    "tc": ["tests/home-insights.test.ts > V3-UIX-27 today_lines (overdue→near merged, capped at 3, deep-linked)"],
+    "note": "GET /home/summaryのtoday_linesをoverdue→near統合・サーバ側で最大3行にcapし、個体ごとの観測入力deep link(/s/obs-register-entry?id=...)を付与。TableNodeのlinkセルで既存語彙のまま描画(新規ノード不要)。"
   },
   {
     "id": "V3-UIX-28",
@@ -2144,10 +2144,10 @@
     "tier": "B",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["3f5012a"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx > Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)"],
+    "note": "app-shell 1箇所(renderer.tsx AppShellNode新設)に全画面共通ブランドクロムを実装。ヘッダー=ブランド+観測対象ナビゲータ/マイページ/通知/設定+認証状態別ログイン/登録/ログアウト、フッター=愚痴・改善/投票・Fork/Builder(未ログイン時は死にリンクを避け非表示)。globals.css に civ-chrome-* トークン準拠CSS追加。47+全screen-defへ横展開(per-screen改修不要)。"
   },
   {
     "id": "V3-UIX-32",
