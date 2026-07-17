@@ -98,7 +98,7 @@ dev-login → ledger screen-def を Renderer で描画 → append-only 台帳の
 
 ### 2.7 C5 以降に追加された E2E spec の網羅索引（V3-AIP-49 残余仕上げ）
 
-C5 執筆時点の本設計書は observation/ugc-translate/market/ledger/spec-thread/screendefの6件のみを個別記述していたが、C6〜C8で以下5件が追加された。**個別の条件分岐網羅節（2.1〜2.6 と同粒度の記述）はまだ未執筆** — 本表はその存在と一文要約のみを機械的に索引化したもの(ギャップを見える化する目的。プレースホルダの空節を新設して「網羅した」と偽装しない)。
+C5 執筆時点の本設計書は observation/ugc-translate/market/ledger/spec-thread/screendefの6件のみを個別記述していたが、C6〜C8で以下7件が追加された。**個別の条件分岐網羅節（2.1〜2.6 と同粒度の記述）はまだ未執筆** — 本表はその存在と一文要約のみを機械的に索引化したもの(ギャップを見える化する目的。プレースホルダの空節を新設して「網羅した」と偽装しない)。
 
 | spec | 一文要約 |
 |---|---|

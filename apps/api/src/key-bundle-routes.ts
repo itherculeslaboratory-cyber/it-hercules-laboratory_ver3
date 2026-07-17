@@ -37,7 +37,7 @@ function envelope(type: string, schema: string, id: string, actorId: string, dat
   };
 }
 
-/** 32byte(256bit)の一回限りリカバリコード。1Password Secret Key / Bitwarden Emergency
+/** 20byte(160bit)の一回限りリカバリコード。1Password Secret Key / Bitwarden Emergency
  * Kit と同型の「オフラインで書き留める前提の高エントロピー文字列」。Crockford風に
  * 4文字ずつハイフン区切り(視写ミスを減らす・視認性)。平文はここでしか作られず、
  * サーバはこの後 SHA-256 しか保持しない。 */

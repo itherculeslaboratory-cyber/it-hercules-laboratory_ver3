@@ -2,7 +2,7 @@
 // (Backblaze B2 等)へ複製するアダプタ。gmo-connector.ts/payjp-connector.ts と同じ
 // 接続層分離パターン: MODE=dry-run(既定・実接続なし)/live(本番 — 人間ゲート: B2 契約+
 // 実鍵投入+実接続まで明示 throw)。本ラン(実装レーン)のスコープは「アダプタ+設定手順書
-// (docs/ops/runbook.md §8)+dry-run 検証」まで — 実 B2 API 呼び出しコードは書かない
+// (docs/ops/runbook.md §7)+dry-run 検証」まで — 実 B2 API 呼び出しコードは書かない
 // (実契約が無い状態でネットワーク呼び出しコードだけ先行させても検証できず、後日の
 // 実装時に実 API 形状で書き直すほうが安全なため)。
 import type { R2BucketLite } from "@ihl/truth";
@@ -29,7 +29,7 @@ export class TruthBackupLiveNotImplementedError extends Error {
     super(
       "TRUTH_BACKUP_LIVE_NOT_IMPLEMENTED — real B2 sync requires a human gate " +
         "(B2 bucket + application key contract + real key injection). " +
-        "See docs/ops/runbook.md §8 for the setup procedure.",
+        "See docs/ops/runbook.md §7 for the setup procedure.",
     );
     this.name = "TruthBackupLiveNotImplementedError";
   }

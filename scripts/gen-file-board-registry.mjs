@@ -13,11 +13,16 @@
 //   node scripts/gen-file-board-registry.mjs          # regenerate in place
 //   node scripts/gen-file-board-registry.mjs --check  # regen in memory, byte-compare, exit 1 on drift
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, dirname } from "node:path";
 import { createHash } from "node:crypto";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 
-const ROOT = process.cwd();
+// Repo root, resolved from this file's own location — NOT process.cwd(). Callers
+// (tests/, apps/api, apps/web) are each their own npm workspace with a different
+// cwd when `npm test` runs them, so cwd-based lookup silently breaks outside the
+// repo root. (Same pattern as scripts/scorecard-gate.mjs.)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(SCRIPT_DIR, "..");
 const OUT = join(ROOT, "04-traceability", "file-board-registry.csv");
 
 const MD_DIRS = ["01-requirements", "02-design"];
