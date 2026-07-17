@@ -23,6 +23,10 @@ export interface ObsAnalysis {
     [k: string]: unknown;
   };
   /**
+   * V3-SEC-42: SHA-256(canonicalJson(results))。改ざん検出・R2データ完全性・論文提出時の真正性証明用(サーバが書込時に算出・任意=既存レコードとの後方互換)。
+   */
+  results_sha256?: string;
+  /**
    * 前回解析との差分（任意）。
    */
   delta?: {

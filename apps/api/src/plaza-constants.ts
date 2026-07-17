@@ -28,6 +28,17 @@ export const SUMMARY_BLOCK_SIZE = 100;
 // ponytail: 較正 knob。紛争滞留の実測で調整(GUI 後波)。
 export const DISPUTE_TTL_DAYS = 14;
 
+// GOV-07: プラチナ投票による紛争裁定(当事者が「公開して投票」を選んだ場合のみ開始)。
+// 出典: user-ruling-2026-07-17-round-16.md 由来要件(registry.json V3-GOV-07)。
+export const GOV_DISPUTE_VOTE_WINDOW_DAYS = 7; // 公開から7日間で投票締切
+export const GOV_DISPUTE_LOSER_KARMA_STEPS = 5; // 敗者Δcount+5(勝敗確定時に1回のみ)
+
+// GOV-10: 掲示板・マーケットの指摘は30回ごとにプラチナ1枚を消費(クールダウンなし)。
+// カルマΔcountとは別経路のプラチナ台帳消費のみ(round-16裁定に基づく要件・registry.json
+// V3-GOV-10)。市場フラグ(market-flag-routes.ts)にのみ配線済み — 掲示板側の指摘機能は
+// 現状未実装のため未配線(HANDOFF 引継ぎ参照)。
+export const GOV_INDICTMENT_PT_FEE_EVERY = 30;
+
 // GOV-09: 不使用フラグ付与時の grantKarmaCountIncrease steps(Δcount+10)。
 export const GOV_FLAG_COUNT_STEPS = 10;
 

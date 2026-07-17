@@ -40,6 +40,9 @@ import { socialRoutes } from "./social-routes";
 import { proposalRoutes } from "./proposal-routes";
 import { profileRoutes } from "./profile-routes";
 import { handleRoutes } from "./handle-routes";
+import { consentRoutes } from "./consent-routes";
+import { keyBundleRoutes } from "./key-bundle-routes";
+import { sandboxRoutes } from "./sandbox-routes";
 import { githubWebhookRoutes } from "./github-webhook-routes";
 import { researchContentRoutes } from "./research-content-routes";
 import { paperMatchRoutes } from "./paper-match-routes";
@@ -49,6 +52,7 @@ import { researchAgentBatchRoutes, handleResearchScheduled } from "./research-ag
 import { NEWSPAPER_CRON_UTC } from "./research-constants";
 import { handleScheduled } from "./batch";
 import { costsRoutes } from "./costs-routes";
+import { checkRateLimit, WRITE_RATE_LIMIT_PER_MINUTE, WRITE_QUOTA_PER_DAY } from "./rate-limit";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -190,6 +194,41 @@ app.use("*", async (c, next) => {
 
   if (presentedV1Token) return c.json({ error: "INVALID_TOKEN" }, 401);
   return c.json({ error: "AUTH_REQUIRED" }, 401);
+});
+
+// V3-SEC-58: 書込系(R2 Truth append)レート制限+ユーザー別クォータ。deny-by-default 直後
+// (actorId 確定後)の単一 choke point — 個別 route を触らず全 POST/PUT/PATCH/DELETE を
+// 一括ガードする(root-cause fix: 各 route に都度 guard を書かない)。actorId 未確定(理論上
+// 到達しない・上の gate で既に 401 済み)は素通り。RATE_LIMIT 未バインドは checkRateLimit が
+// no-op degrade(既存 AUTH_DENYLIST/AUTH_CODE_STATE と同じ規約・テストへの影響なし)。
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+app.use("*", async (c, next) => {
+  const actorId = c.get("actorId");
+  if (!WRITE_METHODS.has(c.req.method) || !actorId) return next();
+
+  const minuteBucket = Math.floor(Date.now() / 60_000);
+  const perMinute = await checkRateLimit(
+    c.env.RATE_LIMIT,
+    `wr:min:${actorId}:${minuteBucket}`,
+    WRITE_RATE_LIMIT_PER_MINUTE,
+    60,
+  );
+  if (!perMinute.allowed) {
+    return c.json({ error: "RATE_LIMITED", limit: perMinute.limit, window_seconds: 60 }, 429);
+  }
+
+  const dayBucket = new Date().toISOString().slice(0, 10); // UTC 日次クォータ
+  const perDay = await checkRateLimit(
+    c.env.RATE_LIMIT,
+    `wr:day:${actorId}:${dayBucket}`,
+    WRITE_QUOTA_PER_DAY,
+    86_400,
+  );
+  if (!perDay.allowed) {
+    return c.json({ error: "QUOTA_EXCEEDED", limit: perDay.limit, window: "UTC day" }, 429);
+  }
+
+  return next();
 });
 
 // GET /health → { status: "ok" } — 契約正本: schemas/api/health.schema.json
@@ -364,6 +403,19 @@ app.route("/api/v1", profileRoutes);
 // §auth-onboarding-locale): GET/POST /me/handle。3〜30文字・限定文字種・一意・不変
 // (put-if-absent 409)。OS は自動生成せず本人の明示タップで確定する。
 app.route("/api/v1", handleRoutes);
+
+// Legal consent (V3-SEC-20仕上げ): GET /me/consent(投影)・POST /onboarding/agree
+// (MUST_AGREE_TO_TERMS ゲート・CL-05 consent-record append-only 永続化)。全て protected。
+app.route("/api/v1", consentRoutes);
+
+// Zero-knowledge key bundle + offline recovery code (V3-SEC-57): POST/GET /me/key-bundle・
+// POST /me/key-bundle/recovery-code(+/verify)。サーバは ciphertext を一切復号しない。
+app.route("/api/v1", keyBundleRoutes);
+
+// Sandbox execution request gate (V3-SEC-45部分実装・docs/planning/c8/
+// design-v3-sec-45-sandbox-boundary.md参照): POST /sandbox/execute-request。
+// Whitelist+Permission制御の認可ゲートのみ(実行基盤は未接続・誇張ゼロ)。
+app.route("/api/v1", sandboxRoutes);
 
 // GitHub webhook (design-k3 §2.5 / V3-KRM-13): POST /github/webhook。session 層 public
 // （PUBLIC_ROUTES）+ HMAC self-gate。行動→pt+axis 換算（config weights・policy 経由）を

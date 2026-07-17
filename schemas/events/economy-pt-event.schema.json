@@ -24,8 +24,8 @@
     },
     "reason_code": {
       "type": "string",
-      "enum": ["mint", "indulgence_spend", "vote_spend", "manual"],
-      "description": "増減理由（mint=鋳造 / indulgence_spend=免罪符購入 / vote_spend=投票消費 / manual=手動）。"
+      "enum": ["mint", "indulgence_spend", "vote_spend", "manual", "indictment_fee"],
+      "description": "増減理由（mint=鋳造 / indulgence_spend=免罪符購入 / vote_spend=投票消費 / manual=手動 / indictment_fee=V3-GOV-10 指摘30回ごとの手数料）。"
     },
     "ref": {
       "type": "string",

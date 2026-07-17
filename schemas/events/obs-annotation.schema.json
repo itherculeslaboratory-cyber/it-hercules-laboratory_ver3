@@ -23,6 +23,11 @@
       "description": "LabelMe アノテーション AST（点／線／polygon／label 等・開いた構造）。",
       "additionalProperties": true
     },
+    "ast_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "V3-SEC-42: SHA-256(canonicalJson(ast))。改ざん検出用(サーバが書込時に算出・任意=既存レコードとの後方互換)。"
+    },
     "value_origin": {
       "type": "string",
       "enum": [

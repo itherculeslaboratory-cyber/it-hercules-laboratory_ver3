@@ -17,17 +17,17 @@ export interface GovVote {
    */
   actor_id: string;
   /**
-   * 投票種別（OS 昇格 / 閾値調整 / fork ランク昇降 / V3-GOV-35 誤BAN復帰判定）。misban_reversal は proposal_target=停止された出品者 actor_id・value=approve が「誤BAN」票。
+   * 投票種別（OS 昇格 / 閾値調整 / fork ランク昇降 / V3-GOV-35 誤BAN復帰判定 / V3-GOV-07 紛争プラチナ投票）。misban_reversal は proposal_target=停止された出品者 actor_id・value=approve が「誤BAN」票。dispute_verdict は proposal_target=dispute_id・value=seller|buyer が二択の一票。
    */
-  kind: "os_merge" | "threshold_adjust" | "fork_rank" | "misban_reversal";
+  kind: "os_merge" | "threshold_adjust" | "fork_rank" | "misban_reversal" | "dispute_verdict";
   /**
-   * 提案対象（rule_id / fork_id / os ref）。
+   * 提案対象（rule_id / fork_id / os ref / V3-GOV-07 dispute_id）。
    */
   proposal_target: string;
   /**
-   * 賛否。
+   * 賛否（approve/reject）。kind=dispute_verdict のときのみ seller/buyer（二択：売り手が正しい/買い手が正しい）。
    */
-  value: "approve" | "reject";
+  value: "approve" | "reject" | "seller" | "buyer";
   /**
    * threshold_adjust 時の提案閾値（任意）。
    */

@@ -115,6 +115,9 @@ const VALIDATOR_NAME: Record<string, string> = {
   "handle-claim": "handleClaim",
   // V3-AUT-09: オープン登録のアカウント行(schemas/events/*, non-frozen, reversible)。
   "aut-account": "autAccount",
+  // V3-SEC-57 zero-knowledge 鍵バンドル+オフラインリカバリコード。
+  "sec-key-bundle": "secKeyBundle",
+  "sec-key-bundle-recovery": "secKeyBundleRecovery",
 };
 
 const FROZEN_NAMES = new Set([
@@ -228,6 +231,10 @@ const EVENT_NAMES = new Set([
   "handle-claim",
   // V3-AUT-09 — same rationale.
   "aut-account",
+  // V3-SEC-57 — data validation MUST fire or putEvent stores unchecked data at 201
+  // permanently (Truth is INSERT ONLY, unfixable).
+  "sec-key-bundle",
+  "sec-key-bundle-recovery",
 ]);
 
 function validatorFor(name: string): ValidateFn {

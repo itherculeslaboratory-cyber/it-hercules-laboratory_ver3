@@ -14,6 +14,10 @@ export type Bindings = {
   // 数字コード verify(V3-AUT-46・round-16 OQ-ONB-03)の試行回数/消費済み iat 状態。
   // 同上のフォールバック規約(未バインド=試行制限/ワンタイム性が働かない degrade)。
   AUTH_CODE_STATE?: KVNamespaceLite;
+  // V3-SEC-14(ログイン系レート制限)+ V3-SEC-58(書込系レート制限+ユーザー別クォータ)の
+  // 固定ウィンドウカウンタ用 KV(rate-limit.ts checkRateLimit)。同上のフォールバック規約
+  // (未バインド=レート制限が働かない degrade・落ちない)。実 namespace 作成は人間ゲート。
+  RATE_LIMIT?: KVNamespaceLite;
   // Optional — mail send is skipped (dev fallback) when RESEND_API_KEY absent.
   RESEND_API_KEY?: string;
   MAIL_FROM?: string;

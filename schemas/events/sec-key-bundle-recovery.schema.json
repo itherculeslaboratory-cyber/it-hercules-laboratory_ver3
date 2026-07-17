@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/sec-key-bundle-recovery.schema.json",
+  "title": "One-time key bundle recovery code (ihl.sec.key_bundle_recovery.v1)",
+  "description": "V3-SEC-57: オフライン1回限りリカバリコード(1Password/Bitwarden型)。サーバはコードの平文を一切保持せずSHA-256ハッシュのみ保管する(action=issue時に発行・平文はレスポンスで1回だけ返し永続化しない)。action=consumeは1回限りの消費マーク(append-only・同一recovery_idへの2度目のconsumeはconflict=再消費不可)。Truth キー truth/ihl.sec.key_bundle_recovery.v1/<actor_id>/<recovery_id>-<action>.json。",
+  "x_ihl_req": "V3-SEC-57",
+  "x_ihl_source": "01-requirements/registry.json V3-SEC-57",
+  "type": "object",
+  "required": ["recovery_id", "actor_id", "code_hash", "action", "created_at", "schema_version"],
+  "properties": {
+    "recovery_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "リカバリコードの一意キー(ULID推奨)。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "本人 actor_id(セッション principal 強制・V3-AUT-17)。"
+    },
+    "code_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256(コード平文)。平文自体はサーバに保管しない(発行時のレスポンスでのみ1回提示)。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["issue", "consume"],
+      "description": "issue=発行時記録 / consume=1回限りの消費マーク。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "event 時刻(RFC3339)。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -121,6 +121,9 @@ const SCHEMAS = [
   ["handleClaim", "events/handle-claim.schema.json"],
   // V3-AUT-09 オープン登録アカウント行(must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
   ["autAccount", "events/aut-account.schema.json"],
+  // V3-SEC-57 zero-knowledge 鍵バンドル+オフラインリカバリコード
+  ["secKeyBundle", "events/sec-key-bundle.schema.json"],
+  ["secKeyBundleRecovery", "events/sec-key-bundle-recovery.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

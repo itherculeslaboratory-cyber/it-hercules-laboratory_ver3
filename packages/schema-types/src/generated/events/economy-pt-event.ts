@@ -21,9 +21,9 @@ export interface EconomyPtEvent {
    */
   delta: number;
   /**
-   * 増減理由（mint=鋳造 / indulgence_spend=免罪符購入 / vote_spend=投票消費 / manual=手動）。
+   * 増減理由（mint=鋳造 / indulgence_spend=免罪符購入 / vote_spend=投票消費 / manual=手動 / indictment_fee=V3-GOV-10 指摘30回ごとの手数料）。
    */
-  reason_code: "mint" | "indulgence_spend" | "vote_spend" | "manual";
+  reason_code: "mint" | "indulgence_spend" | "vote_spend" | "manual" | "indictment_fee";
   /**
    * 関連イベント／対象の参照（任意）。
    */

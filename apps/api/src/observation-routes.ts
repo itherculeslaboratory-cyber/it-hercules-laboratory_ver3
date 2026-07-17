@@ -3,7 +3,7 @@
 // data.actor_id from the session principal (V3-AUT-17): a client-supplied
 // actor_id in the body is ignored, never trusted.
 import { Hono } from "hono";
-import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity, canonicalJson, sha256Hex as truthSha256Hex } from "@ihl/truth";
 import { generateThumbnail } from "./thumbnail";
 import {
   RERANK_WEIGHTS,
@@ -721,6 +721,9 @@ obsRoutes.post("/observation/annotations", async (c) => {
     annotation_id: annotationId,
     capture_id: body.capture_id,
     ast: body.ast,
+    // V3-SEC-42: SHA-256(canonicalJson(ast)) — ROI マスク(アノテーション AST)の改ざん
+    // 検出用。書込時にサーバが算出し append(手で供給不可・overwrite 不可=不変条項③)。
+    ast_sha256: await truthSha256Hex(canonicalJson(body.ast)),
     actor_id: actorId,
     created_at: new Date().toISOString(),
   };
@@ -755,6 +758,9 @@ obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
     analysis_id: analysisId,
     capture_id: captureId,
     results: body.results,
+    // V3-SEC-42: SHA-256(canonicalJson(results)) — 解析結果 JSON の改ざん検出・R2
+    // データ完全性・論文提出時の真正性証明用。サーバが書込時に算出(手で供給不可)。
+    results_sha256: await truthSha256Hex(canonicalJson(body.results)),
     correction_semver: body.correction_semver,
     is_manual_edit: body.is_manual_edit === true,
     actor_id: actorId,

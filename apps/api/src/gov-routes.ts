@@ -13,7 +13,14 @@ import { requireRole } from "./authz";
 import { grantKarmaCountIncrease } from "./ledger-routes";
 import { revokeActor } from "./denylist";
 import { projectPreferences } from "./settings-routes";
-import { DISPUTE_TTL_DAYS, GOV_FLAG_COUNT_STEPS, OS_PROMOTION_MIN_SCORE } from "./plaza-constants";
+import { projectPt, PT_TYPE } from "./contribution";
+import {
+  DISPUTE_TTL_DAYS,
+  GOV_FLAG_COUNT_STEPS,
+  OS_PROMOTION_MIN_SCORE,
+  GOV_DISPUTE_VOTE_WINDOW_DAYS,
+  GOV_DISPUTE_LOSER_KARMA_STEPS,
+} from "./plaza-constants";
 
 const VOTE_TYPE = "ihl.gov.vote.v1";
 const VOTE_SCHEMA = "schemas/events/gov-vote.schema.json";
@@ -23,8 +30,10 @@ const PRECEDENT_TYPE = "ihl.gov.precedent.v1";
 const PRECEDENT_SCHEMA = "schemas/events/gov-precedent.schema.json";
 const FLAG_TYPE = "ihl.gov.flag.v1";
 const FLAG_SCHEMA = "schemas/events/gov-flag.schema.json";
+const PT_SCHEMA = "schemas/events/economy-pt-event.schema.json";
 const SCHEMA_VERSION = "1";
 const TTL_MS = DISPUTE_TTL_DAYS * 24 * 60 * 60 * 1000;
+const GOV_DISPUTE_VOTE_WINDOW_MS = GOV_DISPUTE_VOTE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
 export const govRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -169,6 +178,8 @@ govRoutes.post("/gov/disputes", async (c) => {
 // projectDispute(s, dispute_id) — event 列を時系列(event id ULID 昇順)に畳む。open を起点に
 // participants={opener,respondent} を確定、message を時系列に、close で status を確定。close が
 // 無く now>opened_at+DISPUTE_TTL_DAYS なら expired:true(UI 表示用・実 close は cron/手動 append)。
+// V3-GOV-07: publicize を検出して public/publicized_at/vote_deadline/opener_role を確定し、
+// 審理・投票本体(votes/vote-result/vote-resolve)はこの投影を土台にする。
 export async function projectDispute(s: TruthStore, disputeId: string) {
   const events = (await s.listEvents(`truth/${DISPUTE_TYPE}/${disputeId}/`))
     .map(dataOf)
@@ -184,6 +195,14 @@ export async function projectDispute(s: TruthStore, disputeId: string) {
   let status: "open" | "resolved" | "force_closed" = "open";
   if (close) status = close.resolution === "force_closed" ? "force_closed" : "resolved";
   const expired = !close && Date.now() > Date.parse(openedAt) + TTL_MS;
+
+  const publicize = events.find((e) => e.action === "publicize");
+  const publicizedAt = publicize ? str(publicize.created_at) : null;
+  const voteDeadline = publicizedAt
+    ? new Date(Date.parse(publicizedAt) + GOV_DISPUTE_VOTE_WINDOW_MS).toISOString()
+    : null;
+  const voteResolveEvent = events.find((e) => e.action === "vote_resolve");
+
   return {
     dispute_id: disputeId,
     status,
@@ -193,6 +212,12 @@ export async function projectDispute(s: TruthStore, disputeId: string) {
     messages,
     opened_at: openedAt,
     expired,
+    public: !!publicize,
+    publicized_at: publicizedAt,
+    opener_role: publicize ? (str(publicize.opener_role) || null) : null,
+    vote_deadline: voteDeadline,
+    vote_resolved: !!voteResolveEvent,
+    vote_result: voteResolveEvent ? (str(voteResolveEvent.value) || "tie") : null,
   };
 }
 
@@ -296,12 +321,260 @@ govRoutes.post("/gov/disputes/:dispute_id/close", async (c) => {
   return c.json({ dispute_id: disputeId, precedent_id: precedentId, resolution }, 201);
 });
 
+// ── V3-GOV-07 プラチナ投票による紛争裁定(公開して投票)─────────────────────────
+// POST /gov/disputes/:dispute_id/publicize — 当事者(opener/respondent)のみが選べる。
+// body.opener_role(seller|buyer必須)で opener の市場ロールを宣言し、respondent は自動的に
+// もう一方(勝敗確定時の敗者特定に使う)。open 状態(close 前)のみ・二重 publicize は 409。
+govRoutes.post("/gov/disputes/:dispute_id/publicize", async (c) => {
+  const disputeId = c.req.param("dispute_id");
+  const s = store(c);
+  const view = await projectDispute(s, disputeId);
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  const actorId = c.get("actorId");
+  if (!isParticipant(view, actorId)) return c.json({ error: "NOT_A_PARTICIPANT" }, 403);
+  if (view.status !== "open") return c.json({ error: "ALREADY_CLOSED" }, 409);
+  if (view.public) return c.json({ error: "ALREADY_PUBLIC" }, 409);
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const openerRole = str(body?.opener_role);
+  if (openerRole !== "seller" && openerRole !== "buyer") {
+    return c.json({ error: "INVALID_PUBLICIZE", details: ["opener_role must be 'seller' or 'buyer'"] }, 400);
+  }
+  const eventId = ulid();
+  const data: Record<string, unknown> = {
+    dispute_id: disputeId,
+    actor_id: actorId,
+    action: "publicize",
+    opener_role: openerRole,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  const key = `truth/${DISPUTE_TYPE}/${disputeId}/${eventId}.json`;
+  const res = await s.putEventAt(key, envelope(DISPUTE_TYPE, DISPUTE_SCHEMA, eventId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_PUBLICIZE", details: res.errors }, 400);
+  const after = await projectDispute(s, disputeId);
+  return c.json({ dispute_id: disputeId, public: true, vote_deadline: after!.vote_deadline }, 201);
+});
+
+// projectDisputeVoteTally(s, dispute_id) — kind=dispute_verdict・proposal_target=dispute_id の
+// 投票を集計(1 actor 1 票=put-if-absent の deterministic key で自然に保証・dedup 不要)。
+export interface DisputeVoteTally {
+  seller_votes: number;
+  buyer_votes: number;
+  total_voters: number;
+  window_closed: boolean;
+  winner: "seller" | "buyer" | "tie" | null; // window_closed でなければ null(未確定)
+}
+export async function projectDisputeVoteTally(
+  s: TruthStore,
+  disputeId: string,
+  voteDeadline: string | null,
+): Promise<DisputeVoteTally> {
+  const votes = (await s.listEvents(`truth/${VOTE_TYPE}/${disputeId}/`))
+    .map(dataOf)
+    .filter((v) => v.kind === "dispute_verdict");
+  let seller = 0;
+  let buyer = 0;
+  for (const v of votes) {
+    if (v.value === "seller") seller += 1;
+    else if (v.value === "buyer") buyer += 1;
+  }
+  const windowClosed = !!voteDeadline && Date.now() > Date.parse(voteDeadline);
+  let winner: DisputeVoteTally["winner"] = null;
+  if (windowClosed) winner = seller === buyer ? "tie" : seller > buyer ? "seller" : "buyer";
+  return { seller_votes: seller, buyer_votes: buyer, total_voters: seller + buyer, window_closed: windowClosed, winner };
+}
+
+// GET /gov/disputes/:dispute_id/vote-result — 投票集計投影(公開されていなくても 404 では
+// なく空集計を返す=紛争詳細取得と対称)。
+govRoutes.get("/gov/disputes/:dispute_id/vote-result", async (c) => {
+  const disputeId = c.req.param("dispute_id");
+  const view = await projectDispute(store(c), disputeId);
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  const tally = await projectDisputeVoteTally(store(c), disputeId, view.vote_deadline);
+  return c.json({ dispute_id: disputeId, public: view.public, vote_deadline: view.vote_deadline, resolved: view.vote_resolved, ...tally });
+});
+
+// POST /gov/disputes/:dispute_id/votes — プラチナ投票(二択・1票=1PT消費・PT残高≥1で誰でも
+// 投票可・quorumなし)。公開済み(publicize 済み)かつ投票期限内のみ受理。1 actor 1 票
+// (deterministic key・二回目は 409=再投票不可)。
+govRoutes.post("/gov/disputes/:dispute_id/votes", async (c) => {
+  const disputeId = c.req.param("dispute_id");
+  const s = store(c);
+  const view = await projectDispute(s, disputeId);
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!view.public) return c.json({ error: "NOT_PUBLIC" }, 400);
+  if (view.vote_deadline && Date.now() > Date.parse(view.vote_deadline)) {
+    return c.json({ error: "VOTING_CLOSED" }, 409);
+  }
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const value = str(body?.value);
+  if (value !== "seller" && value !== "buyer") {
+    return c.json({ error: "INVALID_VOTE", details: ["value must be 'seller' or 'buyer'"] }, 400);
+  }
+  const voterId = c.get("actorId");
+  const { balance } = await projectPt(s, voterId);
+  if (balance < 1) return c.json({ error: "INSUFFICIENT_PT", balance }, 402);
+
+  const voteId = ulid();
+  const voteData: Record<string, unknown> = {
+    vote_id: voteId,
+    actor_id: voterId,
+    kind: "dispute_verdict",
+    proposal_target: disputeId,
+    value,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  // deterministic key(actor 単位)= 1 actor 1 票。二回目は conflict=409(再投票不可・PT も
+  // 消費しない=以下の PT 消費より前に判定するので二重課金は起きない)。
+  const voteKey = `truth/${VOTE_TYPE}/${disputeId}/${voterId}.json`;
+  const voteRes = await s.putEventAt(voteKey, envelope(VOTE_TYPE, VOTE_SCHEMA, voteId, voterId, voteData));
+  if (voteRes.status === "invalid") return c.json({ error: "INVALID_VOTE", details: voteRes.errors }, 400);
+  if (voteRes.status === "conflict") return c.json({ error: "ALREADY_VOTED" }, 409);
+
+  const ptId = ulid();
+  await s.putEvent({
+    specversion: "1.0",
+    id: ptId,
+    source: "apps/api",
+    type: PT_TYPE,
+    time: new Date().toISOString(),
+    dataschema: PT_SCHEMA,
+    provenance: { generator_kind: "human", actor_id: voterId },
+    data: {
+      pt_event_id: ptId,
+      actor_id: voterId,
+      delta: -1,
+      reason_code: "vote_spend",
+      ref: disputeId,
+      created_at: new Date().toISOString(),
+      schema_version: SCHEMA_VERSION,
+    },
+  });
+  return c.json({ vote_id: voteId, value, pt_spent: 1 }, 201);
+});
+
+// POST /gov/disputes/:dispute_id/vote-resolve — 投票期限経過後の勝敗確定(誰でも呼べる・
+// projectDisputeVoteTally のゲートが実質の認可・misban-reversal/execute と同型)。敗者に
+// Δcount+5 を1回だけ付与し(同数=引き分けはカルマ変動なし)、結果を判例R2に記録する
+// (appendPrecedent 再利用・LLM 不使用=集計値からの決定論文言)。deterministic key の
+// vote_resolve マーカーで二重実行を防ぐ(先に marker を append→conflict なら既実行)。
+govRoutes.post("/gov/disputes/:dispute_id/vote-resolve", async (c) => {
+  const disputeId = c.req.param("dispute_id");
+  const s = store(c);
+  const view = await projectDispute(s, disputeId);
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!view.public) return c.json({ error: "NOT_PUBLIC" }, 400);
+  const tally = await projectDisputeVoteTally(s, disputeId, view.vote_deadline);
+  if (!tally.window_closed) return c.json({ error: "VOTING_STILL_OPEN", vote_deadline: view.vote_deadline }, 409);
+  if (view.vote_resolved) {
+    return c.json({ dispute_id: disputeId, already_executed: true, ...tally }, 200);
+  }
+
+  const actorId = c.get("actorId");
+  const eventId = ulid();
+  const resolveData: Record<string, unknown> = {
+    dispute_id: disputeId,
+    actor_id: actorId,
+    action: "vote_resolve",
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (tally.winner && tally.winner !== "tie") resolveData.value = tally.winner;
+  // deterministic key(1 dispute につき1回)。conflict は稀な同時実行競合(先勝ちで十分)。
+  const resolveKey = `truth/${DISPUTE_TYPE}/${disputeId}/vote-resolve.json`;
+  const resolveRes = await s.putEventAt(resolveKey, envelope(DISPUTE_TYPE, DISPUTE_SCHEMA, eventId, actorId, resolveData));
+  if (resolveRes.status === "invalid") return c.json({ error: "INVALID_VOTE_RESOLVE", details: resolveRes.errors }, 400);
+  if (resolveRes.status === "conflict") {
+    return c.json({ dispute_id: disputeId, already_executed: true, ...tally }, 200);
+  }
+
+  if (tally.winner && tally.winner !== "tie") {
+    const loserRole = tally.winner === "seller" ? "buyer" : "seller";
+    const loserId = view.opener_role === loserRole ? view.participants.opener : view.participants.respondent;
+    await grantKarmaCountIncrease(s, loserId, GOV_DISPUTE_LOSER_KARMA_STEPS, "dispute", c.env.AUTH_DENYLIST);
+  }
+
+  await appendPrecedent(s, actorId, disputeId, view.category, {
+    title: `プラチナ投票判定: 紛争 ${disputeId}`,
+    summary: `売り手票=${tally.seller_votes} 買い手票=${tally.buyer_votes}(勝者=${tally.winner ?? "tie"})`,
+    tags: ["platinum-vote"],
+  });
+
+  return c.json({ dispute_id: disputeId, resolved: true, ...tally }, 201);
+});
+
 // GET /gov/disputes/:dispute_id — 紛争状態投影(404 or view)。
 govRoutes.get("/gov/disputes/:dispute_id", async (c) => {
   const view = await projectDispute(store(c), c.req.param("dispute_id"));
   if (!view) return c.json({ error: "NOT_FOUND" }, 404);
   return c.json(view);
 });
+
+// ── V3-GOV-11 ホーム司法インボックスのプレビュー(最大5件・審理/投票本体は司法
+// FeatureNode=上の /gov/disputes/* へ委譲)。─────────────────────────────────
+export interface JudicialInboxItem {
+  dispute_id: string;
+  category: string;
+  status: "open" | "resolved" | "force_closed";
+  role: "opener" | "respondent";
+  public: boolean;
+  vote_deadline: string | null;
+  opened_at: string;
+}
+
+/**
+ * 本人が当事者(opener/respondent)の未決着(status="open")紛争を最大 limit 件返す
+ * (都度再計算・常駐 DB 禁止)。並び順: 投票締切が近いものを優先(公開済み)、次に
+ * 開始が新しいもの。DISPUTE_TYPE 全走査 + dispute_id ごとにグルーピングして
+ * projectDispute と同型の折り畳みを行う(投影 index は別波・design-c2 §3.1)。
+ */
+export async function projectJudicialInboxPreview(
+  s: TruthStore,
+  actorId: string,
+  limit = 5,
+): Promise<JudicialInboxItem[]> {
+  const all = (await s.listEvents(`truth/${DISPUTE_TYPE}/`)).map(dataOf);
+  const byDispute = new Map<string, Record<string, unknown>[]>();
+  for (const e of all) {
+    const id = str(e.dispute_id);
+    if (!id) continue;
+    const arr = byDispute.get(id) ?? [];
+    arr.push(e);
+    byDispute.set(id, arr);
+  }
+  const items: JudicialInboxItem[] = [];
+  for (const [disputeId, events] of byDispute) {
+    const sorted = events.slice().sort((a, b) => (str(a.created_at) < str(b.created_at) ? -1 : 1));
+    const open = sorted.find((e) => e.action === "open");
+    if (!open) continue;
+    const opener = str(open.actor_id);
+    const respondent = str(open.respondent_id);
+    if (actorId !== opener && actorId !== respondent) continue;
+    const close = sorted.find((e) => e.action === "close");
+    if (close) continue; // 未決着のみ(status="open")
+    const publicize = sorted.find((e) => e.action === "publicize");
+    const voteDeadline = publicize
+      ? new Date(Date.parse(str(publicize.created_at)) + GOV_DISPUTE_VOTE_WINDOW_MS).toISOString()
+      : null;
+    items.push({
+      dispute_id: disputeId,
+      category: str(open.category),
+      status: "open",
+      role: actorId === opener ? "opener" : "respondent",
+      public: !!publicize,
+      vote_deadline: voteDeadline,
+      opened_at: str(open.created_at),
+    });
+  }
+  items.sort((a, b) => {
+    if (a.vote_deadline && b.vote_deadline) return a.vote_deadline < b.vote_deadline ? -1 : 1;
+    if (a.vote_deadline) return -1; // 締切が近い(=設定済み)ものを優先
+    if (b.vote_deadline) return 1;
+    return a.opened_at < b.opened_at ? 1 : -1; // 新しい開始を優先
+  });
+  return items.slice(0, limit);
+}
 
 // ── Precedent 判例(GOV-12)──────────────────────────────────────────────────
 // projectPrecedents(s, q?, tag?) — title/summary/culture_guide 部分一致(q)・tags 一致(tag)。

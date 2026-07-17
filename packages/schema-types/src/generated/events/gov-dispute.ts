@@ -17,9 +17,9 @@ export interface GovDispute {
    */
   actor_id: string;
   /**
-   * アクション種別（開始 / 発言 / 決着）。
+   * アクション種別（開始 / 発言 / 決着 / V3-GOV-07 公開して投票開始 / V3-GOV-07 投票判定確定）。
    */
-  action: "open" | "message" | "close";
+  action: "open" | "message" | "close" | "publicize" | "vote_resolve";
   /**
    * 紛争カテゴリ（open 時必須・route 側で検証・任意）。
    */
@@ -41,6 +41,14 @@ export interface GovDispute {
    * 発言者の locale（V3-I18-06: UGC 原文タグ。message 時に actor の pref-set locale から刻印・翻訳しない・任意）。
    */
   lang?: string;
+  /**
+   * V3-GOV-07: publicize 時に opener(dispute を開いた actor)の市場取引ロールを宣言する（respondent は自動的にもう一方）。プラチナ投票の二択(売り手が正しい/買い手が正しい)の勝敗から敗者(loser)の actor_id を特定するために必須（publicize 時のみ・任意）。
+   */
+  opener_role?: "seller" | "buyer";
+  /**
+   * V3-GOV-07: vote_resolve 時の勝者側（seller=売り手が正しい / buyer=買い手が正しい）。同数(引き分け)は本フィールドを省略する（任意）。
+   */
+  value?: "seller" | "buyer";
   /**
    * event 時刻（RFC3339）。
    */
