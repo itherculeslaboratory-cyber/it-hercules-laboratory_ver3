@@ -1385,10 +1385,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["ee79efd"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx::Renderer — target-navigator node (V3-OBS-02)", "tests/targets.test.ts (既存バックエンドTC・今回変更なし)"],
+    "note": "バックエンド(POST /observation/targets/search の name/yesno/tree 3モード)は既存実装済み・既テストだったが、obs-navigator.jsonのUIはyes-no未実装・分類ツリーはAPI応答形状と食い違うbind_itemsで機能していなかった。target-navigatorノード(3経路統合・候補提示と確定を分離)を新設して配線。"
   },
   {
     "id": "V3-OBS-06",
@@ -1507,10 +1507,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["890f079"],
+    "tc": ["tests/observation-ext.test.ts::OBS-20 placement/shelf QR (棚→個体 連鎖)", "tests/observation-ext.test.ts::OBS-20 qr prefill (?prefill=1) + entry_mode (既存拡張)"],
+    "note": "個体QRのみだった発行/解決を棚(placement)QRへ拡張。POST /placements/{id}/qr(CL-10 env_qr_token_v1形状)+既存GET /qr/{token}を個体/場所両対応へ一般化(occupancy投影で現占有個体へ連鎖・空棚はqr_placement_emptyで404にしない)。device.json+新規placement-qr.jsonでUI導線。"
   },
   {
     "id": "V3-OBS-22",
@@ -1520,10 +1520,10 @@
     "tier": "S",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
+    "status": "done",
     "commits": [],
-    "tc": [],
-    "note": ""
+    "tc": ["tests/observation.test.ts (既存)", "tests/observation-ext.test.ts (既存)"],
+    "note": "検証のみ・コード変更なし。MVP v1コア5機能(観測データ収集・写真登録・詳細ビュー・親個体連携・QR)はいずれも実装・テスト済みであることを確認(observation.test.ts/observation-ext.test.ts/targets.test.ts等)。市場/マッチング等は第7回裁定後さらに拡張されているが、コア5機能を壊していない。"
   },
   {
     "id": "V3-OBS-23",
@@ -1533,10 +1533,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["e3d5aa5"],
+    "tc": ["tests/observation-ext.test.ts::obs-detail.json's photo list binds the thumbnail endpoint, not raw /image/ (regression guard)", "tests/observation-ext.test.ts::OBS-23 thumbnail serve, no raw bulk download (既存)"],
+    "note": "監査中に発見した実装ズレを修正: obs-detail.jsonの写真一覧が/image/{photo_id}(無圧縮raw原本)を全件bind_itemsしており、要件が明示禁止する「raw全件DL」を毎回発生させていた。既存の/thumbnail/{photo_id}(512px JPEG)へ1行修正+回帰防止テスト追加。"
   },
   {
     "id": "V3-OBS-24",
@@ -1559,10 +1559,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
+    "status": "done",
     "commits": [],
-    "tc": [],
-    "note": ""
+    "tc": ["tests/observation-ext.test.ts::OBS-25/62 commit is the confirmed save path with the subspecies gate (既存)"],
+    "note": "検証のみ・コード変更なし。obs-register→obs-register-entry→obs-register-confirm→obs-register-done(および旧経路obs-entry→obs-confirm)とも「入力画面での即時保存なし・確認画面の主CTAは『登録する』1つ」を満たしていることをscreen-def読み込み+既存テストで確認済み。"
   },
   {
     "id": "V3-OBS-26",
@@ -1613,10 +1613,10 @@
     "tier": "S",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
+    "status": "done",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "検証のみ・コード変更なし。観測(obs-capture)がR2 INSERT ONLY truthの一次書き込み経路であり、個体/市場/AI等の他モジュールがobservation captureを起点に投影を組み立てる構造であることをコード上確認(architectural fact)。ITOパイプラインの機械的TC化(V3-OBS-08)は別レーン所管のため未クローズ。"
   },
   {
     "id": "V3-OBS-45",
@@ -1717,10 +1717,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["4ab0135"],
+    "tc": ["tests/obs-freetext-parser.test.ts::OBS-61 parseObservationFreetext (pure, deterministic)", "tests/obs-freetext-parser.test.ts::OBS-61 POST /observation/parse-freetext route"],
+    "note": "自然言語フリーテキスト1つ+「解析する」ボタンで日付・個体・温度・湿度・胸角・エサを決定論パーサ(正規表現・LLM既定OFF)でJSON化する最小観測入力UI。POST /observation/parse-freetextは解析結果を返すのみでR2コミットはしない(候補提示止まり)。obs-freetext.json新設+obs-register.jsonから導線。"
   },
   {
     "id": "V3-OBS-62",
@@ -1730,10 +1730,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "本レーン所管部分(userId/auth→種族確定→亜種確定必須ゲート→QR/手動対象選択→テンプレ選択→撮影→R2 INSERT ONLY)は実装・テスト済み(subspeciesGateError・OBS-20/25/62コミットゲートTC)。要件が列挙する残りの構成要素(ローカル解析=V3-OBS-47・LabelMeテンプレ適用=V3-OBS-46・タグ緑赤評価)は未実装で、指示書の記載からobs-analysisレーン所管と推測される(V3-OBS-48と同系統)。10秒目標のEnd-to-End主張はこのレーン単独ではクローズできない。"
   },
   {
     "id": "V3-OBS-72",
@@ -1743,10 +1743,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["23a4064"],
+    "tc": ["tests/fnd-18-source.test.ts::V3-OBS-72 lab environment (placement 拡張・append-only latest-wins projection)", "tests/observation-ext.test.ts::OBS-72 individual → placement → lab-environment 連鎖"],
+    "note": "新イベント型ihl.src.lab_environment.v1(append-only・最新1件投影)でplacementに部屋/空調/センサー位置を紐付け。POST/GET /placements/{id}/lab-environment + GET /individuals/{id}/lab-environment(occupancy連鎖)を追加、placement-qr.json(記録)とobs-detail.json(表示)に配線。"
   },
   {
     "id": "V3-PPR-01",
