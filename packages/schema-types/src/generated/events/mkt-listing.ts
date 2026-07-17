@@ -53,6 +53,10 @@ export interface MktListing {
    */
   reservation_max_apply_count?: number;
   /**
+   * V3-MKT-05: オークション（list_auction）の締切（任意）。経過後は settleDueAuctions が read-time 自動決着（最高入札者に match・入札なしは delist）する。
+   */
+  ends_at?: string;
+  /**
    * 出品時刻。
    */
   created_at?: string;

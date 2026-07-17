@@ -142,6 +142,25 @@ export function reduceMarket(listingId: string, events: TxnEvent[]): MarketState
   return { listing_id: listingId, state, seller_id: sellerId, owner_id: ownerId, matched_with: matchedWith, bids, stage: stageOf(state) };
 }
 
+/** V3-MKT-05: 締切(ends_at)経過時にオークションを自動決着すべきか(read-time判定)。
+ * listed_auction のまま ends_at を過ぎていれば入札の有無に関わらず due=true
+ * (「入札なしでも決着」=入札ゼロは delist・1件以上は最高額 match として route 側が
+ * 処理する)。 */
+export function isAuctionSettleDue(state: string, endsAt: string | undefined, now: Date): boolean {
+  if (state !== "listed_auction" || !endsAt) return false;
+  return now.getTime() >= new Date(endsAt).getTime();
+}
+
+/** 最高額入札(同額は先着=created_at 昇順)。amount 欠落の bid は対象外。 */
+export function highestBid(bids: MarketState["bids"]): MarketState["bids"][number] | undefined {
+  let best: MarketState["bids"][number] | undefined;
+  for (const b of bids) {
+    if (typeof b.amount !== "number") continue;
+    if (!best || b.amount > (best.amount as number) || (b.amount === best.amount && b.at < best.at)) best = b;
+  }
+  return best;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface Settlement {

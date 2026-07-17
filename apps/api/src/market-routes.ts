@@ -17,6 +17,8 @@ import {
   isNoPayCancelDue,
   isGraceCancelWindowOpen,
   isOfferExpired,
+  isAuctionSettleDue,
+  highestBid,
   type MarketKind,
   type MarketState,
   type TxnEvent,
@@ -122,6 +124,11 @@ marketRoutes.post("/market/listings", async (c) => {
   if (Number.isInteger(minApply) && minApply >= 1) data.reservation_min_apply_count = minApply;
   const maxApply = Number(body?.reservation_max_apply_count);
   if (Number.isInteger(maxApply) && maxApply >= 1) data.reservation_max_apply_count = maxApply;
+
+  // V3-MKT-05: オークション締切(任意)。経過後は settleDueAuctions が read-time 自動決着。
+  if (typeof body?.ends_at === "string" && !Number.isNaN(Date.parse(body.ends_at))) {
+    data.ends_at = body.ends_at;
+  }
 
   // I18-06 part1: UGC 原文の作者言語タグを actor の locale から刻印(翻訳はしない・
   // 常駐サーバ翻訳を持たない＝不変条項①)。未設定は projectPreferences が DEFAULT_LOCALE=ja。
@@ -300,6 +307,54 @@ async function settleNoPayCancel(
   return [...events, data as unknown as TxnEvent];
 }
 
+// V3-MKT-05: オークション締切(ends_at)経過の read-time 自己修復(settleNoPayCancel と
+// 同型パターン)。listed_auction のまま ends_at を過ぎたら、最高入札があれば match
+// (=matched へ・落札額=最高額)、入札が無ければ delist(「入札なしでも決着」)を系統
+// actor が deterministic key で put-if-absent する。ヤフオク型自動入札(価格帯別入札
+// 単位刻み・予算上限までの自動再入札)は bid 発行側(POST /market/offers 相当の別経路)の
+// 仕様であり、既存の無条件 bid append 経路を壊さないよう本波では対象外(ponytail・
+// 決着ロジックのみ先行実装)。
+const SYSTEM_AUCTION_ACTOR = "system:auction-settle";
+
+async function settleDueAuctions(
+  s: TruthStore,
+  listingId: string,
+  events: TxnEvent[],
+  now: Date,
+): Promise<TxnEvent[]> {
+  const cur = reduceMarket(listingId, events);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const endsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+  if (!isAuctionSettleDue(cur.state, typeof endsAt === "string" ? endsAt : undefined, now)) return events;
+
+  const best = highestBid(cur.bids);
+  const id = ulid();
+  const data: Record<string, unknown> = best
+    ? {
+        transaction_event_id: id,
+        listing_id: listingId,
+        actor_id: SYSTEM_AUCTION_ACTOR,
+        kind: "match",
+        counterparty: best.bidder,
+        amount: best.amount,
+        payload: { auction_settle: "highest_bid" },
+        created_at: now.toISOString(),
+        schema_version: TXN_SCHEMA_VERSION,
+      }
+    : {
+        transaction_event_id: id,
+        listing_id: listingId,
+        actor_id: SYSTEM_AUCTION_ACTOR,
+        kind: "delist",
+        payload: { auction_settle: "no_bids" },
+        created_at: now.toISOString(),
+        schema_version: TXN_SCHEMA_VERSION,
+      };
+  const res = await s.putEventAt(`truth/${TXN_TYPE}/auction-settle-${listingId}.json`, systemTxnEnvelope(id, data));
+  if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
+  return [...events, data as unknown as TxnEvent];
+}
+
 // V3-MKT-10: 取引成立(receive∧rate 揃う=MKT-04)時に 5% 維持費税を義務台帳へ自動計上
 // (「取引成立からの義務自動計上」=これまでの partial の残り)。fee-routes.ts(PAY.JP
 // ゆる請求フロー)が読む既存義務台帳(OBLIGATION_TYPE)をそのまま継承する(型リネーム禁止・
@@ -408,6 +463,7 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   const now = new Date();
   let events = await loadTxns(c, listingId);
   events = await settleNoPayCancel(s, listingId, events, now); // 状態機械5脚③(自己修復)
+  events = await settleDueAuctions(s, listingId, events, now); // V3-MKT-05(自己修復)
 
   const cur = reduceMarket(listingId, events);
   if (!isAllowedEdge(cur.state, kind)) {
@@ -530,6 +586,7 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
   const now = new Date();
   let events = await loadTxns(c, listingId);
   events = await settleNoPayCancel(s, listingId, events, now);
+  events = await settleDueAuctions(s, listingId, events, now); // V3-MKT-05(自己修復)
   const cur = reduceMarket(listingId, events);
   return c.json({
     ...cur,
