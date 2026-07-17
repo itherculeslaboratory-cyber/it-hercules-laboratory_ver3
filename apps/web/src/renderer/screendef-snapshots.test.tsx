@@ -54,6 +54,7 @@ const SCREEN_IDS = [
   "research-newspaper",
   "research-search",
   "settings",
+  "setup-profile",
   "species",
   "template-market",
   "terms",

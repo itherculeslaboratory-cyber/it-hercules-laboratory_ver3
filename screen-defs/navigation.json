@@ -49,7 +49,8 @@
     "knowledge-github",
     "ai-profile-settings",
     "knowledge-thread",
-    "dispute"
+    "dispute",
+    "setup-profile"
   ],
   "edges": [
     {
@@ -441,6 +442,16 @@
       "from": "dispute",
       "to": "knowledge-thread",
       "label": "スレへ戻る"
+    },
+    {
+      "from": "setup-profile",
+      "to": "home",
+      "label": "handle+locale確定後にホームへ(V3-AUT-10)"
+    },
+    {
+      "from": "login",
+      "to": "setup-profile",
+      "label": "middleware誘導(オンボーディング未完了・V3-AUT-10)—ログイン成功後handleが未設定ならここへ307誘導"
     }
   ]
 }

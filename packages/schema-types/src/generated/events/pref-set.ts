@@ -37,6 +37,10 @@ export interface PrefSet {
    */
   country?: string;
   /**
+   * V3-AUT-10 オンボーディングで確定する表示名(handle)。actor_id生ハッシュの代わりに表示する公開ニックネーム。setup-profile画面でlocaleと同時に確定し、この値の有無がonboardingComplete判定(handle未設定=false)を兼ねる。
+   */
+  handle?: string;
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;
