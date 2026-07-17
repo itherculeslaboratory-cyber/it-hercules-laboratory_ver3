@@ -47,6 +47,7 @@ import { researchCanonicalRoutes } from "./research-canonical-routes";
 import { researchAgentBatchRoutes, handleResearchScheduled } from "./research-agent-batch";
 import { NEWSPAPER_CRON_UTC } from "./research-constants";
 import { handleScheduled } from "./batch";
+import { checkRateLimit, WRITE_RATE_LIMIT_PER_MINUTE, WRITE_QUOTA_PER_DAY } from "./rate-limit";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -174,6 +175,41 @@ app.use("*", async (c, next) => {
   }
 
   return c.json({ error: "AUTH_REQUIRED" }, 401);
+});
+
+// V3-SEC-58: 書込系(R2 Truth append)レート制限+ユーザー別クォータ。deny-by-default 直後
+// (actorId 確定後)の単一 choke point — 個別 route を触らず全 POST/PUT/PATCH/DELETE を
+// 一括ガードする(root-cause fix: 各 route に都度 guard を書かない)。actorId 未確定(理論上
+// 到達しない・上の gate で既に 401 済み)は素通り。RATE_LIMIT 未バインドは checkRateLimit が
+// no-op degrade(既存 AUTH_DENYLIST/AUTH_CODE_STATE と同じ規約・テストへの影響なし)。
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+app.use("*", async (c, next) => {
+  const actorId = c.get("actorId");
+  if (!WRITE_METHODS.has(c.req.method) || !actorId) return next();
+
+  const minuteBucket = Math.floor(Date.now() / 60_000);
+  const perMinute = await checkRateLimit(
+    c.env.RATE_LIMIT,
+    `wr:min:${actorId}:${minuteBucket}`,
+    WRITE_RATE_LIMIT_PER_MINUTE,
+    60,
+  );
+  if (!perMinute.allowed) {
+    return c.json({ error: "RATE_LIMITED", limit: perMinute.limit, window_seconds: 60 }, 429);
+  }
+
+  const dayBucket = new Date().toISOString().slice(0, 10); // UTC 日次クォータ
+  const perDay = await checkRateLimit(
+    c.env.RATE_LIMIT,
+    `wr:day:${actorId}:${dayBucket}`,
+    WRITE_QUOTA_PER_DAY,
+    86_400,
+  );
+  if (!perDay.allowed) {
+    return c.json({ error: "QUOTA_EXCEEDED", limit: perDay.limit, window: "UTC day" }, 429);
+  }
+
+  return next();
 });
 
 // GET /health → { status: "ok" } — 契約正本: schemas/api/health.schema.json
