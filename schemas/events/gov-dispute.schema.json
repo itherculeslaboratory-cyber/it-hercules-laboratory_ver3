@@ -20,8 +20,8 @@
     },
     "action": {
       "type": "string",
-      "enum": ["open", "message", "close"],
-      "description": "アクション種別（開始 / 発言 / 決着）。"
+      "enum": ["open", "message", "close", "publicize", "vote_resolve"],
+      "description": "アクション種別（開始 / 発言 / 決着 / V3-GOV-07 公開して投票開始 / V3-GOV-07 投票判定確定）。"
     },
     "category": {
       "type": "string",
@@ -43,6 +43,16 @@
       "type": "string",
       "enum": ["resolved", "force_closed"],
       "description": "決着種別（close 時・resolved=合意 / force_closed=期限切れ強制・任意）。"
+    },
+    "opener_role": {
+      "type": "string",
+      "enum": ["seller", "buyer"],
+      "description": "V3-GOV-07: publicize 時に opener(dispute を開いた actor)の市場取引ロールを宣言する（respondent は自動的にもう一方）。プラチナ投票の二択(売り手が正しい/買い手が正しい)の勝敗から敗者(loser)の actor_id を特定するために必須（publicize 時のみ・任意）。"
+    },
+    "value": {
+      "type": "string",
+      "enum": ["seller", "buyer"],
+      "description": "V3-GOV-07: vote_resolve 時の勝者側（seller=売り手が正しい / buyer=買い手が正しい）。同数(引き分け)は本フィールドを省略する（任意）。"
     },
     "created_at": {
       "type": "string",

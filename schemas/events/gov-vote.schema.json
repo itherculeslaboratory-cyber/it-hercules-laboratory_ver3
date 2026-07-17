@@ -20,18 +20,18 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["os_merge", "threshold_adjust", "fork_rank", "misban_reversal"],
-      "description": "投票種別（OS 昇格 / 閾値調整 / fork ランク昇降 / V3-GOV-35 誤BAN復帰判定）。misban_reversal は proposal_target=停止された出品者 actor_id・value=approve が「誤BAN」票。"
+      "enum": ["os_merge", "threshold_adjust", "fork_rank", "misban_reversal", "dispute_verdict"],
+      "description": "投票種別（OS 昇格 / 閾値調整 / fork ランク昇降 / V3-GOV-35 誤BAN復帰判定 / V3-GOV-07 紛争プラチナ投票）。misban_reversal は proposal_target=停止された出品者 actor_id・value=approve が「誤BAN」票。dispute_verdict は proposal_target=dispute_id・value=seller|buyer が二択の一票。"
     },
     "proposal_target": {
       "type": "string",
       "minLength": 1,
-      "description": "提案対象（rule_id / fork_id / os ref）。"
+      "description": "提案対象（rule_id / fork_id / os ref / V3-GOV-07 dispute_id）。"
     },
     "value": {
       "type": "string",
-      "enum": ["approve", "reject"],
-      "description": "賛否。"
+      "enum": ["approve", "reject", "seller", "buyer"],
+      "description": "賛否（approve/reject）。kind=dispute_verdict のときのみ seller/buyer（二択：売り手が正しい/買い手が正しい）。"
     },
     "adjust_to": {
       "type": "number",
