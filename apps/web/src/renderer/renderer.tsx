@@ -14,6 +14,7 @@ import { cn } from "@/lib/cn";
 import { apiUrl } from "@/lib/api";
 import { ApiError, mapError } from "@/lib/error-messages";
 import { shouldOfferTranslation, translateOnDemand } from "@/lib/ugc-translate";
+import { makeResolver, type Catalogs } from "@/lib/i18n";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
 import {
   clearBatch,
@@ -5289,9 +5290,19 @@ export interface RendererProps {
   onNavigate?: (to: string, query?: Record<string, string>) => void;
   /** URL query scope (?id=…). Defaults to window.location.search in the browser. */
   params?: Record<string, string>;
-  /** I18-08 text_key resolver (lib/i18n supplies the catalog + fallback chain). */
+  /**
+   * I18-08 text_key resolver (lib/i18n supplies the catalog + fallback chain).
+   * Explicit resolveMessage wins; otherwise it is derived from `catalogs` +
+   * `viewerLocale` below (a plain function can't cross the server/client
+   * boundary, but the serializable catalog data can — I18-01/I18-03).
+   */
   resolveMessage?: ResolveMessage;
-  /** I18-06 viewer locale for the on-device UGC translate affordance. */
+  /** I18-08: catalogs loaded server-side (lib/i18n loadCatalogs()); combined
+   *  with viewerLocale to build the resolver when resolveMessage is omitted. */
+  catalogs?: Catalogs;
+  /** I18-06/I18-03 viewer locale — drives both the UGC translate affordance
+   *  and (via `catalogs`) the resolved UI text; follows the account's saved
+   *  preference so the whole product switches with it (I18-01/I18-03). */
   viewerLocale?: string;
 }
 
@@ -5301,11 +5312,16 @@ export function Renderer({
   onNavigate,
   params,
   resolveMessage,
+  catalogs,
   viewerLocale,
 }: RendererProps) {
   const [data, setData] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<Record<string, unknown>>({});
   const execute = onAction ?? defaultExecute(onNavigate);
+  const resolvedMessage = useMemo(
+    () => resolveMessage ?? (catalogs ? makeResolver(catalogs, viewerLocale ?? "ja") : () => undefined),
+    [resolveMessage, catalogs, viewerLocale],
+  );
 
   const navigate = useCallback(
     (to: string, query?: Record<string, string>) => {
@@ -5327,7 +5343,7 @@ export function Renderer({
   const scope: Scope = { params: params ?? readQuery(), data, result };
 
   return (
-    <MessagesCtx.Provider value={resolveMessage ?? (() => undefined)}>
+    <MessagesCtx.Provider value={resolvedMessage}>
       <LocaleCtx.Provider value={viewerLocale ?? "ja"}>
         <ExecuteCtx.Provider value={execute}>
           <ScopeCtx.Provider value={scope}>

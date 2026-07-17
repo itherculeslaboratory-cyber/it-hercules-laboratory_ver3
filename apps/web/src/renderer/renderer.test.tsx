@@ -394,6 +394,33 @@ describe("Renderer — text_key i18n resolution (V3-I18-08)", () => {
     expect(screen.queryByText("t.missing.x")).not.toBeInTheDocument();
     expect(screen.queryByText("FALLBACK")).not.toBeInTheDocument();
   });
+
+  // I18-01/I18-03: page.tsx/[screen]/page.tsx pass serializable `catalogs` +
+  // `viewerLocale` (a resolver function itself can't cross the server/client
+  // boundary) instead of `resolveMessage` — the Renderer must build the same
+  // resolver internally so registered-locale text actually reaches the screen.
+  it("derives the resolver from catalogs+viewerLocale when resolveMessage is omitted", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        catalogs={{ ja: { "t.head.title": "設定" }, en: { "t.head.title": "Settings" } }}
+        viewerLocale="en"
+        def={screenDef([{ id: "h", type: "heading", props: { text_key: "t.head.title", text: "FALLBACK" } }])}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+  });
+
+  it("falls back to the ja catalog layer for an unauthenticated/default viewerLocale", () => {
+    render(
+      <Renderer
+        onAction={vi.fn()}
+        catalogs={{ ja: { "t.head.title": "設定" } }}
+        def={screenDef([{ id: "h", type: "heading", props: { text_key: "t.head.title", text: "FALLBACK" } }])}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "設定" })).toBeInTheDocument();
+  });
 });
 
 describe("Renderer — empty state (V3-UIX-03)", () => {

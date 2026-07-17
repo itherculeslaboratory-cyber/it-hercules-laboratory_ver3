@@ -283,6 +283,11 @@
       "label": "AI プロファイル設定へ"
     },
     {
+      "from": "settings",
+      "to": "settings",
+      "label": "保存後に再読込(I18-03: 新localeでUI全文を即時切替)"
+    },
+    {
       "from": "knowledge-board",
       "to": "knowledge-thread",
       "label": "スレッドを開く"
