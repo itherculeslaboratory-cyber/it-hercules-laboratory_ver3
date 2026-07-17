@@ -402,10 +402,11 @@
     "status": "in_progress",
     "commits": [
       "e61f50b",
-      "0bf56a8"
+      "0bf56a8",
+      "640fa3b"
     ],
-    "tc": [],
-    "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。thread画面再構築済み。"
+    "tc": ["apps/web/src/renderer/screen-boards-footer.test.tsx"],
+    "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。thread画面再構築済み。追記(knowledge-g03レーン): Renderer本体に折り畳み式ScreenBoardsFooter(channel=screen-<screen_id>)を1回だけ差し込み、50本のscreen-def個別編集なしに全画面テンプレートへの必須付与を機械的に保証(既定は折り畳み=開くまでAPI呼び出しゼロ、既存レンダラテストのonAction呼び出し回数前提を壊さない設計)。残: コンポーネント編集/入れ替え/Fork一覧ポップアップ/IDE導線(identity/Fork lineage UIの設計待ち)は引き続きスコープ外。"
   },
   {
     "id": "V3-BBS-05",
@@ -1771,10 +1772,14 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "2678d20"
+    ],
+    "tc": [
+      "tests/paper-match.test.ts describe(\"PPR-02 conditionVector — normalize条件P to key+value+unit+missing (single schema source)\") 4件"
+    ],
+    "note": "条件Pの形(min/max/eq/required/unit)をcontent.schema.json内の$defs複製からschemas/events/condition.schema.json(単一正本)へ抽出し$ref化(cite-ref.schema.jsonと同じ相互参照パターンでcodegen-validators.mjs/envelope.ts両方に登録)。paper-match.tsにconditionVector()を追加し「観点キー+値+単位+欠損フラグ」の観点ベクトル正規化関数を実装(matchConditionsは既にこの形に固定済み・変更不要)。"
   },
   {
     "id": "V3-PPR-03",
@@ -1801,10 +1806,14 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
+    "tc": [
+      "tests/paper-match.test.ts describe(\"PPR-06 gapAnalysis all-species neighbour diff + data_gap\")"
+    ],
+    "note": "監査のみ(新規コミットなし・progress.json記載漏れの発見)。C5期commit 33b8a6dで既にgapAnalysis(全種族横断のギャップ抽出・data_gap/semantic_gap/missing_perspectives・embedding既定OFFでもdata_gapのみ動作)が完全実装済みでテストも緑。要件文と一致することを確認しdoneに分類し直した。"
   },
   {
     "id": "V3-PPR-07",
@@ -1827,10 +1836,16 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "e61f50b",
+      "9eeea25",
+      "33b8a6d"
+    ],
+    "tc": [
+      "tests/project-hub.test.ts describe(\"PPR-09 reanalysisManifest fact keys only + observed_at != committed_at\")"
+    ],
+    "note": "監査のみ(新規コミットなし・progress.json記載漏れの発見)。C5期commit 33b8a6dで既にrun_id/model_name/model_version(tag-routes.ts)・value_origin frozen 9値(OBS-06)・reanalysis-manifest(imageR2Key/scaleTemplateId/bpcmsEngineProfile等の事実キーのみ・画像バイナリ非含)+bundle(observed_at≠committed_at分離)がproject-routes.tsに実装・テスト済み。clientContentDigestの実配線は要件文自体が「ver1未配線」と明記し対象外。"
   },
   {
     "id": "V3-PPR-12",
@@ -1840,10 +1855,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "監査のみ実施・実装/明文化は未着手。apps/api/src配下にtorch/onnxruntime/tensorflow/opencv等サーバ側重処理依存が皆無であることをgrepで確認(完全ローカル計算原則に実装は既に整合)。ただし要件が求める「明文化」(原則を書いた文書)の置き場所が不明(constitution.mdは既に一般論として不変条項①を持つが、PPR固有の書き込み先は未確定) — 裁定待ち: どのファイルに明文化するか(推奨: 02-design/design-c5.md K5節への追記)。"
   },
   {
     "id": "V3-PPR-13",
@@ -1853,12 +1868,15 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "in_progress",
+    "status": "done",
     "commits": [
-      "33b8a6d"
+      "33b8a6d",
+      "52cef86"
     ],
-    "tc": [],
-    "note": "Wikidata Q番号↔専門API(GBIF/NCBI/ICD-11/HuggingFace等)対応をtruth/canonical/mapping_event(append-only・qid__target_db複合キー・DOMAIN_API_MAPオフライン表でdomain妥当性検証)+category親子木として実装。TC: tests/research-canonical.test.ts describe(\"PPR-13 canonical mapping append-only + DOMAIN_API_MAP validation\"/\"PPR-13 category parent-child tree (domain required)\")。世界接続層3要素(Wikidata正規ID・使用時発行の内部Index・専門APIマッピング仕様)のうち「使用時発行の内部Index」の実装は未確認。"
+    "tc": [
+      "tests/research-canonical.test.ts describe(\"PPR-13 canonical mapping append-only + DOMAIN_API_MAP validation\") 新規it 1件(内部Index)"
+    ],
+    "note": "Wikidata Q番号↔専門API(GBIF/NCBI/ICD-11/HuggingFace等)対応をtruth/canonical/mapping_event(append-only・qid__target_db複合キー・DOMAIN_API_MAPオフライン表でdomain妥当性検証)+category親子木として実装。TC: tests/research-canonical.test.ts describe(\"PPR-13 canonical mapping append-only + DOMAIN_API_MAP validation\"/\"PPR-13 category parent-child tree (domain required)\")。世界接続層3要素(Wikidata正規ID・使用時発行の内部Index・専門APIマッピング仕様)のうち「使用時発行の内部Index」の実装は未確認。追記(knowledge-g03レーン): 「使用時発行の内部Index」を実装完了。新Truth型・常駐カウンタを持たず、そのQIDが実際に使われた最初のmapping_eventそのものを都度再計算(prefix scan)で内部Indexとして投影(不変条項①整合)。GET /research/canonical/mapping/:qidのレスポンスにinternal_index(mapping_id+issued_at、未使用QIDはnull)を追加。世界接続層3要素すべて実装確認、doneへ遷移。"
   },
   {
     "id": "V3-PPR-16",
@@ -1939,10 +1957,14 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
+    "tc": [
+      "tests/paper-match.test.ts describe(\"PPR-30 autoFillDescriptor section fill + claim evidence link\")"
+    ],
+    "note": "監査のみ(新規コミットなし・progress.json記載漏れの発見)。C5期commit 33b8a6dで既にPOST /research/paper-matchがData Descriptor自動充填(autoFillDescriptor: 節穴埋め+観測投影による主張-証拠リンク+未検証claimはhypothesis固定)+V3-PPR-01条件突合の再利用+llm_advice任意トグル(既定OFF・AiDisabledErrorで無効化)を要件文どおり実装・テスト済み。"
   },
   {
     "id": "V3-SEC-03",
@@ -2229,10 +2251,15 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "de5376e"
+    ],
+    "tc": [
+      "tools/tests/test_knowledge_search.py 6件",
+      "components/wiki-ingest/tests/test_dummy_backend.py 5件"
+    ],
+    "note": "決定論の梯子・第1段(index.mdスコアリング)をtools/knowledge_search.pyとして新規実装(実体ファイルは一切開かずindex.md行だけでスコア付け・最良1件のみ返す)。第2段のembedding既定バックエンドをcomponents/wiki-ingest/backends.pyにDummyBackend(sha256ハッシュbag-of-tokens・torch/onnxruntime不要・決定論)として追加し、resolve_backend()の既定選択に変更(実運用backend ruri-*は明示指定でのみロード)。"
   },
   {
     "id": "V3-WIK-04",
@@ -2242,10 +2269,14 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "b902af9"
+    ],
+    "tc": [
+      "tools/tests/test_knowledge_ingest.py 6件"
+    ],
+    "note": "docs/knowledge/CLAUDE.mdが参照する決定論ingest CLI tools/knowledge_ingest.pyを新規実装(scan/ingest)。plaza post(root投稿のみ)/research contentのTruthイベント配置をローカルミラー(--truth-dir)からprefix scanし、前回処理ポインタとの差分だけをsources/*.mdスタブ(<!-- DISTILL: pending -->マーカー付き)として生成。CLI自体はモデルを呼ばない(description作文/topics更新/Citations/log記録は別途Sonnetエージェント手順)。"
   },
   {
     "id": "V3-WIK-07",
@@ -2300,10 +2331,14 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": [
+      "33b8a6d"
+    ],
+    "tc": [
+      "tests/research-content.test.ts describe(\"WIK-17 share -> chat_log -> chat-index projection\")"
+    ],
+    "note": "監査のみ(新規コミットなし・progress.json記載漏れの発見)。C5期commit 33b8a6dで既にPWA share_target(apps/web/src/app/manifest.ts)→POST /research/shared(chat_log content append)→GET /research/chat-index(時系列投影)の全経路が実装・テスト済み。"
   },
   {
     "id": "V3-WIK-20",

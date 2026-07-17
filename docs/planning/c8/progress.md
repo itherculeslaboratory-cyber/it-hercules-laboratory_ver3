@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: ██████░░░░░░░░░░░░░░ 28%（93/334）
-- 第1波必達(required): ██████████░░░░░░░░░░ 49%（90/184）
+- 全体: ██████░░░░░░░░░░░░░░ 30%（101/334）
+- 第1波必達(required): ███████████░░░░░░░░░ 53%（98/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 215 |
+| 未着手(todo) | 207 |
 | 着手中(in_progress) | 23 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
-| 完了(done) | 93 |
+| 完了(done) | 101 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -41,7 +41,7 @@
 | L3/L4-auth | █████████░░░░░░░░░░░ 44%（12/27） |
 | L4 | ███████████░░░░░░░░░ 57%（29/51） |
 | L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
-| L4-knowledge | ███░░░░░░░░░░░░░░░░░ 15%（8/54） |
+| L4-knowledge | ██████░░░░░░░░░░░░░░ 30%（16/54） |
 | L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/66） |
 | L6-ui | █░░░░░░░░░░░░░░░░░░░ 3%（1/39） |
 
@@ -251,31 +251,31 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-BBS-03 | 全ファイル・全コンポーネント・全画面テンプレートに『説明掲示板(使い方)・愚痴掲… | required | in_progress | e61f50b, 0bf56a8 |
+| V3-BBS-03 | 全ファイル・全コンポーネント・全画面テンプレートに『説明掲示板(使い方)・愚痴掲… | required | in_progress | e61f50b, 0bf56a8, 640fa3b |
 | V3-BBS-05 | 掲示板スレ・投稿は上書き・削除せず、訂正は追記セクションで行う(INSERT O… | required | done | e61f50b, 0bf56a8 |
 | V3-BBS-14 | 掲示板への改善要求はvoteable(積み投票/プラチナコイン)方式で扱い、AI… | required | todo | — |
 | V3-BBS-28 | 公開Q&A・称賛・未出品オファー・ラブレター一括募集などのEngagement(… | required | todo | — |
 | V3-PPR-01 | 論文照合(Paper Match)機能: 論文が要求する条件P(JSON)とユー… | required | done | 0bf56a8 |
-| V3-PPR-02 | 論文の条件P(P⇒Qの前提)のJSON Schemaを単一正本としてファイル化し… | required | todo | — |
+| V3-PPR-02 | 論文の条件P(P⇒Qの前提)のJSON Schemaを単一正本としてファイル化し… | required | done | 2678d20 |
 | V3-PPR-03 | 論文をPaperSectionsV1の6節(目的/仮説/条件/検証/現在のフェー… | required | in_progress | 0bf56a8 |
-| V3-PPR-06 | 論文全文(sections+conditions+tags)をembedding… | required | todo | — |
+| V3-PPR-06 | 論文全文(sections+conditions+tags)をembedding… | required | done | 33b8a6d |
 | V3-PPR-07 | 研究の空白領域を、観測データの4象限モデル(P∧Q=n11/P∧¬Q=n10/¬… | required | todo | — |
-| V3-PPR-09 | 全派生成果物にrun_id・model_name/version・input_h… | required | todo | — |
-| V3-PPR-12 | 解析は端末CPU/GPUをフル活用した完全ローカル計算(マルチスレッド/SIMD… | required | todo | — |
-| V3-PPR-13 | 科学OSの世界接続層(3要素: Wikidata正規ID・使用時発行の内部Ind… | required | in_progress | 33b8a6d |
+| V3-PPR-09 | 全派生成果物にrun_id・model_name/version・input_h… | required | done | e61f50b, 9eeea25, 33b8a6d |
+| V3-PPR-12 | 解析は端末CPU/GPUをフル活用した完全ローカル計算(マルチスレッド/SIMD… | required | in_progress | — |
+| V3-PPR-13 | 科学OSの世界接続層(3要素: Wikidata正規ID・使用時発行の内部Ind… | required | done | 33b8a6d, 52cef86 |
 | V3-PPR-16 | 研究プロジェクトをprojectId中心(研究の最小単位=背骨)に、プロフィール… | required | done | 33b8a6d |
 | V3-PPR-17 | 研究テーマ(温度・容器サイズ・湿度・振動等がヘラクレス成長に与える影響)を洗い出… | required | done | 33b8a6d |
 | V3-PPR-18 | 追検証は『データ提供のみ』で完了できるようにし、グラフへの自動追加・相関係数の自… | required | done | 33b8a6d |
 | V3-PPR-20 | 論文の観察項目・測定単位・条件・写真動画・修正履歴を統一データフォーマットとして… | required | todo | — |
 | V3-PPR-23 | 論文管理を章構成+引用管理(observation/paper/url/book… | required | todo | — |
-| V3-PPR-30 | 研究者でない一般ユーザーが論文級の成果物を簡単に作れる仕組みを提供する: Dat… | required | todo | — |
+| V3-PPR-30 | 研究者でない一般ユーザーが論文級の成果物を簡単に作れる仕組みを提供する: Dat… | required | done | 33b8a6d |
 | V3-WIK-01 | エージェント維持型の永続Wiki(サブブレイン)を情報源(掲示板/論文/観測)の… | required | done | 33b8a6d |
-| V3-WIK-03 | 検索は決定論の梯子(キーワード抽出→index.mdスコアリングでファイルを開か… | required | todo | — |
-| V3-WIK-04 | 決定論ingest CLI(tools/knowledge_ingest.py)… | required | todo | — |
+| V3-WIK-03 | 検索は決定論の梯子(キーワード抽出→index.mdスコアリングでファイルを開か… | required | done | de5376e |
+| V3-WIK-04 | 決定論ingest CLI(tools/knowledge_ingest.py)… | required | done | b902af9 |
 | V3-WIK-07 | 月次Lint(矛盾・孤立ページ・古い記述・リンク切れ)を実行しlog.mdに記録… | required | todo | — |
 | V3-WIK-13 | 統合検索を全文/タグ/ユーザー/ノードの4本柱で提供し、投稿(ノード)作成時にR… | required | done | 0bf56a8 |
 | V3-WIK-16 | 記事・ブログ機能を論文(#09)とほぼ同じ共通CMS基盤で提供する。記事とブログ… | required | done | 33b8a6d |
-| V3-WIK-17 | 会話ログ・AIチャット・観測データ・行動履歴を『共有』ボタン1タップ(PWA共有… | required | todo | — |
+| V3-WIK-17 | 会話ログ・AIチャット・観測データ・行動履歴を『共有』ボタン1タップ(PWA共有… | required | done | 33b8a6d |
 | V3-WIK-20 | 設計書・コード・掲示板・修整理由・世界観・動画/記事メタ・フォーク系統・種(血統… | required | todo | — |
 | V3-WIK-28 | Cursor等のAIセッションを全て閲覧できるようにし、サブ脳として情報を整理・… | required | todo | — |
 | V3-WIK-29 | 論文/研究のためにanthropics/life-sciences等の外部知識(… | required | todo | — |
