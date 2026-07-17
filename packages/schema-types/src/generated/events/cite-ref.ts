@@ -11,7 +11,19 @@ export interface CiteRef {
   /**
    * 引用先の種別（安定 URL 生成 citeUrl の分岐キー）。
    */
-  type: "observation" | "individual" | "paper" | "thread" | "post" | "user" | "tag" | "listing" | "precedent" | "fork";
+  type:
+    | "observation"
+    | "individual"
+    | "paper"
+    | "thread"
+    | "post"
+    | "user"
+    | "tag"
+    | "listing"
+    | "precedent"
+    | "fork"
+    | "url"
+    | "book";
   /**
    * 引用先の一意キー（type ごとの ID 空間）。
    */

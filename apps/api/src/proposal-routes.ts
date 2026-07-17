@@ -6,7 +6,9 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 
-const PROPOSAL_TYPE = "ihl.research.proposal.v1";
+// exported: V3-WIK-20(知識セル横断投影)が proposal の fork 系譜(forked_from)を
+// 相互リンクグラフの一辺として再利用する(knowledge-graph.ts)。
+export const PROPOSAL_TYPE = "ihl.research.proposal.v1";
 const PROPOSAL_SCHEMA = "schemas/events/research-proposal.schema.json";
 const SCHEMA_VERSION = "1";
 

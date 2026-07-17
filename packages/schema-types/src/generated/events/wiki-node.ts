@@ -13,9 +13,9 @@ export interface WikiNode {
    */
   node_id: string;
   /**
-   * 階層（board_summary=掲示板要約 / big_wiki=大 Wiki）。
+   * 階層（board_summary=掲示板要約 / big_wiki=大 Wiki / lint_log=月次Lint記録・V3-WIK-07。scope_ref="global"・summary_markdown に log.md 形式の所見を格納）。
    */
-  level: "board_summary" | "big_wiki";
+  level: "board_summary" | "big_wiki" | "lint_log";
   /**
    * 対象参照（掲示板ID／論文ID 等）。
    */

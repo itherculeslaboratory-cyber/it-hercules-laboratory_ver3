@@ -3,8 +3,30 @@
 // 出典: docs/planning/c5/design-c5.md §K6 §2.5 / 01-requirements/registry.json
 // V3-BBS-03/10/29/36・V3-GOV-01/09/19/23。
 
-// BBS-03: 3板の別(説明/愚痴/改善)。plaza-post.board_kind enum の正本。
-export const BOARD_KINDS = ["guide", "complaint", "improvement"] as const;
+// BBS-03: 3板の別(説明/愚痴/改善)+BBS-28: Engagement板(公開Q&A/称賛/未出品オファー
+// 一括募集の募集スレ型・subject_key=channel単位)。plaza-post.board_kind enum の正本。
+export const BOARD_KINDS = ["guide", "complaint", "improvement", "engagement"] as const;
+
+// BBS-28: Engagement 板の投稿サブ種別。tags[0] に "engagement:<kind>" 形式で載せる
+// (新規フィールドを増やさず既存 tags[] を再利用・ponytail: rung2)。
+// qna=公開Q&A / praise=称賛 / solicitation=未出品オファー・ラブレター等の一括募集。
+export const ENGAGEMENT_KINDS = ["qna", "praise", "solicitation"] as const;
+export const ENGAGEMENT_TAG_PREFIX = "engagement:";
+
+// BBS-28: 質問自動分類(研究的/飼育方法/血統管理/矛盾指摘/初心者/無意味)のキーワード辞書。
+// LLM 既定OFF(不変条項①)の決定論フォールバック。実鍵配線後は ai-kernel.ts の
+// classify task へ差し替え可能(upgrade path)。
+export const QUESTION_CATEGORIES = [
+  "research", "care", "lineage", "contradiction", "beginner", "meaningless",
+] as const;
+export const QUESTION_CATEGORY_KEYWORDS: Record<(typeof QUESTION_CATEGORIES)[number], readonly string[]> = {
+  research: ["データ", "論文", "統計", "有意", "相関", "仮説"],
+  care: ["餌", "温度", "湿度", "マット", "飼育", "世話"],
+  lineage: ["血統", "系統", "親", "産地", "ライン"],
+  contradiction: ["矛盾", "違う", "おかしい", "本当ですか"],
+  beginner: ["初めて", "初心者", "わかりません", "教えてください"],
+  meaningless: ["笑", "www", "age", "上げ"],
+};
 
 // BBS-29: fork の表示ランク(左=最上位)。projectForkRanks の整列順。
 export const FORK_RANKS = ["official", "recommended", "popular", "beginner", "minor"] as const;
@@ -49,6 +71,14 @@ export const RANKING_WEIGHTS = { like: 1, use: 2, retain: 3, vote: 5, fork: 1 } 
 // GOV-23: /os/main 昇格に要する projectRanking 最小スコア。
 // ponytail: 較正 knob。昇格ラインを運用実測で調整(GUI 後波)。
 export const OS_PROMOTION_MIN_SCORE = 100;
+
+// BBS-14: 改善要求(board_kind=improvement)投稿の AI 安全チェック。LLM は既定 OFF
+// (不変条項①・ai-kernel.ts)のため、決定論キーワードブロックリストで攻撃的内容を拒否する
+// フォールバック実装(投稿 400・plaza-routes.ts isOffensiveContent)。
+// ponytail: 固定キーワード列の較正 knob。IHL_AI_PROVIDER に実鍵が入り classify task が
+// 有効化された後(§6 人間ゲート)、makeLLMClient(task:"classify") 判定へ差し替えるのが
+// 上げ道(ai-kernel.ts の DI seam を再利用・新規 kernel は作らない)。
+export const BBS14_BLOCKED_TERMS = ["死ね", "殺す", "kill you", "die you"] as const;
 
 // GOV-35(round-15拡張・違法出品ユーザー自治): 同国指摘の二段閾値モデレーション+
 // 誤BAN復帰の投票ゲート。出典: user-ruling-2026-07-15-round-15.md #6-9。

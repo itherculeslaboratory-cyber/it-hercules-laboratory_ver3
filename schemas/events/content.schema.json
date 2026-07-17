@@ -114,6 +114,16 @@
       "description": "計測行（paper）。value_origin は frozen provenance 9 値・observed_at は観測時刻（PPR-09）。",
       "items": { "$ref": "#/$defs/measurement" }
     },
+    "citations": {
+      "type": "array",
+      "description": "引用管理（paper・PPR-23）。CiteRef 単一正本（cite-ref.schema.json）を再利用し、OSレベルの統一フォーマット(citationId=type+id)で一元管理する。論文の引用は observation/paper/url/book の4タイプに限定（route側で検証・他typeはCiteRef自体は許容するが400で拒否）。",
+      "items": { "$ref": "cite-ref.schema.json" }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "private"],
+      "description": "公開範囲設定（paper・PPR-23）。省略時は public 扱い（route側既定）。private は一覧投影から本人以外除外（plaza-fork の visibility と同じ規約）。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

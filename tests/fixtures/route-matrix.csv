@@ -31,7 +31,20 @@
 #   route(infra-route-090・protected)を追加 → 82 rows、g07-UIUXレーン(V3-UIX-26)が
 #   ホーム文明ミニマップ新規 1 route(infra-route-091・GET /home/civ-minimap・
 #   protected・080は先に基盤コストレーンが採ったため採番をずらして解決)を追加
-#   → 83 rows。
+#   → 83 rows。C8 g03知識レーンが改善要求優先度キュー新規 1 route(infra-route-092・
+#   V3-BBS-14・protected・080-091は先にg01基盤コスト/AIP-67/経済/観測/UIUXレーンが
+#   採ったため092から採番)を追加 → 84 rows、同レーンが Engagement insights 新規 1 route
+#   (infra-route-093・V3-BBS-28・protected)を追加 → 85 rows、同レーンが研究4象限分析
+#   新規 1 route(infra-route-094・V3-PPR-07・protected)を追加 → 86 rows、同レーンが
+#   統一フォーマット論文自動下書き新規 1 route(infra-route-095・V3-PPR-20・protected)を
+#   追加 → 87 rows、同レーンが論文 HTML export 新規 1 route(infra-route-096・V3-PPR-23・
+#   protected)を追加 → 88 rows、同レーンが観測データ CSV export 新規 1 route
+#   (infra-route-097・V3-PPR-12・protected。reanalyze バッチは既存 /observation/batch-commit
+#   kind:"reanalyze" 拡張のため新規 route 無し)を追加 → 89 rows、同レーンが知識セル横断投影
+#   新規 1 route(infra-route-098・V3-WIK-20・protected)を追加 → 90 rows、同レーンが
+#   月次Lint新規 2 route(infra-route-099/100・V3-WIK-07・protected)を追加 → 92 rows、
+#   同レーンが外部知識取り込み新規 1 route(infra-route-101・V3-WIK-29・protected)を
+#   追加 → 93 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -118,3 +131,13 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/match/convergence,VPS,Workers,W2,infra-route-089,protected,implemented,V3-IND-08 マチアプ収束評価ログ(Precision@K/AUC/score separation/vector change/learning stability)・append-onlyなpreference_event履歴から都度再計算・O(events)・GPU不要
 —,GET,/api/v1/individuals/lineage-check,VPS,Workers,W2,infra-route-090,protected,implemented,V3-IND-21 出品血統照合(reservation_sire_id/dam_id等の申告個体が実在しTruthと矛盾しないか確認・購入者向け疑義確認材料)・market listing側の連携はMKT-29(mkt-listingにindividual_ids欄なし)待ちで listing_id 引数は未対応
 —,GET,/api/v1/home/civ-minimap,VPS,Workers,W2,infra-route-091,protected,implemented,V3-UIX-26 ホーム文明ミニマップ(非PII集計3指標: observation_pace_7d/trust_avg/template_growth・個別ユーザーデータ非公開)・080は先に基盤コストレーンが採ったため採番をずらして解決
+—,GET,/api/v1/plaza/channels/{channel}/improvement-queue,VPS,Workers,W2,infra-route-092,protected,implemented,V3-BBS-14 改善要求 優先度キュー・既存プラチナ投票基盤(KRM-25・GOV-07/MKT-35と同一方式)を再利用・コイン降順+閾値到達でofficial候補化・080-091は先に他レーンが採ったため092から採番
+—,GET,/api/v1/plaza/engagement/insights,VPS,Workers,W2,infra-route-093,protected,implemented,V3-BBS-28 Engagement(公開Q&A/称賛/一括募集)・praise_points(観測データ変動係数)+predicted_questions(頻出質問+自動分類)・市場オファー機構(V3-MKT-06)とは非衝突
+—,POST,/api/v1/research/quadrant,VPS,Workers,W2,infra-route-094,protected,implemented,V3-PPR-07 観測データ4象限モデル(n11/n10/n01/n00)で研究空白領域を検出・逆/裏/対偶を機械生成+仮説論文タイトル/要旨案
+—,POST,/api/v1/research/auto-draft,VPS,Workers,W2,infra-route-095,protected,implemented,V3-PPR-20 PaperSectionsV1拡張・統一フォーマット観測データ(measurements[])のみからconditions節+完了率を自動生成(非永続プレビュー)
+—,GET,/api/v1/research/content/{id}/export,VPS,Workers,W2,infra-route-096,protected,implemented,V3-PPR-23 論文(章構成+引用+図表)を自己完結HTMLへ変換・PDFはブラウザ標準印刷機能を再利用(新規依存を追加しない)
+—,GET,/api/v1/observation/export,VPS,Workers,W2,infra-route-097,protected,implemented,V3-PPR-12 全capture measurements[]をCSVへ決定論シリアライズ(研究者向け全データダウンロード)・実解析は端末側ローカル計算でサーバ負荷ゼロ
+—,GET,/api/v1/knowledge/cell/{id},VPS,Workers,W2,infra-route-098,protected,implemented,V3-WIK-20 意図/系譜/被引用を1クエリで返す横断投影・既存cite_refs/cited_paper_ids/citations/forked_fromを束ねる決定論(常駐グラフDBなし)
+—,POST,/api/v1/wiki/lint,VPS,Workers,W2,infra-route-099,protected,implemented,V3-WIK-07 月次Lint(矛盾/孤立ページ/古い記述/リンク切れ)を手動実行しWIK-01 wiki_node(level=lint_log)へlog.md形式で記録・月次cron配線は人間ゲート
+—,GET,/api/v1/wiki/lint-log,VPS,Workers,W2,infra-route-100,protected,implemented,V3-WIK-07 月次Lint実行履歴(created_at降順)
+—,POST,/api/v1/research/external-import,VPS,Workers,W2,infra-route-101,protected,implemented,V3-WIK-29 外部知識(GitHub公開リポジトリ)をcontent(article)へ決定論正規化して取り込み・常駐フェッチ無し(呼び手が本文供給)・citations型はPPR-23のurlを再利用

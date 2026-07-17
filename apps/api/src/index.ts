@@ -21,6 +21,9 @@ import { marketReservationRoutes } from "./market-reservation-routes";
 import { marketBlockRoutes } from "./market-block-routes";
 import { marketFlagRoutes } from "./market-flag-routes";
 import { plazaRoutes } from "./plaza-routes";
+import { engagementRoutes } from "./engagement-routes";
+import { knowledgeGraphRoutes } from "./knowledge-graph-routes";
+import { knowledgeLintRoutes } from "./knowledge-lint-routes";
 import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
@@ -311,6 +314,20 @@ app.route("/api/v1", marketFlagRoutes);
 // POST posts/stances/forks/signals/summaries + 決定論投影(thread/consensus/fork-rank/
 // ranking/summary)。全て保護・append-only・投影は都度再計算・LLM 呼び出しゼロ。
 app.route("/api/v1", plazaRoutes);
+
+// Engagement (V3-BBS-28): GET /plaza/engagement/insights(praise_points+predicted_questions)。
+// board_kind=engagement の募集スレ型に限定・市場オファー機構(V3-MKT-06)とは非衝突。
+app.route("/api/v1", engagementRoutes);
+
+// Knowledge graph (V3-WIK-20): GET /knowledge/cell/{id}(intent+lineage+referenced_by
+// を1クエリで返す横断投影・既存の cite_refs/cited_paper_ids/citations/forked_from を
+// 束ねるだけ・常駐グラフDBなし・決定論)。
+app.route("/api/v1", knowledgeGraphRoutes);
+
+// Wiki lint (V3-WIK-07): POST /wiki/lint(月次Lintの手動実行=矛盾/孤立ページ/古い記述/
+// リンク切れ・既存 WIK-01 wiki_node[level=lint_log] へ log.md 形式で記録)・
+// GET /wiki/lint-log(履歴)。月次スケジューリングは §6 人間ゲート(常駐なし)。
+app.route("/api/v1", knowledgeLintRoutes);
 
 // Governance / ガバナンス (design-c5.md §K6 §2.1 slot037-040 / V3-GOV-01/09/12/19/23): POST
 // votes/disputes(+messages/close)/flags + 決定論投影(threshold/os-promotion/dispute/

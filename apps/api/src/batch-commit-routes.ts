@@ -11,14 +11,16 @@
 import { Hono } from "hono";
 import { TruthStore, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { writeCaptureFromCommitBody } from "./observation-routes";
+import { writeCaptureFromCommitBody, writeAnalysisFromReanalyzeBody } from "./observation-routes";
 import { writeLifeEvent } from "./individual-routes";
 import { writeClutchEvent } from "./clutch-routes";
 import { moveOccupancy, type DerivedDeviceBinding } from "./source-routes";
 
 export const batchCommitRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-export const BATCH_MAX_ITEMS = 200;
+// PPR-12「Recompute All: 1000枚一括」を満たすため 200→1000 に引き上げ(全 kind 共通の
+// 単一上限・kind別に分岐させない=ponytail rung2)。
+export const BATCH_MAX_ITEMS = 1000;
 
 type BatchResult = { ok: true; id: string; device_bindings?: DerivedDeviceBinding[] } | { ok: false; error: string };
 
@@ -48,6 +50,15 @@ async function commitOne(
     if (typeof clutchId !== "string" || !clutchId) return { ok: false, error: "INVALID_ITEM" };
     const r = await writeClutchEvent(s, actorId, clutchId, body);
     return r.ok ? { ok: true, id: r.event_id } : { ok: false, error: r.error };
+  }
+
+  // PPR-12 Recompute All: 1 件ずつ独立 append(部分失敗を隠さない・上と同じ規約)。
+  // 実解析(SIMD/LUT/ROI Lab変換)は呼び手(端末)側で完了済み・ここは結果の保存+diff記録のみ。
+  if (kind === "reanalyze") {
+    const captureId = item.capture_id;
+    if (typeof captureId !== "string" || !captureId) return { ok: false, error: "INVALID_ITEM" };
+    const r = await writeAnalysisFromReanalyzeBody(s, actorId, captureId, body);
+    return r.ok ? { ok: true, id: r.analysis_id } : { ok: false, error: r.error };
   }
 
   if (kind === "move") {

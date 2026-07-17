@@ -15,8 +15,8 @@
     },
     "level": {
       "type": "string",
-      "enum": ["board_summary", "big_wiki"],
-      "description": "階層（board_summary=掲示板要約 / big_wiki=大 Wiki）。"
+      "enum": ["board_summary", "big_wiki", "lint_log"],
+      "description": "階層（board_summary=掲示板要約 / big_wiki=大 Wiki / lint_log=月次Lint記録・V3-WIK-07。scope_ref=\"global\"・summary_markdown に log.md 形式の所見を格納）。"
     },
     "scope_ref": {
       "type": "string",

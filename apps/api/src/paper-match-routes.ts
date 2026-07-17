@@ -12,10 +12,16 @@ import {
   autoFillDescriptor,
   gapAnalysis,
   hintsForMissing,
+  quadrantAnalysis,
+  derivePropositions,
+  hypothesisDraftsForGaps,
+  autoGeneratePaperDraft,
   type ConditionsP,
   type ObservationJson,
   type NeighborPaper,
   type GapPaper,
+  type TemplateClaim,
+  type UnifiedMeasurement,
 } from "./paper-match";
 
 export const paperMatchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -110,6 +116,49 @@ paperMatchRoutes.post("/research/gap", async (c) => {
   const neighbors = (Array.isArray(body.neighbors) ? body.neighbors : []) as NeighborPaper[];
   const observation = body.observation as ObservationJson | undefined;
   return c.json(gapAnalysis(paper, neighbors, observation));
+});
+
+// POST /research/quadrant — 観測データの4象限モデルで研究の空白領域を検出する(PPR-07)。
+// P=条件充足(matchConditions)・Q=claim充足(autoFillDescriptor と同一実装)を観測ごとに
+// 機械判定し、密度が閾値(既定5%)未満の象限を gaps として返す。gaps の各象限には
+// 逆/裏/対偶(derivePropositions)+ 仮説論文タイトル・要旨案(hypothesisDraftsForGaps)を
+// 同梱する。content_id 指定時はその paper の conditions/claims[0] を土台にする(未指定時は
+// body.conditions/body.claim を使用)。「引用ネットワークのグラフ上で強調」はフロント
+// レンダラ側の表示(本 route は gaps 配列を返すのみ・後波)。LLM 不使用・決定論(不変条項①)。
+paperMatchRoutes.post("/research/quadrant", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  let paper: Record<string, unknown> = {};
+  if (typeof body.content_id === "string") {
+    const ev = await store(c).readEvent(contentKey(body.content_id));
+    if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+    paper = dataOf(ev);
+  }
+  const conditions = (body.conditions ?? paper.conditions ?? {}) as ConditionsP;
+  const claims = (paper.claims ?? []) as TemplateClaim[];
+  const claim = (body.claim as TemplateClaim | undefined) ?? claims[0];
+  if (!claim) return c.json({ error: "INVALID_QUADRANT_REQUEST", details: ["claim required (body.claim or paper.claims[0])"] }, 400);
+  const observations = Array.isArray(body.observations) ? (body.observations as ObservationJson[]) : [];
+  const threshold = typeof body.threshold === "number" ? body.threshold : undefined;
+
+  const result = quadrantAnalysis(conditions, claim, observations, threshold);
+  const pLabel = typeof body.p_label === "string" && body.p_label ? body.p_label : "条件P";
+  const qLabel = typeof body.q_label === "string" && body.q_label ? body.q_label : claim.statement || "主張Q";
+  const propositions = derivePropositions(pLabel, qLabel);
+  const hypothesis_drafts = hypothesisDraftsForGaps(result.gaps, pLabel, qLabel);
+
+  return c.json({ ...result, propositions, hypothesis_drafts });
+});
+
+// POST /research/auto-draft — 統一フォーマットの観測データ(measurements[])のみから論文
+// 下書きを自動生成する(PPR-20)。非永続プレビュー(suggestTags と同じ規約=呼び手が確認して
+// 別途 POST /research/content で書込む・機械が勝手に paper を作らない)。
+paperMatchRoutes.post("/research/auto-draft", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const observations = Array.isArray(body.observations)
+    ? (body.observations as { measurements?: UnifiedMeasurement[] }[])
+    : [];
+  const title = typeof body.title === "string" && body.title ? body.title : "無題(自動生成下書き)";
+  return c.json({ ...autoGeneratePaperDraft(observations, { title }), persisted: false });
 });
 
 // POST /research/content/:id/hypothesis — 仮説を別イベントとして append（PPR-01）。
