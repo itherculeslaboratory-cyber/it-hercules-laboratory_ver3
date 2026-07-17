@@ -93,18 +93,24 @@ test("market-trade lifecycle via real UI, 2 actors: draft -> publish -> apply(ma
   await expect(buyer.getByText(/状態 matched/)).toBeVisible();
 
   // 4. 振込済みを申告する(買い手) — round-16 決済裁定: 銀行振込P2P・IHL非関与。
+  //    磨き第2弾#1(受領10「買い手/売り手のみ表示」): `when` role gating —
+  //    the buyer must NOT see the seller-only "入金を確認した" button here.
   await buyer.getByRole("tab", { name: "取引ボード(成立後)" }).click();
+  await expect(buyer.getByRole("button", { name: "振込済みを申告する(買い手)" })).toBeVisible();
+  await expect(buyer.getByRole("button", { name: "入金を確認した(出品者)" })).not.toBeVisible();
   await buyer.getByRole("button", { name: "振込済みを申告する(買い手)" }).click();
   await waitForKind(buyer, "pay_declare");
   await buyer.waitForLoadState("networkidle");
   await buyer.getByRole("tab", { name: "取引ボード(成立後)" }).click();
   await expect(buyer.getByText(/振込済み申告 \d{4}-\d{2}-\d{2}/)).toBeVisible();
 
-  // 5. 出品者: 入金を確認した → 発送した.
+  // 5. 出品者: 入金を確認した → 発送した. Symmetric `when` check: the seller
+  //    must NOT see the buyer-only "受け取りました" button.
   await page.reload();
   await page.waitForLoadState("networkidle");
   await page.getByRole("tab", { name: "取引ボード(成立後)" }).click();
   await expect(page.getByText(/振込済み申告 \d{4}-\d{2}-\d{2}/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "受け取りました(検品OK・買い手)" })).not.toBeVisible();
   await page.getByRole("button", { name: "入金を確認した(出品者)" }).click();
   await waitForKind(page, "pay_confirm");
   await page.waitForLoadState("networkidle");
@@ -126,12 +132,15 @@ test("market-trade lifecycle via real UI, 2 actors: draft -> publish -> apply(ma
   await buyer.waitForLoadState("networkidle");
   await expect(buyer.getByText(/状態 received/)).toBeVisible();
 
-  // 7. 「買う」タブは全出品の実一覧(GET /market/listings)で、この listing の
-  //    詳細リンクを経由して同じ画面へ着地できる(F2購買一覧の実データ版)。
+  // 7. 「買う」タブは全出品の実一覧(GET /market/listings)で、磨き第2弾#2
+  //    (受領10「画像を押せば詳細が出る」)以降は image-grid カード全体が
+  //    リンクになっている(旧: table + 「詳細を開く」セルリンク)。この
+  //    listing には写真を出品していないので placeholder glyph(📷)で表示される
+  //    (壊れた <img> ではなく正直な空スロット表示)。
   await page.goto(`${WEB}/s/market-trade`);
   await page.waitForLoadState("networkidle");
   await page.getByRole("tab", { name: "買う" }).click();
-  await expect(page.getByRole("cell", { name: title })).toBeVisible();
-  await page.getByRole("row", { name: new RegExp(title) }).getByRole("link", { name: "詳細を開く" }).click();
+  await expect(page.getByText("📷")).toBeVisible();
+  await page.getByRole("link", { name: new RegExp(title) }).click();
   await expect(page.getByText(`${title} / 12000 円`)).toBeVisible();
 });

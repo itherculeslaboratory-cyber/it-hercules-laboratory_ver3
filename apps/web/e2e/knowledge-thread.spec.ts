@@ -1,12 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// c8(ui-asset-catalog.md 【最優先2】)再構築版 — 知の広場 per-thread ビューの
-// 実ブラウザ通貫。dev-login → スレを1本作成(POST /plaza/posts で thread_id/
-// topic を確定)→ /s/knowledge-thread?thread_id=... を実 worker + R2-local で
-// 描画 → (1) スレ頭カード+専用ノード thread-posts が実 API 値を綴じて可視
-// (2) 返信 compose(textarea variant)で新規投稿→自動再読込 (3) stance を
-// segmented variant で投じ Polis 型 consensus 投影(table)が反映 (4) スレ主
-// (dev actor 自身)だけに見える解決マーク(round-16 OQ-PLZ-03)をトグル。
+// c8(ui-asset-catalog.md 【最優先2】)再構築版・UI磨き第2弾(受領10)で追改修 —
+// 知の広場 per-thread ビューの実ブラウザ通貫。dev-login → スレを1本作成
+// (POST /plaza/posts で thread_id/topic を確定)→ /s/knowledge-thread?thread_id=...
+// を実 worker + R2-local で描画 → (1) スレ頭カード+専用ノード thread-posts が
+// 実 API 値を綴じて可視 (2) 返信 compose(textarea variant)で新規投稿→自動
+// 再読込 (3) 磨き第2弾#6: 投稿ごとのインライン賛否ボタン(Agree/Disagree/Pass・
+// 投稿ID手入力は撤去)を投じ Polis 型 consensus 投影(table)が反映 (4) 磨き
+// 第2弾#3: 「この投稿を相談室へ」は既定非表示・kebab(⋮)を開いて初めて見える
+// (5) スレ主(dev actor 自身)だけに見える解決マーク(round-16 OQ-PLZ-03)をトグル。
 
 const WEB = "http://127.0.0.1:3000";
 
@@ -56,19 +58,28 @@ test("knowledge thread: view (avatar/body/cite) -> reply -> stance vote -> threa
   await page.waitForLoadState("networkidle");
   await expect(page.getByText("これはE2Eからの返信です")).toBeVisible();
 
-  // 4. cast a stance on the seed post (segmented Agree/Disagree/Pass, c8); the
-  //    consensus projection recounts and the Polis table shows the tally.
-  await page.getByLabel("対象の投稿 ID *").fill(postId);
-  await page.getByRole("radio", { name: "賛成" }).check();
-  await page.getByRole("button", { name: "賛否を投じる" }).click();
+  // 4. 磨き第2弾#6: cast a stance via the seed post's OWN inline vote button
+  //    (no more manual "対象の投稿 ID" field — the post is scoped by
+  //    data-post-id, since the reply post from step 3 has an identical-looking
+  //    "賛成" button of its own). The consensus projection recounts and the
+  //    Polis table shows the tally.
+  const seedArticle = page.locator(`article[data-post-id="${postId}"]`);
+  await seedArticle.getByRole("button", { name: "賛成" }).click();
   await page.waitForLoadState("networkidle");
-  await page.reload(); // stance-form has no self-navigate transition (matches the pre-c8 behaviour)
+  await page.reload(); // per-post vote has no self-navigate transition (matches the pre-c8 stance-form behaviour)
   await page.waitForLoadState("networkidle");
   const row = page.locator("tr", { hasText: postId });
   await expect(row).toBeVisible();
   await expect(row.locator("td").nth(1)).toHaveText("1"); // agree count
 
-  // 5. thread-starter resolve mark toggles without a full page navigation
+  // 5. 磨き第2弾#3: 「この投稿を相談室へ」 is folded into a per-post kebab (⋮)
+  //    menu — hidden until opened, not a permanently-visible button.
+  const seedAfterReload = page.locator(`article[data-post-id="${postId}"]`);
+  await expect(seedAfterReload.getByRole("button", { name: "この投稿を相談室へ" })).not.toBeVisible();
+  await seedAfterReload.getByRole("button", { name: "この投稿の操作" }).click();
+  await expect(seedAfterReload.getByRole("button", { name: "この投稿を相談室へ" })).toBeVisible();
+
+  // 6. thread-starter resolve mark toggles without a full page navigation
   //    (local refetch) and flips the visible copy + button label.
   await page.getByRole("button", { name: "✔ 解決済みにする" }).click();
   // exact:true — "✔ 解決済み" is a literal substring of the pre-click button's
