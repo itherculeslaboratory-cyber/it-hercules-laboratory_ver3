@@ -3,7 +3,7 @@ id: V3-DOC-OPS-NIGHTLY-AUTORUN
 title: 夜間自動運転 — HQ側実体の参照 + 検証手順
 date: "2026-07-17"
 status: active
-requirement_ids: [V3-AIP-96]
+requirement_ids: [V3-AIP-96, V3-AIP-98]
 ---
 
 # 夜間自動運転（V3-AIP-96）
@@ -43,3 +43,26 @@ requirement_ids: [V3-AIP-96]
 
 repo 側の完了条件は上記 1〜5 を人間または監査エージェントが定期的に読み取り確認できる状態にすること。
 ihl-ver3 側のコード変更は不要（機構は repo の外で完結する運転規約のため）。
+
+## 時間帯予約式スケジューラ（V3-AIP-98 — V3-AIP-96 の拡張）
+
+夜間限定だった自動運転を、週間グリッド（曜日 × 24 時間の slot 種別配列）へ拡張したもの。正本 =
+`D:\claude\ops\schedules\autorun-schedule.json`。
+
+| slot | 意味 | 既定時間帯 |
+|------|------|-----------|
+| `dev` | 自動運転停止(人間の開発時間帯専用) | 19:00-24:00 |
+| `recovery` | 自動運転なし(セッション利用枠の回復優先・19:00に満タンへ調整) | 14:00-19:00 |
+| `auto` | 軽量モデル(既定sonnet)で自動運転 | 00:00-14:00 |
+
+- 曜日ごとの予約編集は `schedule-gui.py`(localhost:8787)。GUI以外の直接編集は非推奨(`_schema` 節に自己記述あり)。
+- 有効化は `enabled: true` + `enabled_by`(記名) + `enabled_at` の3点が揃って初めて成立(R-6同意ベース)。**空欄・falseのときランナーは即終了**。
+- 夜間運転は毎日自動実行し、連続成果ゼロなら `zero_result_stop.threshold` 回で自動停止(既定2)。
+
+### 検証手順(追加分・読み取り専用)
+
+6. `D:\claude\ops\schedules\autorun-schedule.json` の `enabled`/`enabled_by`/`enabled_at` が揃っているか(R-6記名同意の実在確認)。
+7. `grid` の各曜日24 slotが `dev`/`recovery`/`auto`のいずれかで埋まっているか。
+8. `zero_result_stop.consecutive_zero` が `threshold` 未満であること(到達していれば自動停止中 = `enabled` がfalseに落ちているはず)。
+
+repo側のコード変更は不要(週間グリッドの実行判定はHQ側 `runner.ps1` が担う決定論ロジックのため)。
