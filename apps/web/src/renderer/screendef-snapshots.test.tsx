@@ -47,6 +47,7 @@ const SCREEN_IDS = [
   "obs-search",
   "paper-detail",
   "paper-match",
+  "placement-qr",
   "platinum-shop",
   "profile",
   "project-hub",

@@ -22,11 +22,15 @@ const PLACEMENT_TYPE = "ihl.src.placement.v1";
 const BINDING_TYPE = "ihl.src.device_binding.v1";
 const OCCUPANCY_TYPE = "ihl.src.occupancy.v1";
 const TELEMETRY_TYPE = "ihl.src.telemetry.v1";
+// V3-OBS-20 棚/場所 QR (CL-10 env_qr_token_v1・schemas/frozen/qr-token.schema.json
+// と同型・別 truth type なので個体 QR ihl.ind.qr.v1 とは token 空間が分かれる).
+export const ENV_QR_TYPE = "ihl.env.qr.v1";
 
 const PLACEMENT_SCHEMA = "schemas/events/placement.schema.json";
 const BINDING_SCHEMA = "schemas/events/device-binding.schema.json";
 const OCCUPANCY_SCHEMA = "schemas/events/occupancy.schema.json";
 const TELEMETRY_SCHEMA = "schemas/events/telemetry-ingest.schema.json";
+const ENV_QR_SCHEMA = "schemas/frozen/qr-token.schema.json";
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -48,6 +52,11 @@ function envelope(type: string, dataschema: string, actorId: string, data: Recor
 }
 function str(v: unknown): string | null {
   return typeof v === "string" && v.length > 0 ? v : null;
+}
+function b64url(bytes: Uint8Array): string {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 // ── placements ──────────────────────────────────────────────────────────────
@@ -251,6 +260,31 @@ export async function projectOpenOccupancy(
 }
 
 /**
+ * Occupant currently AT a placement — the placement-QR twin of
+ * projectOpenOccupancy (that one keys by subject, this one by placement). Used
+ * to resolve a scanned shelf/location QR to "whichever individual lives here
+ * right now" (V3-OBS-20 棚→個体 連鎖). Same open-interval reasoning: a
+ * phase:"start" record with no matching phase:"end" for the same occupancy_id.
+ */
+export async function projectOccupantAt(
+  bucket: R2BucketLite,
+  placementId: string,
+): Promise<{ occupancy_id: string; subject_ref: string } | null> {
+  const events = (await new TruthStore(bucket).listEvents(`truth/${OCCUPANCY_TYPE}/`)).map(dataOf);
+  const started = new Map<string, string>(); // occupancy_id -> subject_ref
+  const ended = new Set<string>();
+  for (const d of events) {
+    if (d.placement_id !== placementId) continue;
+    if (d.phase === "start") started.set(String(d.occupancy_id), String(d.subject_ref));
+    else if (d.phase === "end") ended.add(String(d.occupancy_id));
+  }
+  for (const [id, subjectRef] of started) {
+    if (!ended.has(id)) return { occupancy_id: id, subject_ref: subjectRef };
+  }
+  return null;
+}
+
+/**
  * Move a subject to a new placement: end the currently-open occupancy (if
  * any) + start a new one, as ONE logical action (F4 wireframe「移動」/
  * batch-commit kind:"move" — device-binding start/end と同型の2相append).
@@ -297,6 +331,40 @@ export async function moveOccupancy(
   );
   return { occupancy_id: newId, ended_previous: endedPrevious };
 }
+
+// ── placement QR (V3-OBS-20 棚/場所からQR発行) ──────────────────────────────
+
+// POST /placements/{placement_id}/qr — issue an env_qr_token_v1 QR (CL-10
+// frozen shape). Scanning it (GET /qr/:token, observation-routes.ts) resolves
+// to whichever individual currently occupies this placement (projectOccupantAt)
+// and chains the SAME "last observation" prefill an individual QR gets —
+// 棚→個体→種→前回テンプレ (design-c2 §3.2 / OBS-20). dataschema points at the
+// frozen schema, so putEventAt's envelope validation enforces the CL-10 shape
+// on write (same contract cl-10-qr-token.test.ts checks statically).
+sourceRoutes.post("/placements/:placement_id/qr", async (c) => {
+  const placementId = c.req.param("placement_id");
+  const actorId = c.get("actorId");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const token = b64url(crypto.getRandomValues(new Uint8Array(24)));
+  const createdAt = new Date().toISOString();
+  const expiresAt =
+    typeof body.expires_at === "string" ? body.expires_at : new Date(Date.now() + 3600_000).toISOString();
+  const data = {
+    schema: "env_qr_token_v1",
+    token,
+    placement_id: placementId,
+    actor_id: actorId,
+    created_at: createdAt,
+    expires_at: expiresAt,
+  };
+  const res = await store(c).putEventAt(
+    `truth/${ENV_QR_TYPE}/${token}.json`,
+    envelope(ENV_QR_TYPE, ENV_QR_SCHEMA, actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_QR", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_QR", key: res.key }, 409);
+  return c.json({ token, placement_id: placementId, expires_at: expiresAt }, 201);
+});
 
 // ── telemetry ───────────────────────────────────────────────────────────────
 

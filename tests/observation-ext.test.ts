@@ -265,6 +265,131 @@ describe("OBS-20 qr prefill (?prefill=1) + entry_mode", () => {
   });
 });
 
+// V3-OBS-20 棚/場所からQR発行: a placement/shelf QR (issued via
+// POST /placements/:id/qr, CL-10 env_qr_token_v1 shape) resolves through the
+// SAME GET /qr/:token scan endpoint as an individual QR — 棚→個体→種→前回
+// テンプレの連鎖。
+describe("OBS-20 placement/shelf QR (棚→個体 連鎖)", () => {
+  it("issues a CL-10-shaped env_qr_token_v1 token for a placement", async () => {
+    const { env } = ctx();
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚A" }, env)).json()) as {
+      placement_id: string;
+    };
+    const res = await post(`/api/v1/placements/${placement_id}/qr`, {}, env);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { token: string; placement_id: string; expires_at: string };
+    expect(body.token).toMatch(/^[A-Za-z0-9_-]{20,}$/);
+    expect(body.placement_id).toBe(placement_id);
+  });
+
+  it("scanning a placement QR with an occupant resolves to that individual + prefill (?prefill=1)", async () => {
+    const { env } = ctx();
+    const indId = "ind-shelf";
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚B" }, env)).json()) as {
+      placement_id: string;
+    };
+    // "move" (kind:"move") is the phase:"start"/"end"-tagged occupancy path
+    // (moveOccupancy, source-routes.ts) — plain POST /occupancy writes a
+    // phase-less legacy record that is never "open" (see the ended-occupancy
+    // test below), so the QR-resolve occupant lookup needs this route.
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: placement_id }] },
+      env,
+    );
+    await post(
+      "/api/v1/observation/captures",
+      { capture_id: ulid(), domain: "biology", subject_ref: `individual/${indId}`, template_id: "tpl-shelf", measurements: [{ item: "len", kind: "number", value: 5 }] },
+      env,
+    );
+    const { token } = (await (await post(`/api/v1/placements/${placement_id}/qr`, {}, env)).json()) as { token: string };
+
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    const body = (await res.json()) as {
+      placement_id: string;
+      individual_id: string;
+      entry_mode: string;
+      prefill: { template_id: string; measurements: unknown[] };
+    };
+    expect(body.placement_id).toBe(placement_id);
+    expect(body.individual_id).toBe(indId);
+    expect(body.entry_mode).toBe("qr_placement");
+    expect(body.prefill.template_id).toBe("tpl-shelf");
+  });
+
+  it("scanning an empty placement (no occupant) resolves without a 404", async () => {
+    const { env } = ctx();
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "空の棚" }, env)).json()) as {
+      placement_id: string;
+    };
+    const { token } = (await (await post(`/api/v1/placements/${placement_id}/qr`, {}, env)).json()) as { token: string };
+
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { individual_id: unknown; entry_mode: string };
+    expect(body.individual_id).toBeNull();
+    expect(body.entry_mode).toBe("qr_placement_empty");
+  });
+
+  it("an ended occupancy (subject moved elsewhere) no longer resolves as the current occupant", async () => {
+    const { env } = ctx();
+    const indId = "ind-moved-out";
+    const { placement_id: shelfC } = (await (await post("/api/v1/placements", { label: "棚C" }, env)).json()) as {
+      placement_id: string;
+    };
+    const { placement_id: shelfC2 } = (await (await post("/api/v1/placements", { label: "棚C2" }, env)).json()) as {
+      placement_id: string;
+    };
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: shelfC }] },
+      env,
+    );
+    // move again → ends the shelfC occupancy (phase:"end"), starts one at shelfC2.
+    await post(
+      "/api/v1/observation/batch-commit",
+      { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: shelfC2 }] },
+      env,
+    );
+    const { token } = (await (await post(`/api/v1/placements/${shelfC}/qr`, {}, env)).json()) as { token: string };
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    const body = (await res.json()) as { individual_id: unknown };
+    expect(body.individual_id).toBeNull();
+  });
+
+  it("a phase-less legacy /occupancy record is not treated as a current occupant", async () => {
+    const { env } = ctx();
+    const indId = "ind-legacy";
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚C-legacy" }, env)).json()) as {
+      placement_id: string;
+    };
+    await post("/api/v1/occupancy", { placement_id, subject_ref: `individual/${indId}` }, env);
+    const { token } = (await (await post(`/api/v1/placements/${placement_id}/qr`, {}, env)).json()) as { token: string };
+    const res = await get(`/api/v1/qr/${token}?prefill=1`, env);
+    const body = (await res.json()) as { individual_id: unknown };
+    expect(body.individual_id).toBeNull();
+  });
+
+  it("expired placement token → 410", async () => {
+    const { env } = ctx();
+    const { placement_id } = (await (await post("/api/v1/placements", { label: "棚D" }, env)).json()) as {
+      placement_id: string;
+    };
+    const past = new Date(Date.now() - 1000).toISOString();
+    const { token } = (await (
+      await post(`/api/v1/placements/${placement_id}/qr`, { expires_at: past }, env)
+    ).json()) as { token: string };
+    const res = await get(`/api/v1/qr/${token}`, env);
+    expect(res.status).toBe(410);
+  });
+
+  it("unknown token (neither individual nor placement store) → 404", async () => {
+    const { env } = ctx();
+    const res = await get("/api/v1/qr/not-a-real-token-at-all", env);
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("OBS-23 thumbnail serve, no raw bulk download", () => {
   it("serves the 512px JPEG thumbnail blob", async () => {
     const { bucket, env } = ctx();

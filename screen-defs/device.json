@@ -3,7 +3,7 @@
   "route": "/devices",
   "title": "観測機器",
   "layout": "standard",
-  "notes": "OBS-31 機器は置き場所に紐付け(個体紐付けは 400)。API キーは暗号化保存で平文非表示・表示は display_name のみ。実鍵投入と cron 常駐は人間ゲート。",
+  "notes": "OBS-31 機器は置き場所に紐付け(個体紐付けは 400)。API キーは暗号化保存で平文非表示・表示は display_name のみ。実鍵投入と cron 常駐は人間ゲート。設置場所(棚)の登録+QR発行(V3-OBS-20)を追加: 一覧行の「QRを発行 →」は individual-detail.json と同じ単発トークン発行パターン(button POST + qr-code)を独立画面(placement-qr)へ切り出したもの(一覧の行から都度POSTを起動できないレンダラの制約のため — obs-register.json の結果行→追観測リンクと同じ「行→詳細画面」縮退)。",
   "nodes": [
     {
       "id": "shell",
@@ -37,6 +37,36 @@
                 { "id": "started-on", "type": "field", "props": { "variant": "text", "name": "started_on", "label": "開始日", "placeholder": "2026-07-11" } },
                 { "id": "api-key", "type": "field", "props": { "variant": "text", "name": "api_key", "label": "API キー（暗号化して保存）", "placeholder": "貼り付け" } },
                 { "id": "submit", "type": "button", "props": { "label": "登録する", "variant": "primary", "type": "submit" } }
+              ]
+            },
+            { "id": "placements-title", "type": "heading", "props": { "text": "設置場所(棚)", "level": 2 } },
+            { "id": "placements-lead", "type": "text", "props": { "text": "棚・置き場所を登録すると、QRラベルを発行してスキャン観測(V3-OBS-20)に使えます。", "muted": true } },
+            {
+              "id": "placement-list",
+              "type": "table",
+              "props": {
+                "source_path": "/api/v1/placements",
+                "bind_items": "data.placement-list.placements",
+                "empty_text": "設置場所はまだ登録されていません。",
+                "columns": [
+                  { "key": "label", "label": "設置場所" },
+                  {
+                    "key": "placement_id",
+                    "label": "",
+                    "cell": "link",
+                    "href_tpl": "/s/placement-qr?id={{placement_id}}",
+                    "link_label": "QRを発行 →"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "placement-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/placements" },
+              "children": [
+                { "id": "placement-label", "type": "field", "props": { "variant": "text", "name": "label", "label": "設置場所の名前", "placeholder": "例: 飼育棚A-3段目", "required": true } },
+                { "id": "placement-submit", "type": "button", "props": { "label": "設置場所を登録する", "variant": "secondary", "type": "submit" } }
               ]
             }
           ]

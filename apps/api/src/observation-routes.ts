@@ -11,6 +11,7 @@ import {
   NAVIGATOR_TARGET_QUESTIONS,
   CONFIDENCE_ORDER,
 } from "./observation-constants";
+import { ENV_QR_TYPE, projectOccupantAt } from "./source-routes";
 import type { Bindings, Variables } from "./env";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -890,32 +891,72 @@ obsRoutes.post("/individuals/:individual_id/qr", async (c) => {
   return c.json({ token, individual_id: individualId, expires_at: data.expires_at ?? null }, 202);
 });
 
-// GET /qr/{token} — resolve token → { individual_id } (observation re-entry).
-// With ?prefill=1 (OBS-20): also returns entry_mode=qr + last-observation prefill
-// (棚→個体→種→テンプレ連鎖) so the QR-resume form starts pre-filled. The bare
-// call keeps its original { individual_id } shape (existing contract).
-obsRoutes.get("/qr/:token", async (c) => {
-  const token = c.req.param("token");
-  const ev = await store(c).readEvent(`truth/${QR_TYPE}/${token}.json`);
-  if (!ev) return c.json({ error: "NOT_FOUND" }, 404);
-  const d = dataOf(ev);
-  if (typeof d.expires_at === "string" && Date.parse(d.expires_at) < Date.now()) {
-    return c.json({ error: "QR_EXPIRED" }, 410);
-  }
-  if (!c.req.query("prefill")) return c.json({ individual_id: d.individual_id });
-
-  const ref = `individual/${d.individual_id}`;
-  const caps = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
+// Last-observation prefill for an individual (棚→個体→種→前回テンプレ連鎖・
+// OBS-20). Shared by both QR flavors below so the chain is defined exactly once.
+async function buildIndividualPrefill(
+  st: TruthStore,
+  individualId: string,
+): Promise<{ template_id: unknown; species_candidate: unknown; measurements: unknown } | null> {
+  const ref = `individual/${individualId}`;
+  const caps = (await st.listEvents(`truth/${CAPTURE_TYPE}/`))
     .map(dataOf)
     .filter((x) => x.subject_ref === ref)
     .sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id)));
   const last = caps[caps.length - 1];
-  const prefill = last
+  return last
     ? {
         template_id: last.template_id ?? null,
         species_candidate: last.species_candidate ?? null,
         measurements: last.measurements ?? [],
       }
     : null;
-  return c.json({ individual_id: d.individual_id, entry_mode: "qr", prefill });
+}
+
+// GET /qr/{token} — resolve token → { individual_id } (observation re-entry).
+// With ?prefill=1 (OBS-20): also returns entry_mode=qr + last-observation prefill
+// (棚→個体→種→テンプレ連鎖) so the QR-resume form starts pre-filled. The bare
+// call keeps its original { individual_id } shape (existing contract).
+//
+// A token not found in the individual-QR store (ihl.ind.qr.v1) also falls back
+// to the placement/shelf-QR store (ihl.env.qr.v1, source-routes.ts POST
+// /placements/:id/qr — CL-10 env_qr_token_v1 shape): a shelf label resolves to
+// whichever individual currently occupies it (projectOccupantAt), then chains
+// the SAME prefill lookup. No current occupant (empty shelf) still resolves
+// (individual_id: null, entry_mode: qr_placement_empty) rather than 404 — the
+// shelf is still scannable to start a brand-new individual there.
+obsRoutes.get("/qr/:token", async (c) => {
+  const token = c.req.param("token");
+  const st = store(c);
+
+  const ev = await st.readEvent(`truth/${QR_TYPE}/${token}.json`);
+  if (ev) {
+    const d = dataOf(ev);
+    if (typeof d.expires_at === "string" && Date.parse(d.expires_at) < Date.now()) {
+      return c.json({ error: "QR_EXPIRED" }, 410);
+    }
+    if (!c.req.query("prefill")) return c.json({ individual_id: d.individual_id });
+    const prefill = await buildIndividualPrefill(st, String(d.individual_id));
+    return c.json({ individual_id: d.individual_id, entry_mode: "qr", prefill });
+  }
+
+  const envEv = await st.readEvent(`truth/${ENV_QR_TYPE}/${token}.json`);
+  if (!envEv) return c.json({ error: "NOT_FOUND" }, 404);
+  const ed = dataOf(envEv);
+  if (typeof ed.expires_at === "string" && Date.parse(ed.expires_at) < Date.now()) {
+    return c.json({ error: "QR_EXPIRED" }, 410);
+  }
+  const placementId = String(ed.placement_id);
+  const occupant = await projectOccupantAt(c.env.TRUTH, placementId);
+  const individualId =
+    occupant && occupant.subject_ref.startsWith("individual/")
+      ? occupant.subject_ref.slice("individual/".length)
+      : null;
+  if (!c.req.query("prefill")) return c.json({ placement_id: placementId, individual_id: individualId });
+  const prefill = individualId ? await buildIndividualPrefill(st, individualId) : null;
+  return c.json({
+    placement_id: placementId,
+    individual_id: individualId,
+    entry_mode: individualId ? "qr_placement" : "qr_placement_empty",
+    prefill,
+  });
 });

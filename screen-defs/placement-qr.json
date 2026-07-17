@@ -1,0 +1,36 @@
+{
+  "screen_id": "placement-qr",
+  "route": "/placements/qr",
+  "title": "設置場所のQR",
+  "layout": "standard",
+  "notes": "V3-OBS-20 棚/場所からQR発行: individual-detail.json のQR発行(POST /individuals/{id}/qr + qr-code)と同じ2ノード構成をplacement向けに置く(POST /placements/{id}/qr)。発行したQRをスキャンすると GET /api/v1/qr/{token} が個体QRと同じ入口で解決し、現在この棚を占有している個体の前回観測をプレフィルする(空の棚は individual_id:null で新規個体登録に進める・observation-routes.ts GET /qr/:token 参照)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "設置場所のQR", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "この設置場所(棚)のQRラベルを発行します。印刷して棚に貼ると、スキャンで観測を再開できます。", "muted": true } },
+            {
+              "id": "issue-qr",
+              "type": "button",
+              "props": { "label": "QR ラベルを発行する", "variant": "primary" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/placements/{{params.id}}/qr" }
+            },
+            { "id": "qr", "type": "qr-code", "props": { "value": "{{result.token}}" } },
+            {
+              "id": "back",
+              "type": "link",
+              "props": { "label": "観測機器の管理へ戻る", "href": "/s/device" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}
