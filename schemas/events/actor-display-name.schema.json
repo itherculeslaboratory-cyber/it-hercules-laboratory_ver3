@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/actor-display-name.schema.json",
+  "title": "Actor Display Name Event data (ihl.actor.display_name.v1)",
+  "description": "actor_id にひも付く表示名の append-only イベント（c8 UI磨き第2弾#5・actor_id 生ハッシュ露出の解消）。Truth キー truth/ihl.actor.display_name.v1/<actor_id>-<ulid>.json。ind-name-event.schema.json と同型の「改名は追記・UPDATE禁止」パターン: projectDisplayName が created_at(ULID tie-break)昇順で最新表示名に畳み込む。表示名は一意性を持たない自己申告のラベルであり、V3-AUT-08 の @handle（一意・不変の ID ゲート）とは別概念（handle は別要件・別波・本イベントは handle を代替しない）。表示名未設定の actor は呼び出し側（actor 表示プリミティブ）が短縮 actor_id ハッシュへ fallback する。",
+  "x_ihl_req": "V3-AIP-101",
+  "x_ihl_source": "docs/planning/rulings/round-16-answers-raw.md 受領10（UIレビュー第1弾）",
+  "type": "object",
+  "required": ["actor_id", "display_name", "created_at"],
+  "properties": {
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "表示名を設定した本人の actor_id（本人スコープ V3-AUT-17・自分以外の名を代理設定できない）。"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "description": "自己申告の表示名（一意性なし・不変性なし・不適切語のモデレーションは対象外＝後波）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "設定時刻（RFC3339）。projectDisplayName の最新判定キー。"
+    }
+  },
+  "additionalProperties": false
+}
