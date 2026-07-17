@@ -56,6 +56,10 @@ export type Bindings = {
   // degrade(API 呼び出しなし)。
   CF_API_TOKEN?: string;
   CF_ACCOUNT_ID?: string;
+  // GitHub Issues 読み取りコネクタ(github-issues-connector.ts / V3-AIP-67)。public repo は
+  // 無認証でも読めるため TOKEN は任意(レート制限緩和用のみ・必須シークレットではない)。
+  GITHUB_API_BASE?: string;
+  GITHUB_TOKEN?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

@@ -1,0 +1,8 @@
+{
+  "schema_version": "1",
+  "description": "V3-AIP-67 GitHub Issues/掲示板→AI要約スレッドのバッチ対象。対象repo・ラベル・蓄積閾値・頻度をハードコードせずここで管理する(ai-digest-routes.ts が policy 経由でロード)。cron 定期実行の配線自体は人間ゲート(常駐トークン消費の開始)— ここは手動sync route(POST /ai-digest/sync)の入力のみ。",
+  "repo": "itherculeslaboratory-cyber/it-hercules-laboratory_ver3",
+  "labels": ["improvement", "feature-request", "bug"],
+  "frequency": "daily",
+  "batch_size": 100
+}

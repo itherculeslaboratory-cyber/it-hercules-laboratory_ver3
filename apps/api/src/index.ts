@@ -5,6 +5,7 @@ import { TruthStore, deriveActorId } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { sourceRoutes } from "./source-routes";
 import { aiRoutes } from "./ai-kernel";
+import { aiDigestRoutes } from "./ai-digest-routes";
 import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
 import { isDenylisted } from "./denylist";
@@ -480,6 +481,13 @@ app.route("/api/v1", envImportRoutes);
 // /ai/:task。protected。既定 AI_DISABLED(501・IHL_AI_PROVIDER 未設定=LLM OFF・不変
 // 条項①)。未知 task→404。実プロバイダ鍵投入は人間ゲート(本 route は呼ばない)。
 app.route("/api/v1", aiRoutes);
+
+// GitHub Issues/掲示板 → AI 要約スレ (V3-AIP-67 / route-matrix infra-route-080): POST
+// /ai-digest/sync(requireRole operator/admin・手動即時実行)。ai-kernel の LLMClient
+// (既定 AI_DISABLED)+ ai-profiles/newspaper.json(BYOK summarize)を再利用する薄い
+// コネクタ。保存/表示は新イベント型を増やさず ihl.plaza.post.v1(channel=knowledge-board・
+// board_kind=improvement)を再利用 — 既存「改善の板」画面に無改造で表示される。
+app.route("/api/v1", aiDigestRoutes);
 
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);
