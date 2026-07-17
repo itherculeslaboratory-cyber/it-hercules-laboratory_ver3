@@ -424,6 +424,9 @@ plazaRoutes.post("/plaza/forks", async (c) => {
   if (body?.visibility !== undefined) data.visibility = body.visibility;
   if (body?.title !== undefined) data.title = body.title;
   if (typeof body?.content_hash === "string") data.content_hash = body.content_hash;
+  // V3-MKT-47: docker_extension/world_template の改ざん検知チェーン(lineage-meta と
+  // 同じ連鎖ハッシュ規約・任意)。
+  if (typeof body?.lineage_hash === "string") data.lineage_hash = body.lineage_hash;
   const key = `truth/${FORK_TYPE}/${targetType}/${forkId}.json`;
   const res = await store(c).putEventAt(key, envelope(FORK_TYPE, FORK_SCHEMA, forkId, actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_FORK", details: res.errors }, 400);
