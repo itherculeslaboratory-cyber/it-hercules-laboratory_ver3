@@ -37,7 +37,7 @@ requirement_ids: [V3-FND-35]
 | 配送(日本郵便 URL 中継) | `apps/api/src/market-routes.ts`(`ship_link` kind)/`apps/api/src/market-settlement.ts` | アダプタ不要(外部 API を呼ばない設計) | IHL は住所/配送 API を一切呼ばず売り手が入力した外部 URL 文字列を非公開ボードで中継するのみ — 外部サービス側の仕様変更は IHL 側の処理に影響しない(URL 文字列を保存/表示するだけ)。 |
 | IoT 観測(SwitchBot) | `components/collector-switchbot/`(Ed25519 署名 ingest・`apps/api/src/collector-routes.ts`) | `COLLECTOR_PUBLIC_KEYS` 登録有無(collector_id 単位) | 未登録 collector_id や検証失敗の署名 → 401 で何も保存しない(データ欠落は起きるが誤ったデータが Truth に紛れ込むことはない)。 |
 | AI/LLM(将来接続予定) | `apps/api/src/ai-kernel.ts` | `IHL_AI_PROVIDER` 未設定=既定 OFF | 未設定 → 全タスクが `501 AI_DISABLED` を返す(不変条項①: LLM は既定 OFF)。 |
-| Cloudflare R2 使用量(V3-CST-02 予定) | 未実装(`config/running-costs.json` 手動値のみ) | `CF_API_TOKEN`/`CF_ACCOUNT_ID` 有無(予定) | 未設定 → 手動入力値(`source:"manual"`)を表示し API 集計は行わない。 |
+| Cloudflare R2 使用量(V3-CST-02) | `apps/api/src/costs-routes.ts`(`fetchR2Usage`) | `CF_API_TOKEN`/`CF_ACCOUNT_ID` 有無 | 未設定、または(将来)実 GraphQL クエリ未検証な間は常に `undefined` → `GET /api/v1/costs` は `config/running-costs.json` の `r2.manual_override_yen` へ degrade(`source:"manual"`)。実クエリ配線は実アカウントでの疎通検証後(人間ゲート隣接)。 |
 
 ## 差替時の確認手順
 

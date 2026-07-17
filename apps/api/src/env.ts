@@ -47,6 +47,11 @@ export type Bindings = {
   // AI プロバイダ名(design-k7 FND-21 §1.6). 未設定=AI_DISABLED(既定 OFF・不変条項①)。
   // 実プロバイダの鍵投入は人間ゲート。実値は env のみ。
   IHL_AI_PROVIDER?: string;
+  // V3-CST-02 コスト透明性(GET /api/v1/costs)の R2 使用量取得用。未設定 →
+  // costs-routes.ts は config/running-costs.json の r2.manual_override_yen へ
+  // degrade(API 呼び出しなし)。
+  CF_API_TOKEN?: string;
+  CF_ACCOUNT_ID?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

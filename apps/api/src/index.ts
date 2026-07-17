@@ -47,6 +47,7 @@ import { researchCanonicalRoutes } from "./research-canonical-routes";
 import { researchAgentBatchRoutes, handleResearchScheduled } from "./research-agent-batch";
 import { NEWSPAPER_CRON_UTC } from "./research-constants";
 import { handleScheduled } from "./batch";
+import { costsRoutes } from "./costs-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -190,6 +191,10 @@ app.route("/api/v1/auth", authRoutes);
 // Mounted BEFORE obsRoutes so the static /observation/insights wins over obsRoutes'
 // param route GET /observation/:capture_id (cross-app first-registered precedence).
 app.route("/api/v1", homeRoutes);
+
+// V3-CST-02 running-cost transparency dashboard: GET /api/v1/costs. Protected
+// (not in PUBLIC_ROUTES) — any logged-in user may view it (no extra role gate).
+app.route("/api/v1", costsRoutes);
 
 // C-USB ingest (design-k1 §1.1 / V3-OBS-44): POST /api/v1/cusb. Session-protected
 // (NOT in PUBLIC_ROUTES — unlike collector's signature-public ingest). Flow:
