@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { SCHEDULE_STAGE_INTERVAL_DAYS } from "./observation-constants";
+import { projectJudicialInboxPreview } from "./gov-routes";
 
 export const homeRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -21,6 +22,12 @@ const CAPTURE_TYPE = "ihl.obs.capture.v1";
 // する分類の閾値。ponytail: 家庭運用の調整ノブ。運用実績で伸縮するなら定数化を昇格。
 const HOME_NEAR_WINDOW_DAYS = 3;
 const DAY_MS = 86_400_000;
+
+// V3-GOV-11: ホームの司法インボックスプレビュー(最大5件)・環境IoT due予定プレビュー
+// (最大3件)。審理・投票本体は司法FeatureNode(/gov/disputes/*)へ委譲し、ホームは
+// プレビューのみを持つ(重複実装しない)。
+const HOME_JUDICIAL_INBOX_LIMIT = 5;
+const HOME_IOT_DUE_LIMIT = 3;
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -207,10 +214,18 @@ homeRoutes.post("/observation/schedule", async (c) => {
   return c.json({ schedule_id: scheduleId, next_observation_at: nextAt }, 201);
 });
 
-// GET /home/summary — today's summary (OBS-21): near / overdue / observing.
+// GET /home/summary — today's summary (OBS-21): near / overdue / observing。V3-GOV-11:
+// 司法インボックスのプレビュー(最大5件)+ 環境IoT due予定のプレビュー(最大3件・既存の
+// overdue→near 順で切り詰め=環境観測スケジュールの再利用・二重実装しない)を追加。
 homeRoutes.get("/home/summary", async (c) => {
-  const summary = await projectHomeSummary(store(c), c.get("actorId"));
-  return c.json(summary);
+  const s = store(c);
+  const actorId = c.get("actorId");
+  const [summary, judicial_inbox] = await Promise.all([
+    projectHomeSummary(s, actorId),
+    projectJudicialInboxPreview(s, actorId, HOME_JUDICIAL_INBOX_LIMIT),
+  ]);
+  const iot_due = [...summary.overdue, ...summary.near].slice(0, HOME_IOT_DUE_LIMIT);
+  return c.json({ ...summary, judicial_inbox, iot_due });
 });
 
 // GET /observation/insights — deterministic gap detection (OBS-43): overdue

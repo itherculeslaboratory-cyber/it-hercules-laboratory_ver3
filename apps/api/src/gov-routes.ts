@@ -508,6 +508,71 @@ govRoutes.get("/gov/disputes/:dispute_id", async (c) => {
   return c.json(view);
 });
 
+// ── V3-GOV-11 ホーム司法インボックスのプレビュー(最大5件・審理/投票本体は司法
+// FeatureNode=上の /gov/disputes/* へ委譲)。─────────────────────────────────
+export interface JudicialInboxItem {
+  dispute_id: string;
+  category: string;
+  status: "open" | "resolved" | "force_closed";
+  role: "opener" | "respondent";
+  public: boolean;
+  vote_deadline: string | null;
+  opened_at: string;
+}
+
+/**
+ * 本人が当事者(opener/respondent)の未決着(status="open")紛争を最大 limit 件返す
+ * (都度再計算・常駐 DB 禁止)。並び順: 投票締切が近いものを優先(公開済み)、次に
+ * 開始が新しいもの。DISPUTE_TYPE 全走査 + dispute_id ごとにグルーピングして
+ * projectDispute と同型の折り畳みを行う(投影 index は別波・design-c2 §3.1)。
+ */
+export async function projectJudicialInboxPreview(
+  s: TruthStore,
+  actorId: string,
+  limit = 5,
+): Promise<JudicialInboxItem[]> {
+  const all = (await s.listEvents(`truth/${DISPUTE_TYPE}/`)).map(dataOf);
+  const byDispute = new Map<string, Record<string, unknown>[]>();
+  for (const e of all) {
+    const id = str(e.dispute_id);
+    if (!id) continue;
+    const arr = byDispute.get(id) ?? [];
+    arr.push(e);
+    byDispute.set(id, arr);
+  }
+  const items: JudicialInboxItem[] = [];
+  for (const [disputeId, events] of byDispute) {
+    const sorted = events.slice().sort((a, b) => (str(a.created_at) < str(b.created_at) ? -1 : 1));
+    const open = sorted.find((e) => e.action === "open");
+    if (!open) continue;
+    const opener = str(open.actor_id);
+    const respondent = str(open.respondent_id);
+    if (actorId !== opener && actorId !== respondent) continue;
+    const close = sorted.find((e) => e.action === "close");
+    if (close) continue; // 未決着のみ(status="open")
+    const publicize = sorted.find((e) => e.action === "publicize");
+    const voteDeadline = publicize
+      ? new Date(Date.parse(str(publicize.created_at)) + GOV_DISPUTE_VOTE_WINDOW_MS).toISOString()
+      : null;
+    items.push({
+      dispute_id: disputeId,
+      category: str(open.category),
+      status: "open",
+      role: actorId === opener ? "opener" : "respondent",
+      public: !!publicize,
+      vote_deadline: voteDeadline,
+      opened_at: str(open.created_at),
+    });
+  }
+  items.sort((a, b) => {
+    if (a.vote_deadline && b.vote_deadline) return a.vote_deadline < b.vote_deadline ? -1 : 1;
+    if (a.vote_deadline) return -1; // 締切が近い(=設定済み)ものを優先
+    if (b.vote_deadline) return 1;
+    return a.opened_at < b.opened_at ? 1 : -1; // 新しい開始を優先
+  });
+  return items.slice(0, limit);
+}
+
 // ── Precedent 判例(GOV-12)──────────────────────────────────────────────────
 // projectPrecedents(s, q?, tag?) — title/summary/culture_guide 部分一致(q)・tags 一致(tag)。
 export async function projectPrecedents(s: TruthStore, q?: string, tag?: string) {
