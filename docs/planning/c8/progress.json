@@ -1103,10 +1103,10 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["0a868da"],
+    "tc": ["tests/mkt-03-comments.test.ts"],
+    "note": "受領(market-finalレーン): マッチング前公開面の欠けていた要素(公開Q&A+ほめボード)をihl.mkt.comment.v1で新設。POST/GET /market/listings/{id}/comments。answerは出品者のみ。既存の非公開ボード(matched後)は不変。"
   },
   {
     "id": "V3-MKT-04",
@@ -1144,10 +1144,10 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["8a40adf"],
+    "tc": ["tests/mkt-06-individual-offer.test.ts"],
+    "note": "受領(market-finalレーン): 個体詳細画面からの未出品個体への直接オファー(ihl.mkt.individual_offer.v1)+個体ごと拒否設定(ihl.mkt.offer_policy.v1・現観測者=個体マスタactor_idのみ設定可)を新設。open/closed/research_only。既存isBlockedPairを再利用。"
   },
   {
     "id": "V3-MKT-10",
@@ -1175,10 +1175,10 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": "round-16裁定: 5%(fee_tax)レーンはU-code正規表現照合を使わずPAY.JP charge metadata.obligation_idの直接照合へ移行(fee-routes.ts)。本要件が定義するU-code FIFO(GMO名前照合)自体はgmo-routes.tsに実装済みだがroute非マウント(GMO退役)。P2P用途は別裁定待ちのため本要件は評価対象を変えずtodoのまま。"
+    "status": "done",
+    "commits": ["887bb12"],
+    "tc": ["tests/fee-routes.test.ts"],
+    "note": "round-16裁定: 5%(fee_tax)レーンはU-code正規表現照合を使わずPAY.JP charge metadata.obligation_idの直接照合へ移行(fee-routes.ts)。本要件が定義するU-code FIFO(GMO名前照合)自体はgmo-routes.tsに実装済みだがroute非マウント(GMO退役)。P2P用途は別裁定待ちのため本要件は評価対象を変えずtodoのまま。 追加(market-finalレーン): 振込コード生成(deriveTransferCode CL-11)は既存実装済みだったため、5%ゆる請求のfee invoice/GET me/fees応答へbank_transfer_codeを新規露出。P2Pの自動FIFO照合(旧GMO API)は退役済み・代替銀行API無しのため対象外のまま。"
   },
   {
     "id": "V3-MKT-18",
@@ -1251,10 +1251,10 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "受領(market-finalレーン・部分): コア(recommendPrice=類似個体の重み付き平均/中央値・計算元sources全公開・embedding既定OFF)はmarket-pricing-routes.tsに実装済み+テスト済み(pre-existing)。未着手: 透明性スコアT/ブリーダーB/ラインL/市場中央値Mの公式+毎年プラチナ投票でロジック1つを選ぶガバナンス層(係数a/b/c初期値はregistry.json ambiguity=未定義)。brief指定どおり優先度最後・大物のため今セッションは着手せず。次セッションはwave-2 OBS-56/OBS-11再利用+投票UIの設計から。"
   },
   {
     "id": "V3-MKT-27",
@@ -1279,10 +1279,10 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["3631352", "5d11d74"],
+    "tc": ["tests/market-ownership.test.ts", "tests/market-stage.test.ts"],
+    "note": "受領(market-finalレーン・検証のみ・新規コミットなし): 所有者移転+観測データ引継ぎ(transferイベント連結・carried_observations・payload.external=trueで非引継ぎ)はC5期(3631352)+round-16決済拡張(5d11d74)で既に実装済み・GET /market/listings/{id}/ownership稼働中・既存TC全緑を確認済み。progress.json側の要件IDとの対応付け見落としと判断し統合時にdoneへ倒す。"
   },
   {
     "id": "V3-MKT-35",
@@ -1318,7 +1318,7 @@
       "bff1b98"
     ],
     "tc": [],
-    "note": "料率5%(旧8%)への追従はeconomy-constants.tsで完了。round-16裁定で(2)5%積立の徴収経路をPAY.JPゆるい請求(fee-routes.ts)へ実装。(1)文明OS拠出3%・(3)フォーク還元10%の負債計上/猶予/変換ロジックは未着手 — 引き続きpartial。 追加(market-g04レーン): 層(2)5%維持費税の積立→義務計上はV3-MKT-10で完成。層(1)文明OS拠出3%(IT.Hercules.Laboratoryマーク商用利用)は「商用利用」をどう検出するか(listing側opt-inフラグか自動判定か・QR顔証明の実装深度)が未確定のアーキ判断で今回スキップ。層(3)フォーク10%還元は貢献度側(V3-KRM-11 applyContributionDelta)に月次リベートは実装済みだが、市場取引個別の負債計上/猶予/変換ロジックとしては未接続。"
+    "note": "料率5%(旧8%)への追従はeconomy-constants.tsで完了。round-16裁定で(2)5%積立の徴収経路をPAY.JPゆるい請求(fee-routes.ts)へ実装。(1)文明OS拠出3%・(3)フォーク還元10%の負債計上/猶予/変換ロジックは未着手 — 引き続きpartial。 追加(market-g04レーン): 層(2)5%維持費税の積立→義務計上はV3-MKT-10で完成。層(1)文明OS拠出3%(IT.Hercules.Laboratoryマーク商用利用)は「商用利用」をどう検出するか(listing側opt-inフラグか自動判定か・QR顔証明の実装深度)が未確定のアーキ判断で今回スキップ。層(3)フォーク10%還元は貢献度側(V3-KRM-11 applyContributionDelta)に月次リベートは実装済みだが、市場取引個別の負債計上/猶予/変換ロジックとしては未接続。 追加(market-finalレーン・部分): 料率5%(旧8%)追従は既存完了。未着手のまま: (1)文明OS3%拠出の負債計上・(2)フォーク10%貢献度分配ロジック。registry.json ambiguityに「3%が最終値か本人再検討中(未確定)」と明記されており、確定前に自動控除の実配線を作ると裁定変更時の手戻りが大きいため触らず。裁定確定後、fee-routes.tsのobligation_kind='civilization_due'追加+ledger-audit拡張が実装先。"
   },
   {
     "id": "V3-MKT-40",
@@ -1328,10 +1328,10 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["dbbb506", "1d472b1"],
+    "tc": ["tests/mkt-40-ledger-audit.test.ts"],
+    "note": "受領(market-finalレーン): GET /ledger/audit新設。貸方(coin_event)/借方(platinum_vote+研究支援ストア注文の2ストリーム差引き)から残高非負+重複ID検知の健全性サマリを都度再計算。新規台帳テーブルは作らず既存の2ストリーム差引きモデル(social-routes.ts既存実装)を検算に転用。今後コイン系新機能を追加するたびdebit側を追記登録する運用が必要。"
   },
   {
     "id": "V3-MKT-45",
@@ -1341,10 +1341,10 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["1d472b1"],
+    "tc": ["tests/mkt-45-research-store.test.ts"],
+    "note": "受領(market-finalレーン): 研究支援ストア(project_id紐づけ・プラチナ/代引き/外部EC誘導の3方式)を新設。在庫チェック必須+都度再計算、プラチナは残高チェック後にのみ確定。外部ECは実鍵無し(research-ec-adapter.tsが縮退・注文自体はブロックしない)。"
   },
   {
     "id": "V3-MKT-47",
@@ -1354,10 +1354,10 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["0958f97"],
+    "tc": ["tests/mkt-47-docker-extension.test.ts", "tests/plaza-fork.test.ts"],
+    "note": "受領(market-finalレーン): Docker拡張フォーク管理を既存plaza-fork汎用基盤(POST/GET /plaza/forks・/plaza/signals・/plaza/ranking)で実装。target_type enumにdocker_extension/world_templateを追加+lineage_hash任意フィールド新設のみ(reuse-first)。実行基盤=デモ起動はV3-SEC-45裁定待ちで対象外。"
   },
   {
     "id": "V3-MKT-49",
@@ -4374,7 +4374,7 @@
       "5d11d74"
     ],
     "tc": [],
-    "note": "銀行振込既定路線(pay_declare/pay_confirm状態機械)は実装済。PAY.JP Platformカード決済の選択肢・5%自動控除は未実装 — partialのまま。振込済み申告/入金確認UIまで実装(E2E通貫)。 追加(market-g04レーン): 銀行振込既定(pay_declare/pay_confirm状態機械・E2E通貫)は前セッションで実装済み・今回セッションではV3-MKT-10で税計算まで接続。PAY.JP Platformカード決済オプションの選択UI/実配線はテナント作成(本人確認)が必要で人間ゲート(照会回答待ち)のため対象外。"
+    "note": "銀行振込既定路線(pay_declare/pay_confirm状態機械)は実装済。PAY.JP Platformカード決済の選択肢・5%自動控除は未実装 — partialのまま。振込済み申告/入金確認UIまで実装(E2E通貫)。 追加(market-g04レーン): 銀行振込既定(pay_declare/pay_confirm状態機械・E2E通貫)は前セッションで実装済み・今回セッションではV3-MKT-10で税計算まで接続。PAY.JP Platformカード決済オプションの選択UI/実配線はテナント作成(本人確認)が必要で人間ゲート(照会回答待ち)のため対象外。 追加(market-finalレーン・部分): 今回V3-MKT-12(887bb12)でbank_transfer_code露出を追加(振込名義の視認性向上)。PAY.JP Platformカード決済オプション・5%自動控除の実配線はPAY.JP/PayPay照会回答待ちのままブロック(HANDOFF §4人間ゲート)。"
   },
   {
     "id": "V3-MKT-63",
@@ -4390,7 +4390,7 @@
       "9d14f02"
     ],
     "tc": [],
-    "note": "買主pay_declare→売主pay_confirmの申告/確認フロー(ゆる請求の骨格)は実装済。PAY.JP経由5%自動控除・PayPay併用は未実装 — partialのまま。 追加(market-g04レーン): 「取引完了後ゆるく計算して振り込んでね」の核フロー(成立→5%自動計上→POST /fees/{id}/invoice→PAY.JPテストmode webhook消込→GET /me/fees未払い投影)はV3-MKT-10配線により機能完結。残るのは要件文の「PAY.JP Platform経由取引のみ5%自動控除」「PayPay OPA承認後の支払手段追加」で、いずれもtenant作成/実申込が必要な人間ゲート(レーン注意書きどおりtenant配線はしない)。振込名義コード(V3-MKT-12)照合はround-16裁定でPAY.JP charge metadata直接照合へ置き換え済みのため要件文のこの一節自体が実質supersededと判断。"
+    "note": "買主pay_declare→売主pay_confirmの申告/確認フロー(ゆる請求の骨格)は実装済。PAY.JP経由5%自動控除・PayPay併用は未実装 — partialのまま。 追加(market-g04レーン): 「取引完了後ゆるく計算して振り込んでね」の核フロー(成立→5%自動計上→POST /fees/{id}/invoice→PAY.JPテストmode webhook消込→GET /me/fees未払い投影)はV3-MKT-10配線により機能完結。残るのは要件文の「PAY.JP Platform経由取引のみ5%自動控除」「PayPay OPA承認後の支払手段追加」で、いずれもtenant作成/実申込が必要な人間ゲート(レーン注意書きどおりtenant配線はしない)。振込名義コード(V3-MKT-12)照合はround-16裁定でPAY.JP charge metadata直接照合へ置き換え済みのため要件文のこの一節自体が実質supersededと判断。 追加(market-finalレーン・部分): 今回V3-MKT-12(887bb12)で銀行振込払い向けbank_transfer_code露出を追加。PAY.JP Platform経由5%自動控除・PayPay併用は照会回答待ちで未着手のまま(fee-routes.tsのwebhook消込は実装済みだがPlatform取引自体が未配線)。"
   },
   {
     "id": "V3-MKT-64",
@@ -4400,10 +4400,10 @@
     "tier": "C",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["a06fc66"],
+    "tc": ["tests/mkt-64-payment-guidance.test.ts"],
+    "note": "受領(market-finalレーン): GET /market/payment-guidance新設。バンドルカード等3DS対応プリカの静的案内をPAY.JP/PayPay照会結果に依存せず返す(非強制)。"
   },
   {
     "id": "V3-MKT-65",

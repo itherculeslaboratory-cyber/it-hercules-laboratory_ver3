@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: █████████░░░░░░░░░░░ 43%（142/334）
-- 第1波必達(required): ███████████████░░░░░ 76%（139/184）
+- 全体: █████████░░░░░░░░░░░ 45%（150/334）
+- 第1波必達(required): ████████████████░░░░ 80%（147/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 167 |
-| 着手中(in_progress) | 22 |
+| 未着手(todo) | 158 |
+| 着手中(in_progress) | 23 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
-| 完了(done) | 142 |
+| 完了(done) | 150 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -37,7 +37,7 @@
 | lane | 進捗 |
 |---|---|
 | CSV | ████████████████████ 100%（1/1） |
-| L1/PAY | █████████░░░░░░░░░░░ 43%（26/61） |
+| L1/PAY | ███████████░░░░░░░░░ 56%（34/61） |
 | L3/L4-auth | ██████████░░░░░░░░░░ 52%（14/27） |
 | L4 | ███████████░░░░░░░░░ 57%（29/51） |
 | L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
@@ -72,29 +72,29 @@
 | V3-KRM-28 | 観測commit成功時に研究貢献度フックを発火する(observation_sa… | required | done | 7591a5f |
 | V3-KRM-32 | 経済システム(Economy)としてプラチナコイン(通貨でなく貢献を示すメダル)… | required | in_progress | 4cf360b |
 | V3-MKT-02 | Listingは状態機械(unlisted→listed_*→sold/deli… | required | done | 3631352 |
-| V3-MKT-03 | 取引ステージモデルを採用: マッチング前は公開(商品詳細+公開Q&A+ほめボード… | required | todo | — |
+| V3-MKT-03 | 取引ステージモデルを採用: マッチング前は公開(商品詳細+公開Q&A+ほめボード… | required | done | 0a868da |
 | V3-MKT-04 | 取引成立を『配送完了確認(買い手受取申告) かつ 評価確定』と定義し、マッチング… | required | done | 3631352 |
 | V3-MKT-05 | オークションは締切(ends_at)経過でsettleDueAuctionsが自… | required | done | 31fc4f9 |
-| V3-MKT-06 | オークション以外に、未出品個体への直接オファー(欲しい意思表示、拒否設定は現観測… | required | todo | — |
+| V3-MKT-06 | オークション以外に、未出品個体への直接オファー(欲しい意思表示、拒否設定は現観測… | required | done | 8a40adf |
 | V3-MKT-10 | 取引成立時に売上5%を(旧8%から引き下げ)『システム維持費税』として売り手に負… | required | done | 674a5dc, 1c5d912, bff1b98, 9d14f02 |
-| V3-MKT-12 | 振込コードはuserIdから決定的に生成(SHA-256→uint24先頭3バイ… | required | todo | — |
+| V3-MKT-12 | 振込コードはuserIdから決定的に生成(SHA-256→uint24先頭3バイ… | required | done | 887bb12 |
 | V3-MKT-18 | マーケット争いは当事者opt-inの『公開して投票』を提供する。7日・1票=1P… | required | done | adae1e9 |
 | V3-MKT-20 | 取引の配送では自社DBに送り手ID/受け手ID(システム内ニックネーム)と取引ス… | required | done | b070403 |
 | V3-MKT-22 | テンプレート(論文/UIスキン/グラフ/重み付け設定/AI設定パック/プロンプト… | required | done | 3631352 |
 | V3-MKT-23 | 出品は個体ID一覧の複数選択で9割完成させ、個体を選ぶだけで親個体画像・血統・成… | required | done | 3631352, b01847d |
-| V3-MKT-25 | 観測データ(種・血統・サイズ・性別・産地・環境ログ)を素材に特徴量ベクトルの高次… | required | todo | — |
+| V3-MKT-25 | 観測データ(種・血統・サイズ・性別・産地・環境ログ)を素材に特徴量ベクトルの高次… | required | in_progress | — |
 | V3-MKT-27 | マーケット評価は自前スコアを発明せずADR-H-08の『良い/普通/悪い』件数モ… | required | done | 3631352 |
-| V3-MKT-29 | 取引成立後は所有者移転と観測データ(温度/重量/齢/成長速度/画像/取引履歴)引… | required | todo | — |
+| V3-MKT-29 | 取引成立後は所有者移転と観測データ(温度/重量/齢/成長速度/画像/取引履歴)引… | required | done | 3631352, 5d11d74 |
 | V3-MKT-35 | プラチナコインを投票通貨とし、認証ユーザーが/economy/voteで対象・枚… | required | done | c21bc00 |
 | V3-MKT-36 | 経済層を3層構造とする: (1)IT.Hercules.Laboratoryマー… | required | in_progress | 674a5dc, 1c5d912, bff1b98 |
-| V3-MKT-40 | 市場台帳(ledger)を複式簿記(Σdebit=Σcredit一致・残高非負・… | required | todo | — |
-| V3-MKT-45 | 研究成果(projectId)に紐づく商品を出品し外部EC(BASE/Shopi… | required | todo | — |
-| V3-MKT-47 | Docker観測拡張をフォーク管理(parent_extension_id/li… | required | todo | — |
+| V3-MKT-40 | 市場台帳(ledger)を複式簿記(Σdebit=Σcredit一致・残高非負・… | required | done | dbbb506, 1d472b1 |
+| V3-MKT-45 | 研究成果(projectId)に紐づく商品を出品し外部EC(BASE/Shopi… | required | done | 1d472b1 |
+| V3-MKT-47 | Docker観測拡張をフォーク管理(parent_extension_id/li… | required | done | 0958f97 |
 | V3-MKT-49 | ランニングコスト(R2・さくらVPS等)をAPIで取得して透明に表示する。ただし… | required | todo | — |
 | V3-MKT-61 | ブロックしたユーザーとは金銭・成体・標本の取引(オファー送信・購入確定・予約マッ… | required | done | 3d21ba6 |
 | V3-MKT-62 | P2P決済ユーザー選択制: 買主→売主決済を取引ごとに①銀行振込(既定・無料・I… | required | in_progress | 5d11d74 |
 | V3-MKT-63 | 5%システム維持費ゆる請求徴収: 取引完了後「計算して振り込んでね」方式でゆるく… | required | in_progress | 5d11d74, 9d14f02 |
-| V3-MKT-64 | カード非保有ユーザー向けプリペイドカード案内: PAY.JP Platform選… | required | todo | — |
+| V3-MKT-64 | カード非保有ユーザー向けプリペイドカード案内: PAY.JP Platform選… | required | done | a06fc66 |
 | V3-MKT-65 | P2P送金アプリの取引利用禁止の規約明記: ユーザー間代金決済にPayPay送金… | required | done | 2cf67e0 |
 | V3-KRM-09 | 指摘の二者が1ヶ月以内に合意しなければ強制クローズとし、未解決強制クローズをユー… | best-effort | todo | — |
 | V3-KRM-14 | 貢献度を『直接貢献』(論文投稿・生体登録・記事・アフィリエイト等、例paper5… | best-effort | todo | — |
