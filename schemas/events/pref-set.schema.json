@@ -49,6 +49,16 @@
       "maxLength": 40,
       "description": "V3-AUT-10 オンボーディングで確定する表示名(handle)。actor_id生ハッシュの代わりに表示する公開ニックネーム。setup-profile画面でlocaleと同時に確定し、この値の有無がonboardingComplete判定(handle未設定=false)を兼ねる。"
     },
+    "ui_exposure": {
+      "type": "string",
+      "enum": ["user", "dev", "admin"],
+      "description": "UI 露出レベル(V3-UIX-43・/me/settings 集約)。dev/admin は screen-def の開発者向けノード(未整備計測・内部ID等)の表示切替に使う自己申告フラグ。サーバ側の権限判定を置き換えない(表示のみ・任意・既定 user)。"
+    },
+    "push_notifications_enabled": {
+      "type": "string",
+      "enum": ["on", "off"],
+      "description": "Push 通知の利用者選好(V3-UIX-43)。実際の配信基盤(VAPID鍵・購読エンドポイント)は本番鍵投入を伴う人間ゲート(§5)であり本フィールドは自己管理設定の保持のみ(任意・既定 off)。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

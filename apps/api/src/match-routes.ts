@@ -58,7 +58,10 @@ export async function projectPreferenceWeights(s: TruthStore, actorId: string): 
   return w;
 }
 
-const dot = (w: number[], x: number[]): number => {
+// exported for V3-UIX-21 (obs-search rerank personalization): the same
+// deterministic dot product the ranking above uses, reused rather than
+// re-implemented at the call site.
+export const dot = (w: number[], x: number[]): number => {
   let s = 0;
   for (let i = 0; i < Math.min(w.length, x.length); i++) s += w[i] * x[i];
   return s;

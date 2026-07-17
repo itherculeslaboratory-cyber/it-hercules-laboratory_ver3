@@ -210,6 +210,50 @@ describe("OBS-45/53 calibratedRealLengthMm (pixel->mm via known marker size)", (
   });
 });
 
+describe("V3-UIX-21 personalize=true: 学習済み好み(match preference)が検索rerankを動かす", () => {
+  it("好みブレンドが embedding 完全同点の2候補を分ける(既定=capture_id 順→learned preferenceで逆転)", async () => {
+    const { bucket, env } = ctx();
+    const q = ulid();
+    // 2つの候補は query に対し cos=0.6 で完全に同点(embedding だけでは決着しない)。
+    // 片方は query 直交方向(dim1)に +、もう片方は - にずれている。
+    let idHigh = ulid();
+    let idLow = ulid();
+    if (idHigh > idLow) [idHigh, idLow] = [idLow, idHigh]; // idHigh が capture_id 順で先勝ちになるよう整える
+    await seedCapture(bucket, env, { id: q, vec: vec384({ 0: 1 }) });
+    await seedCapture(bucket, env, { id: idHigh, vec: vec384({ 0: 0.6, 1: -0.8 }) }); // 既定順(capture_id)では先頭
+    await seedCapture(bucket, env, { id: idLow, vec: vec384({ 0: 0.6, 1: 0.8 }) });
+
+    // 既定(personalize なし)は embedding 完全同点 → capture_id 昇順 tie-break で idHigh が先頭。
+    const before = (await (
+      await post("/api/v1/observation/search", { query_capture_id: q }, env)
+    ).json()) as { results: { capture_id: string }[] };
+    expect(before.results.map((r) => r.capture_id)).toEqual([idHigh, idLow]);
+
+    // dim1 の+方向を好む(y=+1)と1回だけ学習させる(離散信号=swipe)。
+    await post("/api/v1/match/preference", { item_id: "seed", kind: "swipe", y: 1, features: [0, 1] }, env);
+
+    // personalize=true で同じ検索をやり直すと、dim1=+0.8 側(idLow)が学習した好みで上位に来る。
+    const after = (await (
+      await post("/api/v1/observation/search", { query_capture_id: q, personalize: true }, env)
+    ).json()) as { results: { capture_id: string; score: number }[] };
+    expect(after.results.map((r) => r.capture_id)).toEqual([idLow, idHigh]);
+  });
+
+  it("好み未学習(swipe 0件)なら personalize=true でも順位は変わらない(中立0.5・無害に縮退)", async () => {
+    const { bucket, env } = ctx();
+    const q = ulid();
+    const a = ulid();
+    const b = ulid();
+    await seedCapture(bucket, env, { id: q, vec: vec384({ 0: 1 }) });
+    await seedCapture(bucket, env, { id: a, vec: vec384({ 0: 1 }) });
+    await seedCapture(bucket, env, { id: b, vec: vec384({ 0: 0.5, 1: Math.sqrt(0.75) }) });
+    const res = (await (
+      await post("/api/v1/observation/search", { query_capture_id: q, personalize: true }, env)
+    ).json()) as { results: { capture_id: string }[] };
+    expect(res.results.map((r) => r.capture_id)).toEqual([a, b]); // cos 1 > cos 0.5、変わらない
+  });
+});
+
 describe("OBS-18 measurement dictionary + extensions + template scope", () => {
   it("dictionary derives from template item_hashes; unregistered item is flagged then registerable", async () => {
     const { env } = ctx();

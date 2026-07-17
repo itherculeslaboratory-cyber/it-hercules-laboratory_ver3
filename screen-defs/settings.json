@@ -3,7 +3,7 @@
   "route": "/s/settings",
   "title": "設定",
   "layout": "standard",
-  "notes": "選好(locale/theme_pack_id/reduced_motion_override)を PATCH /api/v1/me/preferences で追記(append-only・LWW 投影)。現在値は GET /api/v1/me/preferences。V3-I18-08/UIX-16。",
+  "notes": "選好(locale/theme_pack_id/reduced_motion_override)を PATCH /api/v1/me/preferences で追記(append-only・LWW 投影)。現在値は GET /api/v1/me/preferences。V3-I18-08/UIX-16。V3-UIX-43: /me/settings 集約ハブとして、既に別 screen-def で自己完結する設定機能(AI接続BYOK・機器連携SwitchBot・テーマfork)への導線+この画面自身が持つ選好(表示言語/テーマ/モーション/UI露出/Push通知)+自己データ持出し(バックアップ代替のCSVエクスポート)を1画面に集約する。Push通知は選好の保持のみで実配信基盤(VAPID鍵)は人間ゲート(§5・実鍵投入)。アカウント統合(複数アカウントのマージ)はTruth append-onlyモデルとの整合設計が未確定のため対象外(裁定待ち・要検討: 統合時に元actor_idの履歴をどう畳み込むか)。",
   "nodes": [
     {
       "id": "shell",
@@ -22,7 +22,9 @@
                 { "id": "current-title", "type": "heading", "props": { "text_key": "settings.current-title.text", "text": "現在の設定", "level": 2 } },
                 { "id": "current-locale", "type": "text", "props": { "text_key": "settings.current-locale.text", "text": "言語: {{data.current.locale}}" } },
                 { "id": "current-theme", "type": "text", "props": { "text_key": "settings.current-theme.text", "text": "テーマ: {{data.current.theme_pack_id}}", "muted": true } },
-                { "id": "current-motion", "type": "text", "props": { "text_key": "settings.current-motion.text", "text": "モーション設定: {{data.current.reduced_motion_override}}", "muted": true } }
+                { "id": "current-motion", "type": "text", "props": { "text_key": "settings.current-motion.text", "text": "モーション設定: {{data.current.reduced_motion_override}}", "muted": true } },
+                { "id": "current-exposure", "type": "text", "props": { "text_key": "settings.current-exposure.text", "text": "UI露出: {{data.current.ui_exposure}}", "muted": true } },
+                { "id": "current-push", "type": "text", "props": { "text_key": "settings.current-push.text", "text": "Push通知: {{data.current.push_notifications_enabled}}", "muted": true } }
               ]
             },
             {
@@ -43,9 +45,25 @@
                   { "value": "reduce", "label": "減らす" },
                   { "value": "no-preference", "label": "制限しない" }
                 ] } },
+                { "id": "ui-exposure", "type": "field", "props": { "variant": "select", "name": "ui_exposure", "label_key": "settings.ui-exposure.label", "label": "UI露出(開発者向け表示)", "placeholder": "UI露出を選ぶ", "options": [
+                  { "value": "user", "label": "一般(既定)" },
+                  { "value": "dev", "label": "開発者向け表示も見る" },
+                  { "value": "admin", "label": "管理者向け表示も見る" }
+                ] } },
+                { "id": "push-enabled", "type": "field", "props": { "variant": "select", "name": "push_notifications_enabled", "label_key": "settings.push-enabled.label", "label": "Push通知", "placeholder": "Push通知を選ぶ", "options": [
+                  { "value": "off", "label": "オフ(既定)" },
+                  { "value": "on", "label": "オン" }
+                ] } },
                 { "id": "save", "type": "button", "props": { "label_key": "settings.save.label", "label": "設定を保存する", "variant": "primary", "type": "submit" } }
               ]
             },
+            { "id": "hub-title", "type": "heading", "props": { "text_key": "settings.hub-title.text", "text": "その他の設定", "level": 2 } },
+            { "id": "hub-ai", "type": "link", "props": { "label_key": "settings.hub-ai.label", "label": "AI接続設定(BYOK・個体観測用LLM等)", "href": "/s/ai-profile-settings" } },
+            { "id": "hub-device", "type": "link", "props": { "label_key": "settings.hub-device.label", "label": "機器連携(SwitchBot等IoT)", "href": "/devices" } },
+            { "id": "hub-theme", "type": "link", "props": { "label_key": "settings.hub-theme.label", "label": "テーマのfork一覧", "href": "/s/theme-gallery" } },
+            { "id": "backup-title", "type": "heading", "props": { "text_key": "settings.backup-title.text", "text": "自分のデータを持ち出す(バックアップ)", "level": 2 } },
+            { "id": "backup-facts", "type": "link", "props": { "label_key": "settings.backup-facts.label", "label": "個体データをCSVで書き出す", "href": "/api/v1/export/facts.csv" } },
+            { "id": "backup-photos", "type": "link", "props": { "label_key": "settings.backup-photos.label", "label": "写真参照一覧をCSVで書き出す", "href": "/api/v1/export/photos.csv" } },
             {
               "id": "next-step",
               "type": "link",

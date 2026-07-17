@@ -1082,8 +1082,11 @@ function CardNode({ node }: { node: ScreenNode }) {
 // tokens (no new hex — check-ui-tokens forbids it). warning is filled danger,
 // caution is outlined danger (same hue, lower urgency); success is outlined
 // primary; neutral (default/unknown tone) is the muted outline.
-type Tone = "success" | "warning" | "caution" | "neutral";
-const TONES: readonly Tone[] = ["success", "warning", "caution", "neutral"];
+// V3-UIX-04: 色は意味のみ(緑=成功/赤=失敗/青=情報/黄=注意)。caution/info はそれぞれ
+// 専用トークン(--civ-caution*/--civ-info*)を持ち、caution が danger(失敗)と混同され
+// ないようにする(旧実装は同色だった)。
+type Tone = "success" | "warning" | "caution" | "info" | "neutral";
+const TONES: readonly Tone[] = ["success", "warning", "caution", "info", "neutral"];
 function Badge({ text, tone }: { text: string; tone?: string }) {
   const t: Tone = TONES.includes(tone as Tone) ? (tone as Tone) : "neutral";
   return (

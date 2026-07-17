@@ -11,11 +11,13 @@ import { projectSellerModeration } from "./market-flag-routes";
 import {
   RERANK_WEIGHTS,
   RERANK_MISSING,
+  PERSONALIZE_WEIGHT,
   NAVIGATOR_TARGET_QUESTIONS,
   CONFIDENCE_ORDER,
 } from "./observation-constants";
 import { ENV_QR_TYPE, projectOccupantAt, projectOpenOccupancy, projectLabEnvironmentAt } from "./source-routes";
 import { parseObservationFreetext } from "./freetext-parser";
+import { projectPreferenceWeights, dot } from "./match-routes";
 import type { Bindings, Variables } from "./env";
 import { appendContribution } from "./contribution";
 import { CONTRIB_OBSERVATION_SAVED, CONTRIB_OBSERVATION_WITH_PHOTO } from "./economy-constants";
@@ -52,7 +54,7 @@ export function measurementValueOriginError(measurements: unknown): string | nul
 
 // CL-08 / design-c3 §1: embeddings are frozen at 384 dims. A manifest whose
 // embedding_dim differs is blocked from search (ver2 scoring.py:44 guard).
-const EMBEDDING_DIM = 384;
+export const EMBEDDING_DIM = 384;
 
 const CAPTURE_TYPE = "ihl.obs.capture.v1";
 const PHOTO_TYPE = "ihl.obs.photo.v1";
@@ -108,7 +110,10 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
 // at vector_offset in the embeddings.bin blob. Returns null if no embedding
 // exists or the bytes are out of range. The dim guard (≠384 → block) is applied
 // by the caller against EMBEDDING_DIM (ver2 scoring.py:44 / CL-08).
-async function loadVector(
+// exported for V3-UIX-82(検索グラフビュー): reused by
+// individual-routes.ts projectEntityGraph to score 「近さ(画像類似)」without
+// re-implementing the manifest/blob read.
+export async function loadVector(
   bucket: Bindings["TRUTH"],
   captureId: string,
 ): Promise<Float32Array | null> {
@@ -173,6 +178,24 @@ export function compositeScore(p: {
     w.size * (p.size ?? RERANK_MISSING.size) +
     w.lineage * (p.lineage ?? RERANK_MISSING.lineage)
   );
+}
+
+// V3-UIX-21: 好み(離散信号 y=+1/-1 で記録済み・match-routes.ts)を検索rerankへ反映
+// する独立レイヤー。OBS-11 の compositeScore(embedding/color/size/lineage・sum=1.0・
+// ADR-H-12)は変更せず、personalize=true の時だけ後段でブレンドする(既定挙動を壊さ
+// ない)。w·x は値域が学習量に依存し無限大になり得るため、決定論的な非線形飽和
+// (ロジスティック関数)で必ず [0,1] へ収める(ブラックボックスではない・GPU不要・
+// O(n特徴量) — V3-IND-08 の数式エンジン要件どおり)。
+export function preferenceScore(weights: number[], features: number[]): number {
+  const raw = dot(weights, features);
+  return 1 / (1 + Math.exp(-raw));
+}
+
+/** personalize=true の時、compositeScore(またはcos)へ好みを追加ブレンドする
+ * (V3-UIX-21)。personalize=false/好み未学習(w=[])なら元の score をそのまま返す。 */
+export function personalize(baseScore: number, preference: number | null): number {
+  if (preference === null) return baseScore;
+  return (1 - PERSONALIZE_WEIGHT) * baseScore + PERSONALIZE_WEIGHT * preference;
 }
 
 /** Collapse an individual's per-observation scores to one (OBS-11). scores are
@@ -498,6 +521,11 @@ obsRoutes.post("/observation/search", async (c) => {
     if (queryVec.length !== EMBEDDING_DIM) return c.json({ error: "QUERY_DIM_MISMATCH", dim: queryVec.length }, 400);
     stage = "embedding";
     const rerank = body.rerank === true;
+    // V3-UIX-21: personalize=true の時だけ本人の学習済み好みベクトルを1回取得し、
+    // 各候補へ後段ブレンド(personalizeWeight)する。好み未学習(events 0件)は w=[]
+    // → preferenceScore の dot が常に0 → sigmoid(0)=0.5 で無害(中立)に縮退する。
+    const personalizeOn = body.personalize === true;
+    const prefWeights = personalizeOn ? await projectPreferenceWeights(store(c), c.get("actorId")) : null;
     const scored: { capture_id: string; score: number; subject_ref: string }[] = [];
     for (const cap of candidates) {
       const capId = String(cap.capture_id);
@@ -508,9 +536,12 @@ obsRoutes.post("/observation/search", async (c) => {
       const subjectRef = String(cap.subject_ref ?? "");
       // OBS-11 合成 rerank: blend embedding with lineage (shared individual);
       // color/size stay 欠測既定 until the client-side analysis wave lands.
-      const score = rerank
+      const baseScore = rerank
         ? compositeScore({ embedding: cos, lineage: querySubjectRef && subjectRef === querySubjectRef ? 1 : undefined })
         : cos;
+      const score = prefWeights
+        ? personalize(baseScore, preferenceScore(prefWeights, Array.from(vec)))
+        : baseScore;
       scored.push({ capture_id: capId, score, subject_ref: subjectRef });
     }
     scored.sort((a, b) => b.score - a.score || a.capture_id.localeCompare(b.capture_id));

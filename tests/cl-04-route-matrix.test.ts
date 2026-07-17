@@ -57,7 +57,12 @@
 //        +4 route(infra-route-106..109: POST/GET /individuals/{id}/offer-policy・
 //        POST/GET /individuals/{id}/offers・protected)= 101 → 同レーンが V3-MKT-45
 //        研究支援ストア +3 route(infra-route-110..112: POST/GET /research/store/
-//        items・POST /research/store/items/{id}/orders・protected)= 104。
+//        items・POST /research/store/items/{id}/orders・protected)= 104 →
+//        g07-UIUX レーン(V3-UIX-68・透明性の文化)が +1 route(infra-route-113:
+//        GET /users/{actor}/individuals・protected・080/081は先に他レーンが
+//        採ったため統合時に113へ採番替え)= 105 → 同レーン(V3-UIX-82・検索
+//        グラフビュー)が +1 route(infra-route-114: GET /individuals/{id}/graph・
+//        protected)= 106。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -88,9 +93,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (104 rows)", () => {
-  it("has exactly 104 route rows", () => {
-    expect(rows.length).toBe(104);
+describe("CL-04 route matrix (106 rows)", () => {
+  it("has exactly 106 route rows", () => {
+    expect(rows.length).toBe(106);
   });
 
   it("access column is only public|protected", () => {

@@ -21,7 +21,16 @@ export const SCHEMA_VERSION = "1";
 // (V3-GOV-35 の同国スコープ判定が最初の利用先)。handle は V3-AUT-10 オンボーディング
 // (setup-profile画面)で確定する表示名 — 既存の pref-set(append-only・per-actor
 // last-write-wins)をそのまま再利用し、新規イベント型/routeを増やさない。
-const PREF_FIELDS = ["locale", "theme_pack_id", "template_id", "reduced_motion_override", "country", "handle"] as const;
+const PREF_FIELDS = [
+  "locale",
+  "theme_pack_id",
+  "template_id",
+  "reduced_motion_override",
+  "country",
+  "handle",
+  "ui_exposure",
+  "push_notifications_enabled",
+] as const;
 
 export const settingsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -39,6 +48,8 @@ export type Preferences = {
   reduced_motion_override: string;
   country: string;
   handle: string;
+  ui_exposure: string;
+  push_notifications_enabled: string;
 };
 
 // 選好投影(都度再計算)。pref-set を prefix scan → actor 一致のみ → created_at/ULID
@@ -64,6 +75,8 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
     reduced_motion_override: "system",
     country: "", // 未設定(round-16: 国籍は任意の内部属性・既定は非選択)
     handle: "", // 未設定 = V3-AUT-10 onboardingComplete===false のゲート条件
+    ui_exposure: "user", // V3-UIX-43: 既定は一般ユーザー表示(dev/adminは自己申告トグル)
+    push_notifications_enabled: "off", // V3-UIX-43: 配信基盤は人間ゲート・既定オフ
   };
   for (const e of events) {
     for (const k of PREF_FIELDS) {

@@ -21,6 +21,12 @@ export const LEARNING_RATE = 0.1;
 /** AUC threshold for a "valid"/converged preference model (IND-08). */
 export const MATCH_AUC_VALID_THRESHOLD = 0.7;
 
+/** V3-UIX-21: 検索結果への好み(preference)ブレンド比率。OBS-11 の compositeScore
+ * (embedding/color/size/lineage・ADR-H-12・sum=1.0)は変更せず、その結果へ追加で
+ * 上書きブレンドする独立レイヤーとして personalize=true 時のみ効かせる(既定 rerank
+ * 挙動を壊さない・ADR 再交渉なし)。finalScore = (1-w)·compositeScore + w·preference。 */
+export const PERSONALIZE_WEIGHT = 0.25;
+
 /** allowed QR batch sizes (IND-15). */
 export const QR_BATCH_SIZES = [100, 500, 1000] as const;
 

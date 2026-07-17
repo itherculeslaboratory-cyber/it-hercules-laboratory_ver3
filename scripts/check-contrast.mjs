@@ -59,6 +59,10 @@ const PAIRS = [
   ["primary", "surface", 4.5],
   ["danger", "bg", 4.5],
   ["danger", "danger-bg", 4.5],
+  ["info", "bg", 4.5], // V3-UIX-04: 青=情報 バッジ
+  ["info", "info-bg", 4.5],
+  ["caution", "bg", 4.5], // V3-UIX-04: 黄=注意 バッジ(danger と別色で失敗と混同させない)
+  ["caution", "caution-bg", 4.5],
 ];
 
 let failed = 0;

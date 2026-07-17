@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.it-hercules.uk/events/theme-pack.schema.json",
   "title": "Theme pack event (ihl.theme.pack.v1)",
-  "description": "テーマパック（色トークンのみ・11 キー）の append-only イベント。Truth キー truth/ihl.theme.pack.v1/<pack_id>.json。fork は parent_pack_id 付き追記で built-in（minimal-light/minimal-dark）まで系譜連結（V3-UIX-14/16）。radius/tap/motion/font/fs-* は全画面共通で pack 上書き対象外。",
+  "description": "テーマパック（色トークンのみ・15 キー）の append-only イベント。Truth キー truth/ihl.theme.pack.v1/<pack_id>.json。fork は parent_pack_id 付き追記で built-in（minimal-light/minimal-dark）まで系譜連結（V3-UIX-14/16）。radius/tap/motion/font/fs-* は全画面共通で pack 上書き対象外。info/info-bg/caution/caution-bg は V3-UIX-04(色は意味のみ: 緑=成功/赤=失敗/青=情報/黄=注意)で追加。",
   "x_ihl_req": "V3-UIX-14",
   "x_ihl_source": "docs/planning/c5/design-k4.md §1.2 / §1.5",
   "type": "object",
@@ -35,7 +35,7 @@
     },
     "tokens": {
       "type": "object",
-      "required": ["bg", "surface", "surface-2", "text", "text-muted", "border", "primary", "primary-text", "focus", "danger", "danger-bg"],
+      "required": ["bg", "surface", "surface-2", "text", "text-muted", "border", "primary", "primary-text", "focus", "danger", "danger-bg", "info", "info-bg", "caution", "caution-bg"],
       "properties": {
         "bg": { "type": "string", "minLength": 1 },
         "surface": { "type": "string", "minLength": 1 },
@@ -47,10 +47,14 @@
         "primary-text": { "type": "string", "minLength": 1 },
         "focus": { "type": "string", "minLength": 1 },
         "danger": { "type": "string", "minLength": 1 },
-        "danger-bg": { "type": "string", "minLength": 1 }
+        "danger-bg": { "type": "string", "minLength": 1 },
+        "info": { "type": "string", "minLength": 1 },
+        "info-bg": { "type": "string", "minLength": 1 },
+        "caution": { "type": "string", "minLength": 1 },
+        "caution-bg": { "type": "string", "minLength": 1 }
       },
       "additionalProperties": false,
-      "description": "色トークン 11 キー（fork 対象＝色文明のみ）。"
+      "description": "色トークン 15 キー（fork 対象＝色文明のみ）。"
     },
     "created_at": {
       "type": "string",

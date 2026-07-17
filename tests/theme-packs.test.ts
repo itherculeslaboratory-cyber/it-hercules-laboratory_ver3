@@ -25,6 +25,10 @@ const TOKENS = {
   focus: "#0b7a55",
   danger: "#b3261e",
   "danger-bg": "#fbeae8",
+  info: "#155ab8",
+  "info-bg": "#e8f0fb",
+  caution: "#7a5b00",
+  "caution-bg": "#fdf3d8",
 };
 
 const postPack = (env: object, h: Record<string, string>, body: unknown) =>
