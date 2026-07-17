@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// GATE: dependency-direction + nested-npm + wrangler-binding denylist (V3-FND-12 / V3-FND-02).
+// GATE: dependency-direction + nested-npm + wrangler-binding denylist (V3-FND-12 / V3-FND-02 / V3-CST-01).
 // Enforces the DAG in docs/architecture.md and invariant ① (no resident DB as SSOT):
 //   D1  apps → apps          FAIL (one app importing another app)
 //   D2  {packages,libs,components} → apps   FAIL
@@ -11,9 +11,12 @@
 //                Mongo/Redis/Qdrant/pgvector/etc., V3-FND-02) in a workspace
 //                package.json `dependencies` (production) — devDependencies are
 //                exempt (local test tooling is not the runtime SSOT).
+//   metered-api-dep : a per-call-billed AI/SaaS SDK (openai/@anthropic-ai/sdk/
+//                cohere-ai/replicate/etc., V3-CST-01) in production `dependencies` —
+//                variable, per-user cost must not creep in as a casual dependency.
 // `tests/` may import apps (test harness) and is exempt from D1/D2.
-// Pure helpers (checkImport / isNestedPkg / scanBindings / scanResidentDbDeps) are
-// exported for --selftest.
+// Pure helpers (checkImport / isNestedPkg / scanBindings / scanResidentDbDeps /
+// scanMeteredApiDeps) are exported for --selftest.
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { posix } from "node:path";
@@ -118,6 +121,32 @@ export function scanResidentDbDeps(pkgJson) {
   return Object.keys(deps).filter((d) => RESIDENT_DB_DEPS.has(d));
 }
 
+// Metered/per-call SaaS SDK packages (V3-CST-01: "ユーザー数に比例して増える従量課金
+// を絶対に避け、計算資源はユーザー側に持たせる"). The AI Kernel (apps/api/src/
+// ai-kernel.ts, V3-FND-21) stays provider-less (LLM OFF by default, invariant ①);
+// adding one of these SDKs as a *production* dependency is the tell that a metered
+// call is being wired in casually, bypassing that default-off design. A vetted,
+// human-gated provider integration is still possible via plain `fetch` (no SDK
+// dependency needed, see apps/api/src/mail.ts's Resend call) without tripping this.
+const METERED_API_DEPS = new Set([
+  "openai",
+  "@anthropic-ai/sdk",
+  "cohere-ai",
+  "@google/generative-ai",
+  "@google-cloud/aiplatform",
+  "replicate",
+  "@aws-sdk/client-bedrock-runtime",
+  "@azure/openai",
+  "@mistralai/mistralai",
+  "algoliasearch",
+]);
+
+/** Metered-API SaaS SDK deps found in a package.json's production `dependencies`. */
+export function scanMeteredApiDeps(pkgJson) {
+  const deps = (pkgJson && typeof pkgJson === "object" && pkgJson.dependencies) || {};
+  return Object.keys(deps).filter((d) => METERED_API_DEPS.has(d));
+}
+
 // V3-FND-12 tree-depth limits (02-design/constitution.md §4.1). depth = number of
 // path segments at/below the tree's own top folder (directories + filename),
 // i.e. `docs/a/b/c.md` has depth 3. `components/<name>/` counts depth from
@@ -197,6 +226,8 @@ function runGate() {
       const pkg = JSON.parse(readFileSync(join(root, rel), "utf8"));
       for (const dep of scanResidentDbDeps(pkg))
         violations.push(`resident-db dependency (invariant ①/V3-FND-02): ${rel} [${dep}]`);
+      for (const dep of scanMeteredApiDeps(pkg))
+        violations.push(`metered-API SDK dependency (V3-CST-01, avoid per-user variable cost): ${rel} [${dep}]`);
     } catch {
       /* unparsable package.json is caught elsewhere (not this gate's concern) */
     }
@@ -256,6 +287,17 @@ function selftest() {
     "devDependencies exempt (local test tooling, not runtime SSOT)",
   );
   assert(scanResidentDbDeps({}).length === 0, "no dependencies field clean");
+  // V3-CST-01 metered-API SDK denylist
+  assert(scanMeteredApiDeps({ dependencies: { openai: "^4.0.0" } }).includes("openai"), "openai flagged");
+  assert(
+    scanMeteredApiDeps({ dependencies: { "@anthropic-ai/sdk": "^0.30.0" } }).includes("@anthropic-ai/sdk"),
+    "@anthropic-ai/sdk flagged",
+  );
+  assert(scanMeteredApiDeps({ dependencies: { hono: "^4.0.0" } }).length === 0, "unrelated dep clean");
+  assert(
+    scanMeteredApiDeps({ devDependencies: { openai: "^4.0.0" } }).length === 0,
+    "devDependencies exempt (not a shipped runtime dependency)",
+  );
   // V3-FND-12 tree-depth limits
   assert(checkTreeDepth("docs/a/b/c.md") === null, "docs depth 3 ok");
   assert(checkTreeDepth("docs/a/b/c/d.md") === null, "docs depth 4 ok (at limit)");

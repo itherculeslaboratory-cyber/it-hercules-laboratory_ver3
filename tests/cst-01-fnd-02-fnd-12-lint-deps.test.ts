@@ -1,8 +1,9 @@
-// V3-FND-02 (常駐DB禁止) + V3-FND-12 (依存方向・ツリー深度制限) — lint-deps.mjs の
-// 拡張ぶんを vitest から駆動する契約テスト。gate 自体は `node scripts/lint-deps.mjs`
-// (npm run lint に配線済み)。ここでは pure 関数を直接 import して境界値を検証する。
+// V3-FND-02 (常駐DB禁止) + V3-FND-12 (依存方向・ツリー深度制限) + V3-CST-01 (従量課金
+// SDK禁止) — lint-deps.mjs の拡張ぶんを vitest から駆動する契約テスト。gate 自体は
+// `node scripts/lint-deps.mjs`(npm run lint に配線済み)。ここでは pure 関数を直接
+// import して境界値を検証する。
 import { describe, expect, it } from "vitest";
-import { scanResidentDbDeps, checkTreeDepth } from "../scripts/lint-deps.mjs";
+import { scanResidentDbDeps, scanMeteredApiDeps, checkTreeDepth } from "../scripts/lint-deps.mjs";
 
 describe("V3-FND-02 scanResidentDbDeps (resident DB is not the SSOT)", () => {
   it("flags a known resident-DB/vector-store client in production dependencies", () => {
@@ -33,6 +34,26 @@ describe("V3-FND-02 scanResidentDbDeps (resident DB is not the SSOT)", () => {
     ]) {
       const pkg = JSON.parse(readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8"));
       expect(scanResidentDbDeps(pkg)).toEqual([]);
+    }
+  });
+});
+
+describe("V3-CST-01 scanMeteredApiDeps (no per-user variable-cost SaaS SDK)", () => {
+  it("flags a known metered AI/SaaS SDK in production dependencies", () => {
+    expect(scanMeteredApiDeps({ dependencies: { openai: "^4.0.0" } })).toEqual(["openai"]);
+  });
+
+  it("does not flag devDependencies or unrelated deps", () => {
+    expect(scanMeteredApiDeps({ devDependencies: { openai: "^4.0.0" } })).toEqual([]);
+    expect(scanMeteredApiDeps({ dependencies: { hono: "^4.6.0" } })).toEqual([]);
+  });
+
+  it("this repo's actual workspace package.json files are clean", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    for (const rel of ["../apps/api/package.json", "../apps/web/package.json"]) {
+      const pkg = JSON.parse(readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8"));
+      expect(scanMeteredApiDeps(pkg)).toEqual([]);
     }
   });
 });
