@@ -138,6 +138,14 @@
                       }
                     },
                     {
+                      "id": "payment-notice",
+                      "type": "text",
+                      "props": {
+                        "tab_id": "2",
+                        "text": "代金のやり取りは銀行振込のみをご利用ください。PayPay送金等の個人間送金アプリはご利用いただけません(利用規約で明示禁止)。"
+                      }
+                    },
+                    {
                       "id": "board",
                       "type": "list",
                       "props": {
