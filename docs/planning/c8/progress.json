@@ -459,10 +459,12 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "831f14f"
+    ],
     "tc": [],
-    "note": ""
+    "note": "従量課金SaaS SDK(openai/@anthropic-ai/sdk等)をproduction dependenciesからdenylist化(scanMeteredApiDeps)。AI Kernel(ai-kernel.ts)の既定AI_DISABLEDと組み合わせ、10年コスト最小NFRの一部を機械ゲート化。全workspace package.jsonがクリーンなことを確認。"
   },
   {
     "id": "V3-CST-02",
@@ -472,10 +474,12 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "f3ebe59"
+    ],
     "tc": [],
-    "note": ""
+    "note": "GET /api/v1/costsダッシュボード実装(config/running-costs.jsonのSakura VPS手動値+R2使用量)。R2使用量はCF_API_TOKEN/CF_ACCOUNT_ID未設定または実クエリ未検証な間は常にmanual_override_yenへdegrade(実Cloudflare GraphQLクエリの正確な形は本ランでは未検証のため意図的に未配線・誇張なし)。ログイン済み全ユーザー閲覧可(追加ロール制限なし)。route-matrix.csv(72行目)+CL-04テストのroute数を71→72へ更新。"
   },
   {
     "id": "V3-FND-01",
@@ -500,10 +504,12 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "e4e79ee"
+    ],
     "tc": [],
-    "note": ""
+    "note": "常駐DB/ベクトルストアクライアント(pg/mongodb/redis/qdrant等)を全workspace package.jsonの production dependenciesからdenylist化。scripts/lint-deps.mjs scanResidentDbDeps()実装+npm run lintに配線。"
   },
   {
     "id": "V3-FND-03",
@@ -513,10 +519,12 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "32099ac"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Parquet manifest + DuckDB検索 + subset cosine(FAISS閾値1万件)をlibs/datalake/manifest.pyとして実装(write_manifest/search_manifest/should_use_subset_cosine)。duckdb・polarsは既にPython環境にあったため新規依存追加なし(libs/datalake/requirements.txtで明示宣言)。FAISS不使用のcosine類似検索は既にapps/api側(observation-routes.ts等)で実装済みだったため、本ラン分の未実装だった「Parquetマニフェスト+DuckDB/Polars検索」部分のみを新規実装。"
   },
   {
     "id": "V3-FND-04",
@@ -556,10 +564,12 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "e4e79ee"
+    ],
     "tc": [],
-    "note": ""
+    "note": "依存方向D1-D3は既存gate流用・新規にツリー深度制限(constitution.md §4.1: docs4/schemas3/libs2/scripts3)をcheckTreeDepth()として機械ゲート化。既存ファイルは全て制限内で違反ゼロを確認。"
   },
   {
     "id": "V3-FND-14",
@@ -569,10 +579,12 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "07fda74"
+    ],
     "tc": [],
-    "note": ""
+    "note": "C-USB最小単位(core/rag/io/compatibility/security)をcomponents/*/manifest.jsonのcusb_layer必須enumフィールドとして機械ゲート化(scripts/lint-components.mjs)。既存2コンポーネント(collector-switchbot=io, wiki-ingest=rag)に割当。差替時6項目レビュー用にdocs/architecture/component-swap-checklist.md新設。"
   },
   {
     "id": "V3-FND-18",
@@ -597,10 +609,12 @@
     "tier": "C",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "df69bc9"
+    ],
     "tc": [],
-    "note": ""
+    "note": "WASM(Extism/Spin)ドライバは要件が求める規模(ランタイム埋め込み+AST言語別ホワイトリスト検証器+manifest/監査ログ実行機構)が本ラン残枠を超えるため、設計文書(02-design/adr/adr-v3-wasm-01-script-driver.md, status:proposed)に留めた。内容: Extism推奨(理由=Spinは常駐サーバーでV3-CST-01のサーバーレス制約と衝突するがExtismは埋め込み型)、ScriptManifest/ScriptError/ScriptAuditLogEntryのJSON契約案、危険API(ファイル書込/ネットワーク/OSコマンド)をAST静的検証で実行前拒否する設計、node vmを隔離境界に使わない明記。実装コード・テストはゼロ(誇張ゼロ・in_progress扱い)。次セッションの入口=workerd上でのExtism動作spike+対象言語1つの裁定+スキーマ先行実装。"
   },
   {
     "id": "V3-FND-21",
@@ -4378,10 +4392,12 @@
     "tier": "B",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "fed43fb"
+    ],
     "tc": [],
-    "note": ""
+    "note": "Truthバックアップ二重化(B2)アダプタ実装。apps/api/src/truth-backup-connector.ts planTruthBackup()はdry-run既定(Truthキー一覧を実ネットワーク呼び出しなしで計画算出)、live指定はTruthBackupLiveNotImplementedErrorを投げ人間ゲート(B2契約+実鍵投入)まで明示停止。設定手順書をdocs/ops/runbook.md §7に追加、.env.platform.example に型を追加。実接続は行っていない(dry-run検証まで)。"
   },
   {
     "id": "V3-FND-34",
@@ -4391,10 +4407,12 @@
     "tier": "C",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "c5ecd17"
+    ],
     "tc": [],
-    "note": ""
+    "note": "cron失敗監視ハートビート実装。handleScheduled起動の都度(no-opの日も含め)truth/ihl.ops.cron_heartbeat.v1/{YYYY-MM-DD}.jsonへjob成否をappend(idempotent)、失敗job有りならsendOpsAlert(Resend・鍵未設定はno-op degrade)。新スキーマschemas/events/ops-cron-heartbeat.schema.json追加+codegen再生成済み。"
   },
   {
     "id": "V3-FND-35",
@@ -4404,10 +4422,13 @@
     "tier": "C",
     "lane": "L4",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "8eb8358",
+      "f3ebe59"
+    ],
     "tc": [],
-    "note": ""
+    "note": "外部依存アダプタNFR明文化+現状監査+縮退動作1行一覧をdocs/architecture/external-adapter-nfr.mdとして作成(GMO/PAY.JP/Resend/日本郵便URL中継/SwitchBot/AI Kernel/R2使用量の各アダプタと縮退動作)。ドキュメントのみ(Q-REQ-06承認範囲どおり)。"
   },
   {
     "id": "V3-IND-36",

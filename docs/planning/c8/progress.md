@@ -10,15 +10,15 @@
 
 ## サマリー
 
-- 全体: ███░░░░░░░░░░░░░░░░░ 13%（43/334）
-- 第1波必達(required): ████░░░░░░░░░░░░░░░░ 22%（40/184）
+- 全体: ███░░░░░░░░░░░░░░░░░ 16%（52/334）
+- 第1波必達(required): █████░░░░░░░░░░░░░░░ 27%（49/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 273 |
-| 着手中(in_progress) | 18 |
-| 完了(done) | 43 |
+| 未着手(todo) | 263 |
+| 着手中(in_progress) | 19 |
+| 完了(done) | 52 |
 | 検証済(verified) | 0 |
 
 ## lane 別内訳
@@ -28,7 +28,7 @@
 | CSV | ████████████████████ 100%（1/1） |
 | L1/PAY | █████░░░░░░░░░░░░░░░ 26%（16/61） |
 | L3/L4-auth | ████░░░░░░░░░░░░░░░░ 19%（5/27） |
-| L4 | ██░░░░░░░░░░░░░░░░░░ 10%（5/51） |
+| L4 | █████░░░░░░░░░░░░░░░ 27%（14/51） |
 | L4-gov | █░░░░░░░░░░░░░░░░░░░ 3%（1/35） |
 | L4-knowledge | ███░░░░░░░░░░░░░░░░░ 15%（8/54） |
 | L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/66） |
@@ -163,21 +163,21 @@
 | V3-AIP-96 | 就寝中など人間不在の時間帯に、Claude Code の余剰セッション/スケジュ… | required | todo | — |
 | V3-AIP-97 | D:\claude を Claude の本拠地（HQ）とするワークスペース階層を… | required | todo | — |
 | V3-AIP-98 | 夜間限定の自動運転(V3-AIP-96)を時間帯予約式スケジューラへ拡張し、夜間… | required | todo | — |
-| V3-CST-01 | 10年間ユーザーが増えなくてもコストを賄える構造を最優先とし、ユーザー数に比例し… | required | todo | — |
-| V3-CST-02 | Sakura VPS(サーバー費)+Cloudflare R2(ストレージ費)等… | required | todo | — |
-| V3-CST-09 | Truth(R2)バックアップ二重化: Truth正本を別プロバイダ(Backb… | required | todo | — |
+| V3-CST-01 | 10年間ユーザーが増えなくてもコストを賄える構造を最優先とし、ユーザー数に比例し… | required | done | 831f14f |
+| V3-CST-02 | Sakura VPS(サーバー費)+Cloudflare R2(ストレージ費)等… | required | done | f3ebe59 |
+| V3-CST-09 | Truth(R2)バックアップ二重化: Truth正本を別プロバイダ(Backb… | required | done | fed43fb |
 | V3-FND-01 | R2/Truth への書き込みは INSERT ONLY(append-only… | required | done | 8fbcc49 |
-| V3-FND-02 | 永続正本は Cloudflare R2 のみとし、常駐DB(Postgres/S… | required | todo | — |
-| V3-FND-03 | システムを「個体の一生と再解析可能性を守るファイルベース研究データレイク」として… | required | todo | — |
+| V3-FND-02 | 永続正本は Cloudflare R2 のみとし、常駐DB(Postgres/S… | required | done | e4e79ee |
+| V3-FND-03 | システムを「個体の一生と再解析可能性を守るファイルベース研究データレイク」として… | required | done | 32099ac |
 | V3-FND-04 | 世界状態の更新は Command → 純粋関数 Reducer(Kernel) … | required | done | 8271f49 |
 | V3-FND-05 | 文明の同一性を Genesis Hash + 連続したR2イベント列(各イベント… | required | done | 8271f49 |
-| V3-FND-12 | 依存方向を apps→libs/ihl\|packages\|components … | required | todo | — |
-| V3-FND-14 | システムの同期・接続・管理の最小単位を C-USB(Civilization-U… | required | todo | — |
+| V3-FND-12 | 依存方向を apps→libs/ihl\|packages\|components … | required | done | e4e79ee |
+| V3-FND-14 | システムの同期・接続・管理の最小単位を C-USB(Civilization-U… | required | done | 07fda74 |
 | V3-FND-18 | データ取得元管理を Placement/DeviceBinding/Occupa… | required | done | 9eeea25 |
-| V3-FND-20 | WASM(Extism/Spin)ドライバで中間APIサーバーを不要化し、既存フ… | required | todo | — |
+| V3-FND-20 | WASM(Extism/Spin)ドライバで中間APIサーバーを不要化し、既存フ… | required | in_progress | df69bc9 |
 | V3-FND-21 | AI呼び出しを集約する AI Kernel(A90)を新設し全機能のAI利用(翻… | required | done | 8271f49 |
-| V3-FND-34 | バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバ… | required | todo | — |
-| V3-FND-35 | 外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配… | required | todo | — |
+| V3-FND-34 | バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバ… | required | done | c5ecd17 |
+| V3-FND-35 | 外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配… | required | done | 8eb8358, f3ebe59 |
 | V3-AIP-100 | 使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)が… | best-effort | todo | — |
 | V3-AIP-102 | 技術記事投稿パック: システム案・思想を複数技術サイトへ投稿できる「コピペ完結」… | best-effort | todo | — |
 | V3-AIP-103 | マルチ SNS 自動投稿オーケストレーション: 1 コンテンツを Instagr… | best-effort | todo | — |
