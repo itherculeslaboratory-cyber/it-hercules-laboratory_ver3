@@ -25,6 +25,7 @@
     "obs-search",
     "obs-freetext",
     "individual-detail",
+    "individual-finder",
     "cross",
     "bio-card",
     "match",
@@ -112,6 +113,21 @@
       "from": "home",
       "to": "individual-detail",
       "label": "個体詳細へ"
+    },
+    {
+      "from": "home",
+      "to": "individual-finder",
+      "label": "理想の個体を探すへ"
+    },
+    {
+      "from": "individual-finder",
+      "to": "individual-detail",
+      "label": "詳細画面を開く"
+    },
+    {
+      "from": "individual-finder",
+      "to": "obs-entry",
+      "label": "個体0件時の案内: 観測を始める"
     },
     {
       "from": "home",
