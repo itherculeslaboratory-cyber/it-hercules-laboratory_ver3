@@ -4,7 +4,7 @@
 // data.actor_id をセッション principal で強制刻印(V3-AUT-17)。取引遷移(match/
 // transition)・決済連動は C4 対象外(matrix ver3_note)。
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, deriveTransferCode } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import {
   reduceMarket,
@@ -12,10 +12,13 @@ import {
   projectOwnershipLineage,
   projectPayment,
   projectShippingLink,
+  projectCancelRequest,
   isAllowedEdge,
   isNoPayCancelDue,
   isGraceCancelWindowOpen,
   isOfferExpired,
+  isAuctionSettleDue,
+  highestBid,
   type MarketKind,
   type MarketState,
   type TxnEvent,
@@ -23,6 +26,7 @@ import {
 import { projectPreferences } from "./settings-routes";
 import { isBlockedPair } from "./market-block-routes";
 import { projectSellerModeration, projectListingModeration } from "./market-flag-routes";
+import { OBLIGATION_TYPE, safeKeyPart } from "./gmo-routes";
 import {
   NO_PAY_LIMIT_COUNT,
   NO_PAY_LIMIT_WINDOW_DAYS,
@@ -30,6 +34,8 @@ import {
   GRACE_CANCEL_LIMIT_COUNT,
   GRACE_CANCEL_LIMIT_WINDOW_DAYS,
   GRACE_CANCEL_RESTRICT_DAYS,
+  FEE_MAINTENANCE_TAX_RATE,
+  TAX_GRACE_DAYS,
 } from "./economy-constants";
 
 const LISTING_TYPE = "ihl.mkt.listing.v1";
@@ -58,6 +64,7 @@ const TRANSITION_KINDS = new Set<MarketKind>([
   "list_fixed", "list_auction", "list_lottery", "list_platinum",
   "bid", "match", "ship", "receive", "rate", "delist", "transfer",
   "pay_declare", "pay_confirm", "cancel", "ship_link",
+  "cancel_request", "cancel_approve", "cancel_decline",
 ]);
 
 export const marketRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -154,6 +161,11 @@ marketRoutes.post("/market/listings", async (c) => {
   if (Number.isInteger(minApply) && minApply >= 1) data.reservation_min_apply_count = minApply;
   const maxApply = Number(body?.reservation_max_apply_count);
   if (Number.isInteger(maxApply) && maxApply >= 1) data.reservation_max_apply_count = maxApply;
+
+  // V3-MKT-05: オークション締切(任意)。経過後は settleDueAuctions が read-time 自動決着。
+  if (typeof body?.ends_at === "string" && !Number.isNaN(Date.parse(body.ends_at))) {
+    data.ends_at = body.ends_at;
+  }
 
   // I18-06 part1: UGC 原文の作者言語タグを actor の locale から刻印(翻訳はしない・
   // 常駐サーバ翻訳を持たない＝不変条項①)。未設定は projectPreferences が DEFAULT_LOCALE=ja。
@@ -330,6 +342,14 @@ function transitionActorGuard(
     if (cur.matched_with && actorId !== cur.matched_with) return "matched buyer only";
     return null;
   }
+  if (kind === "cancel_request" || kind === "cancel_approve" || kind === "cancel_decline") {
+    // 相互承認キャンセル依頼(HANDOFF §3.4): request/approve/decline いずれも当事者
+    // (出品者/落札者)のみ。requester 本人が自分の request を承認/却下できない制約は
+    // 別途 route 側(projectCancelRequest 参照後)でチェックする(ここは party 判定のみ)。
+    const isParty = (!!cur.seller_id && actorId === cur.seller_id) || (!!cur.matched_with && actorId === cur.matched_with);
+    if (!isParty) return "party only";
+    return null;
+  }
   const sellerOnly =
     kind === "ship" || kind === "delist" || kind === "transfer" || kind === "pay_confirm" || kind === "ship_link";
   const buyerOnly = kind === "receive" || kind === "rate" || kind === "pay_declare";
@@ -376,6 +396,102 @@ async function settleNoPayCancel(
   const res = await s.putEventAt(`truth/${TXN_TYPE}/auto-cancel-nopay-${listingId}.json`, systemTxnEnvelope(id, data));
   if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
   return [...events, data as unknown as TxnEvent];
+}
+
+// V3-MKT-05: オークション締切(ends_at)経過の read-time 自己修復(settleNoPayCancel と
+// 同型パターン)。listed_auction のまま ends_at を過ぎたら、最高入札があれば match
+// (=matched へ・落札額=最高額)、入札が無ければ delist(「入札なしでも決着」)を系統
+// actor が deterministic key で put-if-absent する。ヤフオク型自動入札(価格帯別入札
+// 単位刻み・予算上限までの自動再入札)は bid 発行側(POST /market/offers 相当の別経路)の
+// 仕様であり、既存の無条件 bid append 経路を壊さないよう本波では対象外(ponytail・
+// 決着ロジックのみ先行実装)。
+const SYSTEM_AUCTION_ACTOR = "system:auction-settle";
+
+async function settleDueAuctions(
+  s: TruthStore,
+  listingId: string,
+  events: TxnEvent[],
+  now: Date,
+): Promise<TxnEvent[]> {
+  const cur = reduceMarket(listingId, events);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const endsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+  if (!isAuctionSettleDue(cur.state, typeof endsAt === "string" ? endsAt : undefined, now)) return events;
+
+  const best = highestBid(cur.bids);
+  const id = ulid();
+  const data: Record<string, unknown> = best
+    ? {
+        transaction_event_id: id,
+        listing_id: listingId,
+        actor_id: SYSTEM_AUCTION_ACTOR,
+        kind: "match",
+        counterparty: best.bidder,
+        amount: best.amount,
+        payload: { auction_settle: "highest_bid" },
+        created_at: now.toISOString(),
+        schema_version: TXN_SCHEMA_VERSION,
+      }
+    : {
+        transaction_event_id: id,
+        listing_id: listingId,
+        actor_id: SYSTEM_AUCTION_ACTOR,
+        kind: "delist",
+        payload: { auction_settle: "no_bids" },
+        created_at: now.toISOString(),
+        schema_version: TXN_SCHEMA_VERSION,
+      };
+  const res = await s.putEventAt(`truth/${TXN_TYPE}/auction-settle-${listingId}.json`, systemTxnEnvelope(id, data));
+  if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
+  return [...events, data as unknown as TxnEvent];
+}
+
+// V3-MKT-10: 取引成立(receive∧rate 揃う=MKT-04)時に 5% 維持費税を義務台帳へ自動計上
+// (「取引成立からの義務自動計上」=これまでの partial の残り)。fee-routes.ts(PAY.JP
+// ゆる請求フロー)が読む既存義務台帳(OBLIGATION_TYPE)をそのまま継承する(型リネーム禁止・
+// round-16裁定=強制収集しない/ゆる請求のため自動ペナルティ・Fibonacci課金は付けない)。
+// gross(成約額)は「実際に動いた金額」を優先する決定的順位: pay_confirm確認額 >
+// pay_declare申告額 > listing.price 表示価格。全て欠落なら課税せず記録もしない(ゆる請求=
+// 取り逃し許容の精神・強制しない)。1 listing = 1 obligation(deterministic key の
+// put-if-absent で冪等・再実行や rate→receive 逆順でも二重計上しない)。
+async function settleFeeObligation(
+  s: TruthStore,
+  listingId: string,
+  sellerId: string | undefined,
+  events: TxnEvent[],
+  settledAt: string,
+): Promise<void> {
+  if (!sellerId) return;
+  const payment = projectPayment(events);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const listingPrice = listingEv ? Number(dataOf(listingEv).price) : NaN;
+  const gross = payment.confirmed_amount ?? payment.declared_amount ?? (Number.isFinite(listingPrice) ? listingPrice : undefined);
+  if (!gross || gross <= 0) return;
+  const amount = Math.round(gross * FEE_MAINTENANCE_TAX_RATE);
+  if (amount <= 0) return; // schema: amount exclusiveMinimum 0
+
+  const id = ulid();
+  const dueDate = new Date(new Date(settledAt).getTime() + TAX_GRACE_DAYS * DAY_MS).toISOString();
+  const data: Record<string, unknown> = {
+    obligation_id: id,
+    actor_id: sellerId,
+    transfer_code: await deriveTransferCode(sellerId),
+    amount,
+    obligation_kind: "fee_tax",
+    due_date: dueDate,
+    created_at: new Date().toISOString(),
+    schema_version: "1",
+  };
+  await s.putEventAt(`truth/${OBLIGATION_TYPE}/mkt-fee-${safeKeyPart(listingId)}.json`, {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: OBLIGATION_TYPE,
+    time: new Date().toISOString(),
+    dataschema: "schemas/events/gmo-obligation.schema.json",
+    provenance: { generator_kind: "agent", agent_name: "market-settle" },
+    data,
+  });
 }
 
 // no-pay/猶予キャンセルの回数投影(round-16 OQ-MKT-03/04)。cancel イベントの
@@ -438,6 +554,7 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   const now = new Date();
   let events = await loadTxns(c, listingId);
   events = await settleNoPayCancel(s, listingId, events, now); // 状態機械5脚③(自己修復)
+  events = await settleDueAuctions(s, listingId, events, now); // V3-MKT-05(自己修復)
 
   const cur = reduceMarket(listingId, events);
   if (!isAllowedEdge(cur.state, kind)) {
@@ -490,12 +607,29 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
     return c.json({ error: "BLOCKED" }, 403);
   }
   if (kind === "cancel" && cur.state === "matched" && actorId === cur.matched_with) {
-    // 猶予キャンセル(成立後60分)。窓が閉じた後の相手承認制キャンセル依頼フローは
-    // 本波対象外(残課題・open_questions)。
+    // 猶予キャンセル(成立後60分・買い手無条件)。窓が閉じた後は cancel_request/
+    // cancel_approve/cancel_decline(相互承認フロー・HANDOFF §3.4)を使う。
     if (!isGraceCancelWindowOpen(events, now)) {
-      return c.json({ error: "GRACE_WINDOW_CLOSED" }, 409);
+      return c.json({ error: "GRACE_WINDOW_CLOSED", details: ["use cancel_request (mutual approval) after the grace window"] }, 409);
     }
     extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), cancel_reason: "grace" };
+  }
+  // HANDOFF §3.4 残作業: 猶予キャンセル窓が閉じた後の相手承認制キャンセル依頼フロー。
+  // request は「pending 中の request が無いこと」、approve/decline は「pending 中で
+  // かつ自分が requester でないこと」を要求する(自分の request を自分で承認/却下
+  // できない=対等な相互承認)。
+  if (kind === "cancel_request") {
+    const existing = projectCancelRequest(events);
+    if (existing.status === "pending") return c.json({ error: "CANCEL_REQUEST_PENDING" }, 409);
+    const reason = (extra.payload as { reason?: unknown } | undefined)?.reason;
+    extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), reason: typeof reason === "string" ? reason : undefined };
+  }
+  if (kind === "cancel_approve" || kind === "cancel_decline") {
+    const existing = projectCancelRequest(events);
+    if (existing.status !== "pending") return c.json({ error: "NO_PENDING_CANCEL_REQUEST" }, 409);
+    if (existing.requested_by === actorId) {
+      return c.json({ error: "FORBIDDEN", details: ["requester cannot resolve own cancel request"] }, 403);
+    }
   }
   // V3-MKT-13(round-15裁定・金額相違自己申告): pay_confirm の payload.mismatch は
   // partial(部分入金=残債の再申告待ち)/over(過入金=クレジット記録のみ)の2値限定。
@@ -524,7 +658,14 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   if (res.status === "invalid") return c.json({ error: "INVALID_TRANSITION", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_TRANSITION", key: res.key }, 409);
 
-  const next = reduceMarket(listingId, [...events, data]);
+  const merged = [...events, data];
+  const next = reduceMarket(listingId, merged);
+  if (kind === "receive" || kind === "rate") {
+    const settlement = projectSettlement(merged, now);
+    if (settlement.settled && settlement.settled_at) {
+      await settleFeeObligation(s, listingId, next.seller_id, merged, settlement.settled_at);
+    }
+  }
   return c.json({ listing_id: listingId, state: next.state, stage: next.stage }, 201);
 });
 
@@ -536,6 +677,7 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
   const now = new Date();
   let events = await loadTxns(c, listingId);
   events = await settleNoPayCancel(s, listingId, events, now);
+  events = await settleDueAuctions(s, listingId, events, now); // V3-MKT-05(自己修復)
   const cur = reduceMarket(listingId, events);
   return c.json({
     ...cur,
@@ -543,6 +685,7 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
     payment: projectPayment(events),
     no_pay_cancel_due: isNoPayCancelDue(events, now),
     grace_cancel_window_open: isGraceCancelWindowOpen(events, now),
+    cancel_request: projectCancelRequest(events), // HANDOFF §3.4 相互承認キャンセル依頼
   });
 });
 

@@ -10,8 +10,10 @@
 import { Hono } from "hono";
 import { TruthStore } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { projectIndividual, buildPedigree } from "./individual-routes";
 
 const TXN_TYPE = "ihl.mkt.transaction_event.v1";
+const PHOTO_TYPE = "ihl.obs.photo.v1";
 
 export const marketPricingRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -103,20 +105,83 @@ export function buildListingDraft(
   };
 }
 
+// 過去成約(match の amount)を comparable に集約(price-recommendation と共用)。
+async function loadSoldComparables(s: TruthStore): Promise<Comparable[]> {
+  const txns = (await s.listEvents(`truth/${TXN_TYPE}/`)).map(dataOf);
+  return txns
+    .filter((d) => d.kind === "match" && typeof d.amount === "number")
+    .map((d) => ({ individual_id: String(d.listing_id), price: d.amount as number, weight: 1 }));
+}
+
+// MKT-23「個体を選ぶだけで9割完成」: individual_ids だけから実観測(V3-IND-13
+// projectIndividual)+直系血統(V3-IND-12 buildPedigree)を server-side で自動集約する
+// (client が既に組み立てた observations を要求していた既存 API の穴埋め=残作業本体)。
+// measurements は自由記述(item/value)なのでフィールド名を決め打ちせず、全 capture の
+// 全 item をそのままテンプレ変数名(item名)としてフラット化する(=テンプレ {{item名}}
+// と1:1対応・命名推測が要らない)。同名 item は後勝ち(直近 capture 優先・listEvents は
+// R2 prefix scan=capture_id(ULID)キー順で本番は時系列・fake bucket は挿入順で近似)。
+export async function autoDeriveIndividualObs(s: TruthStore, individualId: string): Promise<IndividualObs> {
+  const proj = await projectIndividual(s, individualId);
+  const out: IndividualObs = { individual_id: individualId };
+  if (!proj) return out; // 個体不明でも400にはしない(=IDだけの最小スタブへ自然縮退)
+  const master = proj.master as Record<string, unknown> | null;
+  if (master && typeof master.species === "string" && master.species) out.species = master.species;
+
+  for (const obs of proj.observations) {
+    const rec = obs as Record<string, unknown>;
+    if (typeof rec.sire_id === "string") out.sire_id = rec.sire_id;
+    if (typeof rec.dam_id === "string") out.dam_id = rec.dam_id;
+    const measurements = Array.isArray(rec.measurements) ? rec.measurements : [];
+    for (const m of measurements as Record<string, unknown>[]) {
+      if (typeof m.item === "string" && (typeof m.value === "string" || typeof m.value === "number")) {
+        out[m.item] = m.value;
+      }
+    }
+  }
+  out.observation_count = proj.observations.length; // 温度/重量ログ全期間の件数(生ログは別APIで参照)
+  out.timeline_count = proj.timeline.length; // 成長履歴(life-event)件数
+
+  // 親個体(直系のみ・maxDepth=1)。画像は親個体の capture に紐づく最初の photo を採用。
+  const pedigree = await buildPedigree(s, individualId, 1);
+  const parents: { individual_id: string; parent_role?: string; known: boolean; photo_media_key?: string }[] = [];
+  for (const p of pedigree.parents) {
+    let photoMediaKey: string | undefined;
+    const parentProj = p.known ? await projectIndividual(s, p.individual_id) : null;
+    for (const obs of parentProj?.observations ?? []) {
+      const capId = (obs as Record<string, unknown>).capture_id;
+      if (typeof capId !== "string") continue;
+      const photos = (await s.listEvents(`truth/${PHOTO_TYPE}/${capId}-`)).map(dataOf);
+      if (photos.length && typeof photos[0].photo_id === "string") {
+        photoMediaKey = `media/photo/${photos[0].photo_id}`;
+        break;
+      }
+    }
+    parents.push({ individual_id: p.individual_id, parent_role: p.parent_role, known: p.known, photo_media_key: photoMediaKey });
+  }
+  if (parents.length) out.parents = parents;
+  return out;
+}
+
 // ── routes ───────────────────────────────────────────────────────────────
-// POST /market/listings/draft — 個体 ID 選択で draft 生成(MKT-23)。individuals 未指定時は
-// individual_ids から最小スタブ観測を組む(観測投影の本格ロードは別波)。
+// POST /market/listings/draft — 個体 ID 選択で draft 生成(MKT-23)。individuals 省略時は
+// autoDeriveIndividualObs で実観測+血統を自動集約(旧: client 供給の observations 必須
+// だった穴を埋める=本要件の残作業)。comparables 省略時は全成約履歴を既定候補として使う
+// (種族/血統での絞り込みは listing↔individual 参照が無くまだできない=ponytail、
+// listing 側に individual 参照が付いたら絞り込みへ差し替え)。
 marketPricingRoutes.post("/market/listings/draft", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const ids = Array.isArray(body?.individual_ids)
     ? (body?.individual_ids as unknown[]).filter((x): x is string => typeof x === "string")
     : [];
   if (ids.length === 0) return c.json({ error: "INVALID_DRAFT", details: ["individual_ids required"] }, 400);
+  const s = store(c);
   const individuals: IndividualObs[] = Array.isArray(body?.individuals)
     ? (body?.individuals as IndividualObs[])
-    : ids.map((id) => ({ individual_id: id }));
+    : await Promise.all(ids.map((id) => autoDeriveIndividualObs(s, id)));
   const template = typeof body?.template === "string" ? body.template : "";
-  const comparables: Comparable[] = Array.isArray(body?.comparables) ? (body?.comparables as Comparable[]) : [];
+  const comparables: Comparable[] = Array.isArray(body?.comparables)
+    ? (body?.comparables as Comparable[])
+    : await loadSoldComparables(s);
   return c.json(buildListingDraft(individuals, template, comparables), 201);
 });
 
@@ -124,10 +189,7 @@ marketPricingRoutes.post("/market/listings/draft", async (c) => {
 // 集約(embedding 既定 OFF・計算元全公開・MKT-25)。?method=median で中央値。
 marketPricingRoutes.get("/market/listings/:id/price-recommendation", async (c) => {
   const listingId = c.req.param("id");
-  const txns = (await store(c).listEvents(`truth/${TXN_TYPE}/`)).map(dataOf);
-  const comparables: Comparable[] = txns
-    .filter((d) => d.kind === "match" && typeof d.amount === "number")
-    .map((d) => ({ individual_id: String(d.listing_id), price: d.amount as number, weight: 1 }));
+  const comparables = await loadSoldComparables(store(c));
   const method = c.req.query("method") === "median" ? "median" : "weighted_mean";
   return c.json({ listing_id: listingId, ...recommendPrice(comparables, { method }) });
 });

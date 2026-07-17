@@ -61,6 +61,11 @@
       "minimum": 1,
       "description": "V3-IND-35: 出品側が事前設定する応募単位の最大匹数（この匹数超の予約は自動マッチング対象外・任意）。"
     },
+    "ends_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "V3-MKT-05: オークション（list_auction）の締切（任意）。経過後は settleDueAuctions が read-time 自動決着（最高入札者に match・入札なしは delist）する。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

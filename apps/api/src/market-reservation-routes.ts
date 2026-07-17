@@ -30,6 +30,74 @@ const RES_EVENT_SCHEMA_VERSION = "1";
 const SYSTEM_RESERVATION_ACTOR = "system:reservation-match";
 const HOUR_MS = 60 * 60 * 1000;
 
+// V3-IND-35 fulfillment配線(HANDOFF §3.4残作業)。confirm成立後の実配送/決済/評価は
+// reservation専用の新状態機械を作らず、既存のsingular-buyer取引状態機械
+// (market-routes.ts POST /market/listings/{id}/transition・ship/pay_declare/
+// pay_confirm/receive/rate/cancel/cancel_request一式・V3-MKT-10手数料自動計上込み)を
+// reservation_idをlisting_idとして流用し再利用する(冒頭コメントどおり1予約listing=
+// 複数買い手なので「予約全体」ではなく「1確定予約=1買い手」ごとに独立した取引スレッド
+// として扱う=reservation_id粒度で1:1)。
+const TXN_TYPE = "ihl.mkt.transaction_event.v1";
+const TXN_SCHEMA = "schemas/events/mkt-transaction-event.schema.json";
+const TXN_SCHEMA_VERSION = "1";
+
+function systemTxnEnvelope(id: string, data: Record<string, unknown>) {
+  return {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: TXN_TYPE,
+    time: new Date().toISOString(),
+    dataschema: TXN_SCHEMA,
+    provenance: { generator_kind: "agent", agent_name: "market-reservation-fulfillment" },
+    data,
+  };
+}
+
+/** confirmed成立の瞬間、system actorがlist_fixed→matchの2イベントを冪等シード
+ * (put-if-absentキー=reservation_id固定・再実行しても二重シードしない)。以後の
+ * ship/pay_declare/pay_confirm/receive/rate/cancel_requestは通常の
+ * POST /market/listings/{reservation_id}/transition から既存route一式がそのまま使える。 */
+async function seedFulfillmentThread(
+  s: TruthStore,
+  reservationId: string,
+  buyerId: string,
+  sellerId: string,
+  amount: number,
+): Promise<void> {
+  // list_fixed→match は必ずこの順で畳まれる必要がある(match は listed_fixed 以降でしか
+  // 有効な辺にならない・reduceMarket は created_at 昇順+同値時 transaction_event_id
+  // 昇順で処理)。ULID は同一ミリ秒内で単調増加しない(packages/truth/src/ulid.ts)ため、
+  // created_at を 1ms 進めて明示的に順序を保証する(tie-break の運任せにしない)。
+  const now = new Date();
+  const listKey = `truth/${TXN_TYPE}/${reservationId}-fulfill-list.json`;
+  const listId = ulid();
+  const listData: Record<string, unknown> = {
+    transaction_event_id: listId,
+    listing_id: reservationId,
+    actor_id: sellerId,
+    kind: "list_fixed",
+    amount,
+    created_at: now.toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  const listRes = await s.putEventAt(listKey, systemTxnEnvelope(listId, listData));
+  if (listRes.status !== "inserted") return; // 既にシード済み(冪等)
+
+  const matchId = ulid();
+  const matchData: Record<string, unknown> = {
+    transaction_event_id: matchId,
+    listing_id: reservationId,
+    actor_id: sellerId,
+    kind: "match",
+    counterparty: buyerId,
+    amount,
+    created_at: new Date(now.getTime() + 1).toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  await s.putEventAt(`truth/${TXN_TYPE}/${reservationId}-fulfill-match.json`, systemTxnEnvelope(matchId, matchData));
+}
+
 export const marketReservationRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 function store(c: { env: Bindings }): TruthStore {
@@ -402,7 +470,17 @@ marketReservationRoutes.post("/market/reservations/:reservation_id/confirm", asy
   const res = await s.putEventAt(`truth/${RES_EVENT_TYPE}/${reservationId}-confirm.json`, reservationEventEnvelope(id, actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_CONFIRM", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "ALREADY_RESOLVED" }, 409);
-  return c.json({ reservation_id: reservationId, status: "confirmed" }, 201);
+
+  // V3-IND-35 fulfillment配線(HANDOFF §3.4残作業): confirmed成立で通常の取引状態機械
+  // (ship/pay_declare/pay_confirm/receive/rate/cancel_request・V3-MKT-10手数料自動計上
+  // 込み)へ接続する。listing_id=reservation_idの独立スレッドとしてシード(冪等)。
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${reservation.listing_id}.json`);
+  const sellerId = listingEv ? String(dataOf(listingEv).actor_id) : undefined;
+  if (sellerId) {
+    const amount = (offer.offered_unit_price ?? 0) * (offer.offered_count ?? 0);
+    await seedFulfillmentThread(s, reservationId, actorId, sellerId, amount);
+  }
+  return c.json({ reservation_id: reservationId, status: "confirmed", fulfillment_listing_id: reservationId }, 201);
 });
 
 // POST /market/reservations/{reservation_id}/decline — 買い手が明示辞退(未確定=

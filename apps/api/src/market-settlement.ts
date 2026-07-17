@@ -16,7 +16,8 @@ export type MarketKind =
   | "list_fixed" | "list_auction" | "list_lottery" | "list_platinum"
   | "offer" | "love_letter" | "bid" | "match" | "ship" | "receive"
   | "rate" | "settle" | "delist" | "transfer" | "tax_debt" | "tax_pay" | "fee_unpaid"
-  | "pay_declare" | "pay_confirm" | "cancel" | "ship_link";
+  | "pay_declare" | "pay_confirm" | "cancel" | "ship_link"
+  | "cancel_request" | "cancel_approve" | "cancel_decline";
 
 /** ihl.mkt.transaction_event.v1 の data。route は listing 単位に prefix-scan して渡す。 */
 export interface TxnEvent {
@@ -58,7 +59,20 @@ export const MARKET_EDGES: Record<string, Partial<Record<MarketKind, string>>> =
   // cancel は猶予キャンセル(60分・買い手)/48h no-pay 自動キャンセル(系統
   // actor)の到達点(V3-MKT-01 状態機械5脚③・批評R4)。pay_declare/pay_confirm は
   // shipped からも許可(出荷後の遅延入金確認・c8 market-trade E2E で発見)。
-  matched: { ship: "shipped", cancel: "cancelled", pay_declare: "matched", pay_confirm: "matched", ship_link: "matched" },
+  // cancel_request/cancel_decline は経済副次イベント(自己ループ)、cancel_approve は
+  // 猶予窓が閉じた後の相手承認制キャンセル依頼フロー(HANDOFF §3.4残作業)の到達点
+  // (route 側が「相手方のみ承認可・pending request 必須」を保証する・pure edge 表は
+  // 単純な到達可否だけを持つ)。
+  matched: {
+    ship: "shipped",
+    cancel: "cancelled",
+    pay_declare: "matched",
+    pay_confirm: "matched",
+    ship_link: "matched",
+    cancel_request: "matched",
+    cancel_decline: "matched",
+    cancel_approve: "cancelled",
+  },
   shipped: { receive: "received", rate: "rated", ship_link: "shipped", pay_declare: "shipped", pay_confirm: "shipped" },
   received: { rate: "sold" },
   rated: { receive: "sold" },
@@ -126,6 +140,25 @@ export function reduceMarket(listingId: string, events: TxnEvent[]): MarketState
   }
 
   return { listing_id: listingId, state, seller_id: sellerId, owner_id: ownerId, matched_with: matchedWith, bids, stage: stageOf(state) };
+}
+
+/** V3-MKT-05: 締切(ends_at)経過時にオークションを自動決着すべきか(read-time判定)。
+ * listed_auction のまま ends_at を過ぎていれば入札の有無に関わらず due=true
+ * (「入札なしでも決着」=入札ゼロは delist・1件以上は最高額 match として route 側が
+ * 処理する)。 */
+export function isAuctionSettleDue(state: string, endsAt: string | undefined, now: Date): boolean {
+  if (state !== "listed_auction" || !endsAt) return false;
+  return now.getTime() >= new Date(endsAt).getTime();
+}
+
+/** 最高額入札(同額は先着=created_at 昇順)。amount 欠落の bid は対象外。 */
+export function highestBid(bids: MarketState["bids"]): MarketState["bids"][number] | undefined {
+  let best: MarketState["bids"][number] | undefined;
+  for (const b of bids) {
+    if (typeof b.amount !== "number") continue;
+    if (!best || b.amount > (best.amount as number) || (b.amount === best.amount && b.at < best.at)) best = b;
+  }
+  return best;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -203,6 +236,43 @@ export function projectPayment(events: TxnEvent[]): PaymentStatus {
     confirmed_amount: lastConfirm?.amount,
     mismatch: mismatchRaw === "partial" || mismatchRaw === "over" ? mismatchRaw : undefined,
   };
+}
+
+export interface CancelRequestStatus {
+  status: "none" | "pending" | "approved" | "declined";
+  requested_by?: string;
+  requested_at?: string;
+  reason?: string;
+}
+
+/** HANDOFF §3.4 残作業: 猶予キャンセル窓(60分)が閉じた後の相手承認制キャンセル依頼
+ * フロー。cancel_request(どちらの当事者でも)→ 相手方の cancel_approve(実際の
+ * cancel 遷移=cancelled)/cancel_decline(却下・matched のまま)の2段階。都度投影
+ * (常駐 DB 禁止・不変条項①): 3 kind を時系列に畳み、直近の request が応答(approve/
+ * decline)済みかどうかで pending/approved/declined/none を判定する。却下後に再度
+ * request すれば新しい pending へ戻る(1回却下されたら永久に不可、ではない)。 */
+export function projectCancelRequest(events: TxnEvent[]): CancelRequestStatus {
+  const relevant = sortEvents(
+    events.filter((e) => e.kind === "cancel_request" || e.kind === "cancel_approve" || e.kind === "cancel_decline"),
+  );
+  let pending: TxnEvent | undefined;
+  let out: CancelRequestStatus = { status: "none" };
+  for (const e of relevant) {
+    if (e.kind === "cancel_request") {
+      pending = e;
+      const reason = (e.payload as { reason?: unknown } | undefined)?.reason;
+      out = {
+        status: "pending",
+        requested_by: e.actor_id,
+        requested_at: e.created_at,
+        reason: typeof reason === "string" ? reason : undefined,
+      };
+    } else if (pending && (e.kind === "cancel_approve" || e.kind === "cancel_decline")) {
+      out = { ...out, status: e.kind === "cancel_approve" ? "approved" : "declined" };
+      pending = undefined;
+    }
+  }
+  return out;
 }
 
 export interface ShippingLink {
