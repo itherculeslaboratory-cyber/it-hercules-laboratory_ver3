@@ -41,6 +41,7 @@ import { proposalRoutes } from "./proposal-routes";
 import { profileRoutes } from "./profile-routes";
 import { consentRoutes } from "./consent-routes";
 import { keyBundleRoutes } from "./key-bundle-routes";
+import { sandboxRoutes } from "./sandbox-routes";
 import { githubWebhookRoutes } from "./github-webhook-routes";
 import { researchContentRoutes } from "./research-content-routes";
 import { paperMatchRoutes } from "./paper-match-routes";
@@ -385,6 +386,11 @@ app.route("/api/v1", consentRoutes);
 // Zero-knowledge key bundle + offline recovery code (V3-SEC-57): POST/GET /me/key-bundle・
 // POST /me/key-bundle/recovery-code(+/verify)。サーバは ciphertext を一切復号しない。
 app.route("/api/v1", keyBundleRoutes);
+
+// Sandbox execution request gate (V3-SEC-45部分実装・docs/planning/c8/
+// design-v3-sec-45-sandbox-boundary.md参照): POST /sandbox/execute-request。
+// Whitelist+Permission制御の認可ゲートのみ(実行基盤は未接続・誇張ゼロ)。
+app.route("/api/v1", sandboxRoutes);
 
 // GitHub webhook (design-k3 §2.5 / V3-KRM-13): POST /github/webhook。session 層 public
 // （PUBLIC_ROUTES）+ HMAC self-gate。行動→pt+axis 換算（config weights・policy 経由）を
