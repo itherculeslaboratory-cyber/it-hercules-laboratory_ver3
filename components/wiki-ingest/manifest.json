@@ -11,5 +11,6 @@
     "per-input cosine similarity report (worst/mean vs threshold 0.999)"
   ],
   "tests": "tests/test_parity.py",
-  "golden": "golden/parity-vector.json"
+  "golden": "golden/parity-vector.json",
+  "cusb_layer": "rag"
 }
