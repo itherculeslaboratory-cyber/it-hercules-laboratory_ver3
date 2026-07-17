@@ -16,7 +16,8 @@
 #   追加 → 75 rows、同レーンが論文 HTML export 新規 1 route(infra-route-084・V3-PPR-23・
 #   protected)を追加 → 76 rows、同レーンが観測データ CSV export 新規 1 route
 #   (infra-route-085・V3-PPR-12・protected。reanalyze バッチは既存 /observation/batch-commit
-#   kind:"reanalyze" 拡張のため新規 route 無し)を追加 → 77 rows。
+#   kind:"reanalyze" 拡張のため新規 route 無し)を追加 → 77 rows、同レーンが知識セル横断投影
+#   新規 1 route(infra-route-086・V3-WIK-20・protected)を追加 → 78 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -97,3 +98,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/research/auto-draft,VPS,Workers,W2,infra-route-083,protected,implemented,V3-PPR-20 PaperSectionsV1拡張・統一フォーマット観測データ(measurements[])のみからconditions節+完了率を自動生成(非永続プレビュー)
 —,GET,/api/v1/research/content/{id}/export,VPS,Workers,W2,infra-route-084,protected,implemented,V3-PPR-23 論文(章構成+引用+図表)を自己完結HTMLへ変換・PDFはブラウザ標準印刷機能を再利用(新規依存を追加しない)
 —,GET,/api/v1/observation/export,VPS,Workers,W2,infra-route-085,protected,implemented,V3-PPR-12 全capture measurements[]をCSVへ決定論シリアライズ(研究者向け全データダウンロード)・実解析は端末側ローカル計算でサーバ負荷ゼロ
+—,GET,/api/v1/knowledge/cell/{id},VPS,Workers,W2,infra-route-086,protected,implemented,V3-WIK-20 意図/系譜/被引用を1クエリで返す横断投影・既存cite_refs/cited_paper_ids/citations/forked_fromを束ねる決定論(常駐グラフDBなし)
