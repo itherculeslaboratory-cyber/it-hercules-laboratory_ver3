@@ -56303,5 +56303,63 @@
   "wave": "第2波",
   "wave_why": "高度解析/Docker委譲は将来層・スマホ基本は既存撮影で担保",
   "hold": false
+ },
+ {
+  "id": "V3-UIX-83",
+  "statement": "個体ファインダー(IND内探索モード): 一覧・絞り込み(決定論sort=体長/体重/観測回数/直近記録)+個体詳細パネル+血統ツリー(選択時のみ先祖/子孫色分け・親→子フロー)を第1波MVPとする。宇宙表示(ego-graph/全体)・胸角/色sort・embeddingは後続波(design-individual-finder.md §5 波2-5)。",
+  "category": "UI/UX",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "R45最高評価「絶対にIHLver3に実装する」の直接要求。第1波MVPは一覧+詳細+血統に限定"
+   },
+   "ui": {
+    "v": 3,
+    "why": "個体を探す・眺める全ユーザー"
+   },
+   "dep": {
+    "v": 2,
+    "why": "個体一覧/詳細/血統3API(listIndividualsFor/projectIndividualProfile/buildPedigree)に依存・全て実装済み"
+   },
+   "diff": {
+    "v": 1,
+    "why": "search-navigator同型の専用ノード1個・新規バックエンド不要(design-individual-finder.md §2.3)"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": false,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "00-hq/feedback/persona-model.md",
+    "evidence": "R45(2026-07-17)「これ最高ですよ!参考にしてください。絶対にIHLver3に実装する。」",
+    "trust": "高",
+    "date": "2026-07-17"
+   },
+   {
+    "src_file": "docs/planning/c9/structure-canon.md",
+    "evidence": "ユーザー裁定2026-07-18「承認します。とてもレビューしやすかったです。ありがとうございます。　今後も期待しています。進めてください。」(構造正本骨子承認・個体ファインダー=IND内探索モードの位置を確認)",
+    "trust": "高",
+    "date": "2026-07-18"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": "胸角mm単一形質sort・色系統sort・全体宇宙座標投影・embedding ON波の実装時期は design-individual-finder.md §5 波2-5で後続波に切り出し済み(本entryは波1=MVPのみを確定範囲とする)。",
+  "group": "g07-UIUX",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "R45最高評価+design-individual-finder.md波0(b)前提ゲート充足(要件正式採番)。MVP(一覧・絞り込み+詳細+血統)は既存APIのみで成立し第1波残務に含められる規模。宇宙/embedding等の重い部分は第2波以降(design-individual-finder.md §5)。",
+  "hold": false
  }
 ]
