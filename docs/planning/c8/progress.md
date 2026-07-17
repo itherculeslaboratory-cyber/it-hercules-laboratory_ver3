@@ -10,15 +10,15 @@
 
 ## サマリー
 
-- 全体: ████░░░░░░░░░░░░░░░░ 22%（73/334）
-- 第1波必達(required): ████████░░░░░░░░░░░░ 38%（70/184）
+- 全体: █████░░░░░░░░░░░░░░░ 25%（82/334）
+- 第1波必達(required): █████████░░░░░░░░░░░ 43%（79/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 238 |
-| 着手中(in_progress) | 23 |
-| 完了(done) | 73 |
+| 未着手(todo) | 228 |
+| 着手中(in_progress) | 24 |
+| 完了(done) | 82 |
 | 検証済(verified) | 0 |
 
 ## lane 別内訳
@@ -29,7 +29,7 @@
 | L1/PAY | █████░░░░░░░░░░░░░░░ 26%（16/61） |
 | L3/L4-auth | █████████░░░░░░░░░░░ 44%（12/27） |
 | L4 | ███████████░░░░░░░░░ 55%（28/51） |
-| L4-gov | █░░░░░░░░░░░░░░░░░░░ 3%（1/35） |
+| L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
 | L4-knowledge | ███░░░░░░░░░░░░░░░░░ 15%（8/54） |
 | L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/66） |
 | L6-ui | █░░░░░░░░░░░░░░░░░░░ 3%（1/39） |
@@ -200,18 +200,18 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-GOV-07 | プラチナ投票は当事者が「公開して投票」を選んだ場合のみ開始し、7日間・1票=1P… | required | todo | — |
-| V3-GOV-10 | 掲示板・マーケットの指摘は30回ごとにプラチナ1枚を消費し(クールダウンなし)、… | required | todo | — |
-| V3-GOV-11 | ホームは司法インボックスのプレビュー(最大5件)と環境IoT due予定(最大3… | required | todo | — |
+| V3-GOV-07 | プラチナ投票は当事者が「公開して投票」を選んだ場合のみ開始し、7日間・1票=1P… | required | done | adae1e9 |
+| V3-GOV-10 | 掲示板・マーケットの指摘は30回ごとにプラチナ1枚を消費し(クールダウンなし)、… | required | in_progress | 0c866ff |
+| V3-GOV-11 | ホームは司法インボックスのプレビュー(最大5件)と環境IoT due予定(最大3… | required | done | 837b314 |
 | V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | required | todo | — |
-| V3-SEC-14 | ログイン系エンドポイントにレート制限(magiclink 20回/60秒/IP、… | required | todo | — |
-| V3-SEC-20 | 利用規約(ToS)機能はサービスの性質・データの扱い・禁止行為をユーザーが理解し… | required | in_progress | 9229c57 |
-| V3-SEC-41 | ValueCheck/好みセッションは本人JWTと組み合わせた検索ブーストのみに… | required | todo | — |
-| V3-SEC-42 | 画像・解析データにSHA-256(元画像・ROIマスク・解析結果JSON)/Me… | required | todo | — |
-| V3-SEC-45 | ユーザーコード/ドライバー実行はサンドボックス境界(Extism/Docker/… | required | todo | — |
-| V3-SEC-56 | 出品状態書込・テンプレ公開・GMO等は認可(requireMarketListi… | required | todo | — |
-| V3-SEC-57 | 鍵バンドルのサーバzero-knowledge保管+オフラインリカバリコード: … | required | todo | — |
-| V3-SEC-58 | 書込系レート制限+ユーザー別クォータ: R2書込経路にレート制限とユーザー別クォ… | required | todo | — |
+| V3-SEC-14 | ログイン系エンドポイントにレート制限(magiclink 20回/60秒/IP、… | required | done | 7c28a03 |
+| V3-SEC-20 | 利用規約(ToS)機能はサービスの性質・データの扱い・禁止行為をユーザーが理解し… | required | done | 067fd1d |
+| V3-SEC-41 | ValueCheck/好みセッションは本人JWTと組み合わせた検索ブーストのみに… | required | done | ec51ada |
+| V3-SEC-42 | 画像・解析データにSHA-256(元画像・ROIマスク・解析結果JSON)/Me… | required | done | ca52bb8 |
+| V3-SEC-45 | ユーザーコード/ドライバー実行はサンドボックス境界(Extism/Docker/… | required | in_progress | 6db3dd9 |
+| V3-SEC-56 | 出品状態書込・テンプレ公開・GMO等は認可(requireMarketListi… | required | done | 6bcd976 |
+| V3-SEC-57 | 鍵バンドルのサーバzero-knowledge保管+オフラインリカバリコード: … | required | done | 290c33d |
+| V3-SEC-58 | 書込系レート制限+ユーザー別クォータ: R2書込経路にレート制限とユーザー別クォ… | required | done | c3a907e |
 | V3-GOV-02 | 争い入口を一本化し、単一のdispute-roomコンポーネントがanchor_… | best-effort | todo | — |
 | V3-GOV-03 | 指摘の仕様: 入口は指摘のみ(通報UIを置かない)、タグ+理由テキストを必須。同… | best-effort | todo | — |
 | V3-GOV-05 | 合意時は削除せずR2 append-onlyで新版を追加し、被指摘側の修正提案→… | best-effort | todo | — |

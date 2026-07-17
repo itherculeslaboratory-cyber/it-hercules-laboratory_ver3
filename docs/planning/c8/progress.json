@@ -640,10 +640,10 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["adae1e9"],
+    "tc": ["tests/gov-07-dispute-vote.test.ts"],
+    "note": "gov-routes.tsに紛争のプラチナ投票裁定を新規実装: POST publicize(当事者限定・opener_role宣言・二重publicize防止)/POST votes(二択・1票=1PT消費・PT残高>=1で誰でも投票可・1 actor 1票)/GET vote-result(集計投影)/POST vote-resolve(7日窓経過後に多数決確定・敗者へΔcount+5を1回だけ付与・同数は引き分け無変動・appendPrecedent再利用でR2判例記録・deterministic keyで二重実行防止)。gov-dispute/gov-vote/economy-pt-eventスキーマを拡張(enum追加のみ・型リネームなし)。"
   },
   {
     "id": "V3-GOV-10",
@@ -653,10 +653,10 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["0c866ff"],
     "tc": [],
-    "note": ""
+    "note": "市場側(market-flag-routes.ts のユーザー指摘route・gov-stop route両方)には累計30件ごとに1PT消費(reason_code=indictment_fee・カルマΔcountとは別経路・非ブロッキングでPT残高がマイナスになっても指摘自体は拒否しない)を配線しテスト済み(commits内)。掲示板側(「掲示板の指摘」)は現行コードに『掲示板の投稿へ指摘/報告する』というユーザー向けエンドポイント自体が存在しない(plaza-signalはlike/use/retain等のみでflag相当が無い)ため配線先が無く未実装。新規に掲示板指摘機能を丸ごと作るのはスコープ外の推測実装になるため見送った。"
   },
   {
     "id": "V3-GOV-11",
@@ -666,10 +666,10 @@
     "tier": "C",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["837b314"],
+    "tc": ["tests/gov-11-home-judicial-iot-preview.test.ts"],
+    "note": "GET /home/summaryにjudicial_inbox(本人が当事者の未決着紛争を最大5件・締切近い順)とiot_due(既存overdue+near投影を最大3件に切り詰め・二重実装なし)を追加。審理・投票本体は既存の/gov/disputes/*へ委譲(委譲のみで新規UI実装なし)。"
   },
   {
     "id": "V3-I18-01",
@@ -1934,10 +1934,10 @@
     "tier": "C",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["7c28a03"],
+    "tc": ["tests/sec-14-login-rate-limit.test.ts"],
+    "note": "auth-routes.tsのPOST /magic-link(20/60秒/IP)・POST /verify(60/60秒/IP)にIPレート制限を追加。rate-limit.tsの共有カウンタを再利用。"
   },
   {
     "id": "V3-SEC-20",
@@ -1947,12 +1947,10 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "in_progress",
-    "commits": [
-      "9229c57"
-    ],
-    "tc": [],
-    "note": "利用規約同意記録をschemas/frozen/consent-record.schema.json(INSERT ONLY・複数同意=別ファイル)として実装。TC: tests/cl-05-consent.test.ts describe(\"CL-05 consent record shape\"/\"CL-05 consent append-only behaviour\")。screen-defs/terms.jsonで規約画面自体は存在するが、未認証アクセス許可の確認・オンボーディングAPI側のMUST_AGREE_TO_TERMS検証コードはgrep該当0件(apps/api配下に見当たらず) — 同意記録の永続化のみ確認、API側の必須検証ゲートは未実装。"
+    "status": "done",
+    "commits": ["067fd1d"],
+    "tc": ["tests/sec-20-onboarding-consent.test.ts"],
+    "note": "仕上げ完了。未認証/onboarding/terms閲覧・login.json必須チェックボックスによる送信disableは既存実装で既に充足済みと確認(コード変更なし)。残余だったAPI側MUST_AGREE_TO_TERMS検証ゲートをconsent-routes.tsに新設: POST /onboarding/agree(両同意必須・不備は400 MUST_AGREE_TO_TERMS)+CL-05 consent-record(frozen)をterms/privacy別ファイルでappend-only永続化・GET /me/consentで投影。"
   },
   {
     "id": "V3-SEC-41",
@@ -1962,10 +1960,10 @@
     "tier": "C",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["ec51ada"],
+    "tc": ["tests/sec-41-valuecheck-isolation.test.ts"],
+    "note": "match-routes.tsは既に本人JWTスコープのみ(他actorの学習結果/ランキングを返す経路が存在せずscoreもstrip済み)で要件を充足していたと確認。クロスアクター分離の回帰テストのみ追加(コード変更なし)。"
   },
   {
     "id": "V3-SEC-42",
@@ -1975,10 +1973,10 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["ca52bb8"],
+    "tc": ["tests/sec-42-image-hash-integrity.test.ts"],
+    "note": "元画像のSHA-256は既存実装済みと確認(対象外)。残り2件を実装: annotation(ROIマスク)にast_sha256、reanalyze結果にresults_sha256をSHA-256(canonicalJson(...))でサーバ算出・append(クライアント供給値は無視)。加えて「公式画像アップロード経路はobservation/upload一つのみ」の構造回帰ガードを追加(統合時にmarket-routes.tsの既存出品写真アップロード=別ドメインとして正しく許容するようテストを補正)。"
   },
   {
     "id": "V3-SEC-45",
@@ -1988,10 +1986,10 @@
     "tier": "A",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["6db3dd9"],
     "tc": [],
-    "note": ""
+    "note": "要件の『Whitelist(Component/API/Workflow)+Permission制御』の認可ゲート部分のみ実装(sandbox-routes.ts POST /sandbox/execute-request: whitelist違反/本番DB書込/外部通信/CPU・メモリ超過をすべて400で拒否・テスト済み)。要件本文が求める『サンドボックス境界(Extism/Docker/WebAssembly/vm)で完全隔離実行』そのものは未実装 — Cloudflare Workersランタイム(workerd)がnew Function等の動的コード生成を禁止するため、実際の隔離実行にはWorkers for Platforms契約(インフラ決定)かWASMインタプリタの新規開発(数週間規模)が必要と判断し、design doc(docs/planning/c8/design-v3-sec-45-sandbox-boundary.md)に整理して引き継いだ。誇張ゼロのため『実行できる』とはコード・レスポンス・ドキュメントのいずれにも書いていない。"
   },
   {
     "id": "V3-SEC-56",
@@ -2001,10 +1999,10 @@
     "tier": "C",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["6bcd976"],
+    "tc": ["tests/sec-56-listing-registry-boundary.test.ts"],
+    "note": "ver3にはver2由来のPOST /listing-registryは存在せず、既存のCL-04 deny-by-default(index.ts)が唯一かつ十分な認可境界として全出品状態書込・テンプレ公開・GMO routeを保護していると確認(requireMarketListingStateWrite等の個別関数は不要)。ADR(02-design/adr)で明示+回帰ガードテストを追加。実際の再設計はV3-MKT-41(市場レーン・別要件)へ引き継ぎ。"
   },
   {
     "id": "V3-UIX-04",
@@ -4469,10 +4467,10 @@
     "tier": "C",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["290c33d"],
+    "tc": ["tests/sec-57-key-bundle.test.ts"],
+    "note": "key-bundle-routes.ts新設: POST/GET /me/key-bundle(クライアント側で暗号化済みのciphertextをそのまま保管・返却するのみ・サーバは中身を一切解釈/復号しない=真のzero-knowledge)・POST /me/key-bundle/recovery-code(1回限りの高エントロピーコードを発行・平文はレスポンスにのみ載せサーバはSHA-256ハッシュのみ保管)・POST .../verify(ハッシュ一致+未消費のみ許可・1回限り消費・二回目はconflict)。device-routes.ts(V3-OBS-31)のAES鍵管理とは異なりサーバ側に復号可能な鍵を一切持たない設計。"
   },
   {
     "id": "V3-SEC-58",
@@ -4482,10 +4480,10 @@
     "tier": "C",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["c3a907e"],
+    "tc": ["tests/sec-58-write-rate-limit.test.ts"],
+    "note": "R2書込経路(POST/PUT/PATCH/DELETE)にユーザー別固定ウィンドウのレート制限(60/分)+日次クォータ(5000/日)をindex.tsの単一choke-pointミドルウェアで実装。RATE_LIMIT KV未バインド時はno-op degrade(既存AUTH_DENYLIST等と同規約)のため既存テスト無影響。"
   },
   {
     "id": "V3-UIX-82",
