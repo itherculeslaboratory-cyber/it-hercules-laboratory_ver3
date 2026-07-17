@@ -11,7 +11,8 @@ import {
   projectCross,
   projectAuthenticity,
 } from "../apps/api/src/individual-routes";
-import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
+import { issueSessionToken } from "../apps/api/src/session";
+import { DEV_TOKEN, FakeR2Bucket, SESSION_SECRET, makeEnv } from "./helpers";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 const AUTH = { Authorization: `Bearer ${DEV_TOKEN}` };
@@ -782,5 +783,28 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
   it("未知の id は 404", async () => {
     const { env } = ctx();
     expect((await get("/api/v1/individuals/ghost/profile", env)).status).toBe(404);
+  });
+});
+
+describe("V3-UIX-68 GET /users/{actor}/individuals(透明性の文化・他者の作品を全て見れる公開版)", () => {
+  it("他 actor の作品一覧を本人用と同じ投影で返す(ログイン済みなら誰でも閲覧可)", async () => {
+    const { env } = ctx();
+    const aliceAuth = { Authorization: `Bearer ${await issueSessionToken("alice", SESSION_SECRET)}` };
+    await app.request(
+      "/api/v1/individuals",
+      { method: "POST", headers: { ...aliceAuth, "content-type": "application/json" }, body: JSON.stringify({ local_label_text: "DHH-24-999", species: "Dynastes hercules" }) },
+      env,
+    );
+    // bob(別 actor・自分は何も作っていない)が alice の公開ページを開く。
+    const bobAuth = { Authorization: `Bearer ${await issueSessionToken("bob", SESSION_SECRET)}` };
+    const res = await app.request("/api/v1/users/alice/individuals", { headers: bobAuth }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { individuals: { label: string }[] };
+    expect(body.individuals.map((i) => i.label)).toEqual(["DHH-24-999"]);
+    // bob 自身の一覧(本人スコープ)は空のまま — 他者閲覧が自分のスコープを汚染しない。
+    const bobOwn = (await (await app.request("/api/v1/individuals", { headers: bobAuth }, env)).json()) as {
+      individuals: unknown[];
+    };
+    expect(bobOwn.individuals).toEqual([]);
   });
 });

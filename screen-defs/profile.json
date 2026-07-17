@@ -3,7 +3,7 @@
   "route": "/me/profile",
   "title": "プロフィール",
   "layout": "standard",
-  "notes": "KRM-21/04 プロフィール。カルマ/貢献度/取引評価の3指標を個別表示（研究スコアは貢献度配下）。BAN は公開表示。国/言語/文化タグ/自己紹介は公開設定可、取引実績/カルマ/悪レビュー等の public_safety は常に公開。GET /me/profile。",
+  "notes": "KRM-21/04 プロフィール。カルマ/貢献度/取引評価の3指標を個別表示（研究スコアは貢献度配下）。BAN は公開表示。国/言語/文化タグ/自己紹介は公開設定可、取引実績/カルマ/悪レビュー等の public_safety は常に公開。GET /me/profile。V3-UIX-68(透明性の文化): 作品一覧(個体)を追加し「その人の作品を相手のマイページで全て見れる」を実現。?actor=<id> 付きで開くとGET /users/{actor}/profile・/users/{actor}/individualsで他者の公開ページ(受け手側)を表示できる(V3-UIX-68 の GET /users/{actor}/individuals 新設route)。ただし他画面(広場投稿者名・出品者名等)からこの画面へ actor 付きで遷移するリンクは本エントリでは未着手(送り手側は別対応・screen-defごとの導線追加が必要)。お気に入り2種(推し作者=通知あり/推し作品=保存のみ)は新規の永続化設計判断(既存 social-eval kind=favorite/follow を流用するか専用schemaを起こすか)を要するため未着手(裁定/設計待ち)。",
   "nodes": [
     {
       "id": "shell",
@@ -45,11 +45,44 @@
               "props": { "source_path": "/api/v1/me/profile", "bind_text": "良 {{market.rating.good}} / 普 {{market.rating.normal}} / 悪 {{market.rating.bad}}" }
             },
 
+            { "id": "works-title", "type": "heading", "props": { "text": "作品一覧(個体)", "level": 2 } },
+            {
+              "id": "works-list",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/individuals",
+                "bind_items": "data.works-list.individuals",
+                "item_text": "{{label}}（{{species}}）",
+                "empty_text": "登録した個体はまだありません。"
+              }
+            },
+
             {
               "id": "open-status",
               "type": "button",
               "props": { "label": "ステータスへ", "variant": "secondary" },
               "action": { "kind": "navigate", "to": "economy-status" }
+            },
+
+            { "id": "other-title", "type": "heading", "props": { "text": "他の人のマイページ(?actor=id で開く)", "level": 2 } },
+            {
+              "id": "other-identity",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/users/{{params.actor}}/profile",
+                "bind_text": "{{country}} / {{language}}　信頼度 {{intl_trust}}　BAN: {{karma.ban}}",
+                "empty_text": "URLに ?actor=<相手のID> を付けて開くと、その人の情報がここに表示されます。"
+              }
+            },
+            {
+              "id": "other-works",
+              "type": "list",
+              "props": {
+                "source_path": "/api/v1/users/{{params.actor}}/individuals",
+                "bind_items": "data.other-works.individuals",
+                "item_text": "{{label}}（{{species}}）",
+                "empty_text": "作品はまだありません。"
+              }
             }
           ]
         }

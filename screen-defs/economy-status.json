@@ -3,7 +3,7 @@
   "route": "/economy/status",
   "title": "ステータス",
   "layout": "standard",
-  "notes": "KRM-16 統合ステータス。プラチナ/カルマ二層/3軸貢献度/称号 + append-only 履歴の読取投影。GET /me/status・/me/ledger・/me/contribution を都度再計算で表示。",
+  "notes": "KRM-16 統合ステータス。プラチナ/カルマ二層/3軸貢献度/称号 + append-only 履歴の読取投影。GET /me/status・/me/ledger・/me/contribution を都度再計算で表示。V3-UIX-68: history の bind 先が StatusHistoryEntry の実フィールド({{at}}/{{kind}})と一致していなかった旧退行({{created_at}}/{{label}}は存在しないキーで常に空表示)を修正。称号(title)を貢献度リストへ追加、PT影響力残高(GET /me/pt・非公開=本人のみ)も本画面に集約(新規画面を増やさない・V3-UIX-68)。",
   "nodes": [
     {
       "id": "shell",
@@ -26,25 +26,33 @@
               }
             },
 
-            { "id": "contribution-title", "type": "heading", "props": { "text": "貢献度（3軸）", "level": 2 } },
+            { "id": "contribution-title", "type": "heading", "props": { "text": "貢献度（3軸・称号は閾値到達で表示）", "level": 2 } },
             {
               "id": "contribution",
               "type": "list",
               "props": {
                 "source_path": "/api/v1/me/contribution",
                 "bind_items": "data.contribution.axis_list",
-                "item_text": "{{axis}}: {{score}}（鋳造 {{minted}} / 次閾値 {{next_threshold}}）"
+                "item_text": "{{axis}}: {{score}}（鋳造 {{minted}} / 次閾値 {{next_threshold}} / 称号 {{title}}）"
               }
             },
 
-            { "id": "history-title", "type": "heading", "props": { "text": "履歴", "level": 2 } },
+            { "id": "pt-title", "type": "heading", "props": { "text": "PT影響力残高(非公開・本人のみ表示)", "level": 2 } },
+            {
+              "id": "pt",
+              "type": "card",
+              "props": { "source_path": "/api/v1/me/pt", "bind_text": "残高 {{balance}}" }
+            },
+
+            { "id": "history-title", "type": "heading", "props": { "text": "履歴（カルマ・プラチナ・貢献度）", "level": 2 } },
             {
               "id": "history",
               "type": "list",
               "props": {
                 "source_path": "/api/v1/me/status",
                 "bind_items": "data.history.history",
-                "item_text": "{{created_at}} {{label}}"
+                "item_text": "{{at}} [{{kind}}]",
+                "empty_text": "履歴はまだありません。"
               }
             },
 

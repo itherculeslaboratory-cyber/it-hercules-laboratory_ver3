@@ -7,7 +7,7 @@
 // envelope()/store()/dataOf() are re-declared inline here (they are module-private
 // in observation-routes.ts / ledger-routes.ts and cannot be imported — same
 // precedent as projectLedger's inline helpers · 批評家#3).
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES } from "./observation-constants";
@@ -687,14 +687,19 @@ const LIST_SORT_FIELDS = new Set([
 // ponytail: O(n) full master + capture/life-event/occupancy/photo/schedule
 // scan(1回ずつ、計5本), per-actor/individual index は在庫が伸びたら昇格(既存
 // /observation/search 前例と同じ縮退)。
-individualRoutes.get("/individuals", async (c) => {
+// V3-UIX-68(透明性の文化): 一覧構築ロジックを actorId 引数化し、本人用(session
+// scope)と公開プロフィール用(GET /users/{actor}/individuals・他者のマイページに
+// その人の作品を全表示)の2 route から共用する(重複実装を避ける・ロジックは1本)。
+async function listIndividualsFor(
+  c: Context<{ Bindings: Bindings; Variables: Variables }>,
+  actorId: string,
+) {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
   const stageFilter = c.req.query("stage") ?? "";
   const statusFilter = c.req.query("status") ?? "";
   const sortKey = c.req.query("sort") ?? "";
   const sortOrder = c.req.query("order") === "asc" ? 1 : -1; // 既定 desc(新しい/多い/大きい順)
-  const actorId = c.get("actorId");
   const s = store(c);
   const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
     .map(dataOf)
@@ -833,7 +838,14 @@ individualRoutes.get("/individuals", async (c) => {
     individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
   }
   return c.json({ individuals });
-});
+}
+
+individualRoutes.get("/individuals", async (c) => listIndividualsFor(c, c.get("actorId")));
+
+// GET /users/{actor}/individuals — 公開版(V3-UIX-68・透明性の文化: 相手のマイページ
+// でその人の作品=個体一覧を全て見れるようにする)。ロジックは本人用と同一
+// (listIndividualsFor)・スコープだけ actor path param に変える。
+individualRoutes.get("/users/:actor/individuals", async (c) => listIndividualsFor(c, c.req.param("actor")));
 
 // GET /individuals/{id} — whole-individual projection (6 文化 + timeline · IND-13).
 individualRoutes.get("/individuals/:id", async (c) => {
