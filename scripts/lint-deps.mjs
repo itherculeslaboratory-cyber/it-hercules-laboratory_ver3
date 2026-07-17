@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// GATE: dependency-direction + nested-npm + wrangler-binding denylist (V3-FND-12 / V3-FND-02).
+// GATE: dependency-direction + nested-npm + wrangler-binding denylist (V3-FND-12 / V3-FND-02 / V3-CST-01).
 // Enforces the DAG in docs/architecture.md and invariant ① (no resident DB as SSOT):
 //   D1  apps → apps          FAIL (one app importing another app)
 //   D2  {packages,libs,components} → apps   FAIL
@@ -7,8 +7,16 @@
 //   nested-npm : a tracked package.json outside root / a workspace root      FAIL
 //   binding    : d1_databases|kv_namespaces|durable_objects|hyperdrive in
 //                apps/api/wrangler.toml (resident stores) FAIL — R2 bucket stays green
+//   resident-db-dep : a resident-DB/vector-store client package (Postgres/SQLite/
+//                Mongo/Redis/Qdrant/pgvector/etc., V3-FND-02) in a workspace
+//                package.json `dependencies` (production) — devDependencies are
+//                exempt (local test tooling is not the runtime SSOT).
+//   metered-api-dep : a per-call-billed AI/SaaS SDK (openai/@anthropic-ai/sdk/
+//                cohere-ai/replicate/etc., V3-CST-01) in production `dependencies` —
+//                variable, per-user cost must not creep in as a casual dependency.
 // `tests/` may import apps (test harness) and is exempt from D1/D2.
-// Pure helpers (checkImport / isNestedPkg / scanBindings) are exported for --selftest.
+// Pure helpers (checkImport / isNestedPkg / scanBindings / scanResidentDbDeps /
+// scanMeteredApiDeps) are exported for --selftest.
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { posix } from "node:path";
@@ -77,6 +85,94 @@ export function scanBindings(tomlText) {
   return [...tomlText.matchAll(BINDING_DENY)].map((m) => m[1]);
 }
 
+// Resident DB / dedicated vector-store client packages (invariant ①: R2/Truth is
+// the only persistent SSOT; a SQL/NoSQL/vector-store client in production deps
+// means a service is about to treat that store as a source of truth).
+const RESIDENT_DB_DEPS = new Set([
+  "pg",
+  "pg-native",
+  "postgres",
+  "mysql",
+  "mysql2",
+  "sqlite3",
+  "better-sqlite3",
+  "mongodb",
+  "mongoose",
+  "redis",
+  "ioredis",
+  "knex",
+  "prisma",
+  "@prisma/client",
+  "drizzle-orm",
+  "typeorm",
+  "sequelize",
+  "@qdrant/js-client-rest",
+  "pinecone-client",
+  "@pinecone-database/pinecone",
+  "weaviate-client",
+  "weaviate-ts-client",
+  "chromadb",
+  "pgvector",
+]);
+
+/** Resident-DB deps found in a package.json's production `dependencies` (empty = clean). */
+export function scanResidentDbDeps(pkgJson) {
+  const deps = (pkgJson && typeof pkgJson === "object" && pkgJson.dependencies) || {};
+  return Object.keys(deps).filter((d) => RESIDENT_DB_DEPS.has(d));
+}
+
+// Metered/per-call SaaS SDK packages (V3-CST-01: "ユーザー数に比例して増える従量課金
+// を絶対に避け、計算資源はユーザー側に持たせる"). The AI Kernel (apps/api/src/
+// ai-kernel.ts, V3-FND-21) stays provider-less (LLM OFF by default, invariant ①);
+// adding one of these SDKs as a *production* dependency is the tell that a metered
+// call is being wired in casually, bypassing that default-off design. A vetted,
+// human-gated provider integration is still possible via plain `fetch` (no SDK
+// dependency needed, see apps/api/src/mail.ts's Resend call) without tripping this.
+const METERED_API_DEPS = new Set([
+  "openai",
+  "@anthropic-ai/sdk",
+  "cohere-ai",
+  "@google/generative-ai",
+  "@google-cloud/aiplatform",
+  "replicate",
+  "@aws-sdk/client-bedrock-runtime",
+  "@azure/openai",
+  "@mistralai/mistralai",
+  "algoliasearch",
+]);
+
+/** Metered-API SaaS SDK deps found in a package.json's production `dependencies`. */
+export function scanMeteredApiDeps(pkgJson) {
+  const deps = (pkgJson && typeof pkgJson === "object" && pkgJson.dependencies) || {};
+  return Object.keys(deps).filter((d) => METERED_API_DEPS.has(d));
+}
+
+// V3-FND-12 tree-depth limits (02-design/constitution.md §4.1). depth = number of
+// path segments at/below the tree's own top folder (directories + filename),
+// i.e. `docs/a/b/c.md` has depth 3. `components/<name>/` counts depth from
+// *inside* the component (the <name> segment itself is not counted).
+const DEPTH_LIMITS = [
+  { root: "docs", max: 4 },
+  { root: "schemas", max: 3 },
+  { root: "libs", max: 2 },
+  { root: "scripts", max: 3 },
+];
+
+/** Tree-depth violation for one repo-relative path, or null if within limits. */
+export function checkTreeDepth(rel) {
+  const seg = rel.split("/");
+  if (seg[0] === "components") {
+    const depth = seg.length - 2; // strip "components" + "<name>"
+    if (depth > 2) return `components/<name>/ depth ${depth} > 2: ${rel}`;
+    return null;
+  }
+  const limit = DEPTH_LIMITS.find((l) => l.root === seg[0]);
+  if (!limit) return null;
+  const depth = seg.length - 1; // strip the root segment itself
+  if (depth > limit.max) return `${limit.root}/ depth ${depth} > ${limit.max}: ${rel}`;
+  return null;
+}
+
 function trackedFiles(root) {
   return execSync("git ls-files", { cwd: root, encoding: "utf8" })
     .split("\n")
@@ -123,6 +219,26 @@ function runGate() {
     for (const b of scanBindings(readFileSync(join(root, wrangler), "utf8")))
       violations.push(`resident-store binding (invariant ①): ${wrangler} [[${b}]]`);
 
+  // 4. resident-DB dependency denylist (V3-FND-02) — every workspace package.json
+  for (const rel of tracked) {
+    if (!/^(apps|packages|libs)\/[^/]+\/package\.json$/.test(rel) && rel !== "package.json") continue;
+    try {
+      const pkg = JSON.parse(readFileSync(join(root, rel), "utf8"));
+      for (const dep of scanResidentDbDeps(pkg))
+        violations.push(`resident-db dependency (invariant ①/V3-FND-02): ${rel} [${dep}]`);
+      for (const dep of scanMeteredApiDeps(pkg))
+        violations.push(`metered-API SDK dependency (V3-CST-01, avoid per-user variable cost): ${rel} [${dep}]`);
+    } catch {
+      /* unparsable package.json is caught elsewhere (not this gate's concern) */
+    }
+  }
+
+  // 5. tree-depth limits (V3-FND-12 / constitution.md §4.1)
+  for (const rel of tracked) {
+    const v = checkTreeDepth(rel);
+    if (v) violations.push(v);
+  }
+
   return violations;
 }
 
@@ -159,6 +275,38 @@ function selftest() {
   assert(scanBindings("[[r2_buckets]]\nbinding = \"TRUTH\"").length === 0, "r2 bucket clean");
   assert(!isNestedPkg("apps/api/package.json"), "workspace root pkg ok");
   assert(!isNestedPkg("tests/package.json"), "tests root pkg ok");
+  // V3-FND-02 resident-DB dependency denylist
+  assert(scanResidentDbDeps({ dependencies: { pg: "^8.0.0" } }).includes("pg"), "pg flagged");
+  assert(
+    scanResidentDbDeps({ dependencies: { "better-sqlite3": "^11.0.0" } }).includes("better-sqlite3"),
+    "better-sqlite3 flagged",
+  );
+  assert(scanResidentDbDeps({ dependencies: { hono: "^4.0.0" } }).length === 0, "unrelated dep clean");
+  assert(
+    scanResidentDbDeps({ devDependencies: { pg: "^8.0.0" } }).length === 0,
+    "devDependencies exempt (local test tooling, not runtime SSOT)",
+  );
+  assert(scanResidentDbDeps({}).length === 0, "no dependencies field clean");
+  // V3-CST-01 metered-API SDK denylist
+  assert(scanMeteredApiDeps({ dependencies: { openai: "^4.0.0" } }).includes("openai"), "openai flagged");
+  assert(
+    scanMeteredApiDeps({ dependencies: { "@anthropic-ai/sdk": "^0.30.0" } }).includes("@anthropic-ai/sdk"),
+    "@anthropic-ai/sdk flagged",
+  );
+  assert(scanMeteredApiDeps({ dependencies: { hono: "^4.0.0" } }).length === 0, "unrelated dep clean");
+  assert(
+    scanMeteredApiDeps({ devDependencies: { openai: "^4.0.0" } }).length === 0,
+    "devDependencies exempt (not a shipped runtime dependency)",
+  );
+  // V3-FND-12 tree-depth limits
+  assert(checkTreeDepth("docs/a/b/c.md") === null, "docs depth 3 ok");
+  assert(checkTreeDepth("docs/a/b/c/d.md") === null, "docs depth 4 ok (at limit)");
+  assert(!!checkTreeDepth("docs/a/b/c/d/e.md"), "docs depth 5 flagged (over limit)");
+  assert(checkTreeDepth("scripts/lint-deps.mjs") === null, "scripts depth 1 ok");
+  assert(!!checkTreeDepth("scripts/a/b/c/d.mjs"), "scripts depth 4 flagged (over limit)");
+  assert(checkTreeDepth("components/wiki-ingest/tests/x.py") === null, "components depth 2 ok");
+  assert(!!checkTreeDepth("components/wiki-ingest/tests/sub/x.py"), "components depth 3 flagged");
+  assert(checkTreeDepth("apps/api/src/a/b/c/d/e/f.ts") === null, "apps/ has no generic depth limit (only nested-pkg)");
   for (const line of ok) console.log("  " + line);
   if (process.exitCode) console.error("lint-deps --selftest FAILED");
   else console.log("lint-deps --selftest OK");

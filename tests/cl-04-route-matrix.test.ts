@@ -1,4 +1,4 @@
-// CL-04: 71-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 72-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
@@ -13,7 +13,8 @@
 //        .../gov-stop・GET .../flag-status ×2・GET .../misban-reversal・POST
 //        .../misban-reversal/execute)= 70 → 知の広場レーン(round-16 OQ-PLZ-03)が
 //        +1 route(infra-route-079: POST /plaza/threads/{thread_id}/resolution・
-//        protected)= 71。
+//        protected)= 71 → g01-基盤コストレーン(V3-CST-02)が +1 route
+//        (infra-route-080: GET /costs・protected)= 72。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -44,9 +45,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (71 rows)", () => {
-  it("has exactly 71 route rows", () => {
-    expect(rows.length).toBe(71);
+describe("CL-04 route matrix (72 rows)", () => {
+  it("has exactly 72 route rows", () => {
+    expect(rows.length).toBe(72);
   });
 
   it("access column is only public|protected", () => {

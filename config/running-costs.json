@@ -1,0 +1,20 @@
+{
+  "note": "V3-CST-02 running-cost dashboard defaults (GET /api/v1/costs). vps.monthly_yen is edited by a human at deploy time (same convention as consented-crons.json/economy-policy.csv — no live admin-write API; config/ is deploy-time正本, not a runtime KV). r2.pricing rates are configurable estimates — verify against the current Cloudflare R2 pricing page before treating exact yen figures as authoritative.",
+  "currency": "JPY",
+  "vps": {
+    "label": "Sakura VPS",
+    "monthly_yen": 0,
+    "source": "manual"
+  },
+  "r2": {
+    "manual_override_yen": 0,
+    "pricing": {
+      "free_storage_gb": 10,
+      "storage_yen_per_gb_month": 2.5,
+      "free_class_a_ops_per_month": 1000000,
+      "class_a_yen_per_million_ops": 675,
+      "free_class_b_ops_per_month": 10000000,
+      "class_b_yen_per_million_ops": 54
+    }
+  }
+}

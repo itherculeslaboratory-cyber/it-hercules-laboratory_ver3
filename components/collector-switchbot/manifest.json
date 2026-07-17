@@ -11,5 +11,6 @@
     "signed env_collector_ingest_v1 POST to INGEST_URL (collector_id/timestamp/payload/signature)"
   ],
   "tests": "tests/test_collector.py",
-  "golden": "golden/ingest-vector.json"
+  "golden": "golden/ingest-vector.json",
+  "cusb_layer": "io"
 }

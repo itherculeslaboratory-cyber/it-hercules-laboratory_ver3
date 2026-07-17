@@ -31,3 +31,29 @@ export async function sendMagicLink(
   });
   return { sent: res.ok };
 }
+
+// Ops alert mail (V3-FND-34 cron failure heartbeat). Same degrade-safe adapter
+// pattern as sendMagicLink: no RESEND_API_KEY or no OPS_ALERT_EMAIL configured
+// (both are one-time設備投資 env vars, not per-call cost) → skip send, never throw
+// (a failed notification must not crash the batch it is reporting on).
+export async function sendOpsAlert(
+  env: Bindings,
+  subject: string,
+  bodyText: string,
+): Promise<{ sent: boolean }> {
+  if (!env.RESEND_API_KEY || !env.OPS_ALERT_EMAIL) return { sent: false };
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.MAIL_FROM ?? "login@localhost",
+      to: env.OPS_ALERT_EMAIL,
+      subject: `IT Hercules Laboratory — ${subject}`,
+      html: `<pre>${bodyText.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]!)}</pre>`,
+    }),
+  });
+  return { sent: res.ok };
+}

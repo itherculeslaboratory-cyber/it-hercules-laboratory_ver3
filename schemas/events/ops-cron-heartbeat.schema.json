@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ops-cron-heartbeat.schema.json",
+  "title": "Cron heartbeat event (ihl.ops.cron_heartbeat.v1)",
+  "description": "V3-FND-34: バッチ/cron失敗の監視・ハートビート通知。handleScheduled(apps/api/src/batch.ts)の毎回起動(日次)で1件 append し、無人運用でも「動いているか/どのジョブが失敗したか」を Truth 上で追跡可能にする(無音=一定期間ハートビートが無いこと自体が異常のシグナル)。Truth キー truth/ihl.ops.cron_heartbeat.v1/<YYYY-MM-DD>.json(put-if-absent・日次1件)。",
+  "x_ihl_req": "V3-FND-34",
+  "x_ihl_source": "docs/planning/rulings/user-ruling-2026-07-17-round-16.md Q-REQ-07②",
+  "type": "object",
+  "required": ["heartbeat_id", "ran_at", "is_recovery_day", "jobs", "schema_version"],
+  "properties": {
+    "heartbeat_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "冪等キー(YYYY-MM-DD)。"
+    },
+    "ran_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "cron 起動時刻(RFC3339)。"
+    },
+    "is_recovery_day": {
+      "type": "boolean",
+      "description": "月次バッチ本体(RECOVERY_BASE_DAY基準)が実行された日かどうか。false の日は no-op 起動の記録のみ(jobs は空配列)。"
+    },
+    "jobs": {
+      "type": "array",
+      "description": "is_recovery_day=true の日に実行された各ジョブの成否。",
+      "items": {
+        "type": "object",
+        "required": ["name", "status"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["ok", "failed"] },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

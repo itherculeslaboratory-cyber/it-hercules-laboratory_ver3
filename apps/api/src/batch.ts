@@ -8,6 +8,7 @@
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings } from "./env";
 import type { KVNamespaceLite } from "./kv";
+import { sendOpsAlert } from "./mail";
 import {
   KARMA_TYPE,
   COIN_TYPE,
@@ -34,6 +35,8 @@ const TXN_TYPE = "ihl.mkt.transaction_event.v1";
 const TXN_SCHEMA = "schemas/events/mkt-transaction-event.schema.json";
 const RATING_TYPE = "ihl.mkt.rating.v1";
 const RATING_SCHEMA = "schemas/events/mkt-rating.schema.json";
+const HEARTBEAT_TYPE = "ihl.ops.cron_heartbeat.v1";
+const HEARTBEAT_SCHEMA = "schemas/events/ops-cron-heartbeat.schema.json";
 
 // cron が発行する自動/系統イベントの actor(V3-AUT-17: auto=true 自動良評価の系統 actor)。
 const SYSTEM_ACTOR = "system:cron";
@@ -273,9 +276,17 @@ export async function mktFeeUnpaidPenalty(s: TruthStore, now: Date, kv?: KVNames
   }
 }
 
+// V3-FND-34: 1 ジョブぶんの成否(ハートビートに載せる最小単位)。
+export interface JobResult {
+  name: string;
+  status: "ok" | "failed";
+  error?: string;
+}
+
 // 月次バッチ本体(全ジョブ)。now を注入して境界をテスト可能にする(純関数的)。ジョブ
-// 単位で try/catch し、1 ジョブの失敗が他を巻き込まないようにする(cron 耐性)。
-export async function runMonthlyBatch(s: TruthStore, now: Date, kv?: KVNamespaceLite): Promise<void> {
+// 単位で try/catch し、1 ジョブの失敗が他を巻き込まないようにする(cron 耐性)。戻り値
+// の JobResult[] はハートビート(V3-FND-34)に転記される。
+export async function runMonthlyBatch(s: TruthStore, now: Date, kv?: KVNamespaceLite): Promise<JobResult[]> {
   const jobs: [string, () => Promise<void>][] = [
     ["krm03", () => krmMonthlyRecovery(s, now)],
     ["krm12", () => krmDryAxisMercyMint(s, now)],
@@ -283,16 +294,53 @@ export async function runMonthlyBatch(s: TruthStore, now: Date, kv?: KVNamespace
     ["mkt04", () => mktAutoGoodRatings(s, now)],
     ["mkt10", () => mktFeeUnpaidPenalty(s, now, kv)],
   ];
+  const results: JobResult[] = [];
   for (const [name, run] of jobs) {
     try {
       await run();
+      results.push({ name, status: "ok" });
     } catch (e) {
       console.error(`monthly batch job ${name} failed:`, e);
+      results.push({ name, status: "failed", error: String(e instanceof Error ? e.message : e) });
     }
   }
+  return results;
+}
+
+// V3-FND-34 バッチ/cron失敗の監視・ハートビート(round-16 Q-REQ-07②)。cron 起動の
+// 都度 1 件 append(冪等キー = 当日・put-if-absent で日内 1 回)。「無音」= 期待される
+// 日次間隔を超えてこのイベントが現れないこと自体が異常のシグナル(監視側は Truth を
+// 都度読むだけで検知でき、cron 自身が自分の無音を検知することはできないため、外部
+// 監視の受け皿として append することが本ジョブの責務)。
+export async function appendCronHeartbeat(
+  s: TruthStore,
+  now: Date,
+  isRecoveryDay: boolean,
+  jobs: JobResult[],
+): Promise<void> {
+  const dayKey = now.toISOString().slice(0, 10); // YYYY-MM-DD
+  const id = ulid();
+  await s.putEventAt(`truth/${HEARTBEAT_TYPE}/${dayKey}.json`, {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: HEARTBEAT_TYPE,
+    time: now.toISOString(),
+    dataschema: HEARTBEAT_SCHEMA,
+    provenance: agentProvenance(),
+    data: {
+      heartbeat_id: dayKey,
+      ran_at: now.toISOString(),
+      is_recovery_day: isRecoveryDay,
+      jobs,
+      schema_version: "1",
+    },
+  });
 }
 
 // Cloudflare Workers scheduled ハンドラ。日次起動を受け、実処理は毎月 25 日基準のみ。
+// 起動の都度(no-op の日も含め)ハートビートを append し、失敗ジョブがあれば
+// sendOpsAlert で通知(RESEND_API_KEY/OPS_ALERT_EMAIL 未設定時は no-op degrade)。
 export interface ScheduledEventLike {
   scheduledTime?: number;
   cron?: string;
@@ -303,6 +351,17 @@ export async function handleScheduled(
   _ctx?: unknown,
 ): Promise<void> {
   const now = new Date(typeof event?.scheduledTime === "number" ? event.scheduledTime : Date.now());
-  if (now.getUTCDate() !== RECOVERY_BASE_DAY) return; // 月次分岐: 25 日基準以外は no-op
-  await runMonthlyBatch(new TruthStore(env.TRUTH), now, env.AUTH_DENYLIST);
+  const store = new TruthStore(env.TRUTH);
+  const isRecoveryDay = now.getUTCDate() === RECOVERY_BASE_DAY;
+  const jobs = isRecoveryDay ? await runMonthlyBatch(store, now, env.AUTH_DENYLIST) : [];
+  await appendCronHeartbeat(store, now, isRecoveryDay, jobs);
+
+  const failed = jobs.filter((j) => j.status === "failed");
+  if (failed.length > 0) {
+    await sendOpsAlert(
+      env,
+      `月次バッチ失敗 ${failed.length}件 (${now.toISOString().slice(0, 10)})`,
+      failed.map((j) => `${j.name}: ${j.error ?? "(no message)"}`).join("\n"),
+    );
+  }
 }

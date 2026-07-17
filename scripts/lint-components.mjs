@@ -1,12 +1,20 @@
 #!/usr/bin/env node
-// GATE: C-USB component structure (V3-OTH-02). Every component that declares a
-// manifest.json (= is onboarded as a C-USB unit, V3-FND-14) must be complete:
-//   manifest has {id, entrypoint, inputs, outputs, tests, golden}
+// GATE: C-USB component structure (V3-OTH-02 / V3-FND-14). Every component that
+// declares a manifest.json (= is onboarded as a C-USB unit) must be complete:
+//   manifest has {id, entrypoint, inputs, outputs, tests, golden, cusb_layer}
+//   cusb_layer ∈ {core, rag, io, compatibility, security} — the C-USB
+//     (Civilization-USB) category this component plugs into (V3-FND-14: "最小単位
+//     を C-USB(core/rag/io/compatibility/security、IN→Transform→OUT)とする").
+//     This is the CoreEntityBase "core" (lineage) classification, not the
+//     CoreEntityBase "rag" search-metadata sense — see swap-checklist doc below.
 //   FAITHFUL: manifest.entrypoint file EXISTS (not hardcoded run.py — wiki-ingest
 //             declares parity_check.py and has no run.py)
 //   manifest.tests path EXISTS, manifest.golden path EXISTS, README.md EXISTS
 // Components without a manifest are not yet onboarded (e.g. obs-manifest is K1's
 // to onboard) and are skipped — onboarding = adding the manifest, which then gates.
+// Swapping a component's OSS backing must pass the 6-item green/yellow/red review
+// in docs/architecture/component-swap-checklist.md (interface/deps/screen-context/
+// AI-resource/RAG/style) — that check is a human review step, not machine-gated.
 // checkComponent(dir) is exported/pure(fs) for --selftest.
 import {
   readFileSync,
@@ -22,7 +30,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
-const REQUIRED = ["id", "entrypoint", "inputs", "outputs", "tests", "golden"];
+const REQUIRED = ["id", "entrypoint", "inputs", "outputs", "tests", "golden", "cusb_layer"];
+const CUSB_LAYERS = new Set(["core", "rag", "io", "compatibility", "security"]);
 
 /** Return a list of structural violations for one component directory (empty = ok). */
 export function checkComponent(dir) {
@@ -40,6 +49,8 @@ export function checkComponent(dir) {
 
   for (const key of REQUIRED)
     if (!(key in manifest)) out.push(`${name}: manifest missing "${key}"`);
+  if ("cusb_layer" in manifest && !CUSB_LAYERS.has(manifest.cusb_layer))
+    out.push(`${name}: manifest.cusb_layer "${manifest.cusb_layer}" not in {core,rag,io,compatibility,security}`);
 
   // entrypoint / tests / golden are declared paths that must actually exist
   for (const key of ["entrypoint", "tests", "golden"]) {
@@ -90,6 +101,7 @@ function selftest() {
         outputs: [],
         tests: "tests.py",
         golden: "golden.json",
+        cusb_layer: "io",
       }),
     );
     return dir;
@@ -129,6 +141,25 @@ function selftest() {
     assert(
       checkComponent(badKey).some((v) => v.includes('"inputs"')),
       "missing required key flagged",
+    );
+
+    // V3-FND-14 cusb_layer
+    const noCusbLayer = makeValid("no-cusb-layer");
+    const m = JSON.parse(readFileSync(join(noCusbLayer, "manifest.json"), "utf8"));
+    delete m.cusb_layer;
+    writeFileSync(join(noCusbLayer, "manifest.json"), JSON.stringify(m));
+    assert(
+      checkComponent(noCusbLayer).some((v) => v.includes('"cusb_layer"')),
+      "missing cusb_layer flagged",
+    );
+
+    const badCusbLayer = makeValid("bad-cusb-layer");
+    const m2 = JSON.parse(readFileSync(join(badCusbLayer, "manifest.json"), "utf8"));
+    m2.cusb_layer = "not-a-real-layer";
+    writeFileSync(join(badCusbLayer, "manifest.json"), JSON.stringify(m2));
+    assert(
+      checkComponent(badCusbLayer).some((v) => v.includes("cusb_layer")),
+      "invalid cusb_layer value flagged",
     );
   } finally {
     rmSync(base, { recursive: true, force: true });

@@ -109,6 +109,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   // round-16 裁定 — gmo-obligation を継承する新規イベント型(型リネーム禁止・append)。
   "fee-invoice": "feeInvoice",
   "fee-settlement": "feeSettlement",
+  // V3-FND-34: cron失敗監視ハートビート(round-16 Q-REQ-07②)。
+  "ops-cron-heartbeat": "opsCronHeartbeat",
 };
 
 const FROZEN_NAMES = new Set([
@@ -214,6 +216,9 @@ const EVENT_NAMES = new Set([
   // permanently (Truth is INSERT ONLY, unfixable). round-16 PAY.JP 請求フロー.
   "fee-invoice",
   "fee-settlement",
+  // V3-FND-34 — data validation MUST fire or putEvent stores unchecked data at
+  // 201 permanently (Truth is INSERT ONLY, unfixable). round-16 Q-REQ-07②.
+  "ops-cron-heartbeat",
 ]);
 
 function validatorFor(name: string): ValidateFn {
