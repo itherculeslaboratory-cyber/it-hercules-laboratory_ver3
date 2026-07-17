@@ -47,7 +47,7 @@ export function measurementValueOriginError(measurements: unknown): string | nul
 
 // CL-08 / design-c3 §1: embeddings are frozen at 384 dims. A manifest whose
 // embedding_dim differs is blocked from search (ver2 scoring.py:44 guard).
-const EMBEDDING_DIM = 384;
+export const EMBEDDING_DIM = 384;
 
 const CAPTURE_TYPE = "ihl.obs.capture.v1";
 const PHOTO_TYPE = "ihl.obs.photo.v1";
@@ -103,7 +103,10 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
 // at vector_offset in the embeddings.bin blob. Returns null if no embedding
 // exists or the bytes are out of range. The dim guard (≠384 → block) is applied
 // by the caller against EMBEDDING_DIM (ver2 scoring.py:44 / CL-08).
-async function loadVector(
+// exported for V3-UIX-82(検索グラフビュー): reused by
+// individual-routes.ts projectEntityGraph to score 「近さ(画像類似)」without
+// re-implementing the manifest/blob read.
+export async function loadVector(
   bucket: Bindings["TRUTH"],
   captureId: string,
 ): Promise<Float32Array | null> {

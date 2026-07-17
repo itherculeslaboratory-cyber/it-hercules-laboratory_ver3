@@ -8,9 +8,10 @@
 // in observation-routes.ts / ledger-routes.ts and cannot be imported — same
 // precedent as projectLedger's inline helpers · 批評家#3).
 import { Hono, type Context } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES } from "./observation-constants";
+import { loadVector, EMBEDDING_DIM } from "./observation-routes";
 
 export const individualRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -108,6 +109,104 @@ export async function buildPedigree(
     return { individual_id: id, known, parents };
   };
   return walk(individualId, 0);
+}
+
+// ── V3-UIX-82 検索グラフビュー(近さ=形質/血縁のエンティティ紐づき図) ──────────
+// 決定論の近さのみ(embedding cosine・血統)を使い、新規の重い基盤(グラフDB等)を
+// 足さない。既存資産の再利用: buildPedigree(血縁)+ loadVector/cosineSimilarity
+// (画像類似・observation-routes.ts と同一ロジック)。ホバー簡易ビュー/クリック
+// 遷移はUI側(未着手・専用ノード追加が必要)の仕事で、本関数はデータ整形のみ。
+export interface EntityGraphNode {
+  individual_id: string;
+  label: string;
+  kind: "self" | "blood" | "similar";
+  relation?: string; // blood ノードのみ: sire/dam/surrogate
+}
+export interface EntityGraphEdge {
+  from: string;
+  to: string;
+  kind: "blood" | "similar";
+  weight: number; // blood=1固定・similar=cosine類似度(0..1)
+}
+export interface EntityGraph {
+  individual_id: string;
+  nodes: EntityGraphNode[];
+  edges: EntityGraphEdge[];
+}
+
+/** individual_id の最新capture(capture_id昇順末尾=既存 GET /individuals と同じ
+ * 「最新」規約)のembeddingベクトルを返す(無ければnull)。 */
+async function latestVectorFor(
+  s: TruthStore,
+  bucket: Bindings["TRUTH"],
+  individualId: string,
+): Promise<Float32Array | null> {
+  const ref = `individual/${individualId}`;
+  const caps = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.subject_ref === ref)
+    .sort((a, b) => String(a.capture_id ?? "").localeCompare(String(b.capture_id ?? "")));
+  const latest = caps[caps.length - 1];
+  if (!latest) return null;
+  const vec = await loadVector(bucket, String(latest.capture_id));
+  return vec && vec.length === EMBEDDING_DIM ? vec : null;
+}
+
+/** V3-UIX-82: 血縁(pedigree・maxDepth既定2)+ 画像類似(embedding cosine上位topK)
+ * を1つのnodes/edgesグラフに統合する(都度再計算・常駐index無し・不変条項①)。 */
+export async function projectEntityGraph(
+  s: TruthStore,
+  bucket: Bindings["TRUTH"],
+  individualId: string,
+  topK = 5,
+  maxDepth = 2,
+): Promise<EntityGraph> {
+  const nodes: EntityGraphNode[] = [];
+  const edges: EntityGraphEdge[] = [];
+  const seen = new Set<string>([individualId]);
+  const selfName = (await projectName(s, individualId)) ?? individualId;
+  nodes.push({ individual_id: individualId, label: selfName, kind: "self" });
+
+  // 血縁: pedigree を辿り known な祖先のみノード化(circular/truncated は葉のまま無視)。
+  const pedigree = await buildPedigree(s, individualId, maxDepth);
+  const walkBlood = async (node: PedigreeNode, childId: string): Promise<void> => {
+    if (!node.known || node.circular) return;
+    if (!seen.has(node.individual_id)) {
+      seen.add(node.individual_id);
+      const label = (await projectName(s, node.individual_id)) ?? node.individual_id;
+      nodes.push({ individual_id: node.individual_id, label, kind: "blood", relation: node.parent_role });
+    }
+    edges.push({ from: childId, to: node.individual_id, kind: "blood", weight: 1 });
+    for (const p of node.parents) await walkBlood(p, node.individual_id);
+  };
+  for (const p of pedigree.parents) await walkBlood(p, individualId);
+
+  // 画像類似: 自分の最新capture embeddingと他個体の最新capture embeddingをcosine
+  // 比較し上位topKのみ採用(O(n)全走査・design-c3 §1 と同じ縮退)。
+  const myVec = await latestVectorFor(s, bucket, individualId);
+  if (myVec) {
+    const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
+      .map(dataOf)
+      .map((m) => String(m.individual_id ?? ""))
+      .filter((id) => id && id !== individualId);
+    const scored: { individual_id: string; cos: number }[] = [];
+    for (const id of masters) {
+      const vec = await latestVectorFor(s, bucket, id);
+      if (!vec) continue;
+      scored.push({ individual_id: id, cos: cosineSimilarity(myVec, vec) });
+    }
+    scored.sort((a, b) => b.cos - a.cos || a.individual_id.localeCompare(b.individual_id));
+    for (const { individual_id, cos } of scored.slice(0, topK)) {
+      if (!seen.has(individual_id)) {
+        seen.add(individual_id);
+        const label = (await projectName(s, individual_id)) ?? individual_id;
+        nodes.push({ individual_id, label, kind: "similar" });
+      }
+      edges.push({ from: individualId, to: individual_id, kind: "similar", weight: cos });
+    }
+  }
+
+  return { individual_id: individualId, nodes, edges };
 }
 
 /** Current display name (or name at `at` — the last rename on/before that time). */
@@ -877,6 +976,19 @@ individualRoutes.post("/individuals/:id/parents", async (c) => {
 // GET /individuals/{id}/pedigree — multi-generation tree (IND-01).
 individualRoutes.get("/individuals/:id/pedigree", async (c) => {
   return c.json(await buildPedigree(store(c), c.req.param("id")));
+});
+
+// GET /individuals/{id}/graph — V3-UIX-82 検索グラフビュー用データ(血縁+画像類似の
+// nodes/edges・決定論・都度再計算)。?top_k= で similar ノード数を調整可(既定5)。
+individualRoutes.get("/individuals/:id/graph", async (c) => {
+  const topK = Number(c.req.query("top_k") ?? 5);
+  const graph = await projectEntityGraph(
+    store(c),
+    c.env.TRUTH,
+    c.req.param("id"),
+    Number.isFinite(topK) && topK > 0 ? Math.min(20, Math.floor(topK)) : 5,
+  );
+  return c.json(graph);
 });
 
 // GET /individuals/{id}/cross — cross-result rate cards; ?metric= swaps to one
