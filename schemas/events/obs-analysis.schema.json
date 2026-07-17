@@ -23,6 +23,11 @@
       "description": "解析結果本体（項目→値）。",
       "additionalProperties": true
     },
+    "results_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "V3-SEC-42: SHA-256(canonicalJson(results))。改ざん検出・R2データ完全性・論文提出時の真正性証明用(サーバが書込時に算出・任意=既存レコードとの後方互換)。"
+    },
     "delta": {
       "type": "object",
       "description": "前回解析との差分（任意）。",

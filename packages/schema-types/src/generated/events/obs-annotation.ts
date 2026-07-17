@@ -23,6 +23,10 @@ export interface ObsAnnotation {
     [k: string]: unknown;
   };
   /**
+   * V3-SEC-42: SHA-256(canonicalJson(ast))。改ざん検出用(サーバが書込時に算出・任意=既存レコードとの後方互換)。
+   */
+  ast_sha256?: string;
+  /**
    * 計測値の出所（frozen provenance value_origin 9 値・任意。手入力タグ付与時に付す）。
    */
   value_origin?:
