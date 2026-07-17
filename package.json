@@ -8,9 +8,9 @@
     "tests"
   ],
   "scripts": {
-    "lint": "node scripts/lint-filenames.mjs && node scripts/check-generated.mjs && node scripts/check-agents-sync.mjs && node scripts/validate-schemas.mjs && node scripts/check-frontmatter.mjs && node scripts/codegen-schemas.mjs --check && node scripts/codegen-validators.mjs --check && node scripts/codegen-theme-css.mjs --check && node scripts/check-ui-tokens.mjs && node scripts/check-contrast.mjs && node scripts/check-ui-copy.mjs && node scripts/check-screendef-structure.mjs && node scripts/check-i18n-keys.mjs && node scripts/check-secrets.mjs && node scripts/check-cron.mjs && node scripts/check-navigation.mjs && node scripts/check-public-docs.mjs && node scripts/lint-deps.mjs && node scripts/lint-components.mjs && node scripts/check-rtm.mjs",
+    "lint": "node scripts/lint-filenames.mjs && node scripts/check-generated.mjs && node scripts/check-agents-sync.mjs && node scripts/validate-schemas.mjs && node scripts/check-frontmatter.mjs && node scripts/codegen-schemas.mjs --check && node scripts/codegen-validators.mjs --check && node scripts/codegen-theme-css.mjs --check && node scripts/check-ui-tokens.mjs && node scripts/check-contrast.mjs && node scripts/check-ui-copy.mjs && node scripts/check-screendef-structure.mjs && node scripts/check-i18n-keys.mjs && node scripts/check-secrets.mjs && node scripts/check-cron.mjs && node scripts/check-navigation.mjs && node scripts/check-public-docs.mjs && node scripts/lint-deps.mjs && node scripts/lint-components.mjs && node scripts/check-rtm.mjs && node scripts/gen-file-board-registry.mjs --check",
     "test": "npm test -w apps/api -w tests -w apps/web",
-    "codegen": "node scripts/codegen-schemas.mjs && node scripts/codegen-validators.mjs && node scripts/gen-screendef-snapshots.mjs && node scripts/gen-rtm-views.mjs",
-    "codegen:check": "node scripts/codegen-schemas.mjs --check && node scripts/codegen-validators.mjs --check && node scripts/gen-screendef-snapshots.mjs --check && node scripts/gen-rtm-views.mjs --check"
+    "codegen": "node scripts/codegen-schemas.mjs && node scripts/codegen-validators.mjs && node scripts/gen-screendef-snapshots.mjs && node scripts/gen-rtm-views.mjs && node scripts/gen-file-board-registry.mjs",
+    "codegen:check": "node scripts/codegen-schemas.mjs --check && node scripts/codegen-validators.mjs --check && node scripts/gen-screendef-snapshots.mjs --check && node scripts/gen-rtm-views.mjs --check && node scripts/gen-file-board-registry.mjs --check"
   }
 }
