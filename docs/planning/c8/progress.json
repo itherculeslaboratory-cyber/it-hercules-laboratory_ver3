@@ -801,10 +801,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "in_progress",
-    "commits": ["e61f50b", "d49dcd9", "3d89c63"],
-    "tc": ["tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: placement_id → device_binding → telemetry を join(未配置は空配列)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)\")"],
-    "note": "個体詳細(A2)実装は2系統ある: (1) projectIndividual()+GET /individuals/{id}(6文化ブロックの薄い一覧・e61f50b)は0076681で「死にUI」判定されscreen-defs/individual-detail.jsonの実画面から外され現在UI到達不可(コードのみ残存)。(2) 実際にUIが呼ぶのはprojectIndividualProfile()+GET /individuals/{id}/profile(V3-AIP-101スライスA・screen-defs/individual-detail.json準拠)— wave-2(d49dcd9+批評家修正3d89c63)でここへenvironment(現placementのopen device_binding→telemetry join、unbind後の旧placementへのデータ漏れも根治)を追加。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: 所有者履歴(owner history)はどちらの投影にも未実装(フィールド自体が無い)、market_offers/improvementsはprojectIndividual側で空配列固定のまま(mkt-listingにindividual_ids欄なし・MKT-29待ち)、bio-card/cross統計は実画面(individual-detail.json)の設計判断でスコープA対象外(意図的除外・死にUIを出さない方針)、環境(時系列)は現placementのみで全履歴は後続波。"
+    "status": "done",
+    "commits": ["e61f50b", "d49dcd9", "3d89c63", "57cc941"],
+    "tc": ["tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: placement_id → device_binding → telemetry を join(未配置は空配列)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)\")", "tests/individual.test.ts: owner_history/environment_history 2件"],
+    "note": "個体詳細(A2)実装は2系統ある: (1) projectIndividual()+GET /individuals/{id}(6文化ブロックの薄い一覧・e61f50b)は0076681で「死にUI」判定されscreen-defs/individual-detail.jsonの実画面から外され現在UI到達不可(コードのみ残存)。(2) 実際にUIが呼ぶのはprojectIndividualProfile()+GET /individuals/{id}/profile(V3-AIP-101スライスA・screen-defs/individual-detail.json準拠)— wave-2(d49dcd9+批評家修正3d89c63)でここへenvironment(現placementのopen device_binding→telemetry join、unbind後の旧placementへのデータ漏れも根治)を追加。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: bio-card/cross統計は実画面(individual-detail.json)の設計判断でスコープA対象外(意図的除外・死にUIを出さない方針)。(統合obs-finalレーン追記) projectIndividualにowner_history(市場transfer取引のindividual_idsを個体横断集計・projectOwnershipLineageの個体版)とenvironment_history(現在地だけでなくoccupancy全件=引っ越し全履歴)を追加し、旧note記載の所有者履歴欠落/現placementのみの2ギャップを解消。market_offers/improvementsはMKT-29(listing側にindividual_idsリンクが無い・別クラスタ残課題)のブロックのまま据え置き(gapが明記した通り対象外)。"
   },
   {
     "id": "V3-IND-15",
@@ -829,10 +829,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "in_progress",
+    "commits": ["57cc941"],
+    "tc": ["tests/individual.test.ts: POST /individuals/{id}/schedule/generate — STAGE_UNKNOWN 400/決定論間隔生成/NO_INTERVAL_FOR_STAGE 400 3件"],
+    "note": "(統合obs-finalレーン) バックエンドの決定論的中核は実装: POST /individuals/{id}/schedule/generate(直近molt life-eventから現在ステージ自動検出→SCHEDULE_STAGE_INTERVAL_DAYSの決定論間隔で次回観測予定を1件生成・LLM/常駐AI不使用=不変条項①・未定義ステージは400で推測しない)。ただし要件文の「給餌タスク」区分(観測リマインダーと別種のタスク種別)・過去観測からの多様なタスク自動生成・individual-detail画面への「スケジュール自動生成ボタン」のUI配線は未着手(audit自身が『reconciliationでなく新規設計が必要』と評価した規模のため、バックエンド核のみを安全に閉じた)。"
   },
   {
     "id": "V3-IND-21",
@@ -842,10 +842,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "in_progress",
-    "commits": ["e61f50b", "8b05247"],
-    "tc": ["tests/individual.test.ts describe(\"IND-21 真正性(projectAuthenticity)\")", "tests/individual.test.ts describe(\"V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/lineage-check)\")"],
-    "note": "projectAuthenticity(画像sha256連鎖/成長単調性/血統矛盾検知→0..1連続性スコア)は既存実装済み(e61f50b)。wave-2(8b05247)でGET /individuals/lineage-check(checkLineageClaim)を追加: 申告sire_id/dam_id/speciesをTruthと照合しSIRE_UNKNOWN/DAM_UNKNOWN/SPECIES_MISMATCH_*/SIRE_DAM_SAME_INDIVIDUALを検出(read-only)。対象はV3-IND-35予約listingのreservation_sire_id/dam_idのみ(一般listing↔個体紐付けはmkt-listingにindividual_ids欄がなくMKT-29待ちのため対象外・推測実装なし)。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: (1) 一般出品(予約以外)への適用はMKT-29裁定待ち、(2)「疑義を購入者が確認・記録できる文化」に対応する永続化route(このチェック結果を根拠に指摘/記録を残す専用導線)は未実装(read-onlyチェックのみ・既存market-flag-routes.tsの汎用指摘機能との手動併用は可能だが自動連携なし)。"
+    "status": "done",
+    "commits": ["e61f50b", "8b05247", "57cc941"],
+    "tc": ["tests/individual.test.ts describe(\"IND-21 真正性(projectAuthenticity)\")", "tests/individual.test.ts describe(\"V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/lineage-check)\")", "tests/individual.test.ts: lineage-doubt 記録/reason必須400/withdrawn 2件"],
+    "note": "projectAuthenticity(画像sha256連鎖/成長単調性/血統矛盾検知→0..1連続性スコア)は既存実装済み(e61f50b)。wave-2(8b05247)でGET /individuals/lineage-check(checkLineageClaim)を追加: 申告sire_id/dam_id/speciesをTruthと照合しSIRE_UNKNOWN/DAM_UNKNOWN/SPECIES_MISMATCH_*/SIRE_DAM_SAME_INDIVIDUALを検出(read-only)。対象はV3-IND-35予約listingのreservation_sire_id/dam_idのみ(一般listing↔個体紐付けはmkt-listingにindividual_ids欄がなくMKT-29待ちのため対象外・推測実装なし)。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: 一般出品(予約以外)への適用はMKT-29裁定待ち。(統合obs-finalレーン追記) POST/GET /individuals/{id}/lineage-doubt を新設(新イベントihl.ind.lineage_doubt.v1・append-only・withdrawn時も元raisedレコードは残す)。GET .../authenticityのdoubts[]に集約表示し、旧note記載の『疑義を購入者が確認・記録できる文化』の永続化route欠落を解消。汎用market-flag(GOV-35)route誤用の代替として専用route化。"
   },
   {
     "id": "V3-IND-34",
@@ -855,10 +855,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "done",
-    "commits": ["3f941f2"],
+    "status": "in_progress",
+    "commits": ["3f941f2", "57cc941"],
     "tc": ["tests/individual.test.ts describe(\"V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)\")"],
-    "note": "lineage_id(任意タグ)をindividual master/clutchスキーマへ追加(schemas/events/ind-master.schema.json, ind-clutch.schema.json+codegen再生成)。GET /individuals・GET /clutchesに?lineage_id=完全一致フィルタ、clutch promoteで子個体へ継承。系統合流(異なるlineage_id同士の交配→子に新タグ)は既存parents APIがlineageを跨ぐ制約を課さないため追加実装なしで可能(ユーザーがタグを選ぶ運用・テストで確認)。成長ステージの自動更新(直近molt life-eventのto_stageから都度導出・常駐フィールドなし)・所有者(actor_id)・観測履歴・画像(subject_ref経由)は既存基盤で充足。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: タグ(feature_tags)自体はP4層として空配列のまま(IND-15と同じ系統的後波依存・IND-34固有の欠落ではない)。"
+    "note": "lineage_id(任意タグ)をindividual master/clutchスキーマへ追加(schemas/events/ind-master.schema.json, ind-clutch.schema.json+codegen再生成)。GET /individuals・GET /clutchesに?lineage_id=完全一致フィルタ、clutch promoteで子個体へ継承。系統合流(異なるlineage_id同士の交配→子に新タグ)は既存parents APIがlineageを跨ぐ制約を課さないため追加実装なしで可能(ユーザーがタグを選ぶ運用・テストで確認)。成長ステージの自動更新(直近molt life-eventのto_stageから都度導出・常駐フィールドなし)・所有者(actor_id)・観測履歴・画像(subject_ref経由)は既存基盤で充足。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。(統合obs-finalレーン追記・partial据え置き) feature_tagsのP4空スタブは解消(既存の二層タグ集約 POST/GET /tags・target_type=\"individual\" へ実配線・aggregateTagsのai_tags∪user_tagsを表示)。ただし系統合流(複数系統A/C並行育成→合流)の専用merge-flow UI/ロジックは未着手のまま——既存parents API(POST /individuals/{id}/parents)+手動タグ付けで代替可能な状態が続く。ダッシュボード的な「系統一覧+合流ウィザード」画面は新規design/UI着手が必要(次波候補)。"
   },
   {
     "id": "V3-KRM-03",
@@ -1488,10 +1488,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["f728a06"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx describe(\"Renderer — WorkflowContext client-only prefill (V3-OBS-19)\") 3件", "tests/observation.test.ts: V3-OBS-19 life_stage_candidate round-trip 1件"],
+    "note": "WorkflowContext(観測コンテキスト)をclient-only localStorage縮退で実装: renderer.tsxにFieldNode workflow_key(読取)+FormNode carry_to_workflow(書込)の汎用プリミティブを追加、obs-entry.jsonのspecies_candidate/新設life_stage_candidate(obs-capture.schema.json additive追加+CAPTURE_FIELDS登録)へ配線。taxonomy確定は常にユーザーのまま(既定値プリフィルのみ・自動送信なし)。(統合obs-finalレーン)"
   },
   {
     "id": "V3-OBS-20",
@@ -1540,10 +1540,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["f728a06"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx: image-grid search_path/score_pct/citation-buttonテスト1件", "tests/observation-ext.test.ts: aggregate=max individual_idアサーション追加", "screen-def gates(validate-schemas/check-screendef-structure/check-i18n-keys/check-navigation)全緑"],
+    "note": "obs-detail.jsonを高忠実度化: hero大型写真(hide_if_empty_path新設ガード)+構造化撮影条件カード+由来タグ付き測定表(measurement-table readonlyモード再利用)+類似個体サイドバー(V3-OBS-11のPOST /observation/search rerank APIをimage-gridのsearch_path/search_body/item_action_*縮退で再利用・スコア%表示用score_pct合成+この個体を引用ボタン)。observation-routes.tsのaggregate応答にindividual_id(bare id)をadditive追加。(統合obs-finalレーン)"
   },
   {
     "id": "V3-OBS-25",
@@ -1566,10 +1566,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["f728a06"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx 既存measurement-tableスイート回帰確認済み・screendef-snapshots.test.tsx 50件回帰確認済み"],
+    "note": "既存measurement-table(V3-OBS-18)ノードをobs-entry.jsonの計測入力に実配線(項目/数値/単位/計測方法の4要素・自由項目追加可)。旧2固定フィールド(measure-item/measure-value)を置換。IoT機器未登録時はdevice画面への静的リンクを併設。(統合obs-finalレーン)"
   },
   {
     "id": "V3-OBS-27",
@@ -1579,10 +1579,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["f728a06"],
+    "tc": ["apps/web/src/renderer/renderer.test.tsx: describe(\"Renderer — measurement-table StructuredRow group/lock (V3-OBS-27)\") 3件"],
+    "note": "measurement-tableノードにgroup(measurement/photo_condition/environment_snapshot・混在時のみ小見出し表示)+value_origin由来の読取専用ロック(◎/○/△バッジ・自動取得値は編集不可)+bind_items(スコープ配列を読むviewモード)を追加。専用ノードを増やさず既存コンポーネントの機能拡張でStructuredRow要件を満たす。(統合obs-finalレーン)"
   },
   {
     "id": "V3-OBS-32",
