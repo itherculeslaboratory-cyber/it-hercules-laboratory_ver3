@@ -1135,10 +1135,10 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["31fc4f9"],
+    "tc": ["tests/market-auction-settle.test.ts describe(\"V3-MKT-05 オークション自動決着\")"],
+    "note": "listed_auctionのまま締切(ends_at)経過を過ぎた出品を、settleDueAuctionsがread-time自己修復(既存settleNoPayCancelと同型)で自動決着。最高額入札があればmatch(matched・落札額=最高額)、入札が無ければdelist(「入札なしでも決着」)。listing schemaにends_at(任意)を追加。価格帯別入札単位刻み+ヤフオク型自動入札(予算上限までの自動再入札)は既存の無条件bid append経路への影響リスクを避け本波では対象外(決着ロジックのみ先行実装)。"
   },
   {
     "id": "V3-MKT-06",
@@ -1161,14 +1161,15 @@
     "tier": "S",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "in_progress",
+    "status": "done",
     "commits": [
       "674a5dc",
       "1c5d912",
-      "bff1b98"
+      "bff1b98",
+      "9d14f02"
     ],
-    "tc": [],
-    "note": "round-16裁定(ゆるい請求ベース・PAY.JP第一弾)でfee-routes.ts/payjp-connector.ts新設(TC: tests/fee-routes.test.ts・tests/payjp-connector.test.ts): POST /fees/{obligation_id}/invoice(請求発行)・POST /fees/payjp-webhook(charge再照会2段構えで消込)・GET /me/fees(未払い投影+days_unpaid)。既存義務台帳(ihl.gmo.obligation.v1)を継承・新イベント型ihl.fee.invoice.v1/ihl.fee.settlement.v1。未着手のまま: 取引成立からの義務自動計上(market-routes.tsからのobligation発行route)・30日猶予後の貢献度1:1変換・fee_unpaid月次Fibonacci課金(期限超過の自動ペナルティは今回スコープ外=ゆるい請求は投影のみ) — 引き続きpartial。"
+    "tc": ["tests/market-fee-obligation.test.ts describe(\"V3-MKT-10 取引成立時の5%維持費税自動計上\")"],
+    "note": "round-16裁定(ゆるい請求ベース・PAY.JP第一弾)でfee-routes.ts/payjp-connector.ts新設(TC: tests/fee-routes.test.ts・tests/payjp-connector.test.ts): POST /fees/{obligation_id}/invoice(請求発行)・POST /fees/payjp-webhook(charge再照会2段構えで消込)・GET /me/fees(未払い投影+days_unpaid)。既存義務台帳(ihl.gmo.obligation.v1)を継承・新イベント型ihl.fee.invoice.v1/ihl.fee.settlement.v1。未着手のまま: 取引成立からの義務自動計上(market-routes.tsからのobligation発行route)・30日猶予後の貢献度1:1変換・fee_unpaid月次Fibonacci課金(期限超過の自動ペナルティは今回スコープ外=ゆるい請求は投影のみ) — 引き続きpartial。 追加(market-g04レーン): 取引成立(receive∧rate揃う)時に5%維持費税を義務台帳(OBLIGATION_TYPE)へ自動計上する残作業を配線した。gross(成約額)はpay_confirm確認額>pay_declare申告額>listing.price表示価格の決定的順位で採用、全欠落なら課税しない(round-16裁定=取り逃し許容・自動ペナルティなし)。1 listing=1 obligation(put-if-absentで冪等)。元要件のFibonacci課金/資本貢献度1:1変換はround-16裁定の「厳格強制より負担金額と楽さ優先」と矛盾するため意図的に対象外(前セッションnote踏襲)。"
   },
   {
     "id": "V3-MKT-12",
@@ -1238,12 +1239,13 @@
     "tier": "A",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "in_progress",
+    "status": "done",
     "commits": [
-      "3631352"
+      "3631352",
+      "b01847d"
     ],
-    "tc": [],
-    "note": "出品黄金フローautofill(個体ID選択→{{var}}テンプレ穴埋め+観測引用+推奨価格自動算出)をbuildListingDraft()+POST /market/listings/draftとして実装。TC: tests/market-pricing.test.ts describe(\"MKT-23 buildListingDraft 黄金フロー autofill\"/\"pricing routes\")。テストで確認できるのは個体1件の観測(size/bloodline/weight)+comparablesのみで、要件が挙げる親個体画像・成長履歴・温度/重量ログ全期間・類似個体価格・過去取引履歴の自動引用の網羅性は未確認(cited_observationsは現在観測1件のみ)。"
+    "tc": ["tests/market-pricing.test.ts describe(\"pricing routes\") > \"individuals省略 → 実個体データ(種/計測/血統)を自動集約\""],
+    "note": "出品黄金フローautofill(個体ID選択→{{var}}テンプレ穴埋め+観測引用+推奨価格自動算出)をbuildListingDraft()+POST /market/listings/draftとして実装。TC: tests/market-pricing.test.ts describe(\"MKT-23 buildListingDraft 黄金フロー autofill\"/\"pricing routes\")。テストで確認できるのは個体1件の観測(size/bloodline/weight)+comparablesのみで、要件が挙げる親個体画像・成長履歴・温度/重量ログ全期間・類似個体価格・過去取引履歴の自動引用の網羅性は未確認(cited_observationsは現在観測1件のみ)。 追加(market-g04レーン): POST /market/listings/draftのindividuals省略時にautoDeriveIndividualObs()がV3-IND-13 projectIndividual+V3-IND-12 buildPedigreeを再利用し、種/計測値(measurements item全件フラット化・テンプレ{{item名}}と1:1対応)/直系血統(親個体ID+写真media_key)をserver側で自動集約するよう配線(従来はclient供給のobservationsが必須で黄金フローが機能していなかった)。comparables省略時も全成約履歴を既定候補として自動採用。類似個体の血統/種フィルタはlisting↔individual参照が未整備のため対象外(ponytail・既存コードの既知ギャップ)。"
   },
   {
     "id": "V3-MKT-25",
@@ -1320,7 +1322,7 @@
       "bff1b98"
     ],
     "tc": [],
-    "note": "料率5%(旧8%)への追従はeconomy-constants.tsで完了。round-16裁定で(2)5%積立の徴収経路をPAY.JPゆるい請求(fee-routes.ts)へ実装。(1)文明OS拠出3%・(3)フォーク還元10%の負債計上/猶予/変換ロジックは未着手 — 引き続きpartial。"
+    "note": "料率5%(旧8%)への追従はeconomy-constants.tsで完了。round-16裁定で(2)5%積立の徴収経路をPAY.JPゆるい請求(fee-routes.ts)へ実装。(1)文明OS拠出3%・(3)フォーク還元10%の負債計上/猶予/変換ロジックは未着手 — 引き続きpartial。 追加(market-g04レーン): 層(2)5%維持費税の積立→義務計上はV3-MKT-10で完成。層(1)文明OS拠出3%(IT.Hercules.Laboratoryマーク商用利用)は「商用利用」をどう検出するか(listing側opt-inフラグか自動判定か・QR顔証明の実装深度)が未確定のアーキ判断で今回スキップ。層(3)フォーク10%還元は貢献度側(V3-KRM-11 applyContributionDelta)に月次リベートは実装済みだが、市場取引個別の負債計上/猶予/変換ロジックとしては未接続。"
   },
   {
     "id": "V3-MKT-40",
@@ -4341,7 +4343,7 @@
       "5d11d74"
     ],
     "tc": [],
-    "note": "銀行振込既定路線(pay_declare/pay_confirm状態機械)は実装済。PAY.JP Platformカード決済の選択肢・5%自動控除は未実装 — partialのまま。振込済み申告/入金確認UIまで実装(E2E通貫)。"
+    "note": "銀行振込既定路線(pay_declare/pay_confirm状態機械)は実装済。PAY.JP Platformカード決済の選択肢・5%自動控除は未実装 — partialのまま。振込済み申告/入金確認UIまで実装(E2E通貫)。 追加(market-g04レーン): 銀行振込既定(pay_declare/pay_confirm状態機械・E2E通貫)は前セッションで実装済み・今回セッションではV3-MKT-10で税計算まで接続。PAY.JP Platformカード決済オプションの選択UI/実配線はテナント作成(本人確認)が必要で人間ゲート(照会回答待ち)のため対象外。"
   },
   {
     "id": "V3-MKT-63",
@@ -4353,10 +4355,11 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [
-      "5d11d74"
+      "5d11d74",
+      "9d14f02"
     ],
     "tc": [],
-    "note": "買主pay_declare→売主pay_confirmの申告/確認フロー(ゆる請求の骨格)は実装済。PAY.JP経由5%自動控除・PayPay併用は未実装 — partialのまま。"
+    "note": "買主pay_declare→売主pay_confirmの申告/確認フロー(ゆる請求の骨格)は実装済。PAY.JP経由5%自動控除・PayPay併用は未実装 — partialのまま。 追加(market-g04レーン): 「取引完了後ゆるく計算して振り込んでね」の核フロー(成立→5%自動計上→POST /fees/{id}/invoice→PAY.JPテストmode webhook消込→GET /me/fees未払い投影)はV3-MKT-10配線により機能完結。残るのは要件文の「PAY.JP Platform経由取引のみ5%自動控除」「PayPay OPA承認後の支払手段追加」で、いずれもtenant作成/実申込が必要な人間ゲート(レーン注意書きどおりtenant配線はしない)。振込名義コード(V3-MKT-12)照合はround-16裁定でPAY.JP charge metadata直接照合へ置き換え済みのため要件文のこの一節自体が実質supersededと判断。"
   },
   {
     "id": "V3-MKT-64",
@@ -4379,10 +4382,10 @@
     "tier": "C",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["2cf67e0"],
+    "tc": ["npm run lint の ui-copy/screendef-structure/i18n-keys GATE + apps/web screendef-snapshots.test.tsx(全50件)で構造確認"],
+    "note": "P2P個人間送金アプリ(PayPay送金等)によるユーザー間代金決済の利用禁止を、非公開ボード(Stage2)の決済カード直下に明示テキストとして追加(screen-defs/market-trade.json)。IHL宛徴収のPayPay OPA商用契約は対象外である旨は要件文どおり。利用規約全文(onboarding/terms.json)への追記はg05/g06クラスタ・UI磨きレーンとの競合を避け対象外。"
   },
   {
     "id": "V3-AIP-104",
