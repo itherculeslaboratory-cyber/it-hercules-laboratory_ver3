@@ -38,6 +38,7 @@ export const CONTRIBUTION_PER_PLATINUM = 100; // V3-KRM-11/12 1PT鋳造基礎
 export const CONTRIBUTION_TITLE_THRESHOLD = 10000; // V3-KRM-11 称号(GUI可変)
 export const KARMA_BAN_THRESHOLD = -100; // V3-KRM-04 永久BAN
 export const SOCIAL_EVAL_LAYER_MAX = 3; // V3-KRM-20 layer0-3のみ
+export const LAYER4_FIXED_ASSET = 4; // V3-MKT-35 固定資産/ブランド/世界観(投票・フォーク・お気に入り不可)
 export const LOW_RATING_BAD_THRESHOLD = 5; // V3-MKT-27
 export const LOW_RATING_KARMA_MAX = 0; // V3-MKT-27
 export const LOW_RATING_STAR_MAX = 2; // V3-MKT-27

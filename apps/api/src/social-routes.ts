@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { resolvePolicyInt } from "./policy";
-import { SOCIAL_EVAL_LAYER_MAX } from "./economy-constants";
+import { SOCIAL_EVAL_LAYER_MAX, LAYER4_FIXED_ASSET } from "./economy-constants";
 import { projectLedger } from "./ledger-routes";
 
 const EVAL_TYPE = "ihl.social.eval.v1";
@@ -159,11 +159,40 @@ socialRoutes.get("/components/:node_id/eval", async (c) => {
   return c.json(await projectSocialEval(store(c), nodeId, author));
 });
 
-// POST /social/platinum-votes — プラチナ投票を append。voter_id はセッション principal
-// 強制・1票=1coin・任意枚数。coins は正整数。消費可能残高（付与累計 − 投票済累計）を
-// 投影し、不足なら 409 で拒否（V3-KRM-25・1票=1プラチナコイン）。
-// ponytail: 残高投影→append は shop/indulgence と同じ TOCTOU 許容（原子ロック無し・append-only
-// put-if-absent 前提）。同時多重投票の過消費が問題化したら per-actor ロックへ。
+// ── 共有コア(KRM-25 プラチナ投票 append・V3-MKT-35 /economy/vote と /social/
+// platinum-votes の両ルートが同じ残高チェック+append を再利用・コピペ二重化しない)。
+// voter_id はセッション principal 強制・1票=1coin・任意枚数。coins は正整数。消費可能
+// 残高（付与累計 − 投票済累計）を投影し、不足なら 409 で拒否。
+// ponytail: 残高投影→append は shop/indulgence と同じ TOCTOU 許容（原子ロック無し・
+// append-only put-if-absent 前提）。同時多重投票の過消費が問題化したら per-actor ロックへ。
+async function castPlatinumVote(
+  s: TruthStore,
+  voterId: string,
+  targetId: string,
+  coins: number,
+  extra: { target_layer?: number; reason?: string } = {},
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const { platinum_coins } = await projectLedger(s, voterId);
+  const spent = await projectCoinsSpent(s, voterId);
+  const balance = platinum_coins - spent;
+  if (balance < coins) {
+    return { status: 409, body: { error: "INSUFFICIENT_COINS", balance, requested: coins } };
+  }
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    vote_id: id, target_id: targetId, voter_id: voterId, coins,
+    created_at: new Date().toISOString(), schema_version: SCHEMA_VERSION,
+  };
+  if (extra.target_layer !== undefined) data.target_layer = extra.target_layer;
+  if (extra.reason !== undefined) data.reason = extra.reason;
+  const res = await s.putEvent(voteEnvelope(id, voterId, data));
+  if (res.status === "invalid") return { status: 400, body: { error: "INVALID_VOTE", details: res.errors } };
+  if (res.status === "conflict") return { status: 409, body: { error: "DUPLICATE_VOTE", key: res.key } };
+  return { status: 201, body: { vote_id: id } };
+}
+
+// POST /social/platinum-votes — 既存の汎用プラチナ投票（V3-KRM-25・レイヤー制約なし・
+// 後方互換のため据置）。
 socialRoutes.post("/social/platinum-votes", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const targetId = body && typeof body.target_id === "string" ? body.target_id : "";
@@ -171,22 +200,40 @@ socialRoutes.post("/social/platinum-votes", async (c) => {
   if (!targetId || !Number.isInteger(coins) || coins < 1) {
     return c.json({ error: "INVALID_VOTE", details: ["target_id required, coins>=1 integer"] }, 400);
   }
-  const voterId = c.get("actorId");
-  const s = store(c);
-  const { platinum_coins } = await projectLedger(s, voterId);
-  const spent = await projectCoinsSpent(s, voterId);
-  const balance = platinum_coins - spent;
-  if (balance < coins) {
-    return c.json({ error: "INSUFFICIENT_COINS", balance, requested: coins }, 409);
+  const r = await castPlatinumVote(store(c), c.get("actorId"), targetId, coins);
+  return c.json(r.body, r.status as 201 | 400 | 409);
+});
+
+// POST /economy/vote — V3-MKT-35。プラチナコインを投票通貨とし、対象(target_id)・
+// レイヤー(target_layer)・枚数(coins)・理由(reason)を指定してレイヤー0(コード)〜3
+// (機能/OS構成)の改善対象へ投票する。レイヤー4(固定資産/ブランド/世界観)は投票・
+// フォーク・お気に入り不可のため 403（KRM-20 の /social/eval と同じ layer0-3 境界を
+// プラチナ投票側にも適用）。理由(reason)は必須（枚数だけでなく理由も指定させる
+// 要件文どおり）。経済変更(プラチナ投票の集計結果)はProjectRules(コンポーネント固有
+// ルール)を最優先しPlatinumCoinRulesは経済パラメータのみに作用し構造(スキーマ/
+// アーキテクチャ)には干渉しない、という優先順位はProjectRules自体が別波の未実装
+// 機能のためコード上の分岐は無い(ドキュメント上の設計制約として記録するのみ)。
+socialRoutes.post("/economy/vote", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const targetId = body && typeof body.target_id === "string" ? body.target_id : "";
+  const coins = body && typeof body.coins === "number" ? body.coins : 1;
+  const targetLayer = body?.target_layer;
+  const reason = body && typeof body.reason === "string" ? body.reason.trim() : "";
+  if (!targetId || !Number.isInteger(coins) || coins < 1) {
+    return c.json({ error: "INVALID_VOTE", details: ["target_id required, coins>=1 integer"] }, 400);
   }
-  const id = ulid();
-  const res = await s.putEvent(voteEnvelope(id, voterId, {
-    vote_id: id, target_id: targetId, voter_id: voterId, coins,
-    created_at: new Date().toISOString(), schema_version: SCHEMA_VERSION,
-  }));
-  if (res.status === "invalid") return c.json({ error: "INVALID_VOTE", details: res.errors }, 400);
-  if (res.status === "conflict") return c.json({ error: "DUPLICATE_VOTE", key: res.key }, 409);
-  return c.json({ vote_id: id }, 201);
+  if (!reason) {
+    return c.json({ error: "INVALID_VOTE", details: ["reason required"] }, 400);
+  }
+  if (!Number.isInteger(targetLayer) || (targetLayer as number) < 0 || (targetLayer as number) > LAYER4_FIXED_ASSET) {
+    return c.json({ error: "INVALID_VOTE", details: [`target_layer must be 0-${LAYER4_FIXED_ASSET}`] }, 400);
+  }
+  if (targetLayer === LAYER4_FIXED_ASSET) {
+    // レイヤー4(固定資産/ブランド/世界観) — 投票・フォーク・お気に入り不可(V3-MKT-35)。
+    return c.json({ error: "LAYER4_NOT_VOTABLE", details: ["layer 4 (fixed assets/brand/worldview) cannot be voted, forked, or favorited"] }, 403);
+  }
+  const r = await castPlatinumVote(store(c), c.get("actorId"), targetId, coins, { target_layer: targetLayer as number, reason });
+  return c.json(r.body, r.status as 201 | 400 | 409);
 });
 
 // GET /proposals/{id}/votes — 公開合計値 + 投票者内訳。閾値到達で公式昇格候補化
