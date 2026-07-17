@@ -2,12 +2,18 @@
 // magic-link 発行時に同一 OTP(iat 由来)を6桁コードとしても返し、POST /api/v1/auth/
 // verify-code(email+code→session)で検証する。ワンタイム性・試行回数制限・期限は
 // magic-link と同一(MAGIC_TTL 窓)。BAN ゲートも /verify と同契約。
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore, deriveActorId } from "@ihl/truth";
 import { grantKarmaCountIncrease } from "../apps/api/src/ledger-routes";
 import { issueNumericCode } from "../apps/api/src/session";
 import { FakeR2Bucket, SESSION_SECRET, makeEnv } from "./helpers";
+
+// ponytail: known flake under parallel test-runner load (many suites' real
+// Web Crypto HMAC/hash calls contend for CPU) — vitest's 5s default timeout
+// occasionally trips here. Raise per-file, not globally; upgrade to a shared
+// slow-crypto-suite config if more files start flaking the same way.
+vi.setConfig({ testTimeout: 15000 });
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
