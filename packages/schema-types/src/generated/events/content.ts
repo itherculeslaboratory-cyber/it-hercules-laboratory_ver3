@@ -87,7 +87,7 @@ export interface Content {
    * 条件P（機械可読・paper）。キー=条件名、値=閾値仕様。
    */
   conditions?: {
-    [k: string]: Condition;
+    [k: string]: PaperConditionPEntryPPR02;
   };
   /**
    * 主張（paper）。未検証は status=hypothesis 固定、充足で evidenced（PPR-30）。
@@ -113,7 +113,10 @@ export interface Section {
    */
   text: string;
 }
-export interface Condition {
+/**
+ * 論文の条件P(P⇒Qの前提)を構成する単一観点キーの閾値仕様(単一正本)。マッチアルゴリズム(paper-match.ts matchConditions/autoFillDescriptor)とcontent.schema.json(paper conditions)の両方がこのファイルだけを参照する(複製しない)。観点キー自体はcontent.schema.json側でオブジェクトのプロパティ名として持つ(このスキーマは1エントリの値側の形)。
+ */
+export interface PaperConditionPEntryPPR02 {
   min?: number;
   max?: number;
   eq?: number;

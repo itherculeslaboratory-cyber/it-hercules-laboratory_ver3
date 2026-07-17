@@ -59,6 +59,36 @@ export function matchConditions(conditions: ConditionsP, observation: Observatio
   return { satisfied, missing, violated, required_count, match_rate };
 }
 
+export interface ConditionVectorEntry {
+  key: string;
+  value: number | null; // 観測値(観測に無い/数値化できなければ null)
+  unit: string | null;
+  missing: boolean; // 観測にこのキー自体が無い
+}
+
+/**
+ * conditionVector — PPR-02: 条件節を「観点キー+値+単位+欠損フラグ」の観点ベクトルへ
+ * 正規化する（単一正本は schemas/events/condition.schema.json）。matchConditions が
+ * required キーだけの合否判定なのに対し、こちらは conditions の全キー(required/
+ * optional 問わず)を key 昇順で列挙し、embedding/gap analysis(PPR-06/07)がそのまま
+ * 素材にできる一様な観点ベクトルを返す(観測に無いキーは missing:true・value:null)。
+ */
+export function conditionVector(conditions: ConditionsP, observation: ObservationJson): ConditionVectorEntry[] {
+  return Object.keys(conditions ?? {})
+    .sort()
+    .map((key) => {
+      const cond = conditions[key];
+      const has = key in (observation ?? {});
+      const raw = has ? Number((observation as Record<string, unknown>)[key]) : NaN;
+      return {
+        key,
+        value: has && Number.isFinite(raw) ? raw : null,
+        unit: cond?.unit ?? null,
+        missing: !has,
+      };
+    });
+}
+
 export interface MissingKeyHint {
   key: string;
   // 推奨レンジ(min/max/eq/unit から機械合成)。条件が数値レンジを持たない場合は省略。

@@ -79,7 +79,10 @@ const SCHEMAS = [
   ["themePack", "events/theme-pack.schema.json"],
   ["uiTemplate", "events/ui-template.schema.json"],
   ["uiVote", "events/ui-vote.schema.json"],
-  // C5 K5 research/wiki events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
+  // C5 K5 research/wiki events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES).
+  // condition is registered first so content's relative $ref (condition.schema.json/
+  // PPR-02 単一正本) resolves against its $id in the same ajv instance.
+  ["condition", "events/condition.schema.json"],
   ["content", "events/content.schema.json"],
   ["citation", "events/citation.schema.json"],
   ["project", "events/project.schema.json"],

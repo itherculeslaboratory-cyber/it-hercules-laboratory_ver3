@@ -13,6 +13,7 @@ export * from "./events/aut-account";
 export * from "./events/category";
 export * from "./events/citation";
 export * from "./events/cite-ref";
+export * from "./events/condition";
 export * from "./events/content";
 export * from "./events/culture-template";
 export * from "./events/cusb-ingest";

@@ -56,6 +56,22 @@ describe("PPR-13 canonical mapping append-only + DOMAIN_API_MAP validation", () 
     };
     expect(res.mappings.map((m) => m.target_db)).toEqual(["GBIF", "NCBI"]); // target_db 昇順決定論
   });
+
+  it("PPR-13 世界接続層 第3要素(使用時発行の内部Index): 未使用QIDはnull、初回mappingが内部Indexになる", async () => {
+    const bucket = new FakeR2Bucket();
+    const unused = (await (await get(bucket, "/api/v1/research/canonical/mapping/Q999")).json()) as {
+      internal_index: unknown;
+    };
+    expect(unused.internal_index).toBeNull(); // 使われていないQIDは事前採番しない(不変条項①)
+
+    await post(bucket, "/api/v1/research/canonical/mapping", { wikidata_qid: "Q8", target_db: "GBIF", target_id: "a", domain: "biology" });
+    await post(bucket, "/api/v1/research/canonical/mapping", { wikidata_qid: "Q8", target_db: "NCBI", target_id: "b", domain: "biology" });
+    const res = (await (await get(bucket, "/api/v1/research/canonical/mapping/Q8")).json()) as {
+      internal_index: { mapping_id: string; issued_at: string };
+    };
+    expect(res.internal_index.mapping_id).toBe("Q8__GBIF"); // 最初に使われたmappingが内部Index
+    expect(typeof res.internal_index.issued_at).toBe("string");
+  });
 });
 
 describe("PPR-13 category parent-child tree (domain required)", () => {
