@@ -1,7 +1,10 @@
 // V3-AUT-09(オープン登録アカウント行)+ V3-AUT-10/V3-I18-02(必須2ゲート onboarding)
 // TC。独立サインアップ画面は無く、マジックリンク初回検証で account 行を put-if-absent
 // (2回目以降はidempotent no-op)。onboardingComplete は handle+locale の両方が
-//明示確定して初めて true(片方だけでは false のまま)。
+// 明示確定して初めて true(片方だけでは false のまま)。handle ゲートの実体は
+// setup-profile.json 画面と同じ PATCH /me/preferences{handle}(pref-set)——
+// POST /me/handle は別機能(V3-AUT-08・一意@handleクレーム)で onboarding ゲートには
+// 使わない(account.ts projectOnboardingStatus 参照)。
 import { describe, expect, it } from "vitest";
 import { TruthStore } from "@ihl/truth";
 import app from "../apps/api/src/index";
@@ -66,7 +69,7 @@ describe("V3-AUT-10/V3-I18-02 onboardingComplete — required 2 gates (handle + 
     expect(onboardingBefore).toEqual({ onboarding_complete: false, handle: null, locale_set: false });
 
     // handle only -> still false (locale gate missing)
-    await app.request("/api/v1/me/handle", { method: "POST", headers: h, body: JSON.stringify({ handle: "onboarduser" }) }, env);
+    await app.request("/api/v1/me/preferences", { method: "PATCH", headers: h, body: JSON.stringify({ handle: "onboarduser" }) }, env);
     const handleOnly = (await (await app.request("/api/v1/me/onboarding", { headers: h }, env)).json()) as {
       onboarding_complete: boolean;
     };

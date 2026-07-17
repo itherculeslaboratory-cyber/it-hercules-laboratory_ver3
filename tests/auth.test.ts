@@ -188,6 +188,14 @@ describe("C2 auth — session state + middleware paths", () => {
     expect(((await write.json()) as { actor_id: string }).actor_id).toBe(devActor);
   });
 
+  it("V3-AUT-05/V3-AUT-10: dev-login's seeded handle+locale satisfies the SAME onboarding SSOT middleware reads (regression guard: account.ts must read the pref-set handle dev-login actually writes, not the separate /me/handle claim)", async () => {
+    const env = makeEnv(); // same bucket for both requests — onboarding state must persist
+    const res = await app.request("/api/v1/auth/dev-login", { method: "POST", headers: JSON_HEADERS }, env);
+    const cookie = (res.headers.get("set-cookie") ?? "").split(";")[0];
+    const sess = await app.request("/api/v1/auth/session", { headers: { Cookie: cookie } }, env);
+    expect((await sess.json()) as { onboarding_complete: boolean }).toMatchObject({ onboarding_complete: true });
+  });
+
   it("V3-AUT-05: /dev-login is 404 in prod (DEV_TOKEN unset) — no prod surface", async () => {
     const res = await app.request(
       "/api/v1/auth/dev-login",

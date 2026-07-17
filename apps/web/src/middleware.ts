@@ -2,16 +2,19 @@
 // the login entry points themselves (`/s/login`, `/s/login-sent`); an
 // unauthenticated visit anywhere else gets a 307 redirect to `/s/login`.
 //
-// V3-AUT-10 — onboarding gate. A LOGGED-IN visitor whose profile is not yet
-// set up (GET /me/preferences has no handle — the only field with no sane
-// default, see settings-routes.ts PREF_FIELDS) is confined to the dedicated
-// `/s/setup-profile` flow until they confirm a handle + locale, the same way
-// the login gate above confines an anonymous visitor to `/s/login`.
+// V3-AUT-10 — onboarding gate. A LOGGED-IN visitor who hasn't cleared the
+// required handle+locale gates is confined to the dedicated `/s/setup-profile`
+// flow, the same way the login gate above confines an anonymous visitor to
+// `/s/login`. SSOT for "is onboarding complete": apps/api/src/account.ts
+// projectOnboardingStatus() (handle + explicit-locale gates), surfaced via the
+// single GET /auth/session response's `onboarding_complete` field — this
+// middleware does NOT re-derive it from /me/preferences (that would be a
+// second, divergent definition of "done").
 //
 // Both gates reuse the existing PUBLIC/PROTECTED API endpoints (never
 // re-implement JWT/HMAC verification in the Edge runtime): the incoming
 // Cookie header is forwarded as-is and the API's own answer is trusted. This
-// keeps the session + preferences contracts in exactly one place (apps/api).
+// keeps the session + onboarding contracts in exactly one place (apps/api).
 import { NextResponse, type NextRequest } from "next/server";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787";
@@ -42,10 +45,17 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   const cookie = req.headers.get("cookie") ?? "";
   let authenticated = false;
+  // fail-open default: only an explicit `false` from the API flips this —
+  // a malformed/missing field never traps an otherwise-authenticated visitor
+  // in a redirect loop (the auth check above is the fail-closed gate).
+  let onboardingComplete = true;
   try {
     const res = await fetch(`${API_BASE}/api/v1/auth/session`, { headers: { cookie } });
-    const body = (await res.json().catch(() => null)) as { authenticated?: unknown } | null;
+    const body = (await res.json().catch(() => null)) as
+      | { authenticated?: unknown; onboarding_complete?: unknown }
+      | null;
     authenticated = body?.authenticated === true;
+    onboardingComplete = body?.onboarding_complete !== false;
   } catch {
     // ponytail: API unreachable — fail closed (treat as unauthenticated) so a
     // backend outage never silently exposes a protected screen.
@@ -60,20 +70,6 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
   if (skipsOnboardingCheck(pathname)) return NextResponse.next();
 
-  let onboardingComplete = true; // fail-open on this 2nd check only: an
-  // unreachable API already got fail-closed above (redirected to /s/login);
-  // if the session call above succeeded but THIS call errors, the safer
-  // default is to let a real logged-in person through rather than trap them
-  // in a redirect loop over a transient preferences-fetch hiccup.
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/me/preferences`, { headers: { cookie } });
-    if (res.ok) {
-      const prefs = (await res.json().catch(() => null)) as { handle?: unknown } | null;
-      onboardingComplete = typeof prefs?.handle === "string" && prefs.handle.length > 0;
-    }
-  } catch {
-    onboardingComplete = true;
-  }
   if (!onboardingComplete) {
     const url = req.nextUrl.clone();
     url.pathname = "/s/setup-profile";
