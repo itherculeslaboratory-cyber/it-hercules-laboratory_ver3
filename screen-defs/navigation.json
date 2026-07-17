@@ -39,6 +39,7 @@
     "market-trade",
     "template-market",
     "settings",
+    "ai-sessions",
     "theme-gallery",
     "ui-templates",
     "paper-detail",
@@ -276,6 +277,11 @@
       "from": "theme-gallery",
       "to": "settings",
       "label": "設定でテーマ適用へ"
+    },
+    {
+      "from": "settings",
+      "to": "ai-sessions",
+      "label": "AIセッション閲覧へ(サブ脳)"
     },
     {
       "from": "home",

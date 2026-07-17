@@ -11,6 +11,7 @@ import { allScreenDefIds, loadScreenDef } from "@/lib/screendefs";
 // added or removed without regenerating) fails codegen:check and the count guard.
 const SCREEN_IDS = [
   "ai-profile-settings",
+  "ai-sessions",
   "bio-card",
   "costs",
   "country-select",

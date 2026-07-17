@@ -6,7 +6,7 @@
 // PROTECTED（deny-by-default: PUBLIC_ROUTES に載せない）。投影は都度再計算（常駐 DB 禁止）で
 // proposal-routes.ts の reduceProposal パターンを流用。envelope/store/dataOf は inline。
 import { Hono } from "hono";
-import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity, sha256Hex } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN, PAPER_SECTIONS } from "./research-constants";
 import { computeSectionsCompleteness, type SectionState } from "./paper-match";
@@ -424,6 +424,82 @@ researchContentRoutes.post("/research/external-import", async (c) => {
     body_markdown: adapted.body_markdown,
     system_tags: adapted.system_tags,
     citations: adapted.citations,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  const res = await store(c).putEventAt(contentKey(contentId), envelope(CONTENT_TYPE, CONTENT_SCHEMA, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_CONTENT", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_CONTENT", key: res.key }, 409);
+  return c.json({ content_id: contentId }, 201);
+});
+
+// ── AI セッション閲覧(WIK-28)────────────────────────────────────────────────
+// adaptAiSession — Cursor 等のローカル AI セッションログ(JSONL/markdown)を content
+// (content_type=chat_log)へ正規化する決定論アダプタ(adaptGithubSource と同型・reuse-first)。
+// jsonl は 1 行 1 ターン({role, content} 形の JSON。パース不能行/role・content 欠落行は
+// スキップ=部分破損ログでも完走する)を "**role**: content" の markdown 行へ整形する。
+// markdown 入力はそのまま本文とみなす。LaTeX 禁止(\ と $ を除去・PPR-03 と同じ規約 —
+// セッションログはコード/正規表現/Windows パスに \ や $ を含みやすく、この正規化で失われる
+// 情報がある=既知のロス。将来 body_markdown の LATEX_FORBIDDEN 制約が緩めば再検討)。
+export interface AiSessionMeta {
+  source: string; // 例: "cursor"
+  session_ref: string; // 例: ワークスペースパス+セッションID(決定論 content_id 導出の入力)
+}
+
+function jsonlToMarkdown(raw: string): string {
+  const lines: string[] = [];
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const turn = JSON.parse(trimmed) as Record<string, unknown>;
+      if (typeof turn.role === "string" && typeof turn.content === "string") {
+        lines.push(`**${turn.role}**: ${turn.content}`);
+      }
+      // role/content 欠落 or 別形の行は黙ってスキップ(部分破損でも完走・誇張ゼロ)。
+    } catch {
+      // パース不能行はスキップ(壊れた1行のために全体を失敗させない)。
+    }
+  }
+  return lines.join("\n\n");
+}
+
+export function adaptAiSession(meta: AiSessionMeta, format: "jsonl" | "markdown", raw: string): AdaptedExternalContent {
+  const strip = (v: string) => v.replace(/[\\$]/g, ""); // LaTeX 禁止(PPR-03と同じ規約)
+  const body = format === "jsonl" ? jsonlToMarkdown(raw) : raw;
+  return {
+    title: strip(`AIセッション: ${meta.source}/${meta.session_ref}`),
+    body_markdown: strip(body),
+    system_tags: ["ai_session", meta.source],
+    citations: [],
+  };
+}
+
+// POST /research/ai-sessions — ローカル抽出済みのAIセッションログ(JSONL/markdown)を
+// content(chat_log)として取り込む(WIK-28)。常駐DB接続は行わない(呼び手=人間/ローカル
+// 手順書に従って抽出したテキストを渡すのみ・不変条項①)。content_id は
+// sha256(source:session_ref) から決定論導出 — 同一セッションの再投入は自然に
+// 409(DUPLICATE_CONTENT)となり重複が生まれない(INSERT ONLY・不変条項③)。
+researchContentRoutes.post("/research/ai-sessions", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const { source, session_ref, raw } = body;
+  const format = body.format === "jsonl" ? "jsonl" : body.format === "markdown" ? "markdown" : undefined;
+  if (typeof source !== "string" || !source || typeof session_ref !== "string" || !session_ref || !format || typeof raw !== "string" || !raw) {
+    return c.json(
+      { error: "INVALID_AI_SESSION", details: ["source, session_ref (string), format ('jsonl'|'markdown'), raw (string) required"] },
+      400,
+    );
+  }
+  const adapted = adaptAiSession({ source, session_ref }, format, raw);
+  const actorId = c.get("actorId");
+  const contentId = (await sha256Hex(`${source}:${session_ref}`)).slice(0, 26).toUpperCase();
+  const data: Record<string, unknown> = {
+    content_id: contentId,
+    actor_id: actorId,
+    content_type: "chat_log",
+    title: adapted.title,
+    body_markdown: adapted.body_markdown,
+    system_tags: adapted.system_tags,
     created_at: new Date().toISOString(),
     schema_version: SCHEMA_VERSION,
   };

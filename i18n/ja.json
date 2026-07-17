@@ -115,6 +115,7 @@
   "settings.hub-ai.label": "AI接続設定(BYOK・個体観測用LLM等)",
   "settings.hub-device.label": "機器連携(SwitchBot等IoT)",
   "settings.hub-theme.label": "テーマのfork一覧",
+  "settings.hub-ai-sessions.label": "AIセッション閲覧(サブ脳)",
   "settings.backup-title.text": "自分のデータを持ち出す(バックアップ)",
   "settings.backup-facts.label": "個体データをCSVで書き出す",
   "settings.backup-photos.label": "写真参照一覧をCSVで書き出す",

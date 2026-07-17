@@ -1,0 +1,51 @@
+{
+  "screen_id": "ai-sessions",
+  "route": "/wiki/ai-sessions",
+  "title": "AIセッション閲覧",
+  "layout": "standard",
+  "notes": "V3-WIK-28 最小構成。既存の共通CMS基盤(ihl.research.content.v1・content_type=chat_log)を再利用(新規イベント型なし)。一覧はGET /api/v1/research/chat-index(時系列投影)。行の「開く」リンクで同じ画面に?id=を付けて遷移し、下の本文カードがGET /api/v1/research/content/{id}を都度取得して表示する(一覧+本文の2機能を1画面に集約)。取り込み(POST /api/v1/research/ai-sessions)自体はローカル抽出手順書(docs/architecture/ai-session-ingest-howto.md)に従って人間/ローカルスクリプトが行う想定でUIフォームは持たない(常駐DB接続をしない設計のため・不変条項①)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "AIセッション閲覧", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "Cursor等のAIセッションログの一覧です。取り込み手順は docs/knowledge/ai-session-ingest-howto.md を参照してください。", "muted": true } },
+
+            { "id": "list-title", "type": "heading", "props": { "text": "セッション一覧", "level": 2 } },
+            {
+              "id": "sessions",
+              "type": "table",
+              "props": {
+                "source_path": "/api/v1/research/chat-index",
+                "bind_items": "data.sessions.items",
+                "empty_text": "取り込まれたセッションはまだありません。",
+                "columns": [
+                  { "key": "title", "label": "タイトル" },
+                  { "key": "created_at", "cell": "date", "label": "取り込み日時" },
+                  { "key": "content_id", "cell": "link", "href_tpl": "/s/ai-sessions?id={{content_id}}", "link_label": "開く" }
+                ]
+              }
+            },
+
+            { "id": "detail-title", "type": "heading", "props": { "text": "本文", "level": 2 } },
+            {
+              "id": "detail",
+              "type": "card",
+              "props": { "source_path": "/api/v1/research/content/{{params.id}}" },
+              "children": [
+                { "id": "detail-title-text", "type": "text", "props": { "text": "{{data.detail.title}}" } },
+                { "id": "detail-body", "type": "text", "props": { "text": "{{data.detail.body_markdown}}" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}
