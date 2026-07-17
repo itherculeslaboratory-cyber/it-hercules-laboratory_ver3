@@ -19,7 +19,9 @@ the prefix. See research §5 risk 2.
 
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 from functools import lru_cache
 from typing import Protocol
 
@@ -134,14 +136,49 @@ class RuriOnnxBackend:
         return _l2_normalize(arr[0])
 
 
-@lru_cache(maxsize=2)
+class DummyBackend:
+    """V3-WIK-03 既定バックエンド: 「テキスト埋め込み検索は決定論梯子の第2段(補助)
+    とし、既定はdummy決定論バックエンド、実運用バックエンドは後日人間が選定する」。
+
+    学習済みモデル・重い依存(torch/onnxruntime/transformers)を一切使わない
+    bag-of-hashed-tokens 埋め込み: トークンを sha256 でハッシュし固定次元へ
+    加算・符号は下位ビットで決める。同じ入力は常に同じベクトルを返す(決定論・
+    プロセス間/実行間で再現可能)。意味的な検索精度は主張しない(誇張ゼロ) —
+    主役は index.md キーワードスコアリング(第1段)であり、これはモデル未選定
+    期間でも Protocol を満たして動かすためのプレースホルダ。
+    """
+
+    def __init__(self, *, dim: int = RURI_DIM) -> None:
+        self._dim = dim
+
+    @property
+    def model_name(self) -> str:
+        return "dummy-hash-bow#v1"
+
+    @property
+    def embedding_dim(self) -> int:
+        return self._dim
+
+    def embed_text(self, text: str) -> np.ndarray:
+        vec = np.zeros(self._dim, dtype=np.float32)
+        for tok in re.findall(r"\w+", text.lower()):
+            digest = int(hashlib.sha256(tok.encode("utf-8")).hexdigest(), 16)
+            vec[digest % self._dim] += 1.0 if (digest // self._dim) % 2 == 0 else -1.0
+        return _l2_normalize(vec)
+
+
+@lru_cache(maxsize=3)
 def resolve_backend(name: str | None = None) -> EmbeddingBackend:
-    """Select backend. Default OFF: raises unless explicitly asked (不変条項①)."""
+    """Select backend. Default = DummyBackend（V3-WIK-03: 既定は dummy 決定論
+    バックエンド、実運用バックエンドは後日人間が選定する）。実モデル(ruri-*)は
+    明示指定でのみロードする(不変条項① embedding 既定 OFF の精神を維持 — 重い
+    依存を勝手にダウンロード/ロードしない)。
+    """
     name = (name or os.environ.get("IHL_WIKI_BACKEND", "")).strip().lower()
     if name in ("ruri-onnx", "onnx"):
         return RuriOnnxBackend()
     if name in ("ruri-pytorch", "pytorch", "torch"):
         return RuriPytorchBackend()
-    raise ValueError(
-        f"wiki embedding backend is OFF by default; set one of ruri-onnx|ruri-pytorch (got {name!r})"
-    )
+    if name in ("", "dummy", "off"):
+        return DummyBackend()
+    raise ValueError(f"unknown wiki embedding backend: {name!r} (expected dummy|ruri-onnx|ruri-pytorch)")
