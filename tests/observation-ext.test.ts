@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { ulid, TruthStore } from "@ihl/truth";
 import { compositeScore, aggregateIndividual } from "../apps/api/src/observation-routes";
-import { RERANK_WEIGHTS, RERANK_MISSING } from "../apps/api/src/observation-constants";
+import { RERANK_WEIGHTS, RERANK_MISSING, SCALE_PAPER, calibratedRealLengthMm } from "../apps/api/src/observation-constants";
 import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
 
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -180,6 +180,26 @@ describe("OBS-10 search: self-exclusion + prototype averaging + rerank + aggrega
     expect(x.score).toBeCloseTo(1, 5); // max(1, 0.6) = 1
     expect(y.score).toBeCloseTo(0, 5);
     expect(x.score).toBeGreaterThan(y.score);
+  });
+});
+
+describe("OBS-45/53 calibratedRealLengthMm (pixel->mm via known marker size)", () => {
+  it("realLength = pixelLength × mmPerPixel using the SCALE_PAPER marker as the known reference", () => {
+    // marker measured as 100px in the photo, known real size = SCALE_PAPER.marker_mm(10mm)
+    // -> 1px = 0.1mm. A 50px-long subject -> 5mm.
+    expect(calibratedRealLengthMm(50, 100)).toBeCloseTo(5, 9);
+    expect(calibratedRealLengthMm(200, 100)).toBeCloseTo(20, 9);
+  });
+
+  it("a custom markerRealMm (e.g. the QR block instead of the corner marker) is honored", () => {
+    expect(calibratedRealLengthMm(30, 150, SCALE_PAPER.qr_mm)).toBeCloseTo(3, 9);
+  });
+
+  it("degenerate/failed marker detection (<=0 or non-finite) -> null, never a bogus scale", () => {
+    expect(calibratedRealLengthMm(50, 0)).toBeNull();
+    expect(calibratedRealLengthMm(50, -10)).toBeNull();
+    expect(calibratedRealLengthMm(50, NaN)).toBeNull();
+    expect(calibratedRealLengthMm(NaN, 100)).toBeNull();
   });
 });
 
