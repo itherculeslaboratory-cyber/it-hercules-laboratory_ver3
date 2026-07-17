@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore, deriveActorId } from "@ihl/truth";
-import { projectPreferenceWeights, rankByPreference } from "../apps/api/src/match-routes";
+import { projectPreferenceWeights, rankByPreference, projectMatchConvergence } from "../apps/api/src/match-routes";
 import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
 
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -62,5 +62,53 @@ describe("IND-07 rankByPreference pure fn", () => {
     ]);
     expect(out.map((o) => o.item_id)).toEqual(["hi", "mid", "lo"]);
     expect(out.every((o) => !("features" in o))).toBe(true);
+  });
+});
+
+describe("IND-08 projectMatchConvergence (evaluation log — Precision@K/AUC/separation)", () => {
+  it("no events → n_events=0, auc/precision/separation null, converged=false", async () => {
+    const { env, bucket } = ctx();
+    void env;
+    const report = await projectMatchConvergence(new TruthStore(bucket), DEV_ACTOR);
+    expect(report.n_events).toBe(0);
+    expect(report.auc).toBeNull();
+    expect(report.precision_at_k.value).toBeNull();
+    expect(report.score_separation).toBeNull();
+    expect(report.vector_change).toBe(0);
+    expect(report.learning_stability_index).toBeNull();
+    expect(report.converged).toBe(false);
+  });
+
+  it("perfectly separable labels → AUC=1, precision@k=1, converged=true", async () => {
+    const { env, bucket } = ctx();
+    // 2 positives with a large first feature, 2 negatives with a large second
+    // feature; the learned weight favors feature 0 for positives.
+    await pref(env, { item_id: "p1", kind: "swipe", y: 1, features: [1, 0] });
+    await pref(env, { item_id: "p2", kind: "swipe", y: 1, features: [1, 0] });
+    await pref(env, { item_id: "n1", kind: "pass", y: -1, features: [0, 1] });
+    await pref(env, { item_id: "n2", kind: "pass", y: -1, features: [0, 1] });
+    const report = await projectMatchConvergence(new TruthStore(bucket), DEV_ACTOR, 2);
+    expect(report.n_events).toBe(4);
+    expect(report.auc).toBe(1);
+    expect(report.precision_at_k).toEqual({ k: 2, value: 1 });
+    expect(report.score_separation).toBeGreaterThan(0);
+    expect(report.converged).toBe(true);
+  });
+
+  it("vector_change reflects the LAST event's step magnitude (alpha*|y|*||x||)", async () => {
+    const { env, bucket } = ctx();
+    await pref(env, { item_id: "a", kind: "swipe", y: 1, features: [3, 4] }); // ||x||=5
+    const report = await projectMatchConvergence(new TruthStore(bucket), DEV_ACTOR);
+    expect(report.vector_change).toBeCloseTo(0.1 * 1 * 5, 10);
+    expect(report.learning_stability_index).toBeNull(); // <2 events → undefined variance
+  });
+
+  it("GET /match/convergence route reachable + respects ?k=", async () => {
+    const { env } = ctx();
+    await pref(env, { item_id: "x", kind: "swipe", y: 1, features: [1] });
+    const res = await app.request("/api/v1/match/convergence?k=1", { headers: AUTH }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { precision_at_k: { k: number } };
+    expect(body.precision_at_k.k).toBe(1);
   });
 });

@@ -18,6 +18,9 @@ export const RERANK_MISSING = { color: 0.5, size: 0.5, lineage: 0.0 } as const;
 /** preference online-learning rate α in w ← w + α·y·x (IND-07). */
 export const LEARNING_RATE = 0.1;
 
+/** AUC threshold for a "valid"/converged preference model (IND-08). */
+export const MATCH_AUC_VALID_THRESHOLD = 0.7;
+
 /** allowed QR batch sizes (IND-15). */
 export const QR_BATCH_SIZES = [100, 500, 1000] as const;
 
