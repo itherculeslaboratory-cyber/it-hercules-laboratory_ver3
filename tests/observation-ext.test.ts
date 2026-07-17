@@ -5,7 +5,7 @@
 // no bulk raw) / OBS-25-62 (commit gate) / OBS-48 (reanalyze append).
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
-import { ulid } from "@ihl/truth";
+import { ulid, TruthStore } from "@ihl/truth";
 import { compositeScore, aggregateIndividual } from "../apps/api/src/observation-routes";
 import { RERANK_WEIGHTS, RERANK_MISSING } from "../apps/api/src/observation-constants";
 import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
@@ -341,5 +341,31 @@ describe("OBS-48 reanalyze appends (never overwrites) + manifest", () => {
     await post("/api/v1/observation/captures", { capture_id: capId, domain: "biology" }, env);
     const res = await post(`/api/v1/observation/${capId}/reanalyze`, { results: { len: 5 }, correction_semver: "v1" }, env);
     expect(res.status).toBe(400);
+  });
+});
+
+describe("OBS-07 remeasure タグの自動付与 (reanalyze毎に必ず付与)", () => {
+  it("a successful reanalyze auto-appends a machine-layer 'remeasure' tag_event for the capture", async () => {
+    const { bucket, env } = ctx();
+    const capId = ulid();
+    await post("/api/v1/observation/captures", { capture_id: capId, domain: "biology" }, env);
+    const res = await post(`/api/v1/observation/${capId}/reanalyze`, { results: { len: 5 }, correction_semver: "1.0.0" }, env);
+    expect(res.status).toBe(202);
+
+    const events = (await new TruthStore(bucket).listEvents(`truth/ihl.obs.tag_event.v1/capture-${capId}-`)).map(
+      (e) => e.data as { tag: string; tag_type: string; target_type: string; target_id: string; source_type: string },
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ tag: "remeasure", tag_type: "quality", target_type: "capture", target_id: capId, source_type: "machine_suggested" });
+  });
+
+  it("two reanalyses of the same capture each append their own remeasure tag (append-only, no collapse)", async () => {
+    const { bucket, env } = ctx();
+    const capId = ulid();
+    await post("/api/v1/observation/captures", { capture_id: capId, domain: "biology" }, env);
+    await post(`/api/v1/observation/${capId}/reanalyze`, { results: { len: 5 }, correction_semver: "1.0.0" }, env);
+    await post(`/api/v1/observation/${capId}/reanalyze`, { results: { len: 6 }, correction_semver: "1.1.0" }, env);
+    const events = await new TruthStore(bucket).listEvents(`truth/ihl.obs.tag_event.v1/capture-${capId}-`);
+    expect(events).toHaveLength(2);
   });
 });

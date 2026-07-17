@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
 import { generateThumbnail } from "./thumbnail";
+import { tagRemeasured } from "./tag-routes";
 import {
   RERANK_WEIGHTS,
   RERANK_MISSING,
@@ -768,6 +769,7 @@ obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
   );
   if (res.status === "invalid") return c.json({ error: "INVALID_ANALYSIS", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_ANALYSIS", key: res.key }, 409);
+  await tagRemeasured(store(c), actorId, captureId); // OBS-07: 再測定タグ自動付与
   return c.json({ analysis_id: analysisId }, 202);
 });
 
