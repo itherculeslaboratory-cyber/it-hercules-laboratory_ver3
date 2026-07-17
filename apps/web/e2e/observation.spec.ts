@@ -51,8 +51,10 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   //    subject individual (V3-IND-01) + attach a script-generated PNG.
   await page.getByLabel("観測ドメイン").selectOption("biology");
   await page.getByLabel("種の候補").fill("Dynastes hercules");
-  await page.getByLabel("計測項目").fill("体長");
-  await page.getByLabel("計測値").fill("65");
+  // V3-OBS-26 measurement-table (renderer.tsx MeasurementTableNode): item/value
+  // are row-numbered ("項目 1"/"数値 1"), item is a <select> not free text.
+  await page.getByLabel("項目 1").selectOption("体長");
+  await page.getByLabel("数値 1").fill("65");
   await page.getByLabel("対象個体 ID").fill(subjectRef);
   await page.getByLabel("父個体 ID").fill("individual/sire-001");
   await page.getByLabel("母個体 ID").fill("individual/dam-001");
@@ -72,7 +74,12 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
 
   // obs-detail renders the REAL projection (design-c2 §3.2), not a mock.
   await expect(page.getByText("ドメイン: biology")).toBeVisible();
-  await expect(page.getByText(/体長: 65/)).toBeVisible();
+  // V3-OBS-24 高忠実度 detail: measurement-table readonly mode renders
+  // item/value/unit/origin as separate spans in a "計測" group, not a
+  // "体長: 65" string.
+  const measureGroup1 = page.getByRole("group", { name: "計測" });
+  await expect(measureGroup1).toContainText("体長");
+  await expect(measureGroup1).toContainText("65");
   const photo = page.locator("img.civ-image").first();
   await expect(photo).toBeVisible();
   // the photo blob actually round-tripped (naturalWidth>0 ⇒ image decoded).
@@ -117,8 +124,8 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await expect(page.getByRole("heading", { name: "観測を記録する" })).toBeVisible();
   await page.waitForLoadState("networkidle"); // hydration gate (see step 2)
   await page.getByLabel("観測ドメイン").selectOption("biology");
-  await page.getByLabel("計測項目").fill("体重");
-  await page.getByLabel("計測値").fill("32");
+  await page.getByLabel("項目 1").selectOption("体重");
+  await page.getByLabel("数値 1").fill("32");
   await page.getByLabel("対象個体 ID").fill(subjectRef);
   await page.getByRole("button", { name: "確認へ進む" }).click();
   await expect(page.getByRole("heading", { name: "観測を確認する" })).toBeVisible();
@@ -126,7 +133,9 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await page.getByRole("button", { name: "登録する" }).click();
   await expect(page.getByRole("heading", { name: "観測の詳細" })).toBeVisible();
   const capture2Id = new URL(page.url()).searchParams.get("id")!;
-  await expect(page.getByText(/体重: 32/)).toBeVisible();
+  const measureGroup2 = page.getByRole("group", { name: "計測" });
+  await expect(measureGroup2).toContainText("体重");
+  await expect(measureGroup2).toContainText("32");
   await shot(page, "09-obs-detail-2");
 
   // 9. the individual history now shows BOTH captures — persisted in real Truth.

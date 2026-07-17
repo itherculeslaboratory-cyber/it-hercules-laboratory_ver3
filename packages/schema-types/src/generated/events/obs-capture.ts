@@ -65,6 +65,10 @@ export interface ObsCapture {
      */
     unit?: string;
     /**
+     * 計測方法（例: 手入力/IoT取得・任意・UI表示用でvalue_originの代替ではない）。
+     */
+    method?: string;
+    /**
      * 項目ハッシュ（任意）。
      */
     item_hash?: string;

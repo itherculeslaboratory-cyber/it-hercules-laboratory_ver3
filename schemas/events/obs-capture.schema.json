@@ -62,6 +62,7 @@
             "description": "計測値。"
           },
           "unit": { "type": "string", "description": "単位（任意）。" },
+          "method": { "type": "string", "description": "計測方法（例: 手入力/IoT取得・任意・UI表示用でvalue_originの代替ではない）。" },
           "item_hash": { "type": "string", "description": "項目ハッシュ（任意）。" },
           "value_origin": {
             "type": "string",
