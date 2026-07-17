@@ -1,8 +1,8 @@
-// CL-04: 82-route matrix ↔ deny-by-default 照合 (design-c2 §2).
+// CL-04: 83-route matrix ↔ deny-by-default 照合 (design-c2 §2).
 // Reads tests/fixtures/route-matrix.csv and drives the real app:
 //   (i) protected rows: unauthenticated → 401 AUTH_REQUIRED (gate before routing)
 //   (ii) public rows: reachable without a session (never gate-blocked)
-//   (iii) row count === 82. Lineage: base 68 (route-matrix.csv header comment) →
+//   (iii) row count === 83. Lineage: base 68 (route-matrix.csv header comment) →
 //        L-PAY レーン(round-16)が -6 GMO retired + 3 PAY.JP 新規 route(infra-route-
 //        069..071: POST /fees/{obligation_id}/invoice・POST /fees/payjp-webhook
 //        [PUBLIC]・GET /me/fees) = 65 → 認証レーン(round-16 OQ-ROUTE-01/V3-AUT-46)
@@ -29,7 +29,9 @@
 //        解析)が +1 route(infra-route-088: POST /observation/parse-freetext・
 //        protected)= 80 → 観測個体レーン(C8 obs-individuals)が +1 route(infra-route-
 //        089: GET /match/convergence・protected)= 81 → 同レーンが +1 route(infra-route-
-//        090: GET /individuals/lineage-check・protected)= 82。
+//        090: GET /individuals/lineage-check・protected)= 82 → g07-UIUXレーン
+//        (V3-UIX-26)が +1 route(infra-route-091: GET /home/civ-minimap・
+//        protected・080は先に基盤コストレーンが採ったため採番をずらして解決)= 83。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -60,9 +62,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (82 rows)", () => {
-  it("has exactly 82 route rows", () => {
-    expect(rows.length).toBe(82);
+describe("CL-04 route matrix (83 rows)", () => {
+  it("has exactly 83 route rows", () => {
+    expect(rows.length).toBe(83);
   });
 
   it("access column is only public|protected", () => {

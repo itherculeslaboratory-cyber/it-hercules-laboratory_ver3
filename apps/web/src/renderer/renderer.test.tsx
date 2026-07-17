@@ -1026,3 +1026,113 @@ describe("ThemePack — prefers-reduced-motion + token discipline", () => {
     expect(scanColors("class='civ-button' style='color:var(--civ-text)'")).toHaveLength(0);
   });
 });
+
+describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)", () => {
+  function shellDef(): ScreenDef {
+    return {
+      screen_id: "t",
+      route: "/t",
+      title: "t",
+      nodes: [
+        {
+          id: "shell",
+          type: "app-shell",
+          children: [
+            {
+              id: "page",
+              type: "page",
+              children: [{ id: "h", type: "heading", props: { text: "本文", level: 1 } }],
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("logged out: shows brand + login/register links only (no dead links to protected footer/nav)", async () => {
+    const onAction = vi.fn(async () => ({ authenticated: false }));
+    render(<Renderer def={shellDef()} onAction={onAction} />);
+    expect(screen.getByRole("link", { name: "IHL" })).toHaveAttribute("href", "/");
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "ログイン" })).toHaveAttribute("href", "/s/login");
+      expect(screen.getByRole("link", { name: "新規登録" })).toHaveAttribute("href", "/s/login");
+    });
+    expect(screen.queryByRole("button", { name: "ログアウト" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "設定" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "投票・Fork" })).not.toBeInTheDocument();
+    // the screen's own content still renders under the chrome
+    expect(screen.getByRole("heading", { name: "本文" })).toBeInTheDocument();
+  });
+
+  it("logged in: shows primary nav + logout button + footer, and logout calls the API", async () => {
+    const onAction = vi.fn(async (action: Action) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
+      return undefined;
+    });
+    render(<Renderer def={shellDef()} onAction={onAction} />);
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/s/settings");
+    });
+    expect(screen.getByRole("link", { name: "マイページ" })).toHaveAttribute("href", "/s/profile");
+    expect(screen.getByRole("link", { name: "投票・Fork" })).toHaveAttribute("href", "/s/template-market");
+    expect(screen.getByRole("link", { name: "Builder" })).toHaveAttribute("href", "/s/ui-templates");
+    expect(screen.queryByRole("link", { name: "ログイン" })).not.toBeInTheDocument();
+
+    // logout redirects via a raw browser navigation afterwards (jsdom logs a
+    // benign "Not implemented: navigation" for that — not a test failure);
+    // what this test asserts is that the API call itself fires.
+    const logoutBtn = screen.getByRole("button", { name: "ログアウト" });
+    await act(async () => {
+      fireEvent.click(logoutBtn);
+    });
+    expect(onAction).toHaveBeenCalledWith({ kind: "api", method: "POST", path: "/api/v1/auth/logout" });
+  });
+});
+
+describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)", () => {
+  it("shows overdue/near/karma kpis, a deep-linked today_lines row, and non-PII civ stats", async () => {
+    const onAction = vi.fn(async (action: Action) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
+      if (action.path === "/api/v1/me/ledger") return { karma_value: 12, platinum_coins: 3 };
+      if (action.path === "/api/v1/home/summary") {
+        return {
+          overdue: [{ individual_id: "ind-1" }],
+          near: [{ individual_id: "ind-2" }, { individual_id: "ind-3" }],
+          observing: [],
+          today_lines: [
+            { individual_id: "ind-1", days: -5, overdue: true, deep_link: "/s/obs-register-entry?id=ind-1" },
+          ],
+        };
+      }
+      if (action.path === "/api/v1/home/civ-minimap") {
+        return { observation_pace_7d: 42, trust_avg: 61.5, template_growth: 7 };
+      }
+      return undefined;
+    });
+    render(<Renderer def={loadScreenDef("home")} onAction={onAction} />);
+
+    await waitFor(() => expect(screen.getByText("12")).toBeInTheDocument()); // カルマ kpi
+    expect(screen.getByText("1")).toBeInTheDocument(); // 超過 kpi (overdue.length)
+    expect(screen.getByText("2")).toBeInTheDocument(); // 近接 kpi (near.length)
+    expect(screen.getByText("42")).toBeInTheDocument(); // observation_pace_7d
+    expect(screen.getByText("61.5")).toBeInTheDocument(); // trust_avg
+    expect(screen.getByText("7")).toBeInTheDocument(); // template_growth
+    expect(screen.getByText("ind-1")).toBeInTheDocument(); // today_lines row
+    expect(screen.getByRole("link", { name: "記録する" })).toHaveAttribute(
+      "href",
+      "/s/obs-register-entry?id=ind-1",
+    );
+  });
+
+  it("falls back to a neutral number instead of a blank tile when a fetch never resolves", async () => {
+    const onAction = vi.fn(async (action: Action) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: false };
+      return undefined; // every other GET (ledger/summary/civ-minimap) "fails" silently
+    });
+    render(<Renderer def={loadScreenDef("home")} onAction={onAction} />);
+    await waitFor(() => expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument());
+    // fallback values from home.json (V3-UIX-26 「API失敗時は近似フォールバック表示」)
+    expect(screen.getByText("50")).toBeInTheDocument(); // civ-trust fallback
+    expect(screen.getAllByText("0").length).toBeGreaterThan(0); // karma/overdue/near/pace/growth fallbacks
+  });
+});

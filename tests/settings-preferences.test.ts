@@ -55,6 +55,7 @@ describe("UIX-16 選好 append + LWW 投影", () => {
       template_id: "default",
       reduced_motion_override: "system",
       country: "",
+      handle: "", // V3-AUT-10: 未設定 = onboardingComplete===false のゲート条件
     });
   });
 
@@ -98,5 +99,16 @@ describe("UIX-16/I18-08 負の validation(write-time 検証配線・批評家修
     expect((await patchPrefs(env, h, { country: "JP" })).status).toBe(200);
     const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
     expect(p.country).toBe("JP");
+  });
+
+  // V3-AUT-10: handle が空文字/40字超なら 400(setup-profile のオンボーディング確定契約)。
+  it("handle は1〜40文字のみ許可(空文字/超過は400)", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("dave");
+    expect((await patchPrefs(env, h, { handle: "" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { handle: "x".repeat(41) })).status).toBe(400);
+    expect((await patchPrefs(env, h, { handle: "dave-the-breeder" })).status).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.handle).toBe("dave-the-breeder");
   });
 });

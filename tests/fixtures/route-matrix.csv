@@ -28,7 +28,10 @@
 #   ログ GET /match/convergence)の新規 1 route(infra-route-089・protected・080/081は
 #   先に基盤コスト/AIP-67レーンが採ったため採番をずらして解決)を追加 → 81 rows、
 #   同レーンが V3-IND-21(出品血統照合 GET /individuals/lineage-check)の新規 1
-#   route(infra-route-090・protected)を追加 → 82 rows。
+#   route(infra-route-090・protected)を追加 → 82 rows、g07-UIUXレーン(V3-UIX-26)が
+#   ホーム文明ミニマップ新規 1 route(infra-route-091・GET /home/civ-minimap・
+#   protected・080は先に基盤コストレーンが採ったため採番をずらして解決)を追加
+#   → 83 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -114,3 +117,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/observation/parse-freetext,VPS,Workers,W2,infra-route-088,protected,implemented,自然言語フリーテキスト観測の決定論パース(V3-OBS-61・LLM既定OFF・R2コミットはしない提案止まり)
 —,GET,/api/v1/match/convergence,VPS,Workers,W2,infra-route-089,protected,implemented,V3-IND-08 マチアプ収束評価ログ(Precision@K/AUC/score separation/vector change/learning stability)・append-onlyなpreference_event履歴から都度再計算・O(events)・GPU不要
 —,GET,/api/v1/individuals/lineage-check,VPS,Workers,W2,infra-route-090,protected,implemented,V3-IND-21 出品血統照合(reservation_sire_id/dam_id等の申告個体が実在しTruthと矛盾しないか確認・購入者向け疑義確認材料)・market listing側の連携はMKT-29(mkt-listingにindividual_ids欄なし)待ちで listing_id 引数は未対応
+—,GET,/api/v1/home/civ-minimap,VPS,Workers,W2,infra-route-091,protected,implemented,V3-UIX-26 ホーム文明ミニマップ(非PII集計3指標: observation_pace_7d/trust_avg/template_growth・個別ユーザーデータ非公開)・080は先に基盤コストレーンが採ったため採番をずらして解決

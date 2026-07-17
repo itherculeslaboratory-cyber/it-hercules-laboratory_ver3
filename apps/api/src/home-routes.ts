@@ -10,6 +10,9 @@ import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { SCHEDULE_STAGE_INTERVAL_DAYS } from "./observation-constants";
 import { projectJudicialInboxPreview } from "./gov-routes";
+import { KARMA_TYPE } from "./ledger-routes";
+import { CULTURE_TEMPLATE_TYPE } from "./culture";
+import { KARMA_VALUE_MIN, KARMA_VALUE_MAX, INTL_TRUST_MIN, INTL_TRUST_MAX } from "./economy-constants";
 
 export const homeRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -89,12 +92,35 @@ function scheduleView(d: Record<string, unknown>) {
   };
 }
 
+// V3-UIX-27: ホームの today_lines は最大何行まで統合表示するか。
+const HOME_TODAY_LINES_MAX = 3;
+
+// V3-UIX-27: today_lines の1行(個体名相当のid・日数・観測入力deep link)。
+// days は now 起点(超過はマイナス、近接はプラス)。deep_link は既存の
+// screenHref 規約(apps/web/src/renderer/renderer.tsx)と同じ /s/<screen>?id=
+// 形— サーバ側はこの1文字列を返すだけで renderer は table の link セルで
+// そのまま描画できる(既存語彙の再利用・新規ノード不要)。
+function todayLineView(d: Record<string, unknown>, nowMs: number) {
+  const t = Date.parse(String(d.next_observation_at));
+  const days = Number.isNaN(t) ? 0 : Math.round((t - nowMs) / DAY_MS);
+  const individualId = String(d.individual_id ?? "");
+  return {
+    individual_id: individualId,
+    next_observation_at: d.next_observation_at,
+    days,
+    overdue: !Number.isNaN(t) && t < nowMs,
+    deep_link: `/s/obs-register-entry?id=${encodeURIComponent(individualId)}`,
+  };
+}
+
 /**
  * ホーム今日の要約(OBS-21): 本人の最新スケジュールを now 基準で分類。
  *  - overdue(超過): next < now
  *  - near(近接):   now ≤ next ≤ now + HOME_NEAR_WINDOW_DAYS
  *  - observing(観測中): next がそれより先(予定済みだが今は差し迫っていない)
  * 都度再計算・決定論(next_observation_at→individual_id で安定ソート)。
+ * today_lines(V3-UIX-27): overdue→near の順で統合し最大 HOME_TODAY_LINES_MAX
+ * 行に切る(サーバ側で切ることで over-fetch を避ける・常駐 index 不要)。
  */
 export async function projectHomeSummary(
   s: TruthStore,
@@ -104,6 +130,7 @@ export async function projectHomeSummary(
   overdue: ReturnType<typeof scheduleView>[];
   near: ReturnType<typeof scheduleView>[];
   observing: ReturnType<typeof scheduleView>[];
+  today_lines: ReturnType<typeof todayLineView>[];
 }> {
   const rows = (await s.listEvents(`truth/${SCHEDULE_TYPE}/`))
     .map(dataOf)
@@ -124,10 +151,15 @@ export async function projectHomeSummary(
   const byNext = (a: Record<string, unknown>, b: Record<string, unknown>) =>
     String(a.next_observation_at).localeCompare(String(b.next_observation_at)) ||
     String(a.individual_id).localeCompare(String(b.individual_id));
+  const sortedOverdue = overdue.sort(byNext);
+  const sortedNear = near.sort(byNext);
   return {
-    overdue: overdue.sort(byNext).map(scheduleView),
-    near: near.sort(byNext).map(scheduleView),
+    overdue: sortedOverdue.map(scheduleView),
+    near: sortedNear.map(scheduleView),
     observing: observing.sort(byNext).map(scheduleView),
+    today_lines: [...sortedOverdue, ...sortedNear]
+      .slice(0, HOME_TODAY_LINES_MAX)
+      .map((d) => todayLineView(d, nowMs)),
   };
 }
 
@@ -176,6 +208,59 @@ export async function projectInsightGaps(
   return { overdue, missing_observation };
 }
 
+// V3-UIX-26 ホームの文明ミニマップ: 非PII集計3指標のみ(誰の値かは一切出さない)。
+//  - observation_pace_7d: 直近7日の全ユーザー合計 capture 件数
+//  - trust_avg: 全ユーザーの intl_trust(karma由来 0-100)平均
+//  - template_growth: 文化テンプレ版(fork含む)の総数
+// 常駐 index を持たず都度全走査(不変条項①)。ponytail: MVP 量前提の O(n) 全
+// 走査。運用実績でユーザー数が増えたら投影キャッシュ化を検討。
+const CIV_MINIMAP_WINDOW_DAYS = 7;
+
+export interface CivMinimap {
+  observation_pace_7d: number;
+  trust_avg: number;
+  template_growth: number;
+}
+
+export async function projectCivMinimap(s: TruthStore, now: Date = new Date()): Promise<CivMinimap> {
+  const nowMs = now.getTime();
+  const windowStartMs = nowMs - CIV_MINIMAP_WINDOW_DAYS * DAY_MS;
+
+  // capture イベントの data には created_at が無い(observation-routes.ts の
+  // capture 生成が刻むのは envelope 直下の time のみ)— dataOf() で捨てず
+  // envelope.time を直接読む。
+  const observation_pace_7d = (await s.listEvents(`truth/${CAPTURE_TYPE}/`)).filter((e) => {
+    const t = Date.parse(String(e.time ?? ""));
+    return !Number.isNaN(t) && t >= windowStartMs && t <= nowMs;
+  }).length;
+
+  const karmaByActor = new Map<string, number>();
+  for (const d of (await s.listEvents(`truth/${KARMA_TYPE}/`)).map(dataOf)) {
+    if (d.layer !== "value" || typeof d.actor_id !== "string") continue;
+    const delta = typeof d.delta === "number" ? d.delta : 0;
+    karmaByActor.set(d.actor_id, (karmaByActor.get(d.actor_id) ?? 0) + delta);
+  }
+  const trusts = [...karmaByActor.values()].map((value) => {
+    const karma = Math.min(KARMA_VALUE_MAX, Math.max(KARMA_VALUE_MIN, value));
+    return Math.min(INTL_TRUST_MAX, Math.max(INTL_TRUST_MIN, 50 + karma / 2));
+  });
+  const trust_avg = trusts.length > 0 ? trusts.reduce((a, b) => a + b, 0) / trusts.length : 50;
+
+  const template_growth = (await s.listEvents(`truth/${CULTURE_TEMPLATE_TYPE}/`)).length;
+
+  return {
+    observation_pace_7d,
+    trust_avg: Math.round(trust_avg * 10) / 10,
+    template_growth,
+  };
+}
+
+// V3-UIX-26 近似フォールバック(API失敗時)。実測不能時に「ゼロ」でなく中立の
+// 近似値を返すための既定値 — home.json 側は取得失敗時にこの定数と同型の
+// フォールバックを表示する(呼び出し元がこの関数自体を試すのに失敗した場合、
+// つまり Truth 未接続等の異常系)。
+export const CIV_MINIMAP_FALLBACK: CivMinimap = { observation_pace_7d: 0, trust_avg: 50, template_growth: 0 };
+
 // ── routes ─────────────────────────────────────────────────────────────────────
 
 // POST /observation/schedule — INSERT one observation schedule (OBS-21). The next
@@ -214,9 +299,10 @@ homeRoutes.post("/observation/schedule", async (c) => {
   return c.json({ schedule_id: scheduleId, next_observation_at: nextAt }, 201);
 });
 
-// GET /home/summary — today's summary (OBS-21): near / overdue / observing。V3-GOV-11:
-// 司法インボックスのプレビュー(最大5件)+ 環境IoT due予定のプレビュー(最大3件・既存の
-// overdue→near 順で切り詰め=環境観測スケジュールの再利用・二重実装しない)を追加。
+// GET /home/summary — today's summary (OBS-21): near / overdue / observing /
+// today_lines(V3-UIX-27)。V3-GOV-11: 司法インボックスのプレビュー(最大5件)+
+// 環境IoT due予定のプレビュー(最大3件・既存の overdue→near 順で切り詰め=環境観測
+// スケジュールの再利用・二重実装しない)を追加。
 homeRoutes.get("/home/summary", async (c) => {
   const s = store(c);
   const actorId = c.get("actorId");
@@ -226,6 +312,17 @@ homeRoutes.get("/home/summary", async (c) => {
   ]);
   const iot_due = [...summary.overdue, ...summary.near].slice(0, HOME_IOT_DUE_LIMIT);
   return c.json({ ...summary, judicial_inbox, iot_due });
+});
+
+// GET /home/civ-minimap — V3-UIX-26 非PII集計3指標。Truth 走査自体が失敗した
+// 場合のみ200+近似フォールバックを返す(画面を壊さない・他ユーザー個別データ
+// は元より一切扱わないので「失敗時に何を隠すか」の判断は不要)。
+homeRoutes.get("/home/civ-minimap", async (c) => {
+  try {
+    return c.json(await projectCivMinimap(store(c)));
+  } catch {
+    return c.json(CIV_MINIMAP_FALLBACK);
+  }
 });
 
 // GET /observation/insights — deterministic gap detection (OBS-43): overdue

@@ -1,0 +1,44 @@
+{
+  "screen_id": "setup-profile",
+  "route": "/onboarding/setup-profile",
+  "title": "プロフィールを整える",
+  "layout": "standard",
+  "notes": "V3-AUT-10: オンボーディング未完了(onboardingComplete===false、実体はGET /api/v1/me/preferencesのhandleが空)の間、middlewareがログイン済み訪問者をここへ誘導する専用フロー。handle確定+locale明示選択を1フォームで同時に PATCH /api/v1/me/preferences し、この2点が揃った時点でonboardingCompleteがtrueになる(表示名はactor_id生ハッシュのままにしない・言語は既定値のまま素通りさせない)。タイムゾーン/テーマは既存のsettings画面で後から変更可(この専用フローは人格成立に必須の2点のみに絞る・作り込みすぎない)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text_key": "setup-profile.title.text", "text": "プロフィールを整える", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "setup-profile.lead.text", "text": "最初に表示名と言語だけ決めます(あとで設定から変更できます)。", "muted": true } },
+            {
+              "id": "profile-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "PATCH", "path": "/api/v1/me/preferences", "body_from": "profile-form" },
+              "children": [
+                { "id": "handle", "type": "field", "props": { "variant": "text", "name": "handle", "label_key": "setup-profile.handle.label", "label": "表示名(handle)", "placeholder": "他の人にはこの名前で表示されます", "required": true } },
+                {
+                  "id": "locale", "type": "field", "props": {
+                    "variant": "select", "name": "locale", "label_key": "setup-profile.locale.label", "label": "表示言語", "placeholder": "言語を選ぶ", "required": true,
+                    "options": [
+                      { "value": "ja", "label": "日本語" },
+                      { "value": "en", "label": "English" }
+                    ]
+                  }
+                },
+                { "id": "save", "type": "button", "props": { "label_key": "setup-profile.save.label", "label": "はじめる", "variant": "primary", "type": "submit" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "profile-form", "to_screen_id": "home", "label": "handle+locale確定後にホームへ(onboardingComplete=trueになる)" }
+  ]
+}

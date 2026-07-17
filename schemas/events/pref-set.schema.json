@@ -43,6 +43,12 @@
       "pattern": "^[A-Z]{2}$",
       "description": "所属国(ISO 3166-1 alpha-2・任意・round-16裁定 V3-AUT-35/I18-02: UI非表示の内部属性。用途は規制/合法性の国別フィルタリング・行政介入スコープ(V3-GOV-35)・翻訳/通関/送料判定(V3-I18-17)に限定。国際信頼スコア等への汎用拡張は未裁定=対象外)。"
     },
+    "handle": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "description": "V3-AUT-10 オンボーディングで確定する表示名(handle)。actor_id生ハッシュの代わりに表示する公開ニックネーム。setup-profile画面でlocaleと同時に確定し、この値の有無がonboardingComplete判定(handle未設定=false)を兼ねる。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

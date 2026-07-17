@@ -3,6 +3,7 @@
   "route": "/",
   "title": "ホーム",
   "layout": "standard",
+  "notes": "V3-UIX-25(司令塔=今日の状態kpi+次の一手today_lines)/26(文明ミニマップ非PII集計)/27(today_linesは最大3行・deep link)。既存の観測開始1クリック(start-observe)・FeatureNode入口(open-*/chip-*)・設定とテーマ(open-theme/open-ui-templates/open-settings)は tests/nav-reachability.test.ts の click-budget契約とe2e(observation.spec.ts)のラベル契約のため id/label/href を変更していない — 追加のみ。",
   "nodes": [
     {
       "id": "shell",
@@ -13,26 +14,57 @@
           "type": "page",
           "children": [
             { "id": "title", "type": "heading", "props": { "text_key": "home.title.text", "text": "観測ホーム", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text_key": "home.lead.text", "text": "新しい観測を始めるか、個体を開きます。", "muted": true } },
+            { "id": "lead", "type": "text", "props": { "text_key": "home.lead.text", "text": "今日の状態と次の一手だけをここに置いています。", "muted": true } },
             {
               "id": "ledger",
               "type": "card",
               "props": { "source_path": "/api/v1/me/ledger" },
               "children": [
                 { "id": "here-title", "type": "heading", "props": { "text_key": "home.here-title.text", "text": "今日の状態", "level": 2 } },
-                { "id": "karma", "type": "text", "props": { "text_key": "home.karma.text", "text": "カルマ: {{data.ledger.karma_value}}" } },
+                { "id": "kpi-karma", "type": "kpi-tile", "props": { "label_key": "home.kpi-karma.label", "label": "カルマ", "value": "{{data.ledger.karma_value}}", "fallback": "0" } },
                 { "id": "platinum", "type": "text", "props": { "text_key": "home.platinum.text", "text": "プラチナコイン: {{data.ledger.platinum_coins}}", "muted": true } }
               ]
             },
-            { "id": "today-title", "type": "heading", "props": { "text_key": "home.today-title.text", "text": "今日の要約", "level": 2 } },
+            {
+              "id": "todaystats",
+              "type": "kpi-tile",
+              "props": { "source_path": "/api/v1/home/summary", "label_key": "home.kpi-overdue.label", "label": "超過", "value": "{{data.todaystats.overdue.length}}", "fallback": "0" }
+            },
+            {
+              "id": "kpi-near",
+              "type": "kpi-tile",
+              "props": { "label_key": "home.kpi-near.label", "label": "近接", "value": "{{data.todaystats.near.length}}", "fallback": "0" }
+            },
+            { "id": "today-title", "type": "heading", "props": { "text_key": "home.today-title.text", "text": "次の一手", "level": 2 } },
             {
               "id": "today",
-              "type": "list",
+              "type": "table",
               "props": {
-                "source_path": "/api/v1/home/summary",
-                "bind_items": "data.today.overdue",
-                "item_text": "{{individual_id}} 次回 {{next_observation_at}}"
+                "bind_items": "data.todaystats.today_lines",
+                "empty_text": "今日観測が必要な個体はありません",
+                "columns": [
+                  { "key": "individual_id", "label_key": "home.today.col-individual.label", "label": "個体" },
+                  { "key": "days", "label_key": "home.today.col-days.label", "label": "日数" },
+                  { "key": "deep_link", "cell": "link", "href_tpl": "{{deep_link}}", "link_label": "記録する" }
+                ]
               }
+            },
+            { "id": "civ-title", "type": "heading", "props": { "text_key": "home.civ-title.text", "text": "文明の状態", "level": 2 } },
+            { "id": "civ-lead", "type": "text", "props": { "text_key": "home.civ-lead.text", "text": "誰の値かは出ません(全体の非PII集計のみ)。", "muted": true } },
+            {
+              "id": "civstats",
+              "type": "kpi-tile",
+              "props": { "source_path": "/api/v1/home/civ-minimap", "label_key": "home.civ-pace.label", "label": "直近7日の観測件数", "value": "{{data.civstats.observation_pace_7d}}", "fallback": "0" }
+            },
+            {
+              "id": "civ-trust",
+              "type": "kpi-tile",
+              "props": { "label_key": "home.civ-trust.label", "label": "信頼度平均", "value": "{{data.civstats.trust_avg}}", "fallback": "50" }
+            },
+            {
+              "id": "civ-growth",
+              "type": "kpi-tile",
+              "props": { "label_key": "home.civ-growth.label", "label": "テンプレ文化の版数", "value": "{{data.civstats.template_growth}}", "fallback": "0" }
             },
             {
               "id": "start-observe",
@@ -45,6 +77,7 @@
               "type": "link",
               "props": { "label_key": "home.guide-select.label", "label": "ドメインから選んで始める", "href": "/s/obs-domain-select" }
             },
+            { "id": "feature-nav-title", "type": "heading", "props": { "text_key": "home.feature-nav-title.text", "text": "各機能へ", "level": 2 } },
             {
               "id": "open-individual",
               "type": "button",
