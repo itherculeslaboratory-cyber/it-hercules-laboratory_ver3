@@ -80,24 +80,35 @@
 <body>
 <header>
   <h1>UI再設計 第2ラウンド 判定シート(C8)</h1>
-  <div class="sub">正本: docs/planning/c8/ui-redesign-round2.md(受領11=全体約15点への構造回答)。各カードは Before(現行スクショ)→ユーザー指摘(逐語)→After案(390px/1440px)→遷移の変更点→採点欄の順です。末尾の総合判定でGO(この設計で実装)/NO(再設計)を選んでください。</div>
+  <div class="sub">正本: docs/planning/c8/ui-redesign-round2.md(受領11=全体約15点への構造回答・§6=全画面自己監査)。構成: 0.全体遷移図+構造判定 → 1.語彙辞書/概念 → 2.受領11の10画面After案(Before→ユーザー指摘→After→採点欄) → 3.残り46画面の自己監査(AI自己採点・実操作なし) → 4.裁定が要る3点 → 5.総合GO/NO。</div>
   <div class="autosave">✓ 入力は自動保存されます(このPC内)・自由に記入OK。消える心配は不要です。</div>
 </header>
 <main>
 
-<!-- ============ 画面マップ ============ -->
+<!-- ============ 0. 全体遷移図+構造判定(最重要) ============ -->
 <div class="card">
-  <div class="cardhead"><b>画面マップ(一次ナビ)</b><span>正本 §3</span></div>
+  <div class="cardhead"><b>0. 全体遷移図+構造判定</b><span>「全体設計ができているか」への回答・正本 §3・§6</span></div>
+
+  <h3 class="section">現状の問題サマリ(全画面自己監査§6より)</h3>
+  <table class="vocab">
+    <tr><th>問題</th><th>内容</th></tr>
+    <tr><td class="bad">旧世代フロー並存</td><td>obs-entry/obs-confirm(旧1画面フロー)と obs-register→entry→confirm(OBS-25正本の3画面フロー)が両方いまだ実装に現存。navigation.jsonも両方の辺を保持したまま。</td></tr>
+    <tr><td class="bad">home導線が旧フローのみ</td><td>home.jsonの主導線「観測を始める」は今も旧obs-entryへ向き、OBS-25正本の入口obs-registerはhomeから到達不可の孤立画面のまま(cutover未実施)。</td></tr>
+    <tr><td class="bad">孤島画面(オーファン)</td><td>navigation.json上でinbound edge 0の画面が複数存在。研究論文クラスタ5画面(project-hub/data-descriptor/paper-detail/research-newspaper/research-search)はURL直打ちでしか到達できない。</td></tr>
+    <tr><td class="bad">単機能画面</td><td>language-select/obs-domain-select/theme-gallery/knowledge-github等、遷移先画面と機能が完全重複するのに独立画面のまま残っているものが複数。</td></tr>
+  </table>
+
+  <h3 class="section">再設計後の画面マップ図(正本 §3)</h3>
   <div class="mapgrid">
     <div class="maprow"><div class="mapbox home">ホーム(司令塔)</div></div>
     <div class="maprow">
       <span class="maparrow">↓</span>
-      <div class="mapbox">観測</div>
+      <div class="mapbox">観測(obs-register 3画面フロー・唯一の入口)</div>
       <div class="mapbox">個体</div>
       <div class="mapbox">市場: 買う|出品</div>
       <div class="mapbox">取引中(一覧→詳細)</div>
       <div class="mapbox">知の広場</div>
-      <div class="mapbox">マイページ</div>
+      <div class="mapbox">マイページ/設定(ステータス統合)</div>
     </div>
     <div class="maprow">
       <span class="maplabel">市場 --成立--&gt; 取引中</span>
@@ -112,7 +123,40 @@
       <div class="mapbox">公開投票(GOV-07)</div>
     </div>
   </div>
-  <p class="purposeline">市場のタブは「買う」「出品」の2つだけ(「この出品/取引」タブは廃止)。取引中は独立画面。話し合いの場への入口は対象側の「…」のみ(ナビ常設なし)。</p>
+  <p class="purposeline">市場のタブは「買う」「出品」の2つだけ(「この出品/取引」タブは廃止)。取引中は独立画面。話し合いの場への入口は対象側の「…」のみ(ナビ常設なし)。観測の唯一の入口はobs-register(旧obs-entryはretire)。</p>
+
+  <h3 class="section">IA変更一覧(統合・廃止・導線差し替え・全18件 — §6.2から整形)</h3>
+  <table class="vocab">
+    <tr><th>#</th><th>変更</th><th>種別</th><th>理由(1行)</th></tr>
+    <tr><td>1</td><td>language-select を廃止</td><td class="bad">廃止</td><td>§4.7既決・setup-profileに統合済み方針</td></tr>
+    <tr><td>2</td><td>country-select を setup-profile に統合</td><td class="ok">統合</td><td>§4.7既決・country+language 1画面化</td></tr>
+    <tr><td>3</td><td>obs-domain-select を廃止</td><td class="bad">廃止</td><td>obs-entry内ドメインselectと完全重複(language-select 0点と同型)</td></tr>
+    <tr><td>4</td><td>obs-entry を obs-register-entry へ統合</td><td class="ok">統合</td><td>個体/生物観測は新OBS-25フローで代替可(cutover依存: home導線+E2E移行)</td></tr>
+    <tr><td>5</td><td>obs-confirm を obs-register-confirm へ統合</td><td class="ok">統合</td><td>計測値を表示しない機能不全の旧確認画面・新confirmで代替</td></tr>
+    <tr><td>6</td><td>obs-search を obs-register に統合しnav重複解消</td><td class="ok">統合</td><td>対象検索の入口3重複(global nav/自画面/obs-navigator)を1つに</td></tr>
+    <tr><td>7</td><td>knowledge-github を knowledge-hub カードに統合</td><td class="ok">統合</td><td>外部リンク1つの単機能・独立画面の必然性なし</td></tr>
+    <tr><td>8</td><td>theme-gallery を settings に統合</td><td class="ok">統合</td><td>設定のテーマselectと完全重複・付加価値ゼロ</td></tr>
+    <tr><td>9</td><td>platinum-shop を economy-status の1セクション化</td><td class="ok">統合</td><td>c7既決・購入前確認2ステップ化を同時実施</td></tr>
+    <tr><td>10</td><td>cross を individual-detail 内セクション化</td><td class="ok">統合</td><td>死にUI・遷移路消失済み・実結線まで単独画面凍結</td></tr>
+    <tr><td>11</td><td>ai-sessions を一般ナビから隔離</td><td class="bad">廃止(隔離)</td><td>Cursor等の開発者内部文言・一般ユーザーの利用理由なし</td></tr>
+    <tr><td>12</td><td>home「観測を始める」→ obs-register へ差し替え</td><td>導線差し替え</td><td>OBS-25新フローを唯一の入口にするcutover本体</td></tr>
+    <tr><td>13</td><td>home「ドメインから選ぶ」導線削除</td><td>導線差し替え</td><td>obs-domain-select廃止に伴う導線除去</td></tr>
+    <tr><td>14</td><td>home「個体を開く」のid無しnavigate是正</td><td>導線差し替え</td><td>id無しnavigateでindividual-detailが常に未検出になるバグ是正</td></tr>
+    <tr><td>15</td><td>qr-resume遷移先 → obs-register-entry</td><td>導線差し替え</td><td>物理QR接点が旧劣化フローへ誤誘導している非一貫性の是正</td></tr>
+    <tr><td>16</td><td>obs-navigator改名「種の判定」+obs-register-new補助リンク化</td><td>導線差し替え</td><td>「対象を特定する」が個体選択と混同・Family0-3ダミーを実データ化</td></tr>
+    <tr><td>17</td><td>navigation.json 旧login系辺を削除</td><td>導線差し替え</td><td>§4.7反映漏れ(旧オンボーディング辺が新setup-profile辺と共存)</td></tr>
+    <tr><td>18</td><td>cross・bio-card辺の3者不整合解消</td><td>導線差し替え</td><td>navigation.json・要件V3-IND-12・実装の3者不整合を解消</td></tr>
+  </table>
+  <p class="purposeline">全55画面 → 確定分11件除去で44画面 / 裁定(下記4.セクション)込みで最大~38画面まで削減可能(詳細: ui-redesign-round2.md §6.2)。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreSTR" min="0" max="100" placeholder="例: 70">
+    <label>良い点</label>
+    <textarea id="goodSTR" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badSTR" placeholder="悪い点"></textarea>
+  </div>
 </div>
 
 <!-- ============ 語彙辞書 ============ -->
@@ -435,9 +479,171 @@
   </div>
 </div>
 
+<!-- ============ 自己監査セクション(46画面) ============ -->
+<div class="card">
+  <div class="cardhead"><b>全画面自己監査(46画面)</b><span>正本 §6・2026-07-17</span></div>
+  <p class="purposeline"><b style="color:var(--fg)">注記:</b> これはAIの自己採点です(スクショ+screen-def定義の静的監査・実操作なし)。上の10画面(受領11で人間が既に採点済み)とは別に、残り46画面をAIが自己監査し予測点を付けたものです。実データでの動作確認・実際のユーザー採点ではありません(限界の詳細は正本 §6.4)。</p>
+
+  <h3 class="section">監査表(予測点 昇順・46画面)</h3>
+  <table class="vocab">
+    <tr><th>#</th><th>画面</th><th>予測点</th><th>主違反</th><th>処置</th></tr>
+    <tr><td>1</td><td>ai-sessions</td><td class="bad">5</td><td>Cursor/リポジトリ内パス等の開発者内部文言を直接露出</td><td>retire</td></tr>
+    <tr><td>2</td><td>project-hub</td><td class="bad">10</td><td>オーファン画面(inbound edge 0)+「バージョン分岐」等git語を無説明</td><td>fix/裁定</td></tr>
+    <tr><td>3</td><td>data-descriptor</td><td class="bad">15</td><td>ナビ辺皆無で到達不能+「Data Descriptor/claim」未翻訳</td><td>fix/裁定</td></tr>
+    <tr><td>4</td><td>obs-domain-select</td><td class="bad">15</td><td>遷移先obs-entry内と完全重複の単機能画面</td><td>retire</td></tr>
+    <tr><td>5</td><td>paper-detail</td><td class="bad">15</td><td>オーファン+「条件P」内部変数露出</td><td>fix/裁定</td></tr>
+    <tr><td>6</td><td>research-newspaper</td><td class="bad">15</td><td>オーファン+固定ボタンが対象論文と無関係</td><td>fix/裁定</td></tr>
+    <tr><td>7</td><td>theme-gallery</td><td class="bad">15</td><td>設定のテーマselectと完全重複・行き止まり</td><td>merge→settings</td></tr>
+    <tr><td>8</td><td>cross</td><td class="bad">15</td><td>率カード3枚とも空欄(UI未結線)+経由路消失</td><td>merge→individual-detail</td></tr>
+    <tr><td>9</td><td>individual-detail</td><td class="bad">20</td><td>id無しnavigateで常に未検出+未検出でもQR表示</td><td>fix</td></tr>
+    <tr><td>10</td><td>knowledge-github</td><td class="bad">20</td><td>外部リンク1つの単機能なのに独立画面</td><td>merge→knowledge-hub</td></tr>
+    <tr><td>11</td><td>ui-templates</td><td>22</td><td>home導線「選ぶ」に反し保存フォームのみ</td><td>fix</td></tr>
+    <tr><td>12</td><td>match</td><td>25</td><td>screen-defに画像ノード皆無(核心の直感評価不能)</td><td>fix</td></tr>
+    <tr><td>13</td><td>paper-match</td><td>25</td><td>2入口がid未継承+生URLクエリ露出</td><td>fix</td></tr>
+    <tr><td>14</td><td>research-search</td><td>25</td><td>オーファン+結果行タップ不可</td><td>fix</td></tr>
+    <tr><td>15</td><td>obs-templates</td><td>28</td><td>1保存1項目でテンプレを作れない+生ID手入力</td><td>fix</td></tr>
+    <tr><td>16</td><td>knowledge-board</td><td>30</td><td>スレ一覧各項目がタップ不可(遷移未実装)</td><td>fix</td></tr>
+    <tr><td>17</td><td>obs-confirm</td><td>30</td><td>入力計測値を確認画面に一切表示せず機能不全</td><td>merge→obs-register-confirm</td></tr>
+    <tr><td>18</td><td>obs-navigator</td><td>30</td><td>分類ツリーにFamily0-3プレースホルダ露出</td><td>fix</td></tr>
+    <tr><td>19</td><td>platinum-shop</td><td>30</td><td>購入前確認なしの即時POST(c7でアンチパターン)</td><td>merge→economy-status</td></tr>
+    <tr><td>20</td><td>qr-resume</td><td>30</td><td>続行ボタンが旧obs-entryへ誤誘導・個体カード無し</td><td>fix</td></tr>
+    <tr><td>21</td><td>device</td><td>33</td><td>設置場所の生IDが画面上どこにも出ず入力不能</td><td>fix</td></tr>
+    <tr><td>22</td><td>bio-card</td><td>35</td><td>種/サイズ空欄・一括発行UI無し・生きた導線無し</td><td>fix</td></tr>
+    <tr><td>23</td><td>obs-entry</td><td>35</td><td>対象/父/母個体IDを生値入力・obs-register-entryの劣化版</td><td>merge→obs-register-entry</td></tr>
+    <tr><td>24</td><td>knowledge-paper</td><td>35</td><td>論文一覧が描画されない(source_path不整合)</td><td>fix</td></tr>
+    <tr><td>25</td><td>obs-detail ★</td><td>38</td><td>{{data.lab-env…}}が未展開の生表示+V3-OBS-72露出</td><td>fix</td></tr>
+    <tr><td>26</td><td>species</td><td>40</td><td>fork元ID欄に必要な生IDが一覧に出ず入力不能</td><td>fix</td></tr>
+    <tr><td>27</td><td>profile</td><td>40</td><td>「BAN: false」生真偽値表示・empty_text未到達バグ</td><td>fix</td></tr>
+    <tr><td>28</td><td>template-market</td><td>40</td><td>ランキングにempty_text無く0件時完全空白</td><td>fix</td></tr>
+    <tr><td>29</td><td>home</td><td>42</td><td>設定見出し下にステータス/取引/コストchip混在(IA誤配置)</td><td>fix</td></tr>
+    <tr><td>30</td><td>placement-qr</td><td>45</td><td>{{data.lab-env-current…}}生表示+V3-OBS-72露出</td><td>fix</td></tr>
+    <tr><td>31</td><td>economy-status</td><td>50</td><td>PT影響力残高が新語のまま無説明</td><td>fix</td></tr>
+    <tr><td>32</td><td>settings</td><td>50</td><td>レビュー対象スクショが現行JSONより大幅に古い</td><td>fix</td></tr>
+    <tr><td>33</td><td>obs-register</td><td>55</td><td>homeから到達不可の孤立(cutover未実施)</td><td>fix</td></tr>
+    <tr><td>34</td><td>knowledge-hub ★</td><td class="ok">60</td><td>「正本」「フォーク」「Fork」「Builder」内部語が一画面に集中</td><td>fix</td></tr>
+    <tr><td>35</td><td>costs</td><td class="ok">63</td><td>「manual入力/manual/(R2)」内部タグ+円/JPY混在</td><td>fix</td></tr>
+    <tr><td>36</td><td>ai-profile-settings</td><td class="ok">65</td><td>「検索補助(RAG)」略語を無説明露出</td><td>fix</td></tr>
+    <tr><td>37</td><td>obs-freetext</td><td class="ok">65</td><td>解析結果に個体IDを生値表示(語彙辞書違反)</td><td>fix</td></tr>
+    <tr><td>38</td><td>obs-register-batch-confirm</td><td class="ok">65</td><td>未選択の空状態のみで実データ表示品質未検証</td><td>fix</td></tr>
+    <tr><td>39</td><td>obs-search ★</td><td class="ok">68</td><td>サムネイル未表示(画像直感評価の設計意図に未達)</td><td>keep/fix</td></tr>
+    <tr><td>40</td><td>obs-register-confirm</td><td class="ok">70</td><td>スクショが体重/体長とも空値で実データ未検証</td><td>fix</td></tr>
+    <tr><td>41</td><td>obs-register-batch-done</td><td class="ok">70</td><td>空状態のみで実データ未検証</td><td>keep</td></tr>
+    <tr><td>42</td><td>obs-register-done</td><td class="ok">78</td><td>空値表示で実データ未検証(構成は良好)</td><td>keep</td></tr>
+    <tr><td>43</td><td>obs-register-entry ★</td><td class="ok">78</td><td>対象個体が空アバターのみで名前/写真カード無し・Δ未検証</td><td>keep/fix</td></tr>
+    <tr><td>44</td><td>obs-register-batch</td><td class="ok">80</td><td>「該当457件」等の内部集計語が無機質に露出</td><td>keep</td></tr>
+    <tr><td>45</td><td>obs-register-new</td><td class="ok">80</td><td>1440pxで下半分が大きく余白</td><td>keep</td></tr>
+    <tr><td>46</td><td>obs-register-clutch</td><td class="ok">83</td><td>情報量多く1440pxでも縦長</td><td>keep</td></tr>
+  </table>
+  <p class="purposeline">分布: ≤20点=10画面(構造欠陥・オーファン・純重複)/21-40=15画面/41-60=8画面/61-83=13画面。低得点の主因は個別部品の質でなく「IA(到達性)・遷移(id継承)・語彙(内部語)」の3層(詳細: ui-redesign-round2.md §6.1)。</p>
+
+  <h3 class="section">ワースト10 詳細(違反と是正方針)</h3>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W1. ai-sessions(5点)</b><span>一般面から隔離</span></div>
+    <div class="frame"><img class="zoom" src="../screens/ai-sessions-1440.png" alt="ai-sessions"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> Cursor等のAIチャットログ一覧をSettings配下に露出。「Cursor」「docs/knowledge/ai-session-ingest-howto.md」という開発者ツール名・リポジトリ内パスをそのままエンドユーザーに提示(全違反中最重度)。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> settingsのサブメニューから外す。開発者/管理者専用の隔離面(ui_exposure=developer時のみ表示)へ移設。一般ユーザーには存在ごと非公開。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W2. project-hub(10点)</b><span>概念の要否から裁定</span></div>
+    <div class="frame"><img class="zoom" src="../screens/project-hub-1440.png" alt="project-hub"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> navigation.jsonにinbound edge皆無のオーファン。「最良バージョン」「バージョン分岐」「ロットQR」等git/version比喩を生体データに無翻訳で適用、「プロジェクト」が何を指すか説明皆無。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> 導線追加より先に「この概念(プロジェクト=版管理された飼育系統)が一般ユーザーに必要か」を人間裁定。必要ならversion/branch語を「系統」「分岐飼育」等へ全訳+1行説明。不要なら凍結。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W3. data-descriptor(15点)</b><span>訳語+導線 or 凍結</span></div>
+    <div class="frame"><img class="zoom" src="../screens/data-descriptor-1440.png" alt="data-descriptor"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> オーファン(URL直打ちのみ)。見出し「Data Descriptor」が英語学術語のまま無説明、プレビュー内「claim」も無説明の英語専門語。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> knowledge-hub「論文」柱から遷移導線を新設し「データ記述(論文の観測データ定義)」等の訳語+1行説明を付す、または本ラウンド対象外として明示凍結。研究論文クラスタ一括で裁定(下記4.(b))。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W4. paper-detail(15点)</b><span>知の広場に組込み+ユーザー語化</span></div>
+    <div class="frame"><img class="zoom" src="../screens/paper-detail-1440.png" alt="paper-detail"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> オーファン。ボタン「条件Pで観測を照合する」の「条件P」は要件定義の変数名がそのまま流出、遷移先paper-matchへid継承もしていない。「論文」「マニフェスト」の説明も画面に無い。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> 知の広場→論文の流れに本画面を組込む。「条件P」→「この論文が求める観測条件」等へ置換。paper-matchへのnavigateに<code>?id={{params.paper_id}}</code>を付与し継承させる。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W5. research-newspaper(15点)</b><span>生成主体の説明+対象論文紐付け</span></div>
+    <div class="frame"><img class="zoom" src="../screens/research-newspaper-1440.png" alt="research-newspaper"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> オーファン。「関連する論文を開く」が対象論文と無関係な固定ボタン。生成主体・目的の説明が皆無で初見には謎の存在。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> 知の広場配下に導線追加。「AIが自動生成した研究課題ダイジェスト」等の生成主体説明を冒頭に1行。各記事から対象論文へのper-item紐付けリンクへ修正。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W6. cross(15点)</b><span>individual-detail内へ統合し凍結</span></div>
+    <div class="frame"><img class="zoom" src="../screens/cross-1440.png" alt="cross"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> 死亡率/完品率/羽化不全率の値が3枚とも空欄(集計APIは在るがUI未結線)。要件V3-IND-12の「個体詳細経由必須」の遷移が実装から消失、n数・対象個体名も皆無。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> individual-detail内の「この血を次に使うか」セクションへ統合。実データ結線+n数・対象個体名表示+ドリルダウンが実装できるまで単独画面は凍結。navigation.jsonのcross辺を追従。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W7. obs-domain-select(15点)</b><span>廃止</span></div>
+    <div class="frame"><img class="zoom" src="../screens/obs-domain-select-1440.png" alt="obs-domain-select"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> 観測ドメインを選ぶだけの単機能画面。遷移先obs-entry内に同じ「観測ドメイン」selectが既存で100%重複。主要ユースケース(生物観測)では画面自体が不要。round2が0点認定したlanguage-selectと同型。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> 廃止。ドメイン選択を残す場合でも次画面の先頭1フィールドへ統合(country+language統合と同方針)。homeの「ドメインから選んで始める」導線も除去。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W8. theme-gallery(15点)</b><span>settingsへ統合し廃止</span></div>
+    <div class="frame"><img class="zoom" src="../screens/theme-gallery-1440.png" alt="theme-gallery"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> テーマ閲覧専用で適用は別画面(設定)必須の分割過剰。リスト項目は非クリックの行き止まり。設定のテーマselectと内容が完全重複しプレビュー等の付加価値ゼロ。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> 設定画面のテーマ選択へ統合。フォーク済みテーマのプレビューを見せたいなら、その機能ごと設定内に実装する(単独画面は作らない)。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W9. individual-detail(20点)</b><span>実ID遷移の復活+未検出時のUI整合</span></div>
+    <div class="frame"><img class="zoom" src="../screens/individual-detail-1440.png" alt="individual-detail"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> home「個体を開く」がid無しでnavigateするため必ず「個体が見つかりません」。にもかかわらず未検出状態でも「QRラベルを発行する」ボタンと実QRコードが表示される(対象整合違反・スクショで実見確認)。cross/bio-cardへの導線はnav.json記載のみで実体消失。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> 個体一覧/検索から実IDで遷移する入口を復活(homeのnavigateに<code>?id</code>付与 or 一覧経由化)。未検出時はQR発行導線を隠す。実データで再撮影し「個体のホーム画面」として再採点。</p>
+  </div>
+
+  <div class="card" style="background:#0f1116">
+    <div class="cardhead"><b>W10. knowledge-github(20点)</b><span>knowledge-hubへ統合し廃止</span></div>
+    <div class="frame"><img class="zoom" src="../screens/knowledge-github-1440.png" alt="knowledge-github"></div>
+    <p class="purposeline"><b style="color:var(--fg)">現状:</b> GitHubの改善履歴・フォークへ外部リンクで飛ぶだけの単機能。「フォーク」が無説明のgit内部語のまま、内容1行で大半空白でモバイルでも間延び。</p>
+    <p class="purposeline"><b style="color:var(--fg)">After:</b> knowledge-hubの「GitHub掲示板」カードから直接外部リンクを開く形に統合し本画面は廃止。「フォーク(改善版の枝分かれ)」等の1行説明をカードに添える。</p>
+  </div>
+</div>
+
+<!-- ============ 裁定が要る3点 ============ -->
+<div class="card">
+  <div class="cardhead"><b>裁定が要る3点</b><span>正本 §6.2 #24-26・人間ゲート</span></div>
+
+  <h3 class="section">(a) profile + economy-status を1ステータス画面に統合するか</h3>
+  <p class="purposeline">現状: カルマ/貢献度がprofileとeconomy-statusの両方に重複表示され、どちらが正本か不明瞭。c7 usecase-driven-design.mdは既に統合の方向で設計済み。</p>
+  <p class="transition">推奨: 統合する(c7既決の方向)</p>
+  <div class="picks">
+    <label><input type="radio" name="judgeA" value="統合する"> 統合する(推奨)</label>
+    <label><input type="radio" name="judgeA" value="統合しない(現状維持)"> 統合しない(現状維持)</label>
+  </div>
+  <div class="memorow"><label>記入欄</label><textarea id="commentA" placeholder="コメント・条件など"></textarea></div>
+
+  <h3 class="section">(b) 研究論文クラスタ5画面(paper-detail/project-hub/research-search/research-newspaper/data-descriptor)の扱い</h3>
+  <p class="purposeline">現状: navigation.json上でinbound edge 0、どこからも到達できない孤島。知の広場「論文」柱配下に導線を新設するか、本ラウンド対象外として凍結するかの裁定が必要。</p>
+  <p class="transition">推奨: 導線新設は最小1本(知の広場「論文」柱)+残り4画面は当面凍結</p>
+  <div class="picks">
+    <label><input type="radio" name="judgeB" value="導線新設は最小1本+残りは凍結"> 導線新設は最小1本+残りは凍結(推奨)</label>
+    <label><input type="radio" name="judgeB" value="当面凍結(全5画面)"> 当面凍結(全5画面・導線追加なし)</label>
+  </div>
+  <div class="memorow"><label>記入欄</label><textarea id="commentB" placeholder="コメント・条件など"></textarea></div>
+
+  <h3 class="section">(c) 非生物ドメイン観測(鉱物/デジタル等)の要否</h3>
+  <p class="purposeline">現状: obs-entry(汎用ドメイン観測画面)をretireすると、生物以外(鉱物/デジタル/場所/カスタム)の観測記録手段が失われる。需要が実在するか裁定が必要。</p>
+  <p class="transition">推奨: 当面廃止・生物観測に集中</p>
+  <div class="picks">
+    <label><input type="radio" name="judgeC" value="当面廃止・生物観測に集中"> 当面廃止・生物観測に集中(推奨)</label>
+    <label><input type="radio" name="judgeC" value="別途最小画面で再設計"> 別途最小画面で再設計(需要あり)</label>
+  </div>
+  <div class="memorow"><label>記入欄</label><textarea id="commentC" placeholder="コメント・条件など"></textarea></div>
+</div>
+
 <!-- ============ 総合判定 ============ -->
 <div class="card">
-  <div class="cardhead"><b>総合判定</b><span>10画面+画面マップ/語彙辞書/話し合いの場概念を踏まえた全体の可否</span></div>
+  <div class="cardhead"><b>総合判定</b><span>全体構造+10画面+自己監査46画面+裁定3点を踏まえた全体の可否</span></div>
   <div class="go-decision">判定 = <span id="goLabel">(未選択)</span></div>
   <div class="picks">
     <label><input type="radio" name="goDecision" value="GO"> GO(この設計で実装へ進む)</label>
@@ -486,8 +692,19 @@ const SCREENS = [
   {id:'TM', title:'terms(わかりやすい版⇔正式版タブ)'}
 ];
 
+const JUDGMENTS = [
+  {id:'A', title:'(a) profile+economy-status統合'},
+  {id:'B', title:'(b) 研究論文クラスタ5画面の扱い'},
+  {id:'C', title:'(c) 非生物ドメイン観測の要否'}
+];
+
 function summary(){
   const lines = ['# UI再設計round2 判定(C8)', ''];
+  lines.push('## 0. 全体構造(遷移図+IA変更)');
+  lines.push('点数: '+scoreOrBlank('scoreSTR'));
+  lines.push('良い点: '+(val('goodSTR')||'(なし)'));
+  lines.push('悪い点: '+(val('badSTR')||'(なし)'));
+  lines.push('');
   SCREENS.forEach(s=>{
     lines.push('## '+s.title);
     lines.push('点数: '+scoreOrBlank('score'+s.id));
@@ -495,6 +712,12 @@ function summary(){
     lines.push('悪い点: '+(val('bad'+s.id)||'(なし)'));
     lines.push('');
   });
+  lines.push('## 裁定が要る3点');
+  JUDGMENTS.forEach(j=>{
+    lines.push(j.title+': '+radioVal('judge'+j.id));
+    lines.push('コメント: '+(val('comment'+j.id)||'(なし)'));
+  });
+  lines.push('');
   lines.push('## 総合判定');
   lines.push('GO/NO: '+radioVal('goDecision'));
   lines.push('自由コメント: '+(val('overallMemo')||'(なし)'));
