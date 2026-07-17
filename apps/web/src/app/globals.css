@@ -115,6 +115,49 @@ body {
   flex-direction: column;
   gap: 16px;
 }
+
+/* V3-UIX-28 全画面共通ブランドクロム(app-shell 1箇所に実装・全画面へ横展開)。
+ * 第3回裁定: モバイル下タブ/デスクトップサイドナビのレスポンシブ標準形は
+ * 将来のDeepNav強化の話 — この最小クロムはヘッダー/フッターの横並びのみ
+ * (作り込みすぎない・V3-UIX-32の方針に合わせる)。 */
+.civ-chrome-header,
+.civ-chrome-footer {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid var(--civ-border);
+}
+.civ-chrome-footer {
+  border-bottom: none;
+  border-top: 1px solid var(--civ-border);
+  margin-top: auto;
+}
+.civ-brand {
+  font-weight: 400;
+  font-size: var(--civ-fs-3);
+  color: var(--civ-text);
+  text-decoration: none;
+  margin-right: auto;
+}
+.civ-chrome-nav,
+.civ-chrome-auth {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.civ-chrome-auth {
+  margin-left: auto;
+}
+.civ-chrome-link {
+  font-size: var(--civ-fs-1);
+}
+
 .civ-heading {
   font-weight: 300;
   font-size: var(--civ-fs-4);
@@ -514,6 +557,42 @@ body {
   .civ-table {
     display: block;
     overflow-x: auto;
+  }
+}
+
+/* batch-roster 一括ケア表(civ-care-table)は入力表(体重/体長)なので、横
+ * スクロールで列見出しが隠れると何を打っているか分からなくなる — 390px 幅
+ * では見出し行を隠し、各セルを data-label ラベル付きの行に積む(wave-1批評
+ * 指摘のラベル欠け修正)。他の .civ-table 利用画面には影響しない専用クラス。 */
+@media (max-width: 560px) {
+  .civ-care-table thead {
+    display: none;
+  }
+  .civ-care-table,
+  .civ-care-table tbody,
+  .civ-care-table tr,
+  .civ-care-table td {
+    display: block;
+    width: 100%;
+  }
+  .civ-care-table tr {
+    margin-bottom: 8px;
+    border: 1px solid var(--civ-border);
+    border-radius: var(--civ-radius);
+    padding: 4px 12px;
+  }
+  .civ-care-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: none;
+  }
+  .civ-care-table td::before {
+    content: attr(data-label);
+    color: var(--civ-text-muted);
+    font-size: var(--civ-fs-1);
+    flex-shrink: 0;
   }
 }
 

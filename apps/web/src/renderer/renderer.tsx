@@ -1316,12 +1316,17 @@ function StepperNode({ node }: { node: ScreenNode }) {
 // props.value/trend are templates interpolated against scope (like text
 // nodes); an optional own source_path feeds {{data.<id>.field}} the same way
 // CardNode's source_path does, so a tile can be the only fetcher on screen.
+// props.fallback (V3-UIX-26 文明ミニマップ「API失敗時は近似フォールバック
+// 表示」): while the bound value is still empty (either loading, or the fetch
+// truly failed and useSource's catch() silently gave up), show this instead
+// of a blank tile — both states honestly mean "no real number yet".
 function KpiTileNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   useSource(node);
   const resolve = useContext(MessagesCtx);
   const scope = useContext(ScopeCtx);
-  const value = interpolate(String(p.value ?? ""), scope);
+  const resolved = interpolate(String(p.value ?? ""), scope);
+  const value = resolved !== "" ? resolved : p.fallback != null ? String(p.fallback) : "";
   const label = displayText(resolve, p.label_key, p.label, "");
   const trend = p.trend != null ? interpolate(String(p.trend), scope) : "";
   return (
@@ -2811,7 +2816,11 @@ function BatchRosterNode() {
       </ul>
 
       {mode === "care" && selected.size > 0 && (
-        <table className="civ-table">
+        // wave-1批評指摘: 390px幅では横スクロールでなくラベル付きカード積みに
+        // する(入力表なので列見出しがスクロールで隠れると何を打っているか
+        // わからなくなる)。civ-care-table のみに閉じたスコープの mobile CSS
+        // (globals.css)。data-label は各 th と同一文言で td::before に出す。
+        <table className={cn("civ-table", "civ-care-table")}>
           <thead>
             <tr>
               <th>個体</th>
@@ -2830,10 +2839,10 @@ function BatchRosterNode() {
               const delta = prev != null && g.weight !== "" && Number.isFinite(w) ? w - prev : null;
               return (
                 <tr key={id}>
-                  <td className="civ-cell-clip" title={ind.label}>
+                  <td className="civ-cell-clip" data-label="個体" title={ind.label}>
                     {ind.label}
                   </td>
-                  <td>
+                  <td data-label="体重g">
                     <input
                       className="civ-input"
                       type="number"
@@ -2843,7 +2852,7 @@ function BatchRosterNode() {
                       aria-label={`${ind.label} 体重g`}
                     />
                   </td>
-                  <td>
+                  <td data-label="体長mm">
                     <input
                       className="civ-input"
                       type="number"
@@ -2853,7 +2862,7 @@ function BatchRosterNode() {
                       aria-label={`${ind.label} 体長mm`}
                     />
                   </td>
-                  <td>{delta != null ? `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}g` : "—"}</td>
+                  <td data-label="Δ前回">{delta != null ? `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}g` : "—"}</td>
                 </tr>
               );
             })}
@@ -5136,17 +5145,144 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// V3-UIX-28 全画面共通ブランドクロム + V3-AUT-12 ログイン/登録/ログアウトの
+// 常時ナビ。app-shell は47全screen-defに1個ずつ既にあるため、ここ1箇所に
+// 実装すれば全画面へ横展開される(per-screen改修不要)。
+//
+// ロゴは画像アセットパイプライン(apps/web にはまだ public/ が無い)を新設
+// せず、差し替え容易なテキストワードマークで表す(ponytail: 画像ロゴが要る
+// ようになったら public/ を新設してこの1箇所を <img> に差し替える)。
+//
+// 認証状態は既存の公開 GET /api/v1/auth/session(401を返さない)で判定。未
+// ログイン中は knowledge-board 等の保護ルートへの死にリンクを見せないよう
+// フッター(愚痴/投票/Builder)とヘッダーの深い導線を隠し、ブランド+ログイン/
+// 新規登録の最小ヘッダーだけを出す。「新規登録」はこのアプリがマジックリンク
+// 一本化方針(専用サインアップ画面なし)のため /s/login と同じ遷移先だが、
+// V3-AUT-12 が要求する3リンク(ログイン/登録/ログアウト)を文言として満たす。
+function ChromeAuthLinks({
+  authenticated,
+  loggingOut,
+  onLogout,
+}: {
+  authenticated: boolean;
+  loggingOut: boolean;
+  onLogout: () => void;
+}) {
+  if (!authenticated) {
+    return (
+      <>
+        <a className="civ-link civ-chrome-link" href="/s/login">
+          ログイン
+        </a>
+        <a className="civ-link civ-chrome-link" href="/s/login">
+          新規登録
+        </a>
+      </>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={cn("civ-interactive", "civ-button", "civ-chrome-link")}
+      data-variant="ghost"
+      aria-busy={loggingOut || undefined}
+      onClick={onLogout}
+    >
+      ログアウト
+    </button>
+  );
+}
+
+function AppShellNode({ node }: { node: ScreenNode }) {
+  const execute = useContext(ExecuteCtx);
+  const [authLoaded, setAuthLoaded] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/auth/session" }))
+      .then((r) => {
+        if (!alive) return;
+        const body = r as { authenticated?: unknown } | undefined;
+        setAuthenticated(body?.authenticated === true);
+      })
+      .catch(() => {
+        if (alive) setAuthenticated(false);
+      })
+      .finally(() => {
+        if (alive) setAuthLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onLogout = useCallback(async () => {
+    setLoggingOut(true);
+    try {
+      await execute({ kind: "api", method: "POST", path: "/api/v1/auth/logout" });
+    } catch {
+      // ponytail: logout is best-effort — even if the API call fails, sending
+      // the visitor to /s/login is the safe outcome (never strand them on a
+      // page that still thinks it's logged in).
+    } finally {
+      if (typeof window !== "undefined") window.location.assign("/s/login");
+    }
+  }, [execute]);
+
+  return (
+    <div className="civ-app-shell">
+      <header className="civ-chrome-header">
+        <a className="civ-brand" href="/">
+          IHL
+        </a>
+        {authLoaded && authenticated && (
+          <nav className="civ-chrome-nav" aria-label="主要ナビゲーション">
+            <a className="civ-link civ-chrome-link" href="/s/obs-search">
+              観測対象を探す
+            </a>
+            <a className="civ-link civ-chrome-link" href="/s/profile">
+              マイページ
+            </a>
+            <a className="civ-link civ-chrome-link" href="/">
+              通知
+            </a>
+            <a className="civ-link civ-chrome-link" href="/s/settings">
+              設定
+            </a>
+          </nav>
+        )}
+        <div className="civ-chrome-auth">
+          <ChromeAuthLinks authenticated={authLoaded && authenticated} loggingOut={loggingOut} onLogout={onLogout} />
+        </div>
+      </header>
+      <Children nodes={node.children} />
+      {authLoaded && authenticated && (
+        <footer className="civ-chrome-footer">
+          <a className="civ-link civ-chrome-link" href="/s/knowledge-board">
+            愚痴・改善
+          </a>
+          <a className="civ-link civ-chrome-link" href="/s/template-market">
+            投票・Fork
+          </a>
+          <a className="civ-link civ-chrome-link" href="/s/ui-templates">
+            Builder
+          </a>
+        </footer>
+      )}
+    </div>
+  );
+}
+
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
   const resolve = useContext(MessagesCtx);
   switch (node.type) {
     case "app-shell":
-      return (
-        <div className="civ-app-shell">
-          <Children nodes={node.children} />
-        </div>
-      );
+      return <AppShellNode node={node} />;
     case "page":
       return (
         <main className="civ-page">
