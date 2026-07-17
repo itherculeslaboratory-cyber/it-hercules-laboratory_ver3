@@ -155,6 +155,115 @@ export function autoFillDescriptor(template: DescriptorTemplate, observation: Ob
   return { sections, claims, match };
 }
 
+// ── quadrantAnalysis(PPR-07)─────────────────────────────────────────────────
+// QUADRANT_GAP_DENSITY_THRESHOLD — 象限密度がこの値未満(既定 5%)かつ未論文化なら
+// 「研究の空白領域」として検出する(要件例示値をそのまま採用)。
+// ponytail: 較正 knob。運用実測で調整(GUI 後波・V3-GOV-17)。
+export const QUADRANT_GAP_DENSITY_THRESHOLD = 0.05;
+
+export type Quadrant = "n11" | "n10" | "n01" | "n00";
+export const QUADRANTS: readonly Quadrant[] = ["n11", "n10", "n01", "n00"];
+
+export interface QuadrantCounts {
+  n11: number; // P∧Q
+  n10: number; // P∧¬Q
+  n01: number; // ¬P∧Q
+  n00: number; // ¬P∧¬Q
+  total: number;
+}
+export interface QuadrantDensity extends QuadrantCounts {
+  density: Record<Quadrant, number>;
+  gaps: Quadrant[]; // 密度が閾値未満(=薄い象限=研究の空白領域)
+}
+
+/**
+ * quadrantAnalysis — 観測データの4象限モデル(PPR-07)。conditions の required キーを
+ * 2 グループに分ける: claim.evidence_keys に載るキー=Q(主張の証拠条件)、それ以外の
+ * required キー=P(前提条件)。各キーの充足判定は matchConditions を 1 回呼んで再利用
+ * (同一実装・車輪の再発明をしない=autoFillDescriptor の evidenced 判定と同じ式)。
+ * observation 1 件ごとに P/Q を機械判定して4象限へ分類し、密度(件数/総数)が閾値未満の
+ * 象限を「薄い象限=未論文化の研究空白」として gaps に列挙する(決定論・都度再計算)。
+ * P 定義キーが無ければ「P は常に真」(matchConditions の required_count=0 既定と同じ)。
+ */
+export function quadrantAnalysis(
+  conditions: ConditionsP,
+  claim: TemplateClaim,
+  observations: ObservationJson[],
+  threshold: number = QUADRANT_GAP_DENSITY_THRESHOLD,
+): QuadrantDensity {
+  const evidenceKeys = new Set((claim.evidence_keys ?? []).slice().sort());
+  const pKeys = Object.keys(conditions ?? {}).filter((k) => conditions[k]?.required === true && !evidenceKeys.has(k));
+  let n11 = 0, n10 = 0, n01 = 0, n00 = 0;
+  for (const obs of observations) {
+    const satisfiedSet = new Set(matchConditions(conditions, obs).satisfied);
+    const p = pKeys.length === 0 || pKeys.every((k) => satisfiedSet.has(k));
+    const q = evidenceKeys.size > 0 && [...evidenceKeys].every((k) => satisfiedSet.has(k));
+    if (p && q) n11++;
+    else if (p && !q) n10++;
+    else if (!p && q) n01++;
+    else n00++;
+  }
+  const total = observations.length;
+  const density: Record<Quadrant, number> = total
+    ? { n11: n11 / total, n10: n10 / total, n01: n01 / total, n00: n00 / total }
+    : { n11: 0, n10: 0, n01: 0, n00: 0 };
+  const gaps = QUADRANTS.filter((k) => density[k] < threshold);
+  return { n11, n10, n01, n00, total, density, gaps };
+}
+
+export interface DerivedPropositions {
+  converse: string; // 逆(Q⇒P)
+  inverse: string; // 裏(¬P⇒¬Q)
+  contrapositive: string; // 対偶(¬Q⇒¬P)
+}
+
+/**
+ * derivePropositions — 確定命題(P⇒Q)から逆・裏・対偶を機械的に生成する(PPR-07)。
+ * 命題論理の恒等変形のみ(LLM 不使用・決定論・pLabel/qLabel の文字列合成)。
+ */
+export function derivePropositions(pLabel: string, qLabel: string): DerivedPropositions {
+  return {
+    converse: `${qLabel} ⇒ ${pLabel}`,
+    inverse: `¬(${pLabel}) ⇒ ¬(${qLabel})`,
+    contrapositive: `¬(${qLabel}) ⇒ ¬(${pLabel})`,
+  };
+}
+
+export interface HypothesisDraft {
+  quadrant: Quadrant;
+  title: string;
+  abstract: string;
+}
+
+// 象限ごとの仮説論文タイトル/要旨テンプレ(決定論テンプレ文合成・LLM 不使用・PPR-07)。
+const QUADRANT_HYPOTHESIS_TEMPLATE: Record<Quadrant, (p: string, q: string) => HypothesisDraft> = {
+  n11: (p, q) => ({
+    quadrant: "n11",
+    title: `${p}かつ${q}の再現性検証`,
+    abstract: `${p}と${q}が同時に観測された事例は少ない。追加観測でこの組合せの再現性を検証する。`,
+  }),
+  n10: (p, q) => ({
+    quadrant: "n10",
+    title: `${p}にもかかわらず${q}が成立しない条件の探索`,
+    abstract: `${p}を満たしながら${q}に至らない事例(逆の反証候補)が薄い。境界条件を仮説論文として提起する。`,
+  }),
+  n01: (p, q) => ({
+    quadrant: "n01",
+    title: `${p}なしで${q}が成立する経路の探索`,
+    abstract: `${p}を満たさずに${q}が観測される事例(裏の反証候補)が薄い。別要因の関与を仮説論文として提起する。`,
+  }),
+  n00: (p, q) => ({
+    quadrant: "n00",
+    title: `${p}と${q}がともに不成立な事例の対偶検証`,
+    abstract: `${p}も${q}も不成立な事例(対偶の裏付け候補)が薄い。対偶(¬${q}⇒¬${p})の追試が必要。`,
+  }),
+};
+
+/** hypothesisDraftsForGaps — gaps の各象限に対応する仮説論文タイトル・要旨を生成(PPR-07)。 */
+export function hypothesisDraftsForGaps(gaps: Quadrant[], pLabel: string, qLabel: string): HypothesisDraft[] {
+  return gaps.map((g) => QUADRANT_HYPOTHESIS_TEMPLATE[g](pLabel, qLabel));
+}
+
 export interface NeighborPaper {
   content_id?: string;
   conditions?: ConditionsP;

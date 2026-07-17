@@ -10,7 +10,8 @@
 #   (round-16 OQ-PLZ-03)がスレ解決マーク新規 1 route(infra-route-079・protected)を
 #   追加 → 71 rows、C8 g03知識レーンが改善要求優先度キュー新規 1 route(infra-route-080・
 #   V3-BBS-14・protected)を追加 → 72 rows、同レーンが Engagement insights 新規 1 route
-#   (infra-route-081・V3-BBS-28・protected)を追加 → 73 rows。
+#   (infra-route-081・V3-BBS-28・protected)を追加 → 73 rows、同レーンが研究4象限分析
+#   新規 1 route(infra-route-082・V3-PPR-07・protected)を追加 → 74 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -87,3 +88,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/plaza/threads/{thread_id}/resolution,VPS,Workers,W2,infra-route-079,protected,implemented,知の広場スレ解決マーク(round-16裁定OQ-PLZ-03)・権限=スレ主のみ・append-only supersedeパターン(resolution_id ULID昇順の最後が現在値)
 —,GET,/api/v1/plaza/channels/{channel}/improvement-queue,VPS,Workers,W2,infra-route-080,protected,implemented,V3-BBS-14 改善要求 優先度キュー・既存プラチナ投票基盤(KRM-25・GOV-07/MKT-35と同一方式)を再利用・コイン降順+閾値到達でofficial候補化
 —,GET,/api/v1/plaza/engagement/insights,VPS,Workers,W2,infra-route-081,protected,implemented,V3-BBS-28 Engagement(公開Q&A/称賛/一括募集)・praise_points(観測データ変動係数)+predicted_questions(頻出質問+自動分類)・市場オファー機構(V3-MKT-06)とは非衝突
+—,POST,/api/v1/research/quadrant,VPS,Workers,W2,infra-route-082,protected,implemented,V3-PPR-07 観測データ4象限モデル(n11/n10/n01/n00)で研究空白領域を検出・逆/裏/対偶を機械生成+仮説論文タイトル/要旨案
