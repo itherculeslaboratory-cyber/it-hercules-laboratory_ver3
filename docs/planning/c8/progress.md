@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: ██████░░░░░░░░░░░░░░ 30%（101/334）
-- 第1波必達(required): ███████████░░░░░░░░░ 53%（98/184）
+- 全体: ███████░░░░░░░░░░░░░ 33%（111/334）
+- 第1波必達(required): ████████████░░░░░░░░ 59%（108/184）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（3/150）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 207 |
-| 着手中(in_progress) | 23 |
+| 未着手(todo) | 195 |
+| 着手中(in_progress) | 25 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
-| 完了(done) | 101 |
+| 完了(done) | 111 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -42,7 +42,7 @@
 | L4 | ███████████░░░░░░░░░ 57%（29/51） |
 | L4-gov | ██████░░░░░░░░░░░░░░ 29%（10/35） |
 | L4-knowledge | ██████░░░░░░░░░░░░░░ 30%（16/54） |
-| L4-obs | ██░░░░░░░░░░░░░░░░░░ 9%（6/66） |
+| L4-obs | █████░░░░░░░░░░░░░░░ 24%（16/66） |
 | L6-ui | █░░░░░░░░░░░░░░░░░░░ 3%（1/39） |
 
 ## lane 別明細
@@ -323,12 +323,12 @@
 | V3-IND-36 | 割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl… | required | done | 65d7a00 |
 | V3-OBS-02 | 観測対象ナビゲータはテキストのみ(画像・サムネイル非表示)で、学名検索・アキネー… | required | todo | — |
 | V3-OBS-06 | 全ての計測・特徴値にvalue_origin(direct_observed/i… | required | done | e61f50b |
-| V3-OBS-07 | 観測の信頼度モデルを設け、自動取得>手入力>後日編集の順で信頼度を明示スコア化し… | required | in_progress | e61f50b |
-| V3-OBS-08 | 観測パイプラインはITO構造(IN:写真・env・metadata → Tran… | required | todo | — |
-| V3-OBS-09 | 画像埋め込みはEmbeddingBackend Protocolで一本化し、本番… | required | todo | — |
-| V3-OBS-11 | 類似検索の最終rerankスコアはembedding+color+size+li… | required | todo | — |
-| V3-OBS-14 | 撮影特徴量は部位別平均L*a*b*(頭部/胸角/前胸/上翅)+分散+色ヒストグラ… | required | todo | — |
-| V3-OBS-17 | 観測commit時にデバイス(devices[])を宣言するとDeviceBin… | required | todo | — |
+| V3-OBS-07 | 観測の信頼度モデルを設け、自動取得>手入力>後日編集の順で信頼度を明示スコア化し… | required | done | e61f50b, aa9dee3 |
+| V3-OBS-08 | 観測パイプラインはITO構造(IN:写真・env・metadata → Tran… | required | done | e61f50b, 35e555e |
+| V3-OBS-09 | 画像埋め込みはEmbeddingBackend Protocolで一本化し、本番… | required | done | e61f50b, 35e555e |
+| V3-OBS-11 | 類似検索の最終rerankスコアはembedding+color+size+li… | required | done | e61f50b |
+| V3-OBS-14 | 撮影特徴量は部位別平均L*a*b*(頭部/胸角/前胸/上翅)+分散+色ヒストグラ… | required | done | 426c2ca |
+| V3-OBS-17 | 観測commit時にデバイス(devices[])を宣言するとDeviceBin… | required | done | ce81dd5 |
 | V3-OBS-19 | 種族+発育段階を1度決めて観測画面に引き継ぐWorkflowContext(観測… | required | todo | — |
 | V3-OBS-20 | 個体ID・棚・場所からQRコードを発行/スキャンし、スキャンで該当個体の新規観測… | required | todo | — |
 | V3-OBS-22 | MVP v1観測コアスコープを「観測データ収集・写真登録・詳細ビュー・親個体連携… | required | todo | — |
@@ -338,17 +338,17 @@
 | V3-OBS-26 | 観測計測入力の1行UIは(項目)ドロップダウン選択or新規追加/数値入力/(単位… | required | todo | — |
 | V3-OBS-27 | 測定行・撮影条件行・環境スナップショット行を単一のStructuredRowコン… | required | todo | — |
 | V3-OBS-43 | 観測を文明OSの中心Input(全機能の一次データ/機能の中心)と位置づけ、固体… | required | todo | — |
-| V3-OBS-45 | スケール紙/計測台を標準化(A4方眼19×26cm+四隅マーカー10mm角+QR… | required | todo | — |
-| V3-OBS-46 | LabelMe相当の画像アノテーション(点/線/ポリゴン/ラベル)を統合し、観測… | required | todo | — |
-| V3-OBS-47 | 写真を撮った瞬間に大きさ・角の長さ・色などをローカル解析(HSV/Lab色空間・… | required | todo | — |
-| V3-OBS-48 | 観測詳細画面に「この観測を再解析する」ボタンを1つ置き、新しい画像なしで既存画像… | required | todo | — |
-| V3-OBS-53 | 写真1枚からmm単位精度で色・光度・湿度・温度を取得・記録できる観測システムと設… | required | todo | — |
-| V3-OBS-56 | searchable_capture_setを検索中核Parquetとし、cap… | required | todo | — |
-| V3-OBS-57 | 写真解析で個体観測画像から種候補・形態特徴・タグ・taxonomyを導く。種候補… | required | todo | — |
+| V3-OBS-45 | スケール紙/計測台を標準化(A4方眼19×26cm+四隅マーカー10mm角+QR… | required | in_progress | 2dcf396 |
+| V3-OBS-46 | LabelMe相当の画像アノテーション(点/線/ポリゴン/ラベル)を統合し、観測… | required | in_progress | e61f50b |
+| V3-OBS-47 | 写真を撮った瞬間に大きさ・角の長さ・色などをローカル解析(HSV/Lab色空間・… | required | in_progress | e61f50b |
+| V3-OBS-48 | 観測詳細画面に「この観測を再解析する」ボタンを1つ置き、新しい画像なしで既存画像… | required | done | e61f50b |
+| V3-OBS-53 | 写真1枚からmm単位精度で色・光度・湿度・温度を取得・記録できる観測システムと設… | required | in_progress | 2dcf396 |
+| V3-OBS-56 | searchable_capture_setを検索中核Parquetとし、cap… | required | done | 2dc42f8 |
+| V3-OBS-57 | 写真解析で個体観測画像から種候補・形態特徴・タグ・taxonomyを導く。種候補… | required | done | b7078e5 |
 | V3-OBS-61 | 観測入力を自然言語のフリーテキスト欄1つ+「解析する」ボタンで受け付け、日付・個… | required | todo | — |
 | V3-OBS-62 | 観測フローを固定順で定義する: userId/auth→種族確定(taxonom… | required | todo | — |
 | V3-OBS-72 | 研究室環境コンテキストの紐付け: 部屋・棚の配置、エアコン等の空調環境、センサー… | required | todo | — |
-| V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | in_progress | 65d7a00 |
+| V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | done | 65d7a00, cc21229 |
 | V3-IND-03 | 観測登録時に個体をindividual_id+display_nameで扱い、ユ… | best-effort | todo | — |
 | V3-IND-05 | 血統(親子)表示で最良個体のみ次世代シリーズ名(例「玉」→「王」)へ昇格させる仕… | best-effort | todo | — |
 | V3-IND-06 | 親表示はハイブリッド(Q7 C): truthはADR-H-11のparent_… | best-effort | todo | — |

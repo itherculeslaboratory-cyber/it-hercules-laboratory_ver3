@@ -1413,12 +1413,13 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "in_progress",
+    "status": "done",
     "commits": [
-      "e61f50b"
+      "e61f50b",
+      "aa9dee3"
     ],
-    "tc": [],
-    "note": "信頼度モデル(自動取得>手入力>後日編集)+◎/○/△視覚文化を実装。apps/api/src/tag-routes.ts confidenceGrade()(コメントでOBS-07明示): CONFIDENCE_ORDERで9値enum全域を◎/○/△に総写像、is_manual_edit=trueは起源に関わらず最下位△(後日編集)。TC: tests/tags.test.ts describe(\"OBS-07 confidenceGrade (value_origin -> grade, 自動>手入力>後日編集)\")—ランク順序/is_manual_edit最下位/9値enum全域totalityの3テスト。未実装:「再測定タグ」(テンプレ/AI/技術向上後の再測定に付与する専用タグ)はコード内に該当箇所なし(grep該当0件) — 再測定の識別自体は未着手。"
+    "tc": ["tests/observation-ext.test.ts:describe(OBS-07 remeasureタグの自動付与)"],
+    "note": "信頼度モデル(自動取得>手入力>後日編集)+◎/○/△視覚文化を実装。apps/api/src/tag-routes.ts confidenceGrade()(コメントでOBS-07明示): CONFIDENCE_ORDERで9値enum全域を◎/○/△に総写像、is_manual_edit=trueは起源に関わらず最下位△(後日編集)。TC: tests/tags.test.ts describe(\"OBS-07 confidenceGrade (value_origin -> grade, 自動>手入力>後日編集)\")—ランク順序/is_manual_edit最下位/9値enum全域totalityの3テスト。未実装:「再測定タグ」(テンプレ/AI/技術向上後の再測定に付与する専用タグ)はコード内に該当箇所なし(grep該当0件) — 再測定の識別自体は未着手。 追加(C8 obs-analysisレーン): 残余だった再測定タグを解消。POST /observation/{capture_id}/reanalyze成功時にtag-routes.appendTagEvent経由でtarget_type=capture・tag=remeasure・tag_type=quality・source_type=machine_suggestedを自動append(best-effort)。既存の手動remeasure運用(tests/tags.test.ts)と同じ規約。"
   },
   {
     "id": "V3-OBS-08",
@@ -1428,10 +1429,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["e61f50b", "35e555e"],
+    "tc": ["components/obs-manifest/tests/test_manifest.py:test_output_rows_and_run_info_carry_derived_artifact_metadata"],
+    "note": "todoだったが実際はe61f50b(C5波)で大枠実装済みと判明(obs-manifest ITO契約)。残gapだった派生成果物メタデータ(run_id/schema_version/input_hash/provenance)をoutput row+run_infoへ追加。run-level input_hashは入力sha256集合の順不同集約。"
   },
   {
     "id": "V3-OBS-09",
@@ -1441,10 +1442,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["e61f50b", "35e555e"],
+    "tc": ["components/obs-manifest/tests/test_manifest.py:test_resolve_image_backend_*, test_analyze_color_*"],
+    "note": "todoだったが埋め込みbackend切替自体はe61f50bで実装済みと判明。EmbeddingBackend Protocol(components/wiki-ingestのruri Protocol資産と同型)をDummyImageBackend/Dinov2ImageBackend/resolve_image_backend()として画像側にも展開(既存embed_dummy/_embed_dinov2/get_backendは後方互換維持)。色ヒストグラム/透明感/黒割合をanalyze_color()で併算(既定はembed_dummyと同じ誠実さでbyte-hash由来の決定論プレースホルダ・実ピクセル解析はPillow/numpy decodeが要る後続wave・実値供給はクライアント側capture-time解析(OBS-47/AIP-104)がmeasurements value_origin=image_derived経由で担う契約)。"
   },
   {
     "id": "V3-OBS-11",
@@ -1454,10 +1455,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["e61f50b"],
+    "tc": ["tests/observation-ext.test.ts:describe(OBS-11 compositeScore + aggregateIndividual)"],
+    "note": "確認のみ・追加変更なし(C8 obs-analysisレーン)。rerank合成式(compositeScore 0.50e+0.20color+0.20size+0.10lineage・欠測既定)+aggregateIndividual(max/mean_top3/weighted_latest)はe61f50bで既に実装・テスト済み(観測ルートのsearch経路で稼働中)と検証。progress.jsonのtodoは実態と乖離していたため今回doneへ修正。"
   },
   {
     "id": "V3-OBS-14",
@@ -1467,10 +1468,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["426c2ca"],
+    "tc": ["components/obs-manifest/tests/test_lab_features.py"],
+    "note": "components/obs-manifest/lab_features.py新設。純粋numpy(sRGB->linear->XYZ->L*a*b* D65)で部位別(頭部/胸角/前胸/上翅・任意名も可)の平均/分散L*a*b*+8bin色ヒストグラムを算出するforkable独立ノード。画像デコード/部位切り出し自体はOBS-46/47(端末側・後続wave)としてスコープ外に明示。欠測部位はゼロ埋めせず除外。"
   },
   {
     "id": "V3-OBS-17",
@@ -1480,10 +1481,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["ce81dd5"],
+    "tc": ["tests/obs-device-binding-commit.test.ts"],
+    "note": "writeCaptureFromCommitBody(solid-observation/commit・batch-commit capture kindの共通funnel)にdevices[]対応を追加。宣言device_idごとに登録済みplacement_refを引きDeviceBinding(open済み再利用・二重POST防止)+Occupancyをbest-effortで自動start。専用binding API不要でcommit1回完結。obs-capture.schema.jsonにdevices(任意配列)を追加(additive)+codegen再生成。"
   },
   {
     "id": "V3-OBS-19",
@@ -1625,10 +1626,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "in_progress",
+    "commits": ["2dcf396"],
+    "tc": ["tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"],
+    "note": "スケール紙物理仕様(SCALE_PAPER)はe61f50bで既存。実寸換算式calibratedRealLengthMm(realLength=pixelLength×mmPerPixel、検出失敗はnull)を新規追加。四隅マーカー自動検出+射影変換のCV実装自体はここでは未着手。 残余(C8 obs-analysisレーン): 四隅マーカー自動検出+射影変換をブラウザ側(WASM/Canvas)で行うCV実装そのもの。V3-AIP-104(サーバ側重処理なし既定OFF・OpenCV.js等の重量級ライブラリ回避)によりクライアント実装が前提だが、具体アルゴリズム(自前の最小限Canny/Hough vs 軽量WASM CVライブラリ)の選定はUI/フロントエンドレーンとの協調が要るアーキテクチャ分岐のため、推測実装せずスキップ。docs/planning/c8/design-obs-53-mm-precision-scale.mdに境界を明記済み。裁定/設計待ち: どちらのCV方式を採るか(推奨=まず自前最小実装で500行未満に収める案、ユーザー影響=バンドルサイズ)。"
   },
   {
     "id": "V3-OBS-46",
@@ -1638,10 +1639,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "in_progress",
+    "commits": ["e61f50b"],
+    "tc": ["tests/obs-annotations.test.ts"],
+    "note": "残余(C8 obs-analysisレーン): backend側(append-only POST /observation/annotations・value_originタグ付与・編集ルート非存在)はe61f50bで既に実装・テスト済み(tests/obs-annotations.test.ts)と確認済み(itemsDoneのOBS-14/57作業中に検証)。残余: 既存OSSのLabelMeをflexlayoutの別パネルにiframe並列配置しASTをpostMessageで共有するフロントエンド統合自体は本レーン(バックエンド/パイプライン中心)のスコープ外・未着手。"
   },
   {
     "id": "V3-OBS-47",
@@ -1651,10 +1652,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "in_progress",
+    "commits": ["e61f50b"],
+    "tc": ["tests/obs-annotations.test.ts:describe(OBS-47 append-only guardrails)"],
+    "note": "残余(C8 obs-analysisレーン): backend側の契約(自動計測値は修正不可・手入力は明確な選択+タグ付与・value_origin frozen enumゲート)はe61f50bで既に実装・テスト済み(tests/obs-annotations.test.ts describe(OBS-47 append-only guardrails))と確認済み。残余: 撮影直後のHSV/Lab色空間・輪郭・サイズ推定・ダメージ検出をブラウザ側で行う実際のCV実装自体は、V3-OBS-45と同じアーキ判断待ちのため未着手(docs/planning/c8/design-obs-53-mm-precision-scale.md参照)。"
   },
   {
     "id": "V3-OBS-48",
@@ -1664,10 +1665,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["e61f50b"],
+    "tc": ["tests/observation-ext.test.ts:describe(OBS-48 reanalyze appends)"],
+    "note": "確認のみ・追加変更なし(C8 obs-analysisレーン。V3-OBS-07で自動タグ付けhookのみ追加)。reanalyze append(analysis_id別・元画像削除禁止・delta/correction_semver記録)+reanalysis-manifest投影はe61f50bで既に実装・テスト済みと検証。progress.jsonのtodoは実態と乖離していたため今回doneへ修正。"
   },
   {
     "id": "V3-OBS-53",
@@ -1677,10 +1678,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "in_progress",
+    "commits": ["2dcf396"],
+    "tc": ["tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"],
+    "note": "「設計図/スケールシートを提供する」の設計図としてdocs/planning/c8/design-obs-53-mm-precision-scale.mdを新規作成。実装済み(SCALE_PAPER定数・calibratedRealLengthMm式・photo_conditions偽装拒否・lab_features.py)と未実装(client-side CV・要アーキ判断)の境界+既存データ契約(新API不要)を整理。 残余(C8 obs-analysisレーン): 設計図は納品済みだが、要件statement本体が指す「観測システムそのもの」のフル実装(mm精度取得の一連のUI+CVフロー)はV3-OBS-45/47と同じ理由でクライアント側CV実装待ち・未着手。"
   },
   {
     "id": "V3-OBS-56",
@@ -1690,10 +1691,10 @@
     "tier": "A",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["2dc42f8"],
+    "tc": ["components/obs-manifest/tests/test_searchable_capture_set.py"],
+    "note": "components/obs-manifest/searchable_capture_set.py新設。run.pyのSEARCHABLE_CAPTURE_SET_COLUMNS固定列順でPolars DataFrameを構築しParquetへ書き出すbuild_searchable_capture_set()/write_snapshot()。snapshots/<snapshot_id>append-only(FileExistsError re-write防止)・latest.jsonをpointerとして更新(pointerのみ上書き対象)。join元データの実結合(captures+thumbnail+embedding manifest)は別waveとして明示。polarsはimportorskipガード+CI(.github/workflows/ci.yml)にpolars追加でskipのまま放置しない。"
   },
   {
     "id": "V3-OBS-57",
@@ -1703,10 +1704,10 @@
     "tier": "B",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": ""
+    "status": "done",
+    "commits": ["b7078e5"],
+    "tc": ["tests/obs-species-suggestions.test.ts", "tests/cl-04-route-matrix.test.ts"],
+    "note": "apps/api/src/observation-routes.tsにheuristicSpeciesCandidatesFromVector(既存search embedding ladderを再利用しspecies_confirmed_by=user確定captureの近傍探索でspecies_candidateを提案)+suggestSpeciesCandidates(ヒューリスティック空の時だけCLIP→Visionへ注入可能callableでエスカレーション、両方未設定でも必ず完走しdegraded配列に明示)を追加。GET /observation/{capture_id}/species-suggestions(protected)を新設・tests/fixtures/route-matrix.csvにinfra-route-080として追加しcl-04-route-matrix.test.tsの期待行数を更新(統合時にinfra-route-080はV3-CST-02が先取していたためinfra-route-083へ採番をずらして解決・75行)。種の自動確定はしない(species_confirmed_byは既存frozen const\"user\"のまま無変更)。"
   },
   {
     "id": "V3-OBS-61",
@@ -4519,12 +4520,13 @@
     "tier": "C",
     "lane": "L4-obs",
     "scope": "required",
-    "status": "in_progress",
+    "status": "done",
     "commits": [
-      "65d7a00"
+      "65d7a00",
+      "cc21229"
     ],
-    "tc": [],
-    "note": "データエクスポート二層は実装済み: apps/api/src/individual-routes.ts GET /export/facts.csv(事実CSV・バイナリ非含有)+ GET /export/photos.csv(写真参照メタのみ・media_key/sha256、バイナリ本体は含まない)。TC: tests/individual.test.ts describe(\"V3-OBS-73 データエクスポート二層(facts.csv / photos.csv)\")。未了: 要件statementのCRフロー(grillingで確定した事項を要件へ環流させる運用プロセス)はドキュメント作業フローでありデータ実装のスコープ外——コード側コメントで明示的に対象外と宣言(誇張ゼロ)。プロセス整備自体は未着手のため in_progress のまま。"
+    "tc": ["tests/individual.test.ts:describe(V3-OBS-73 データエクスポート二層)(既存・pre-existing)"],
+    "note": "データエクスポート二層は実装済み: apps/api/src/individual-routes.ts GET /export/facts.csv(事実CSV・バイナリ非含有)+ GET /export/photos.csv(写真参照メタのみ・media_key/sha256、バイナリ本体は含まない)。TC: tests/individual.test.ts describe(\"V3-OBS-73 データエクスポート二層(facts.csv / photos.csv)\")。未了: 要件statementのCRフロー(grillingで確定した事項を要件へ環流させる運用プロセス)はドキュメント作業フローでありデータ実装のスコープ外——コード側コメントで明示的に対象外と宣言(誇張ゼロ)。プロセス整備自体は未着手のため in_progress のまま。 追加(C8 obs-analysisレーン): データエクスポート二層(facts.csv/photos.csv)は65d7a00で既に実装・テスト済みと確認(追加変更なし)。残余だった「grillingで確定した事項を要件へ環流させるCRフロー」はdocs/planning/c8/requirement-cr-flow.mdとして、新規ツールを増やさず既存実績(round-15/16裁定=このフローの実例)の5ステップformalizeで充足したためdoneへ。"
   },
   {
     "id": "V3-SEC-57",
