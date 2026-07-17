@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
 import { apiUrl } from "@/lib/api";
 import { ApiError, mapError } from "@/lib/error-messages";
 import { shouldOfferTranslation, translateOnDemand } from "@/lib/ugc-translate";
-import { makeResolver, type Catalogs } from "@/lib/i18n";
+import { makeResolver, type Catalogs } from "@/lib/i18n-resolve";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
 import {
   clearBatch,
