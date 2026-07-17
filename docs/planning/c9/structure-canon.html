@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C9 構造正本 骨子 — 判定用ワンページャ</title>
+<style>
+  :root{
+    --bg:#0d0f13;
+    --surface:#151821;
+    --surface2:#1b1f2a;
+    --border:rgba(255,255,255,.10);
+    --border-strong:rgba(255,255,255,.18);
+    --accent:#ff7a1a;
+    --accent-dim:rgba(255,122,26,.16);
+    --text:#e9eaef;
+    --muted:#9aa0ac;
+    --muted2:#6d7382;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif;
+    line-height:1.5;
+    padding:0 0 32px;
+  }
+  .wrap{max-width:1400px;margin:0 auto;padding:24px 24px 0;}
+  header{padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:.7rem;font-weight:700;letter-spacing:.08em;
+    color:var(--accent);border:1px solid var(--accent);
+    background:var(--accent-dim);
+    border-radius:999px;padding:3px 11px;text-transform:uppercase;
+  }
+  h1{font-size:1.7rem;margin:8px 0 3px;font-weight:800;letter-spacing:-.01em;}
+  .lede{font-size:1rem;color:var(--text);margin:0 0 8px;}
+  .lede strong{color:var(--accent);}
+  blockquote{
+    margin:0 0 8px;padding:8px 14px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    border-radius:10px;
+    font-size:.82rem;color:var(--text);
+  }
+  blockquote p{margin:0 0 4px;}
+  blockquote p:last-child{margin-bottom:0;}
+  .context{font-size:.74rem;color:var(--muted2);margin:2px 0;}
+  .context b{color:var(--muted);font-weight:600;}
+  section{margin-bottom:22px;}
+  h2{
+    font-size:1.12rem;font-weight:800;margin:0 0 4px;
+    display:flex;align-items:baseline;gap:10px;
+  }
+  h2 .num{color:var(--accent);font-variant-numeric:tabular-nums;}
+  h3{font-size:.92rem;font-weight:700;color:var(--muted);margin:14px 0 8px;}
+  .section-note{font-size:.8rem;color:var(--muted);margin:0 0 10px;max-width:90ch;}
+  .section-note strong{color:var(--text);}
+
+  /* zone grid */
+  .zone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .zone-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:13px 16px;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .zone-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .zone-name{font-size:.98rem;font-weight:800;}
+  .zone-code{font-size:.68rem;color:var(--muted2);letter-spacing:.06em;font-family:ui-monospace,Consolas,monospace;}
+  .zone-purpose{font-size:.8rem;color:var(--text);}
+  .zone-count{
+    font-size:.68rem;font-weight:700;color:var(--accent);
+    background:var(--accent-dim);border-radius:999px;
+    padding:2px 9px;white-space:nowrap;align-self:flex-start;
+  }
+  .chip-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:1px;}
+  .chip{
+    font-size:.6rem;font-family:ui-monospace,Consolas,monospace;
+    background:var(--surface2);border:1px solid var(--border);
+    border-radius:999px;padding:1px 6px;color:var(--muted);line-height:1.7;
+  }
+
+  .new-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+  .new-card{
+    background:var(--surface);border:2px solid var(--accent);
+    border-radius:12px;padding:12px 16px;
+    display:flex;flex-direction:column;gap:4px;
+  }
+  .new-tag{
+    display:inline-block;font-size:.68rem;font-weight:800;color:var(--accent);
+    letter-spacing:.06em;
+  }
+  .new-name{font-size:1rem;font-weight:800;}
+  .new-row{font-size:.84rem;color:var(--text);}
+  .new-row .label{color:var(--muted2);font-size:.72rem;display:block;margin-bottom:1px;}
+
+  /* diagram */
+  .diagram-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:14px;overflow-x:auto;
+  }
+  .diagram-card svg{width:100%;max-width:940px;height:auto;display:block;min-width:640px;margin:0 auto;}
+  .legend{display:flex;gap:22px;font-size:.72rem;color:var(--muted);margin:8px 2px 0;flex-wrap:wrap;}
+
+  /* mobile diagram fallback: SVG at <640px shrinks below legible text size,
+     so a plain vertical box-flow (same 13 edges, no drawing) replaces it there. */
+  .flow-mobile{display:none;overflow-x:visible;}
+  .flow-mobile .flow-node{
+    background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+    padding:10px 14px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;
+    margin-bottom:8px;
+  }
+  .flow-mobile .flow-node.accent{border-color:var(--accent);}
+  .flow-mobile .flow-node.dashed{border-style:dashed;border-color:var(--muted2);}
+  .flow-mobile .fn-name{font-weight:700;font-size:.92rem;}
+  .flow-mobile .fn-code{font-size:.68rem;color:var(--muted2);font-family:ui-monospace,Consolas,monospace;}
+  .flow-mobile .flow-note{flex-basis:100%;font-size:.76rem;color:var(--muted);}
+  .flow-mobile .flow-arrow{text-align:center;color:var(--muted2);font-size:.8rem;margin:2px 0 10px;}
+
+  /* vocab */
+  .policy-list{margin:0 0 12px;padding-left:20px;font-size:.82rem;color:var(--text);}
+  .policy-list li{margin-bottom:3px;}
+  .table-wrap{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;overflow:auto;
+  }
+  table{border-collapse:collapse;width:100%;min-width:760px;font-size:.78rem;}
+  thead th{
+    text-align:left;font-size:.66rem;letter-spacing:.05em;color:var(--muted2);
+    text-transform:uppercase;padding:8px 14px;border-bottom:1px solid var(--border-strong);
+    white-space:nowrap;
+  }
+  tbody td{padding:6px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody td.n{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;}
+  tbody td.src{color:var(--muted);font-size:.78rem;}
+  tbody td.internal{color:var(--muted);}
+  tbody td.ui strong{color:var(--text);}
+  .vocab-mobile{display:none;}
+  .vocab-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;padding:16px 18px;margin-bottom:12px;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .vocab-card .vocab-num{font-size:.72rem;color:var(--accent);font-weight:700;}
+
+  /* honesty */
+  .honesty-list{margin:0;padding-left:20px;font-size:.82rem;}
+  .honesty-list li{margin-bottom:5px;max-width:100ch;}
+  .honesty-list strong{color:var(--accent);}
+
+  /* checksum */
+  .checksum-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:14px 20px;
+  }
+  .checksum{
+    font-family:ui-monospace,Consolas,monospace;font-size:1.1rem;
+    margin:0 0 5px;color:var(--text);
+  }
+  .checksum strong{color:var(--accent);font-size:1.25rem;}
+  code{
+    font-family:ui-monospace,Consolas,monospace;font-size:.75rem;
+    background:var(--surface2);border:1px solid var(--border);
+    border-radius:6px;padding:2px 6px;color:var(--muted);
+    word-break:break-all;
+  }
+
+  footer{
+    border-top:1px solid var(--border);padding-top:14px;
+  }
+  footer h2{margin-bottom:6px;}
+  footer .ask{font-size:.96rem;margin:0 0 5px;}
+  footer .options{font-size:.82rem;color:var(--muted);}
+
+  @media (max-width:1040px){
+    .zone-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:640px){
+    .wrap{padding:24px 18px 0;}
+    h1{font-size:1.5rem;}
+    .zone-grid,.new-grid{grid-template-columns:1fr;}
+    section{margin-bottom:34px;}
+    .checksum{font-size:1rem;}
+    .checksum strong{font-size:1.15rem;}
+    .diagram-card:not(.flow-mobile){display:none;}
+    .flow-mobile{display:block;}
+    .table-wrap{display:none;}
+    .vocab-mobile{display:block;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="badge">draft</span>
+  <h1>C9 構造正本 骨子</h1>
+  <p class="lede">判断は1つ: <strong>この骨組みを土台にしてよいか</strong></p>
+  <blockquote>
+    <p>この文書で決めることは1つだけ: トップ構造(9ゾーン+目的宣言)と語彙方針(+初期10語)を、C9の全画面ラウンドの土台として承認するか。</p>
+    <p>55画面それぞれの統合/廃止・中身の設計はここでは<strong>決めない</strong>(後続ラウンドで1ジャーニーずつ判定)。</p>
+    <p>承認されたら <code>status: active</code> に昇格。以後の全UI変更は本正本との整合が納品条件(KICKOFF-c9-quality 契約3)。</p>
+  </blockquote>
+  <p class="context"><b>悩みの逐語(この文書が解く問題):</b> 「これUIの設計というか本当に何が必要、遷移設計、とかFableが監督したり、考えたりしましたか?」(受領11・15点)/「画面遷移・全体の設計はちゃんとできているの?」(R44)</p>
+  <p class="context"><b>データソース:</b> screen-defs/*.json 実数55件(navigation.json除く)・renderer.tsx グローバルナビ実装・到達可否は全navigate/href実grep(2026-07-17調査)</p>
+</header>
+
+<section id="zones">
+  <h2><span class="num">1.</span> 画面マップ骨子 — 9ゾーン+新設2</h2>
+  <p class="section-note">各ゾーンに「ユーザーはなぜここに来るか」を1行宣言する。<strong>現55画面は全て下表のどこかに1回だけ載る</strong>(検算§4)。</p>
+
+  <div class="zone-grid">
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">入口 <span class="zone-code">ENTRY</span></span><span class="zone-count">6画面</span></div>
+      <div class="zone-purpose">初めて/再訪の人が迷わず自分の作業場に入る</div>
+      <div class="chip-row">
+        <span class="chip">login</span><span class="chip">login-sent</span><span class="chip">terms</span>
+        <span class="chip">setup-profile</span><span class="chip">country-select</span><span class="chip">language-select</span>
+      </div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">ホーム司令塔 <span class="zone-code">HOME</span></span><span class="zone-count">1画面</span></div>
+      <div class="zone-purpose">今日やること・届いた出来事を10秒で把握して次へ飛ぶ</div>
+      <div class="chip-row"><span class="chip">home</span></div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">観測 <span class="zone-code">OBS</span></span><span class="zone-count">20画面</span></div>
+      <div class="zone-purpose">目の前の個体の変化を最少クリックで記録する(全機能の一次データ)</div>
+      <div class="chip-row">
+        <span class="chip">obs-register</span><span class="chip">obs-register-entry</span><span class="chip">obs-register-new</span>
+        <span class="chip">obs-register-batch</span><span class="chip">obs-register-batch-confirm</span><span class="chip">obs-register-batch-done</span>
+        <span class="chip">obs-register-clutch</span><span class="chip">obs-register-confirm</span><span class="chip">obs-register-done</span>
+        <span class="chip">obs-freetext</span><span class="chip">obs-entry</span><span class="chip">obs-confirm</span>
+        <span class="chip">obs-domain-select</span><span class="chip">obs-search</span><span class="chip">obs-navigator</span>
+        <span class="chip">obs-detail</span><span class="chip">obs-templates</span><span class="chip">device</span>
+        <span class="chip">placement-qr</span><span class="chip">qr-resume(物理QR入口)</span>
+      </div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">個体・種 <span class="zone-code">IND</span></span><span class="zone-count">5画面</span></div>
+      <div class="zone-purpose">理想の個体を見つけ、個体の物語(血統・成長)を辿る</div>
+      <div class="chip-row">
+        <span class="chip">individual-detail</span><span class="chip">bio-card</span><span class="chip">cross</span>
+        <span class="chip">match</span><span class="chip">species</span>
+      </div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">市場 <span class="zone-code">MKT</span></span><span class="zone-count">3画面</span></div>
+      <div class="zone-purpose">安心して買う・出す。取引の今を見失わない</div>
+      <div class="chip-row">
+        <span class="chip">market-trade</span><span class="chip">economy-status</span><span class="chip">platinum-shop</span>
+      </div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">創る <span class="zone-code">FORK</span></span><span class="zone-count">2画面</span></div>
+      <div class="zone-purpose">良いテンプレを真似て・作って・共有して得をする(コピーされた方が得)</div>
+      <div class="chip-row">
+        <span class="chip">template-market</span><span class="chip">ui-templates</span>
+      </div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">知の広場 <span class="zone-code">KNW</span></span><span class="zone-count">11画面</span></div>
+      <div class="zone-purpose">みんなの記録と論文から答えを探し、議論する</div>
+      <div class="chip-row">
+        <span class="chip">knowledge-hub</span><span class="chip">knowledge-board</span><span class="chip">knowledge-thread</span>
+        <span class="chip">knowledge-paper</span><span class="chip">knowledge-github</span><span class="chip">paper-match</span>
+        <span class="chip">paper-detail</span><span class="chip">data-descriptor</span><span class="chip">project-hub</span>
+        <span class="chip">research-search</span><span class="chip">research-newspaper</span>
+      </div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">話し合いの場 <span class="zone-code">HAN</span></span><span class="zone-count">1画面</span></div>
+      <div class="zone-purpose">もめごと・指摘を当事者同士で落ち着いて解決する</div>
+      <div class="chip-row"><span class="chip">dispute</span></div>
+    </div>
+
+    <div class="zone-card">
+      <div class="zone-head"><span class="zone-name">マイページ <span class="zone-code">ME</span></span><span class="zone-count">6画面</span></div>
+      <div class="zone-purpose">自分の状態(信頼・資産・設定)を確認して整える</div>
+      <div class="chip-row">
+        <span class="chip">profile</span><span class="chip">settings</span><span class="chip">ai-profile-settings</span>
+        <span class="chip">ai-sessions</span><span class="chip">costs</span><span class="chip">theme-gallery</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>新設2(いずれもユーザー裁定済み・本判断の対象外=位置の確認のみ)</h3>
+  <div class="new-grid">
+    <div class="new-card">
+      <span class="new-tag">新設</span>
+      <div class="new-name">個体ファインダー(一覧⇔宇宙)</div>
+      <div class="new-row"><span class="label">位置</span>IND内の探索モード。トップナビ項目にはしない</div>
+      <div class="new-row"><span class="label">根拠</span>R45「絶対にIHLver3に実装する」/ design-individual-finder.md §4</div>
+    </div>
+    <div class="new-card">
+      <span class="new-tag">新設</span>
+      <div class="new-name">取引中(独立画面)</div>
+      <div class="new-row"><span class="label">位置</span>MKT隣接。ホームに件数表示</div>
+      <div class="new-row"><span class="label">根拠</span>round-16裁定「取引中=独立画面」</div>
+    </div>
+  </div>
+</section>
+
+<section id="transitions">
+  <h2><span class="num">2.</span> 遷移骨子(主要導線のみ)</h2>
+  <div class="diagram-card">
+    <svg viewBox="0 0 1180 360" role="img" aria-label="遷移骨子の簡易図">
+      <!-- edges (drawn first, under nodes) -->
+      <!-- ENTRY -> HOME -->
+      <path d="M95,66 C95,115 250,115 250,177" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <!-- QR -> OBS -->
+      <path d="M131,130 C280,130 280,32 520,32" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <!-- HOME -> OBS/IND/MKT/KNW/ME -->
+      <path d="M410,165 C465,165 465,32 520,32" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M410,171 C465,171 465,90 520,90" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M410,177 C465,177 465,148 520,148" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M410,183 C465,183 465,206 520,206" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <path d="M410,189 C465,189 465,264 520,264" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <!-- HOME -.フッター.-> FORK -->
+      <path d="M330,204 C330,322 470,322 520,322" fill="none" stroke="#6d7382" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowMuted)"/>
+      <rect x="368" y="288" width="66" height="18" rx="5" fill="#151821"/>
+      <text x="401" y="301" font-size="10.5" fill="#9aa0ac" text-anchor="middle">フッター</text>
+      <!-- IND self loop (finder) -->
+      <path d="M690,82 C745,76 745,104 690,98" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <rect x="750" y="79" width="150" height="32" rx="6" fill="#151821" stroke="#242938"/>
+      <text x="758" y="92" font-size="10" fill="#9aa0ac">ファインダー</text>
+      <text x="758" y="105" font-size="10" fill="#9aa0ac">一覧⇔宇宙</text>
+      <!-- MKT -> TRD -->
+      <path d="M690,148 L810,148" fill="none" stroke="#ff7a1a" stroke-width="2" marker-end="url(#arrow)"/>
+      <!-- MKT -.もめたら.-> HAN -->
+      <path d="M690,160 C860,160 860,229 1010,229" fill="none" stroke="#6d7382" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowMuted)"/>
+      <rect x="812" y="172" width="62" height="18" rx="5" fill="#151821"/>
+      <text x="843" y="185" font-size="10.5" fill="#9aa0ac" text-anchor="middle">もめたら</text>
+      <!-- TRD -.-> HAN -->
+      <path d="M895,168 C895,205 950,229 1010,229" fill="none" stroke="#6d7382" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowMuted)"/>
+      <!-- KNW -.指摘.-> HAN -->
+      <path d="M690,206 C860,206 900,229 1010,231" fill="none" stroke="#6d7382" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowMuted)"/>
+      <rect x="762" y="200" width="48" height="18" rx="5" fill="#151821"/>
+      <text x="786" y="213" font-size="10.5" fill="#9aa0ac" text-anchor="middle">指摘</text>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#ff7a1a"/>
+        </marker>
+        <marker id="arrowMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6d7382"/>
+        </marker>
+      </defs>
+
+      <!-- nodes -->
+      <g>
+        <rect x="20" y="20" width="150" height="46" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="95" y="40" font-size="13" font-weight="700" fill="#e9eaef" text-anchor="middle">入口</text>
+        <text x="95" y="55" font-size="9.5" fill="#6d7382" text-anchor="middle">ENTRY</text>
+      </g>
+      <g>
+        <circle cx="95" cy="130" r="36" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <text x="95" y="127" font-size="10" fill="#e9eaef" text-anchor="middle">物理QR</text>
+        <text x="95" y="139" font-size="10" fill="#e9eaef" text-anchor="middle">ラベル</text>
+      </g>
+      <g>
+        <rect x="250" y="150" width="160" height="54" rx="12" fill="#1b1f2a" stroke="#ff7a1a" stroke-width="1.5"/>
+        <text x="330" y="173" font-size="14" font-weight="800" fill="#e9eaef" text-anchor="middle">ホーム司令塔</text>
+        <text x="330" y="190" font-size="9.5" fill="#6d7382" text-anchor="middle">HOME</text>
+      </g>
+      <g>
+        <rect x="520" y="12" width="170" height="40" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="605" y="30" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">観測</text>
+        <text x="605" y="44" font-size="9.5" fill="#6d7382" text-anchor="middle">OBS</text>
+      </g>
+      <g>
+        <rect x="520" y="70" width="170" height="40" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="605" y="88" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">個体・種</text>
+        <text x="605" y="102" font-size="9.5" fill="#6d7382" text-anchor="middle">IND</text>
+      </g>
+      <g>
+        <rect x="520" y="128" width="170" height="40" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="605" y="146" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">市場</text>
+        <text x="605" y="160" font-size="9.5" fill="#6d7382" text-anchor="middle">MKT</text>
+      </g>
+      <g>
+        <rect x="520" y="186" width="170" height="40" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="605" y="204" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">知の広場</text>
+        <text x="605" y="218" font-size="9.5" fill="#6d7382" text-anchor="middle">KNW</text>
+      </g>
+      <g>
+        <rect x="520" y="244" width="170" height="40" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="605" y="262" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">マイページ</text>
+        <text x="605" y="276" font-size="9.5" fill="#6d7382" text-anchor="middle">ME</text>
+      </g>
+      <g>
+        <rect x="520" y="302" width="170" height="40" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="605" y="320" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">創る</text>
+        <text x="605" y="334" font-size="9.5" fill="#6d7382" text-anchor="middle">FORK</text>
+      </g>
+      <g>
+        <rect x="810" y="128" width="170" height="40" rx="10" fill="#1b1f2a" stroke="#ff7a1a" stroke-width="1.5"/>
+        <text x="895" y="146" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">取引中</text>
+        <text x="895" y="160" font-size="9.5" fill="#6d7382" text-anchor="middle">TRD ※新設</text>
+      </g>
+      <g>
+        <rect x="1010" y="206" width="150" height="46" rx="10" fill="#1b1f2a" stroke="#2c3140" stroke-width="1.5"/>
+        <text x="1085" y="226" font-size="12.5" font-weight="700" fill="#e9eaef" text-anchor="middle">話し合いの場</text>
+        <text x="1085" y="241" font-size="9.5" fill="#6d7382" text-anchor="middle">HAN</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- narrow-viewport fallback: same 13導線を整列ボックスの縦フローで表現(SVGは640px未満で縮小しすぎて判読不能なため) -->
+  <div class="diagram-card flow-mobile">
+    <div class="flow-node"><span class="fn-name">入口</span><span class="fn-code">ENTRY</span></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-node accent">
+      <span class="fn-name">ホーム司令塔</span><span class="fn-code">HOME</span>
+      <div class="flow-note">物理QRラベル → 観測(直接流入)</div>
+    </div>
+    <div class="flow-arrow">↓ 分岐</div>
+    <div class="flow-node"><span class="fn-name">観測</span><span class="fn-code">OBS</span></div>
+    <div class="flow-node"><span class="fn-name">個体・種</span><span class="fn-code">IND</span>
+      <div class="flow-note">⟲ ファインダー: 一覧⇔宇宙</div>
+    </div>
+    <div class="flow-node"><span class="fn-name">市場</span><span class="fn-code">MKT</span>
+      <div class="flow-note">→ 取引中(※新設) ／ ⇢ もめたら: 話し合いの場</div>
+    </div>
+    <div class="flow-node"><span class="fn-name">知の広場</span><span class="fn-code">KNW</span>
+      <div class="flow-note">⇢ 指摘: 話し合いの場</div>
+    </div>
+    <div class="flow-node"><span class="fn-name">マイページ</span><span class="fn-code">ME</span></div>
+    <div class="flow-node dashed"><span class="fn-name">創る</span><span class="fn-code">FORK</span>
+      <div class="flow-note">⇢ フッター(HOMEからの補助導線)</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-node accent"><span class="fn-name">取引中</span><span class="fn-code">TRD ※新設</span>
+      <div class="flow-note">市場から ／ ⇢ 話し合いの場</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-node"><span class="fn-name">話し合いの場</span><span class="fn-code">HAN</span>
+      <div class="flow-note">市場・取引中・知の広場から補助導線で集まる</div>
+    </div>
+    <div class="legend">
+      <span>→ / ↓ = 主要導線</span>
+      <span>⇢ = 補助導線(「…」メニュー等)</span>
+    </div>
+  </div>
+
+  <p class="section-note">実線=主要導線・破線=「…」メニュー等からの補助導線。ゾーン内部の遷移は各ジャーニーのラウンドで確定する。</p>
+</section>
+
+<section id="vocab">
+  <h2><span class="num">3.</span> 語彙辞書骨子 — 方針3行+初期10語</h2>
+  <ol class="policy-list">
+    <li>スキーマ名・ID・開発用語は画面に出さない。出したくなったらこの表に追記してから使う。</li>
+    <li>新語・専門語は初出画面に1行説明を添える。</li>
+    <li>迷ったらユーザー自身の言葉(逐語フィードバック)を正とする。</li>
+  </ol>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>内部用語(UIに出さない)</th><th>UIで使う言葉</th><th>出典</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="n">1</td><td class="internal">dispute / 相談室 / 二人部屋</td><td class="ui"><strong>話し合いの場</strong></td><td class="src">round-16裁定(汎用調停ルーム)・受領11「相談室ってなんだよ」</td></tr>
+        <tr><td class="n">2</td><td class="internal">買い手/売り手(役割ラベル)</td><td class="ui">出さない(自分に関係あるボタンだけ表示)</td><td class="src">受領10必須①(実装済み方針)</td></tr>
+        <tr><td class="n">3</td><td class="internal">actor_id等の生ハッシュ</td><td class="ui"><strong>表示名</strong></td><td class="src">受領10(実装済み方針)</td></tr>
+        <tr><td class="n">4</td><td class="internal">listing/trade等のID露出</td><td class="ui"><strong>対象カード</strong>(写真+名前)。IDは詳細の隅</td><td class="src">受領10/11の内部語指摘から導出(redesign-round2分析)</td></tr>
+        <tr><td class="n">5</td><td class="internal">「この出品取引」等の複合内部語</td><td class="ui">「買う」「出品」「取引中」</td><td class="src">受領11逐語</td></tr>
+        <tr><td class="n">6</td><td class="internal">6次元観測ベクトル(生値)</td><td class="ui"><strong>形質プロファイル</strong></td><td class="src">design-individual-finder.md:68</td></tr>
+        <tr><td class="n">7</td><td class="internal">telemetry / テレメトリ</td><td class="ui"><strong>環境データ</strong></td><td class="src">新規提案</td></tr>
+        <tr><td class="n">8</td><td class="internal">karma(内部名)</td><td class="ui"><strong>貢献度</strong></td><td class="src">round-16(フォーク10%=貢献度)</td></tr>
+        <tr><td class="n">9</td><td class="internal">Truth / R2 / append-only 等の基盤語</td><td class="ui">出さない。必要時のみ「記録は書き換えられません」</td><td class="src">新規提案</td></tr>
+        <tr><td class="n">10</td><td class="internal">fork</td><td class="ui"><strong>フォーク</strong>(初出画面に「=コピーして自分版を作ること。コピーされた方が得」の1行説明)</td><td class="src">フォーク文化(不変条項②・ユーザー哲学語として維持)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- narrow-viewport fallback: same 10行を縦カードで表現(4列テーブルは640px未満で列が切れるため) -->
+  <div class="vocab-mobile">
+    <div class="vocab-card"><span class="vocab-num">#1</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>dispute / 相談室 / 二人部屋</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span><strong>話し合いの場</strong></div>
+      <div class="new-row"><span class="label">出典</span>round-16裁定(汎用調停ルーム)・受領11「相談室ってなんだよ」</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#2</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>買い手/売り手(役割ラベル)</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span>出さない(自分に関係あるボタンだけ表示)</div>
+      <div class="new-row"><span class="label">出典</span>受領10必須①(実装済み方針)</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#3</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>actor_id等の生ハッシュ</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span><strong>表示名</strong></div>
+      <div class="new-row"><span class="label">出典</span>受領10(実装済み方針)</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#4</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>listing/trade等のID露出</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span><strong>対象カード</strong>(写真+名前)。IDは詳細の隅</div>
+      <div class="new-row"><span class="label">出典</span>受領10/11の内部語指摘から導出(redesign-round2分析)</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#5</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>「この出品取引」等の複合内部語</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span>「買う」「出品」「取引中」</div>
+      <div class="new-row"><span class="label">出典</span>受領11逐語</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#6</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>6次元観測ベクトル(生値)</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span><strong>形質プロファイル</strong></div>
+      <div class="new-row"><span class="label">出典</span>design-individual-finder.md:68</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#7</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>telemetry / テレメトリ</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span><strong>環境データ</strong></div>
+      <div class="new-row"><span class="label">出典</span>新規提案</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#8</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>karma(内部名)</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span><strong>貢献度</strong></div>
+      <div class="new-row"><span class="label">出典</span>round-16(フォーク10%=貢献度)</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#9</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>Truth / R2 / append-only 等の基盤語</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span>出さない。必要時のみ「記録は書き換えられません」</div>
+      <div class="new-row"><span class="label">出典</span>新規提案</div>
+    </div>
+    <div class="vocab-card"><span class="vocab-num">#10</span>
+      <div class="new-row"><span class="label">内部用語(UIに出さない)</span>fork</div>
+      <div class="new-row"><span class="label">UIで使う言葉</span><strong>フォーク</strong>(初出画面に「=コピーして自分版を作ること。コピーされた方が得」の1行説明)</div>
+      <div class="new-row"><span class="label">出典</span>フォーク文化(不変条項②・ユーザー哲学語として維持)</div>
+    </div>
+  </div>
+
+  <p class="section-note" style="margin-top:14px;">出典の正直表示: 1〜5は未承認分析資料(ui-redesign-round2.md)からの引き継ぎで、<strong>この承認により正式化</strong>される。7・9は新規提案。</p>
+</section>
+
+<section id="checksum">
+  <h2><span class="num">4.</span> 検算(実データ)</h2>
+  <div class="checksum-card">
+    <p class="checksum">6 + 1 + 20 + 5 + 3 + 2 + 11 + 1 + 6 = <strong>55</strong></p>
+    <p class="section-note" style="margin-bottom:10px;">= <code>screen-defs/*.json</code> 実数(navigation.json除く)。重複なし・漏れなし。</p>
+    <p class="section-note" style="margin-bottom:0;">再現コマンド: <code>node -e "console.log(require('fs').readdirSync('screen-defs').filter(f=>f.endsWith('.json')&&f!=='navigation.json').length)"</code></p>
+  </div>
+</section>
+
+<section id="honesty">
+  <h2><span class="num">5.</span> 正直表示(この骨子が言わないこと)</h2>
+  <ul class="honesty-list">
+    <li>研究系5画面(paper-detail / data-descriptor / project-hub / research-search / research-newspaper)は<strong>現在UI導線から到達不能</strong>(実測)。KNWに置いたのは棚卸しであり、導線新設/凍結の裁定は後続ラウンド。</li>
+    <li>OBS内の重複3画面(obs-entry / obs-confirm / obs-domain-select)には退役候補の分析が存在するが、本判断には含まない。</li>
+    <li>ファインダーの胸角mm sort・全個体の宇宙座標はバックエンド未実装。第1ラウンドのスライスは「一覧+詳細+血統」まで(KICKOFF)で、未接続部は画面内に正直表示する。</li>
+  </ul>
+</section>
+
+<footer>
+  <h2><span class="num">6.</span> 判断のお願い(1つだけ)</h2>
+  <p class="ask"><strong>この骨組み(9ゾーン+目的宣言+語彙方針10語)をC9の土台として承認しますか?</strong></p>
+  <p class="options">承認 / 部分修正(どこをどう直すか) / 差し戻し — HQレビューハブのカードから採点・コメントできます。</p>
+</footer>
+
+</div>
+</body>
+</html>
