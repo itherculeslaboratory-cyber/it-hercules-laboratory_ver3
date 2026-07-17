@@ -42,8 +42,7 @@ describe("middleware — V3-AUT-12 redirect behavior", () => {
     vi.stubGlobal(
       "fetch",
       mockFetchSequence({
-        "/auth/session": { authenticated: true, actor_id: "a" },
-        "/me/preferences": { handle: "dave", locale: "ja" },
+        "/auth/session": { authenticated: true, actor_id: "a", onboarding_complete: true },
       }),
     );
     try {
@@ -99,12 +98,14 @@ describe("middleware — V3-AUT-12 redirect behavior", () => {
   });
 
   // ── V3-AUT-10 onboarding gate ────────────────────────────────────────────
-  it("redirects a logged-in visitor with no handle to /s/setup-profile", async () => {
+  // SSOT: onboarding_complete comes from GET /auth/session (apps/api
+  // projectOnboardingStatus — handle + explicit-locale gates), not a
+  // separately-derived /me/preferences check.
+  it("redirects a logged-in visitor with onboarding_complete:false to /s/setup-profile", async () => {
     vi.stubGlobal(
       "fetch",
       mockFetchSequence({
-        "/auth/session": { authenticated: true, actor_id: "a" },
-        "/me/preferences": { handle: "", locale: "ja" },
+        "/auth/session": { authenticated: true, actor_id: "a", onboarding_complete: false },
       }),
     );
     try {
@@ -117,35 +118,31 @@ describe("middleware — V3-AUT-12 redirect behavior", () => {
     }
   });
 
-  it("does NOT redirect-loop: /s/setup-profile itself is reachable even with no handle", async () => {
-    const fetchMock = mockFetchSequence({ "/auth/session": { authenticated: true, actor_id: "a" } });
+  it("does NOT redirect-loop: /s/setup-profile itself is reachable even with onboarding_complete:false", async () => {
+    const fetchMock = mockFetchSequence({
+      "/auth/session": { authenticated: true, actor_id: "a", onboarding_complete: false },
+    });
     vi.stubGlobal("fetch", fetchMock);
     try {
       const req = new NextRequest("http://localhost:3000/s/setup-profile", { headers: { cookie: "ihl_session=v1.x.y" } });
       const res = await middleware(req);
       expect(res.headers.get("location")).toBeNull();
-      // only the auth/session check ran — /me/preferences was never fetched for this path.
+      // exactly one call: the single /auth/session fetch covers both gates.
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();
     }
   });
 
-  it("fails OPEN on the onboarding check alone (session confirmed, preferences fetch errors)", async () => {
+  it("fails OPEN on the onboarding gate alone when the field is missing/malformed (session itself is confirmed authenticated)", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.includes("/auth/session")) {
-          return new Response(JSON.stringify({ authenticated: true, actor_id: "a" }), { status: 200 });
-        }
-        throw new Error("preferences unreachable");
-      }),
+      mockFetchSequence({ "/auth/session": { authenticated: true, actor_id: "a" } }), // no onboarding_complete field
     );
     try {
       const req = new NextRequest("http://localhost:3000/", { headers: { cookie: "ihl_session=v1.x.y" } });
       const res = await middleware(req);
-      // a confirmed real session is never trapped by a transient prefs-fetch hiccup
+      // a confirmed real session is never trapped by a missing/malformed field
       expect(res.headers.get("location")).toBeNull();
     } finally {
       vi.unstubAllGlobals();

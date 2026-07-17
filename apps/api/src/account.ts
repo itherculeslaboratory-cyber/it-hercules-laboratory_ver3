@@ -3,6 +3,7 @@
 // 成功時にオープン登録として R2 へ put-if-absent する(2回目以降はキー衝突=idempotent
 // no-op・disputed の判定・再送は不要=事故らない)。PII は持たない(actor_id のみ)。
 import { TruthStore, ulid } from "@ihl/truth";
+import { projectPreferences } from "./settings-routes";
 
 const ACCOUNT_TYPE = "ihl.aut.account.v1";
 const ACCOUNT_SCHEMA = "schemas/events/aut-account.schema.json";
@@ -15,7 +16,9 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
   return (e.data ?? {}) as Record<string, unknown>;
 }
 
-/** 本人が既に handle を確定済みなら its handle、未確定なら null。 */
+/** 本人が既に @handle(V3-AUT-08・一意・不変クレーム)を確定済みなら its handle、
+ * 未確定なら null。projectOnboardingStatus の判定には使わない(下記参照) — これは
+ * handle-routes.ts の別機能(一意な@ID)専用。 */
 export async function findOwnHandle(s: TruthStore, actorId: string): Promise<string | null> {
   const events = (await s.listEvents(`truth/${HANDLE_TYPE}/`)).map(dataOf);
   const mine = events.find((d) => d.actor_id === actorId);
@@ -60,7 +63,14 @@ export interface OnboardingStatus {
 // V3-AUT-10/V3-I18-02: 必須2ゲート(handle + locale)が両方満たされて初めて
 // onboardingComplete=true。V3-AUT-45(usecase-driven-design.md)により表示名/
 // タイムゾーン/テーマは既定を通せる可変項目でゲートしない。
+//
+// handle ゲートの実体は projectPreferences(settings-routes.ts)の handle
+// フィールド(pref-set・PATCH /me/preferences)—— setup-profile.json 画面が実際に
+// 書く先はこれで、findOwnHandle(HANDLE_TYPE・別機能の@handle一意クレーム)ではない。
+// このSSOT関数はここでのみ「onboarding完了」を判定し、apps/web/middleware.ts は
+// GET /auth/session の onboarding_complete をそのまま使う(2系統併存の解消)。
 export async function projectOnboardingStatus(s: TruthStore, actorId: string): Promise<OnboardingStatus> {
-  const [handle, localeSet] = await Promise.all([findOwnHandle(s, actorId), hasExplicitLocale(s, actorId)]);
+  const [prefs, localeSet] = await Promise.all([projectPreferences(s, actorId), hasExplicitLocale(s, actorId)]);
+  const handle = prefs.handle ? prefs.handle : null;
   return { onboarding_complete: handle !== null && localeSet, handle, locale_set: localeSet };
 }

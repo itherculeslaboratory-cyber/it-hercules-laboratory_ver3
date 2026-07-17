@@ -1,15 +1,12 @@
-// V3-AIP-34 — Spec-Driven design contract for the 知の広場 thread screen.
-// The thread spec (K6 正本) must (1) validate against screendef.schema.json and
-// (2) be consistent with the route matrix: every API path the thread screen
-// reads/writes is a PROTECTED route (deny-by-default), and the screen is
-// reachable in navigation.json. Same discipline cl-04-route-matrix pins for the
-// whole API — here for one Spec-first screen.
-//
-// DEPENDENCY GATE (design-k8 §5): the thread spec is the K6 知の広場 deliverable.
-// C5 shipped it as the plaza board screen (knowledge-board): a thread-bearing
-// board that reads GET /plaza/channels/{channel}/threads and writes POST
-// /plaza/posts. findThreadSpec discovers it structurally, so this suite now
-// activates. It still SKIPS + STOP-reports if no thread/plaza screen-def exists.
+// V3-AIP-34 — Spec-Driven design contract, applied to a second domain
+// (market-trade) after tests/spec-thread.test.ts proved the pattern on the
+// 知の広場 thread screen. Same discipline, same 3 checks: (1) the screen-def
+// validates against screendef.schema.json, (2) every API endpoint it
+// reads/writes is deny-by-default (401 without auth — cl-04-route-matrix
+// pattern, driving the real app), (3) the screen is reachable in
+// navigation.json. Discovered structurally (route/screen_id/API references),
+// not hardcoded to a filename, so it stays wired if market-trade.json is ever
+// renamed or the market flow is later split across screens.
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -23,20 +20,27 @@ const require = createRequire(fileURLToPath(new URL("../package.json", import.me
 type Node = { id: string; type: string; props?: Record<string, unknown>; action?: Record<string, unknown>; children?: Node[] };
 type ScreenDef = { screen_id: string; route: string; title: string; nodes: Node[] };
 
-// A "thread spec" = the 知の広場 thread screen. Discovered structurally so it
-// wires to whatever K6 named the file:
-//   (a) a single-thread route/id — …/t/{thread_id}, a :thread_id/{thread_id}
-//       segment, or a screen_id naming a thread; OR
-//   (b) the plaza thread board — any node that reads plaza threads or writes a
-//       plaza post (C5 shipped it as knowledge-board).
-function referencesPlazaThread(def: ScreenDef): boolean {
+function flatten(def: ScreenDef): Node[] {
+  const out: Node[] = [];
+  const walk = (n: Node) => {
+    out.push(n);
+    for (const c of n.children ?? []) walk(c);
+  };
+  for (const n of def.nodes ?? []) walk(n);
+  return out;
+}
+
+// A "market-trade spec" = the 出品/取引 screen (draft→publish→match→pay→ship→
+// receive). Discovered structurally: route/screen_id naming, or any node
+// reading/writing /market/listings.
+function referencesMarketListings(def: ScreenDef): boolean {
   return flatten(def).some((n) => {
     const src = typeof n.props?.source_path === "string" ? n.props.source_path : "";
     const act = n.action?.kind === "api" && typeof n.action.path === "string" ? n.action.path : "";
-    return /\/plaza\/(threads|channels\/[^/]+\/threads|posts)/.test(src + " " + act);
+    return /\/market\/listings/.test(src + " " + act);
   });
 }
-function findThreadSpec(): ScreenDef | null {
+function findMarketTradeSpec(): ScreenDef | null {
   const dir = `${ROOT}/screen-defs`;
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".json")) continue;
@@ -48,30 +52,17 @@ function findThreadSpec(): ScreenDef | null {
     }
     const route = def.route ?? "";
     const id = def.screen_id ?? "";
-    if (/\{thread_id\}|:thread_id|\/t\//.test(route) || /thread/i.test(id)) return def;
-    if (referencesPlazaThread(def)) return def;
+    if (/\/market\/trade/.test(route) || /market-?trade/i.test(id)) return def;
+    if (referencesMarketListings(def)) return def;
   }
   return null;
 }
 
-function flatten(def: ScreenDef): Node[] {
-  const out: Node[] = [];
-  const walk = (n: Node) => {
-    out.push(n);
-    for (const c of n.children ?? []) walk(c);
-  };
-  for (const n of def.nodes ?? []) walk(n);
-  return out;
-}
-
-// Every API endpoint the screen reads (list source_path) or writes (form api
-// action), as {method, path}. {param}/:param → "x" so the path is requestable.
+// Every API endpoint the screen reads (list source_path) or writes (form/button
+// api action), as {method, path}. {param}/{{...}}/:param → "x" so the path is
+// requestable against the real app.
 function apiEndpoints(def: ScreenDef): { method: string; path: string }[] {
   const out = new Map<string, { method: string; path: string }>();
-  // ponytail: double-brace mustache ({{x}}) must be matched atomically before the
-  // single-brace fallback, or a stray "}" leaks into the concrete path (harmless
-  // here since the global auth gate 401s any /api/v1/* path regardless, but a
-  // malformed path is not what "drive the real app" is meant to test).
   const concrete = (p: string) => p.replace(/\{\{[^{}]*\}\}|\{[^{}]*\}/g, "x").replace(/:[^/]+/g, "x");
   for (const n of flatten(def)) {
     const src = n.props?.source_path;
@@ -84,19 +75,19 @@ function apiEndpoints(def: ScreenDef): { method: string; path: string }[] {
   return [...out.values()];
 }
 
-const threadSpec = findThreadSpec();
+const marketTradeSpec = findMarketTradeSpec();
 
-if (!threadSpec) {
+if (!marketTradeSpec) {
   // eslint-disable-next-line no-console
   console.warn(
-    "[STOP] spec-thread.test.ts skipped: K6 知の広場 thread screen-def not produced yet " +
-      "(V3-AIP-34 spec JSON 未明文化, design-k8 §5). Validation + route-matrix integrity " +
-      "wire automatically once a thread-view screen-def lands in screen-defs/.",
+    "[STOP] spec-market-trade.test.ts skipped: market-trade screen-def not found " +
+      "(V3-AIP-34 2nd-domain Spec-Driven contract). Validation + route-matrix integrity " +
+      "wire automatically once a screen reading/writing /market/listings lands in screen-defs/.",
   );
 }
 
-describe.skipIf(!threadSpec)("V3-AIP-34 thread spec (Spec-Driven contract)", () => {
-  const def = threadSpec!;
+describe.skipIf(!marketTradeSpec)("V3-AIP-34 market-trade spec (Spec-Driven contract, 2nd domain)", () => {
+  const def = marketTradeSpec!;
 
   it("validates against screendef.schema.json (draft 2020-12)", () => {
     const Ajv2020 = require("ajv/dist/2020.js");
@@ -106,12 +97,9 @@ describe.skipIf(!threadSpec)("V3-AIP-34 thread spec (Spec-Driven contract)", () 
     expect(validate(def), JSON.stringify(validate.errors)).toBe(true);
   });
 
-  it("every API endpoint the thread screen touches is deny-by-default (401 without auth)", async () => {
-    // cl-04-route-matrix pattern: drive the REAL app. Thread content is
-    // protected, so each endpoint the screen reads/writes must gate to
-    // 401 AUTH_REQUIRED before routing — authoritative over any CSV label.
+  it("every API endpoint the market-trade screen touches is deny-by-default (401 without auth)", async () => {
     const endpoints = apiEndpoints(def);
-    expect(endpoints.length, "thread screen must read/write at least one API route").toBeGreaterThan(0);
+    expect(endpoints.length, "market-trade screen must read/write at least one API route").toBeGreaterThan(0);
     for (const e of endpoints) {
       const res = await app.request(e.path, { method: e.method }, makeEnv());
       expect(res.status, `${e.method} ${e.path}`).toBe(401);
@@ -119,7 +107,7 @@ describe.skipIf(!threadSpec)("V3-AIP-34 thread spec (Spec-Driven contract)", () 
     }
   });
 
-  it("the thread screen is reachable in navigation.json", () => {
+  it("the market-trade screen is reachable in navigation.json", () => {
     const nav = JSON.parse(readFileSync(`${ROOT}/screen-defs/navigation.json`, "utf8")) as {
       screens?: string[];
       nodes?: string[];
