@@ -103,9 +103,13 @@ sourceRoutes.get("/placements", async (c) => {
  * Prefix scan of all binding events (open-check is device-GLOBAL, not actor-
  * scoped — a device can only be bound once at a time). ponytail: O(n) scan of
  * one event type, fine for MVP volumes (same ceiling as TruthStore.listEvents).
+ * Takes a TruthStore (not a raw bucket) so callers that already hold one
+ * (e.g. individual-routes.ts projectEnvironment, V3-IND-13) can reuse it
+ * without re-instantiating — this is the SAME open/closed semantics as the
+ * device-binding 409 check, exported so it isn't re-derived elsewhere.
  */
-export async function projectOpenBindings(bucket: R2BucketLite, deviceId: string): Promise<string[]> {
-  const events = await new TruthStore(bucket).listEvents(`truth/${BINDING_TYPE}/`);
+export async function projectOpenBindings(st: TruthStore, deviceId: string): Promise<string[]> {
+  const events = await st.listEvents(`truth/${BINDING_TYPE}/`);
   const started = new Set<string>();
   const ended = new Set<string>();
   for (const e of events) {
@@ -127,7 +131,7 @@ sourceRoutes.post("/device-bindings", async (c) => {
   if (!deviceId || !placementId) {
     return c.json({ error: "INVALID_BINDING", details: ["device_id and placement_id required"] }, 400);
   }
-  const open = await projectOpenBindings(c.env.TRUTH, deviceId);
+  const open = await projectOpenBindings(store(c), deviceId);
   if (open.length > 0) return c.json({ error: "DEVICE_ALREADY_BOUND", open_binding_id: open[0] }, 409);
 
   const bindingId = ulid();

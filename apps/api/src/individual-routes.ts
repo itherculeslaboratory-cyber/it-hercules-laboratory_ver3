@@ -13,6 +13,7 @@ import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES } from "./observation-constants";
 import { appendContribution } from "./contribution";
 import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
+import { projectOpenBindings } from "./source-routes";
 
 export const individualRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -28,6 +29,8 @@ const PHOTO_TYPE = "ihl.obs.photo.v1";
 const SCHEDULE_TYPE = "ihl.obs.schedule.v1";
 const DEVICE_TYPE = "ihl.obs.device.v1";
 const OCCUPANCY_TYPE = "ihl.src.occupancy.v1";
+const BINDING_TYPE = "ihl.src.device_binding.v1"; // FND-18 source module (V3-IND-13 環境時系列 join)
+const TELEMETRY_TYPE = "ihl.src.telemetry.v1";
 
 const SCHEMA = {
   master: "schemas/events/ind-master.schema.json",
@@ -386,6 +389,50 @@ export async function projectAuthenticity(s: TruthStore, id: string) {
   };
 }
 
+export interface LineageCheckIssue {
+  code: string;
+  detail?: string;
+}
+export interface LineageCheckResult {
+  consistent: boolean;
+  issues: LineageCheckIssue[];
+}
+
+/**
+ * V3-IND-21 出品血統照合: cross-checks a CLAIMED sire_id/dam_id/species (the
+ * only individual refs a market listing currently carries are the V3-IND-35
+ * reservation_sire_id/reservation_dam_id fields — general listing↔individual
+ * linkage for arbitrary sold individuals is MKT-29 territory, still todo/
+ * blocked on that lane's own schema decision, NOT reimplemented here) against
+ * actual Truth: do the referenced individuals exist, and does their recorded
+ * species match the claim? Buyers get concrete issues to record their doubt
+ * against, never a silently-trusted claim (誇張ゼロ). Read-only, pure fn of Truth.
+ */
+export async function checkLineageClaim(
+  s: TruthStore,
+  claim: { sire_id?: string; dam_id?: string; species?: string },
+): Promise<LineageCheckResult> {
+  const issues: LineageCheckIssue[] = [];
+  const checkParent = async (id: string | undefined, role: "sire" | "dam") => {
+    if (!id) return;
+    const rec = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
+    if (!rec) {
+      issues.push({ code: `${role.toUpperCase()}_UNKNOWN`, detail: id });
+      return;
+    }
+    const d = dataOf(rec);
+    if (claim.species && typeof d.species === "string" && d.species && d.species !== claim.species) {
+      issues.push({ code: `SPECIES_MISMATCH_${role.toUpperCase()}`, detail: `${d.species} != ${claim.species}` });
+    }
+  };
+  await checkParent(claim.sire_id, "sire");
+  await checkParent(claim.dam_id, "dam");
+  if (claim.sire_id && claim.dam_id && claim.sire_id === claim.dam_id) {
+    issues.push({ code: "SIRE_DAM_SAME_INDIVIDUAL" });
+  }
+  return { consistent: issues.length === 0, issues };
+}
+
 /**
  * individual-detail スライスA投影 (V3-AIP-101 c7-wireframes-core5 §4 F1/F2)。
  * 判断3指標(成長比較・血統健全度・近交リスク)とタイムラインが1レスポンスで
@@ -397,6 +444,64 @@ export async function projectAuthenticity(s: TruthStore, id: string) {
  * 使い回す(親・きょうだいぶんの再スキャンをしない)。常駐キャッシュは持たない
  * (都度再計算・不変条項①)。
  */
+export interface EnvironmentReading {
+  device_id: string;
+  metric: string;
+  bucket_start_ms: number;
+  mean: number;
+  count: number;
+}
+
+/**
+ * Environment time series for a placement (V3-IND-13 「環境(時系列)」統合):
+ * placement_id → open device_binding(s) at that placement → their
+ * ihl.src.telemetry.v1 bucketized readings (V3-FND-18). Read-only join, no
+ * writes — this is a lightweight display embed, not the telemetry pipeline's
+ * own source-of-truth reconciliation (that stays projectTelemetryLatest in
+ * source-routes.ts, which additionally arbitrates multi-source duplicate
+ * buckets by count/source priority). Scoped to the individual's CURRENT
+ * placement only (not full move history — a later 波 if move-by-move
+ * environment history is required). Deterministic, O(bindings + telemetry).
+ */
+async function projectEnvironment(s: TruthStore, placementId: string | null): Promise<EnvironmentReading[]> {
+  if (!placementId) return [];
+  // 「open device_binding(s)」= このplacementでSTARTしたが、後からENDされていない
+  // もの(projectOpenBindings 再利用・source-routes.ts の 409 判定と同じ open/closed
+  // 意味論)。startイベント単独だとappend-onlyゆえ「昔ここにいた」痕跡が永遠に残る
+  // ため、デバイスが別placementへunbind→rebindされた後もそのまま拾ってしまい、
+  // 再配置先の最新テレメトリをこのindividualの環境として誤帰属してしまう
+  // (批評家指摘)。ここではopenのものだけをdeviceに採用する。
+  const candidates = (await s.listEvents(`truth/${BINDING_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.placement_id === placementId && d.phase === "start");
+  const deviceIds = new Set<string>();
+  for (const d of candidates) {
+    const deviceId = String(d.device_id);
+    const open = await projectOpenBindings(s, deviceId);
+    if (open.includes(String(d.binding_id))) deviceIds.add(deviceId);
+  }
+  if (!deviceIds.size) return [];
+  // ponytail: 現在openなbindingのdeviceを対象に「全期間」のテレメトリを返す
+  // (bindingのeffective_atによる下限クランプはしない) — 同じdeviceが一度よそへ
+  // 出て「同じplacementへ」戻ってきた場合、その中抜け期間の読み取りが混ざる
+  // ケースは残るが、今回の指摘(=別placementへ出たまま戻らないケース)はopen
+  // 判定だけで解消する。必要になったらbindingごとのeffective_at以降のみに絞る。
+  const readings: EnvironmentReading[] = [];
+  for (const e of await s.listEvents(`truth/${TELEMETRY_TYPE}/`)) {
+    const d = dataOf(e);
+    const deviceId = String(d.device_id ?? "");
+    if (!deviceIds.has(deviceId) || typeof d.metric !== "string" || typeof d.bucket_start_ms !== "number") continue;
+    readings.push({
+      device_id: deviceId,
+      metric: d.metric,
+      bucket_start_ms: d.bucket_start_ms,
+      mean: Number(d.mean),
+      count: Number(d.count),
+    });
+  }
+  return readings.sort((a, b) => a.bucket_start_ms - b.bucket_start_ms || a.metric.localeCompare(b.metric));
+}
+
 export async function projectIndividualProfile(s: TruthStore, id: string) {
   const master = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
   const ref = `individual/${id}`;
@@ -544,6 +649,7 @@ export async function projectIndividualProfile(s: TruthStore, id: string) {
     status,
     thumbnail_path,
     placement_id,
+    environment: await projectEnvironment(s, placement_id), // V3-IND-13 環境(時系列)統合
     schedule,
     parents,
     siblings,
@@ -569,6 +675,7 @@ export async function createIndividualMaster(
     species?: string;
     birth_or_hatch_date?: string;
     source_type?: string;
+    lineage_id?: string; // V3-IND-34 複数系統並行管理タグ
   },
 ): Promise<{ individualId: string; res: Awaited<ReturnType<TruthStore["putEventAt"]>> }> {
   const individualId =
@@ -578,7 +685,7 @@ export async function createIndividualMaster(
     actor_id: actorId,
     created_at: nowIso(),
   };
-  for (const k of ["local_label_text", "species", "birth_or_hatch_date", "source_type"] as const) {
+  for (const k of ["local_label_text", "species", "birth_or_hatch_date", "source_type", "lineage_id"] as const) {
     if (fields[k] !== undefined) data[k] = fields[k];
   }
   const res = await s.putEventAt(
@@ -630,6 +737,7 @@ individualRoutes.post("/individuals", async (c) => {
     species: body.species as string | undefined,
     birth_or_hatch_date: body.birth_or_hatch_date as string | undefined,
     source_type: body.source_type as string | undefined,
+    lineage_id: typeof body.lineage_id === "string" ? body.lineage_id : undefined,
   });
   if (res.status === "invalid") return c.json({ error: "INVALID_INDIVIDUAL", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_INDIVIDUAL", key: res.key }, 409);
@@ -698,18 +806,27 @@ const LIST_SORT_FIELDS = new Set([
 // ponytail: O(n) full master + capture/life-event/occupancy/photo/schedule
 // scan(1回ずつ、計5本), per-actor/individual index は在庫が伸びたら昇格(既存
 // /observation/search 前例と同じ縮退)。
+// V3-IND-12 率カードドリルダウン: ?parent_id=+?status= の組合せで血統(Cross)画面
+// の率カード(死亡率/羽化不全率等)から「この親のコホートで死亡した子」のような
+// 詳細一覧へ遷移できる(cohort=offspringOf(parent_id)・既存 status フィルタと
+// AND)。lineage_id は別軸(V3-IND-34・複数系統タグ)— こちらは血統(親子関係)の
+// コホート、lineage_id は横断タグで意味が違うため別 query param のまま併存する。
 individualRoutes.get("/individuals", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase();
   const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
   const stageFilter = c.req.query("stage") ?? "";
   const statusFilter = c.req.query("status") ?? "";
+  const parentIdFilter = c.req.query("parent_id") ?? ""; // V3-IND-12 率カード→詳細一覧ドリルダウン(?parent_id=+?status=でコホート絞り込み)
+  const lineageFilter = c.req.query("lineage_id") ?? ""; // V3-IND-34 複数系統並行管理(完全一致)
   const sortKey = c.req.query("sort") ?? "";
   const sortOrder = c.req.query("order") === "asc" ? 1 : -1; // 既定 desc(新しい/多い/大きい順)
   const actorId = c.get("actorId");
   const s = store(c);
+  const cohortIds = parentIdFilter ? new Set(await offspringOf(s, parentIdFilter)) : null;
   const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
     .map(dataOf)
-    .filter((m) => m.actor_id === actorId);
+    .filter((m) => m.actor_id === actorId)
+    .filter((m) => !cohortIds || cohortIds.has(String(m.individual_id ?? "")));
   const capturesByIndividual = new Map<string, { data: Record<string, unknown>; time: string }[]>();
   for (const e of await s.listEvents(`truth/${CAPTURE_TYPE}/`)) {
     const d = dataOf(e);
@@ -800,6 +917,8 @@ individualRoutes.get("/individuals", async (c) => {
     if (speciesFilter && species.toLowerCase() !== speciesFilter) continue;
     if (stageFilter && stage !== stageFilter) continue;
     if (statusFilter && lifeStatus !== statusFilter) continue;
+    const lineageId = typeof m.lineage_id === "string" ? m.lineage_id : null;
+    if (lineageFilter && lineageId !== lineageFilter) continue; // V3-IND-34 完全一致
     // 最新観測から遡って最初に写真がある capture のサムネ URL(無ければ null)。
     let thumbnailPath: string | null = null;
     for (let i = caps.length - 1; i >= 0; i--) {
@@ -827,6 +946,7 @@ individualRoutes.get("/individuals", async (c) => {
       thumbnail_path: thumbnailPath,
       life_status: lifeStatus,
       next_observation_at: nextObservationAt,
+      lineage_id: lineageId, // V3-IND-34 複数系統並行管理タグ
     });
   }
   if (LIST_SORT_FIELDS.has(sortKey)) {
@@ -844,6 +964,22 @@ individualRoutes.get("/individuals", async (c) => {
     individuals.sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
   }
   return c.json({ individuals });
+});
+
+// GET /individuals/lineage-check?sire_id=&dam_id=&species= — 出品血統照合
+// (V3-IND-21)。少なくとも sire_id/dam_id のどちらかが必須(単体チェック用途)。
+// NOTE: must be registered BEFORE GET /individuals/:id below — Hono's router
+// resolves this same-depth static-vs-param overlap by REGISTRATION ORDER (first
+// match wins), not by static-precedence, so this has to come first or `:id`
+// would swallow "lineage-check" as a literal id (verified by TC).
+individualRoutes.get("/individuals/lineage-check", async (c) => {
+  const sireId = c.req.query("sire_id") || undefined;
+  const damId = c.req.query("dam_id") || undefined;
+  const species = c.req.query("species") || undefined;
+  if (!sireId && !damId) {
+    return c.json({ error: "INVALID_LINEAGE_CHECK", details: ["sire_id or dam_id required"] }, 400);
+  }
+  return c.json(await checkLineageClaim(store(c), { sire_id: sireId, dam_id: damId, species }));
 });
 
 // GET /individuals/{id} — whole-individual projection (6 文化 + timeline · IND-13).

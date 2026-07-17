@@ -240,6 +240,25 @@ describe("IND-12 交配結果(projectCross・決定論)", () => {
     const { env } = ctx();
     expect((await get("/api/v1/cross", env)).status).toBe(404);
   });
+
+  it("率カード→詳細一覧ドリルダウン: ?parent_id=+?status=でコホート絞り込み(V3-IND-12)", async () => {
+    const { env } = ctx();
+    const pa = await seedCross(env); // kids[0] は death・他3体は生存側
+    const cohort = (await (await get(`/api/v1/individuals?parent_id=${pa}`, env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(cohort.individuals).toHaveLength(4);
+    const dead = (await (await get(`/api/v1/individuals?parent_id=${pa}&status=dead`, env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(dead.individuals).toHaveLength(1);
+    // 親でない個体は他に登録があっても混ざらない。
+    const stranger = await createInd(env);
+    const strangerCohort = (await (await get(`/api/v1/individuals?parent_id=${stranger}`, env)).json()) as {
+      individuals: unknown[];
+    };
+    expect(strangerCohort.individuals).toEqual([]);
+  });
 });
 
 describe("IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)", () => {
@@ -332,6 +351,47 @@ describe("IND-21 真正性(projectAuthenticity)", () => {
     await post(`/api/v1/individuals/${id}/parents`, { parent_id: id, parent_role: "sire" }, env);
     const auth = await projectAuthenticity(new TruthStore(bucket), id);
     expect(auth!.lineage_conflicts.some((cf) => cf.type === "self_parent")).toBe(true);
+  });
+});
+
+describe("V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/lineage-check)", () => {
+  it("実在し種が一致すれば consistent=true・issuesは空", async () => {
+    const { env } = ctx();
+    const sire = await createInd(env, { species: "hercules" });
+    const res = await get(`/api/v1/individuals/lineage-check?sire_id=${sire}&species=hercules`, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { consistent: boolean; issues: unknown[] };
+    expect(body).toEqual({ consistent: true, issues: [] });
+  });
+
+  it("未知の sire_id は SIRE_UNKNOWN・種の食い違いは SPECIES_MISMATCH", async () => {
+    const { env } = ctx();
+    const sire = await createInd(env, { species: "hercules" });
+    const res = await get(`/api/v1/individuals/lineage-check?sire_id=ghost&dam_id=${sire}&species=grantii`, env);
+    const body = (await res.json()) as { consistent: boolean; issues: { code: string }[] };
+    expect(body.consistent).toBe(false);
+    expect(body.issues.map((i) => i.code).sort()).toEqual(["SIRE_UNKNOWN", "SPECIES_MISMATCH_DAM"]);
+  });
+
+  it("sire_id===dam_id は SIRE_DAM_SAME_INDIVIDUAL", async () => {
+    const { env } = ctx();
+    const one = await createInd(env);
+    const body = (await (await get(`/api/v1/individuals/lineage-check?sire_id=${one}&dam_id=${one}`, env)).json()) as {
+      issues: { code: string }[];
+    };
+    expect(body.issues.some((i) => i.code === "SIRE_DAM_SAME_INDIVIDUAL")).toBe(true);
+  });
+
+  it("sire_id/dam_id ともに無ければ400", async () => {
+    const { env } = ctx();
+    expect((await get("/api/v1/individuals/lineage-check?species=x", env)).status).toBe(400);
+  });
+
+  it("GET /individuals/:id (6文化投影) と /individuals/lineage-check は別ルートとして共存する(static優先)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    expect((await get(`/api/v1/individuals/${id}`, env)).status).toBe(200);
+    expect((await get(`/api/v1/individuals/lineage-check?sire_id=${id}`, env)).status).toBe(200);
   });
 });
 
@@ -782,5 +842,102 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
   it("未知の id は 404", async () => {
     const { env } = ctx();
     expect((await get("/api/v1/individuals/ghost/profile", env)).status).toBe(404);
+  });
+
+  it("V3-IND-13 environment: placement_id → device_binding → telemetry を join(未配置は空配列)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as {
+      environment: unknown[];
+    };
+    expect(body.environment).toEqual([]); // 未配置
+
+    const place = ((await (await post("/api/v1/placements", { label: "Shelf A" }, env)).json()) as { placement_id: string }).placement_id;
+    await post("/api/v1/occupancy", { placement_id: place, subject_ref: `individual/${id}` }, env);
+    await post("/api/v1/device-bindings", { device_id: "dev-env-1", placement_id: place }, env);
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-env-1", ts_ms: 0, metric: "temp", value: 28 }] }, env);
+    // an unbound device at a DIFFERENT placement must not leak in.
+    await post("/api/v1/device-bindings", { device_id: "dev-other", placement_id: "elsewhere" }, env);
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-other", ts_ms: 0, metric: "temp", value: 99 }] }, env);
+
+    body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as unknown as {
+      environment: unknown[];
+    };
+    const environment = body.environment as { device_id: string; metric: string; mean: number }[];
+    expect(environment).toHaveLength(1);
+    expect(environment[0]).toMatchObject({ device_id: "dev-env-1", metric: "temp", mean: 28 });
+  });
+
+  it("V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    const place = ((await (await post("/api/v1/placements", { label: "Shelf B" }, env)).json()) as { placement_id: string }).placement_id;
+    await post("/api/v1/occupancy", { placement_id: place, subject_ref: `individual/${id}` }, env);
+
+    const bind = (await (await post("/api/v1/device-bindings", { device_id: "dev-move-1", placement_id: place }, env)).json()) as {
+      binding_id: string;
+    };
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-move-1", ts_ms: 0, metric: "temp", value: 20 }] }, env);
+
+    let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as { environment: unknown[] };
+    expect(body.environment).toHaveLength(1); // まだ P にバインドされている間は写る
+
+    // unbind(end) → 別 placement へ再バインド。start イベント自体は append-only で残る。
+    await post("/api/v1/device-bindings/end", { binding_id: bind.binding_id }, env);
+    const otherPlace = ((await (await post("/api/v1/placements", { label: "Shelf Q" }, env)).json()) as { placement_id: string }).placement_id;
+    await post("/api/v1/device-bindings", { device_id: "dev-move-1", placement_id: otherPlace }, env);
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-move-1", ts_ms: 900000, metric: "temp", value: 99 }] }, env);
+
+    body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as { environment: unknown[] };
+    // individual は依然 place にいる(occupancy 未移動)。dev-move-1 はもう otherPlace の
+    // openバインド — place の環境に otherPlace の新データが混ざってはいけない。
+    expect(body.environment).toEqual([]);
+  });
+});
+
+describe("V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)", () => {
+  it("individual master に lineage_id を付与でき、?lineage_id= で完全一致フィルタできる", async () => {
+    const { env } = ctx();
+    const a = await createInd(env, { lineage_id: "A" });
+    const c = await createInd(env, { lineage_id: "C" });
+    await createInd(env); // タグなし個体は対象外(絞り込みで漏れない)
+
+    const lineA = (await (await get("/api/v1/individuals?lineage_id=A", env)).json()) as {
+      individuals: { individual_id: string; lineage_id: string | null }[];
+    };
+    expect(lineA.individuals.map((i) => i.individual_id)).toEqual([a]);
+    expect(lineA.individuals[0].lineage_id).toBe("A");
+
+    // 系統合流: 別系統の親を交配し、子に新しい lineage_id("AC")をユーザーが付ける。
+    // 交配自体は既存 parents API がそのまま許す(lineage を跨ぐ制約はない)。
+    const merged = await createInd(env, { lineage_id: "AC" });
+    await post(`/api/v1/individuals/${merged}/parents`, { parent_id: a, parent_role: "sire" }, env);
+    await post(`/api/v1/individuals/${merged}/parents`, { parent_id: c, parent_role: "dam" }, env);
+    const lineAC = (await (await get("/api/v1/individuals?lineage_id=AC", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(lineAC.individuals.map((i) => i.individual_id)).toEqual([merged]);
+  });
+
+  it("クラッチの lineage_id は promote で子個体へ継承される", async () => {
+    const { env } = ctx();
+    const clutchRes = await post(
+      "/api/v1/clutches",
+      { initial_count: 5, harvested_at: "2026-07-01", lineage_id: "A" },
+      env,
+    );
+    const clutchId = ((await clutchRes.json()) as { clutch_id: string }).clutch_id;
+    // ?lineage_id= フィルタは clutch 一覧にも効く。
+    const clutchList = (await (await get("/api/v1/clutches?lineage_id=A", env)).json()) as {
+      clutches: { clutch_id: string }[];
+    };
+    expect(clutchList.clutches.map((c) => c.clutch_id)).toEqual([clutchId]);
+
+    const promoteRes = await post(`/api/v1/clutches/${clutchId}/promote`, { count: 2, at: "2026-07-05T00:00:00Z" }, env);
+    const { individual_ids } = (await promoteRes.json()) as { individual_ids: string[] };
+    const list = (await (await get("/api/v1/individuals?lineage_id=A", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(list.individuals.map((i) => i.individual_id).sort()).toEqual([...individual_ids].sort());
   });
 });

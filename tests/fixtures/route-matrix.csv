@@ -24,7 +24,11 @@
 #   lab-environment・GET individuals/{id}/lab-environment・全 protected)を
 #   追加 → 79 rows、同レーン(V3-OBS-61 自然言語フリーテキスト解析)が新規 1
 #   route(infra-route-088・POST /observation/parse-freetext・protected)を
-#   追加 → 80 rows。
+#   追加 → 80 rows。観測個体レーン(C8 obs-individuals)が V3-IND-08(マチアプ収束評価
+#   ログ GET /match/convergence)の新規 1 route(infra-route-089・protected・080/081は
+#   先に基盤コスト/AIP-67レーンが採ったため採番をずらして解決)を追加 → 81 rows、
+#   同レーンが V3-IND-21(出品血統照合 GET /individuals/lineage-check)の新規 1
+#   route(infra-route-090・protected)を追加 → 82 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -108,3 +112,5 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-086,protected,implemented,研究室環境コンテキスト投影読み出し(V3-OBS-72・未記録はnull・404にしない)
 —,GET,/api/v1/individuals/{individual_id}/lab-environment,VPS,Workers,W2,infra-route-087,protected,implemented,個体→occupancy→placement→研究室環境の連鎖投影(V3-OBS-72・obs-detail表示元)
 —,POST,/api/v1/observation/parse-freetext,VPS,Workers,W2,infra-route-088,protected,implemented,自然言語フリーテキスト観測の決定論パース(V3-OBS-61・LLM既定OFF・R2コミットはしない提案止まり)
+—,GET,/api/v1/match/convergence,VPS,Workers,W2,infra-route-089,protected,implemented,V3-IND-08 マチアプ収束評価ログ(Precision@K/AUC/score separation/vector change/learning stability)・append-onlyなpreference_event履歴から都度再計算・O(events)・GPU不要
+—,GET,/api/v1/individuals/lineage-check,VPS,Workers,W2,infra-route-090,protected,implemented,V3-IND-21 出品血統照合(reservation_sire_id/dam_id等の申告個体が実在しTruthと矛盾しないか確認・購入者向け疑義確認材料)・market listing側の連携はMKT-29(mkt-listingにindividual_ids欄なし)待ちで listing_id 引数は未対応
