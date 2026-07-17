@@ -5,7 +5,7 @@
 // gapAnalysis: injected fixed vectors -> neighbour diff axis -> stable missing_perspectives
 // (all-species, no species filter) + data_gap key diff, vector-absent -> data_gap only.
 import { describe, expect, it } from "vitest";
-import { matchConditions, autoFillDescriptor, gapAnalysis, hintsForMissing, computeSectionsCompleteness } from "../apps/api/src/paper-match";
+import { matchConditions, autoFillDescriptor, gapAnalysis, hintsForMissing, computeSectionsCompleteness, conditionVector } from "../apps/api/src/paper-match";
 import app from "../apps/api/src/index";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
 
@@ -52,6 +52,35 @@ describe("PPR-01 matchConditions classification + match_rate", () => {
     const r = matchConditions({ a: { required: false } }, {});
     expect(r.required_count).toBe(0);
     expect(r.match_rate).toBe(1);
+  });
+});
+
+describe("PPR-02 conditionVector — normalize条件P to key+value+unit+missing (single schema source)", () => {
+  const conditions = {
+    temp: { min: 25, max: 30, required: true, unit: "C" },
+    humidity: { min: 40, required: true }, // no unit -> null
+    density: { max: 10, required: false },
+  };
+
+  it("lists ALL condition keys (required and optional) key-asc, not just required", () => {
+    const v = conditionVector(conditions, { temp: 27, humidity: 55, density: 3 });
+    expect(v.map((e) => e.key)).toEqual(["density", "humidity", "temp"]); // key asc, includes optional
+  });
+
+  it("present numeric observation -> value set, missing=false; unit passthrough or null", () => {
+    const v = conditionVector(conditions, { temp: 27, humidity: 55, density: 3 });
+    expect(v.find((e) => e.key === "temp")).toEqual({ key: "temp", value: 27, unit: "C", missing: false });
+    expect(v.find((e) => e.key === "humidity")).toEqual({ key: "humidity", value: 55, unit: null, missing: false });
+  });
+
+  it("absent key -> missing=true, value=null (欠損フラグ)", () => {
+    const v = conditionVector(conditions, { temp: 27 });
+    expect(v.find((e) => e.key === "humidity")).toEqual({ key: "humidity", value: null, unit: null, missing: true });
+  });
+
+  it("non-numeric observed value -> value=null but missing=false (present, just not numeric)", () => {
+    const v = conditionVector(conditions, { temp: "warm" });
+    expect(v.find((e) => e.key === "temp")).toEqual({ key: "temp", value: null, unit: "C", missing: false });
   });
 });
 

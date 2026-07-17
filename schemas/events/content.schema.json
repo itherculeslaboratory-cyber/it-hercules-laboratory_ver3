@@ -147,18 +147,7 @@
       },
       "additionalProperties": false
     },
-    "condition": {
-      "type": "object",
-      "required": ["required"],
-      "properties": {
-        "min": { "type": "number" },
-        "max": { "type": "number" },
-        "eq": { "type": "number" },
-        "required": { "type": "boolean" },
-        "unit": { "type": "string" }
-      },
-      "additionalProperties": false
-    },
+    "condition": { "$ref": "condition.schema.json" },
     "claim": {
       "type": "object",
       "required": ["claim_id", "statement", "status"],

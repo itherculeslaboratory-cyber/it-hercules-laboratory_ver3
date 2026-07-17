@@ -60,7 +60,11 @@ const VALIDATOR_NAME: Record<string, string> = {
   "theme-pack": "themePack",
   "ui-template": "uiTemplate",
   "ui-vote": "uiVote",
-  // C5 K5 research/wiki events (schemas/events/*, non-frozen, reversible)
+  // C5 K5 research/wiki events (schemas/events/*, non-frozen, reversible).
+  // condition is a shared component type (not an envelope-data target) but is
+  // registered so content's relative $ref (condition.schema.json / PPR-02 単一
+  // 正本)resolves in the same ajv instance — same pattern as cite-ref below.
+  condition: "condition",
   content: "content",
   citation: "citation",
   project: "project",
