@@ -109,6 +109,13 @@ const VALIDATOR_NAME: Record<string, string> = {
   // round-16 裁定 — gmo-obligation を継承する新規イベント型(型リネーム禁止・append)。
   "fee-invoice": "feeInvoice",
   "fee-settlement": "feeSettlement",
+  // V3-MKT-03(市場フォローレーン C8 g04): 公開Q&A+ほめボード(マッチング前公開の
+  // 唯一の掲示欄)。
+  "mkt-comment": "mktComment",
+  // V3-MKT-06(市場フォローレーン C8 g04): 未出品個体への直接オファー + 個体ごと
+  // オファーポリシー(拒否設定は現観測者=個体の actor_id)。
+  "mkt-offer-policy": "mktOfferPolicy",
+  "mkt-individual-offer": "mktIndividualOffer",
 };
 
 const FROZEN_NAMES = new Set([
@@ -214,6 +221,11 @@ const EVENT_NAMES = new Set([
   // permanently (Truth is INSERT ONLY, unfixable). round-16 PAY.JP 請求フロー.
   "fee-invoice",
   "fee-settlement",
+  // 市場フォローレーン(C8 g04残todo) — data validation MUST fire or putEvent
+  // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
+  "mkt-comment",
+  "mkt-offer-policy",
+  "mkt-individual-offer",
 ]);
 
 function validatorFor(name: string): ValidateFn {

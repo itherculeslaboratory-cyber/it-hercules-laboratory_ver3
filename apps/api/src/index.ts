@@ -26,6 +26,7 @@ import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
 import { marketRatingRoutes } from "./market-rating-routes";
 import { marketPaymentGuidanceRoutes } from "./market-payment-guidance-routes";
+import { marketCommentRoutes } from "./market-comment-routes";
 import { marketTemplateRoutes } from "./market-template-routes";
 import { marketPricingRoutes } from "./market-pricing-routes";
 import { piiRoutes } from "./pii-routes";
@@ -254,6 +255,10 @@ app.route("/api/v1", marketFlagRoutes);
 
 // V3-MKT-64 プリカ案内(静的・照会結果非依存): GET /market/payment-guidance。全て保護。
 app.route("/api/v1", marketPaymentGuidanceRoutes);
+
+// V3-MKT-03 公開Q&A + ほめボード(マッチング前の公開面): POST/GET
+// /market/listings/{id}/comments。全て保護・kind=answer は出品者のみ。
+app.route("/api/v1", marketCommentRoutes);
 
 // Plaza / 知の広場書込 (design-c5.md §K6 §2.1 slot033-036 / V3-BBS-01/03/05/10/20/29/36):
 // POST posts/stances/forks/signals/summaries + 決定論投影(thread/consensus/fork-rank/

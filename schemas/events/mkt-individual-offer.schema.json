@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-individual-offer.schema.json",
+  "title": "Direct offer on a not-yet-listed individual (ihl.mkt.individual_offer.v1)",
+  "description": "未出品個体への直接オファー(欲しい意思表示・V3-MKT-06)。個体詳細画面から送信する。出品(mkt-listing)を介さず個体(individual_id)に直接ぶら下がる append-only イベント。Truth キー truth/ihl.mkt.individual_offer.v1/<individual_id>/<offer_id>.json。kind=love_letter は値段非開示(応答/一覧で amount を返さない・POST /market/offers の love_letter と同じ規約)。",
+  "x_ihl_req": "V3-MKT-06",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1 / 整理予定/指示/指示金曜日までにしたいこと.txt",
+  "type": "object",
+  "required": ["offer_id", "individual_id", "actor_id", "owner_id", "kind", "created_at", "schema_version"],
+  "properties": {
+    "offer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "オファーの一意キー(ULID)。"
+    },
+    "individual_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象個体の individual_id。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "オファー送信者の actor_id(セッション principal 強制・V3-AUT-17)。"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "オファー時点の現観測者(個体マスタ actor_id)のスナップショット。所有者の一覧投影の絞り込みに使う。"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["offer", "love_letter"],
+      "description": "offer=金額提示 / love_letter=告白方式(値段開示なし一発勝負・血統/実験目的等の理由文で選ばれる)。"
+    },
+    "amount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "提示額(円・kind=offer のみ想定・love_letter は非開示につき応答に出さない)。"
+    },
+    "purpose": {
+      "type": "string",
+      "enum": ["personal", "research"],
+      "description": "V3-MKT-06 の 'research_only' ポリシー判定に使う自己申告目的(既定 personal)。"
+    },
+    "message": {
+      "type": "string",
+      "description": "血統の素晴らしさ・実験目的等を伝える自由文(love_letter で主に使う)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "送信時刻(RFC3339)。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

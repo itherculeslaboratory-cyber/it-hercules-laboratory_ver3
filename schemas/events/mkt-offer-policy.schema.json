@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-offer-policy.schema.json",
+  "title": "Individual direct-offer policy (ihl.mkt.offer_policy.v1)",
+  "description": "未出品個体への直接オファーの受入方針(V3-MKT-06)。append-only・last-write-wins(pref-set.schema.jsonと同じ規約)。Truth キー truth/ihl.mkt.offer_policy.v1/<individual_id>/<policy_id>.json。設定できるのはその個体の現観測者(=個体マスタの actor_id)のみ(route ガード)。未設定時の既定は route 側の基本テンプレ 'open'(GOV-35のプリセットと同型)。",
+  "x_ihl_req": "V3-MKT-06",
+  "x_ihl_source": "docs/planning/c5/design-k3.md §2.1 / 整理予定/指示/指示金曜日までにしたいこと.txt",
+  "type": "object",
+  "required": ["policy_id", "individual_id", "actor_id", "policy", "created_at", "schema_version"],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "設定イベントの一意キー(ULID)。"
+    },
+    "individual_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象個体の individual_id。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "設定者の actor_id(セッション principal 強制・現観測者=個体マスタの actor_id と route が一致確認する)。"
+    },
+    "policy": {
+      "type": "string",
+      "enum": ["open", "closed", "research_only"],
+      "description": "open=誰でもオファー可(既定) / closed=完全拒否 / research_only=研究目的申告のオファーのみ受理。"
+    },
+    "note": {
+      "type": "string",
+      "description": "任意の一言(個別override理由等)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "設定時刻(RFC3339)。last-write-wins の並び替えキー。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

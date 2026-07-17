@@ -115,6 +115,10 @@ const SCHEMAS = [
   // L-PAY PAY.JP 5%請求フロー events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
   ["feeInvoice", "events/fee-invoice.schema.json"],
   ["feeSettlement", "events/fee-settlement.schema.json"],
+  // 市場フォローレーン(C8 g04残todo・V3-MKT-03/06)
+  ["mktComment", "events/mkt-comment.schema.json"],
+  ["mktOfferPolicy", "events/mkt-offer-policy.schema.json"],
+  ["mktIndividualOffer", "events/mkt-individual-offer.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],
