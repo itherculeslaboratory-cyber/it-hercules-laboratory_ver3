@@ -534,6 +534,97 @@ obsRoutes.post("/observation/search", async (c) => {
   });
 });
 
+// ── OBS-57 種候補提案チェーン: ヒューリスティック → CLIP(任意) → Vision(任意) ──
+
+export interface SpeciesCandidate {
+  species: string;
+  score: number;
+  method: "heuristic" | "clip" | "vision";
+}
+export interface SpeciesSuggestionResult {
+  candidates: SpeciesCandidate[];
+  method_used: "heuristic" | "clip" | "vision";
+  degraded: string[];
+}
+
+/**
+ * Heuristic tier (always-on, zero-cost, no LLM/Vision — invariant①): nearest
+ * user-CONFIRMED captures (species_confirmed_by==="user") by cosine similarity,
+ * aggregated by species_candidate (mean of contributing scores). Pure reuse of
+ * the SAME embedding infra as /observation/search — no new index/model.
+ */
+export async function heuristicSpeciesCandidatesFromVector(
+  s: TruthStore,
+  bucket: Bindings["TRUTH"],
+  queryVec: Float32Array,
+  excludeCaptureId?: string,
+): Promise<SpeciesCandidate[]> {
+  const confirmed = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .filter((x) => x.species_confirmed_by === "user" && typeof x.species_candidate === "string" && x.capture_id !== excludeCaptureId);
+  const bySpecies = new Map<string, number[]>();
+  for (const cap of confirmed) {
+    const vec = await loadVector(bucket, String(cap.capture_id));
+    if (!vec || vec.length !== EMBEDDING_DIM) continue;
+    const cos = cosineSimilarity(queryVec, vec);
+    const species = String(cap.species_candidate);
+    (bySpecies.get(species) ?? bySpecies.set(species, []).get(species)!).push(cos);
+  }
+  return [...bySpecies.entries()]
+    .map(([species, scores]) => ({ species, score: scores.reduce((a, b) => a + b, 0) / scores.length, method: "heuristic" as const }))
+    .sort((a, b) => b.score - a.score || a.species.localeCompare(b.species));
+}
+
+/**
+ * OBS-57 chain: heuristic runs first (always). Only escalates to CLIP, then
+ * Vision, when the heuristic tier found NOTHING (no confirmed neighbors yet —
+ * a cold-start case). clip/vision are OPTIONAL injected async callables — the
+ * production route wires them from env-configured endpoints ONLY (both unset
+ * by default: invariant① LLM/Vision既定OFF). When a tier is unset OR returns
+ * no candidates, that is recorded in `degraded` (劣化運用を隠さない) and the
+ * chain still COMPLETES — it never throws/blocks on a missing optional tier.
+ * The caller NEVER auto-confirms a species from this result — species_confirmed_by
+ * stays a frozen `const: "user"` in the capture schema (V3-OBS-03, unchanged).
+ */
+export async function suggestSpeciesCandidates(
+  heuristicCandidates: SpeciesCandidate[],
+  opts: {
+    clip?: (() => Promise<SpeciesCandidate[] | null>) | null;
+    vision?: (() => Promise<SpeciesCandidate[] | null>) | null;
+  } = {},
+): Promise<SpeciesSuggestionResult> {
+  if (heuristicCandidates.length) {
+    return { candidates: heuristicCandidates, method_used: "heuristic", degraded: [] };
+  }
+  const degraded: string[] = ["heuristic_no_match"];
+  if (opts.clip) {
+    const r = await opts.clip();
+    if (r && r.length) return { candidates: r, method_used: "clip", degraded };
+    degraded.push("clip_no_match");
+  } else {
+    degraded.push("clip_not_configured");
+  }
+  if (opts.vision) {
+    const r = await opts.vision();
+    if (r && r.length) return { candidates: r, method_used: "vision", degraded };
+    degraded.push("vision_no_match");
+  } else {
+    degraded.push("vision_not_configured");
+  }
+  return { candidates: [], method_used: "heuristic", degraded };
+}
+
+// GET /observation/{capture_id}/species-suggestions — OBS-57 種候補提案(確定はしない・
+// 提示のみ)。CLIP/Vision未設定(既定)でもヒューリスティックのみで必ず完走する。
+obsRoutes.get("/observation/:capture_id/species-suggestions", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const queryVec = await loadVector(c.env.TRUTH, captureId);
+  if (!queryVec) return c.json({ error: "QUERY_EMBEDDING_NOT_FOUND" }, 404);
+  const heuristic = await heuristicSpeciesCandidatesFromVector(store(c), c.env.TRUTH, queryVec, captureId);
+  const result = await suggestSpeciesCandidates(heuristic); // clip/vision未設定(既定OFF)
+  return c.json(result);
+});
+
 // GET /observation/measurement-dictionary — item_hash 登録辞書 (OBS-18). Derived
 // from every template item that carries an item_hash (no dedicated dictionary
 // event; templates ARE the registry).
