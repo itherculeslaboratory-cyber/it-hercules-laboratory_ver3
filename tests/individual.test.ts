@@ -783,4 +783,28 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     const { env } = ctx();
     expect((await get("/api/v1/individuals/ghost/profile", env)).status).toBe(404);
   });
+
+  it("V3-IND-13 environment: placement_id → device_binding → telemetry を join(未配置は空配列)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env);
+    let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as {
+      environment: unknown[];
+    };
+    expect(body.environment).toEqual([]); // 未配置
+
+    const place = ((await (await post("/api/v1/placements", { label: "Shelf A" }, env)).json()) as { placement_id: string }).placement_id;
+    await post("/api/v1/occupancy", { placement_id: place, subject_ref: `individual/${id}` }, env);
+    await post("/api/v1/device-bindings", { device_id: "dev-env-1", placement_id: place }, env);
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-env-1", ts_ms: 0, metric: "temp", value: 28 }] }, env);
+    // an unbound device at a DIFFERENT placement must not leak in.
+    await post("/api/v1/device-bindings", { device_id: "dev-other", placement_id: "elsewhere" }, env);
+    await post("/api/v1/telemetry", { rows: [{ device_id: "dev-other", ts_ms: 0, metric: "temp", value: 99 }] }, env);
+
+    body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as unknown as {
+      environment: unknown[];
+    };
+    const environment = body.environment as { device_id: string; metric: string; mean: number }[];
+    expect(environment).toHaveLength(1);
+    expect(environment[0]).toMatchObject({ device_id: "dev-env-1", metric: "temp", mean: 28 });
+  });
 });

@@ -26,6 +26,8 @@ const PHOTO_TYPE = "ihl.obs.photo.v1";
 const SCHEDULE_TYPE = "ihl.obs.schedule.v1";
 const DEVICE_TYPE = "ihl.obs.device.v1";
 const OCCUPANCY_TYPE = "ihl.src.occupancy.v1";
+const BINDING_TYPE = "ihl.src.device_binding.v1"; // FND-18 source module (V3-IND-13 環境時系列 join)
+const TELEMETRY_TYPE = "ihl.src.telemetry.v1";
 
 const SCHEMA = {
   master: "schemas/events/ind-master.schema.json",
@@ -395,6 +397,50 @@ export async function projectAuthenticity(s: TruthStore, id: string) {
  * 使い回す(親・きょうだいぶんの再スキャンをしない)。常駐キャッシュは持たない
  * (都度再計算・不変条項①)。
  */
+export interface EnvironmentReading {
+  device_id: string;
+  metric: string;
+  bucket_start_ms: number;
+  mean: number;
+  count: number;
+}
+
+/**
+ * Environment time series for a placement (V3-IND-13 「環境(時系列)」統合):
+ * placement_id → open device_binding(s) at that placement → their
+ * ihl.src.telemetry.v1 bucketized readings (V3-FND-18). Read-only join, no
+ * writes — this is a lightweight display embed, not the telemetry pipeline's
+ * own source-of-truth reconciliation (that stays projectTelemetryLatest in
+ * source-routes.ts, which additionally arbitrates multi-source duplicate
+ * buckets by count/source priority). Scoped to the individual's CURRENT
+ * placement only (not full move history — a later 波 if move-by-move
+ * environment history is required). Deterministic, O(bindings + telemetry).
+ */
+async function projectEnvironment(s: TruthStore, placementId: string | null): Promise<EnvironmentReading[]> {
+  if (!placementId) return [];
+  const deviceIds = new Set(
+    (await s.listEvents(`truth/${BINDING_TYPE}/`))
+      .map(dataOf)
+      .filter((d) => d.placement_id === placementId && d.phase === "start")
+      .map((d) => String(d.device_id)),
+  );
+  if (!deviceIds.size) return [];
+  const readings: EnvironmentReading[] = [];
+  for (const e of await s.listEvents(`truth/${TELEMETRY_TYPE}/`)) {
+    const d = dataOf(e);
+    const deviceId = String(d.device_id ?? "");
+    if (!deviceIds.has(deviceId) || typeof d.metric !== "string" || typeof d.bucket_start_ms !== "number") continue;
+    readings.push({
+      device_id: deviceId,
+      metric: d.metric,
+      bucket_start_ms: d.bucket_start_ms,
+      mean: Number(d.mean),
+      count: Number(d.count),
+    });
+  }
+  return readings.sort((a, b) => a.bucket_start_ms - b.bucket_start_ms || a.metric.localeCompare(b.metric));
+}
+
 export async function projectIndividualProfile(s: TruthStore, id: string) {
   const master = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
   const ref = `individual/${id}`;
@@ -542,6 +588,7 @@ export async function projectIndividualProfile(s: TruthStore, id: string) {
     status,
     thumbnail_path,
     placement_id,
+    environment: await projectEnvironment(s, placement_id), // V3-IND-13 環境(時系列)統合
     schedule,
     parents,
     siblings,
