@@ -1,0 +1,4 @@
+# libs/datalake runtime deps (V3-FND-03 Parquet manifest + DuckDB/Polars search).
+# Install: C:/Users/sawad/AppData/Local/Programs/Python/Python312/python.exe -m pip install -r requirements.txt
+duckdb>=1.5     # reads the Parquet manifest via SQL (no resident DB — opened/closed per call)
+polars>=1.42    # writes the Parquet manifest (columnar; DataFrame -> .parquet)
