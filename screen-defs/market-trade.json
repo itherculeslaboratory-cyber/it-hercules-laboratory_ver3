@@ -3,7 +3,7 @@
   "route": "/market/trade",
   "title": "取引",
   "layout": "standard",
-  "notes": "c8(ui-asset-catalog.md 【最優先1】)再構築版。MKT-03/23/25/20。目的起点=3タブ[この出品/取引|買う|出品する]。「この出品/取引」が既定(listing_id 付きで開いた時に即詳細が見える・market.spec.ts 互換)。stage(公開1→非公開ボード2)は内側の stage-tabs が data.state.stage に自動追従(手動タップも可・タブは隠さない=レンダラに when が無いための設計)。4段stepper は current_from/current_map(BadgeNode の derive_from+labels 流用)で MARKET_EDGES の実 state 群を4visual stepへ縮退。振込は round-16 決済裁定どおり銀行振込P2P・GMO非関与(GMO振込tableは廃止済み)— pay_declare→pay_confirm→ship→receive の4トグルのみ。写真ギャラリー/個体仕様table/送料見積りは対象外(schemas/events/mkt-listing.schema.json に individual_ids/photos フィールドが無く実データ不在のため — 誇張ゼロ、飾りで埋めない。詳細は c8 タスク報告)。評価(F4②)・相手選別なしdispute起票はロール判定手段(when)が無いため respondent_id は候補提示+手動確認に縮退。",
+  "notes": "c8(ui-asset-catalog.md 【最優先1】)再構築版・UI磨き第2弾(受領10)で追改修。MKT-03/23/25/20。目的起点=3タブ[この出品/取引|買う|出品する]。「この出品/取引」が既定(listing_id 付きで開いた時に即詳細が見える・market.spec.ts 互換)。stage(公開1→非公開ボード2)は内側の stage-tabs が data.state.stage に自動追従(手動タップも可・タブは隠さない=stage 出し分けは tabs のまま)。4段stepper は current_from/current_map(BadgeNode の derive_from+labels 流用)で MARKET_EDGES の実 state 群を4visual stepへ縮退。振込は round-16 決済裁定どおり銀行振込P2P・GMO非関与 — pay_declare(買い手)/pay_confirm(出品者)/ship(出品者)/receive(買い手)の4トグルは磨き第2弾#1で `when`(役割別出し分けプリミティブ・{{viewer.actor_id}} vs {{data.state.seller_id}}/matched_with)を付与し、受領10「買い手/売り手のみ表示」を解消(両方常時表示だった旧UIから変更)。出品写真は磨き第2弾#2でschemas/events/mkt-listing-photo.schema.json(新イベント型・mkt-listing 本体は無変更)+POST /market/listings/{id}/photo で追加、出品フォームに photo field・「買う」タブは table から image-grid へ差し替え(カードタップ=詳細・受領10「画像を押せば詳細が出る」)。bids-table の入札者列・非公開board の from は磨き第2弾#5で actor 表示プリミティブ(表示名 or 短縮ハッシュ)化。相手選別なしdispute起票の respondent_id 自動判定(出品者/落札者どちらが起票者かの一般判定)は本波未対応(候補提示+手動確認のまま・別要件)。個体仕様table/送料見積りは対象外(schemas/events/mkt-listing.schema.json に individual_ids フィールドが無く実データ不在のため — 誇張ゼロ、飾りで埋めない)。",
   "nodes": [
     {
       "id": "shell",
@@ -99,7 +99,7 @@
                         "source_path": "/api/v1/market/listings/{{params.listing_id}}/state",
                         "bind_items": "data.bids-table.bids",
                         "columns": [
-                          { "key": "bidder", "label": "入札者" },
+                          { "key": "bidder", "label": "入札者", "cell": "actor" },
                           { "key": "amount", "label": "金額(円)" },
                           { "key": "at", "label": "日時", "cell": "date" }
                         ],
@@ -144,7 +144,8 @@
                         "tab_id": "2",
                         "source_path": "/api/v1/market/listings/{{params.listing_id}}/board",
                         "bind_items": "data.board.offers",
-                        "item_text": "{{from}} {{kind}} {{amount}}",
+                        "item_actor_field": "from",
+                        "item_text": "{{kind}} {{amount}}",
                         "empty_text": "非公開ボードはまだありません(成立後・当事者2人のみ開きます)。"
                       }
                     },
@@ -155,7 +156,8 @@
                         "tab_id": "2",
                         "label": "振込済みを申告する(買い手)",
                         "variant": "primary",
-                        "static": { "kind": "pay_declare", "listing_id": "{{params.listing_id}}" }
+                        "static": { "kind": "pay_declare", "listing_id": "{{params.listing_id}}" },
+                        "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.matched_with}}"] }
                       },
                       "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
                     },
@@ -166,7 +168,8 @@
                         "tab_id": "2",
                         "label": "入金を確認した(出品者)",
                         "variant": "primary",
-                        "static": { "kind": "pay_confirm", "listing_id": "{{params.listing_id}}" }
+                        "static": { "kind": "pay_confirm", "listing_id": "{{params.listing_id}}" },
+                        "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.seller_id}}"] }
                       },
                       "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
                     },
@@ -177,7 +180,8 @@
                         "tab_id": "2",
                         "label": "発送した(出品者)",
                         "variant": "secondary",
-                        "static": { "kind": "ship", "listing_id": "{{params.listing_id}}" }
+                        "static": { "kind": "ship", "listing_id": "{{params.listing_id}}" },
+                        "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.seller_id}}"] }
                       },
                       "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
                     },
@@ -188,7 +192,8 @@
                         "tab_id": "2",
                         "label": "受け取りました(検品OK・買い手)",
                         "variant": "primary",
-                        "static": { "kind": "receive", "listing_id": "{{params.listing_id}}" }
+                        "static": { "kind": "receive", "listing_id": "{{params.listing_id}}" },
+                        "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.matched_with}}"] }
                       },
                       "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
                     },
@@ -213,21 +218,20 @@
                   ]
                 },
                 {
-                  "id": "listings-table",
-                  "type": "table",
-              "props": {
-                "tab_id": "browse",
-                "source_path": "/api/v1/market/listings",
-                "bind_items": "data.listings-table.listings",
-                "columns": [
-                  { "key": "title", "label": "タイトル" },
-                  { "key": "price", "label": "価格(円)" },
-                  { "key": "accept_mode", "label": "成立方式" },
-                  { "key": "listing_id", "label": "詳細", "cell": "link", "href_tpl": "/s/market-trade?listing_id={{listing_id}}", "link_label": "詳細を開く" }
-                ],
-                "empty_text": "出品はまだありません。"
-              }
-            },
+                  "id": "listings-grid",
+                  "type": "image-grid",
+                  "props": {
+                    "tab_id": "browse",
+                    "source_path": "/api/v1/market/listings",
+                    "bind_items": "data.listings-grid.listings",
+                    "item_image": "/api/v1/market/listings/{{listing_id}}/photo/{{cover_photo_id}}",
+                    "item_alt": "{{title}}",
+                    "item_label": "{{title}} / {{price}} 円",
+                    "item_badge": "{{accept_mode}}",
+                    "item_href": "/s/market-trade?listing_id={{listing_id}}",
+                    "empty_text": "出品はまだありません。"
+                  }
+                },
             {
               "id": "create-hint",
               "type": "text",
@@ -244,6 +248,7 @@
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings" },
               "children": [
                 { "id": "new-title", "type": "field", "props": { "variant": "text", "name": "title", "label": "出品タイトル", "required": true } },
+                { "id": "new-photo", "type": "field", "props": { "variant": "photo", "name": "photo", "label": "個体写真(任意・「買う」タブの一覧に表示されます)" } },
                 { "id": "new-description", "type": "field", "props": { "variant": "textarea", "name": "description", "label": "説明(任意)" } },
                 { "id": "new-price", "type": "field", "props": { "variant": "number", "name": "price", "label": "希望価格(円・任意)" } },
                 {

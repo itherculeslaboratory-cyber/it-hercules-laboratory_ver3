@@ -32,7 +32,8 @@
               "props": {
                 "source_path": "/api/v1/gov/disputes/{{params.dispute_id}}",
                 "bind_items": "data.messages.messages",
-                "item_text": "{{actor_id}}: {{body}}",
+                "item_actor_field": "actor_id",
+                "item_text": "{{body}}",
                 "empty_text": "まだ発言がありません。"
               }
             },

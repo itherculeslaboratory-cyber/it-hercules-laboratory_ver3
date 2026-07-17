@@ -54,6 +54,11 @@ export type Scope = {
   params: Record<string, string>;
   data: Record<string, unknown>;
   result: Record<string, unknown>;
+  // c8 UI磨き第2弾#1(受領10「買い手/売り手だけ表示」): GET /me/profile を
+  // Renderer が一度だけ取得し {{viewer.actor_id}} として全ノードへ公開する —
+  // `when` プリミティブが役割(買い手/売り手/スレ主)を判定する唯一の材料。
+  // 未ログイン/取得失敗時は {}（`when` は単に false 側に倒れる・エラーにしない）。
+  viewer: Record<string, unknown>;
 };
 
 type DataSink = {
@@ -63,7 +68,7 @@ type DataSink = {
 
 const ExecuteCtx = createContext<Execute>(async () => undefined);
 const InvalidCtx = createContext<Set<string>>(new Set());
-const ScopeCtx = createContext<Scope>({ params: {}, data: {}, result: {} });
+const ScopeCtx = createContext<Scope>({ params: {}, data: {}, result: {}, viewer: {} });
 const TransitionsCtx = createContext<Transition[]>([]);
 const NavigateCtx = createContext<(to: string, query?: Record<string, string>) => void>(
   () => {},
@@ -434,14 +439,24 @@ function useRunAction(nodeId: string) {
       // action executors observed in tests see exactly the action.
       const result = effBody === undefined ? await execute(act) : await execute(act, effBody);
       if (result && typeof result === "object") setActionResult(result);
-      // Two-stage photo upload (design-c2 §3.2): the capture is created first,
-      // then — if the form carried a photo — the file is POSTed as multipart
-      // against the returned capture_id, BEFORE the transition unmounts us.
+      // Two-stage photo upload (design-c2 §3.2): the create action returns an
+      // id first, then — if the form carried a photo — the file is POSTed as
+      // multipart against that id, BEFORE the transition unmounts us.
+      // capture_id (observation) and listing_id (c8磨き第2弾#2 market-trade
+      // listing photo) are the two ids this rides today — not a generic
+      // upload-config engine; add another id key here if a third screen needs
+      // it (no screen-def has needed more than these two so far).
       const captureId = (result as Record<string, unknown> | undefined)?.capture_id;
+      const uploadListingId = (result as Record<string, unknown> | undefined)?.listing_id;
       if (effFile && typeof captureId === "string") {
         await execute(
           { kind: "api", method: "POST", path: "/api/v1/observation/upload" },
           { capture_id: captureId, file: effFile },
+        );
+      } else if (effFile && typeof uploadListingId === "string") {
+        await execute(
+          { kind: "api", method: "POST", path: `/api/v1/market/listings/${uploadListingId}/photo` },
+          { file: effFile },
         );
       }
       if (fromDraft) clearDraft();
@@ -867,11 +882,17 @@ function ListNode({ node }: { node: ScreenNode }) {
     const textTpl = p.item_text ? String(p.item_text) : "";
     const imgTpl = p.item_image ? String(p.item_image) : "";
     const altTpl = p.item_alt ? String(p.item_alt) : "";
+    // c8磨き第2弾#5: item_actor_field names a ROW key holding an actor_id (e.g.
+    // dispute's messages "actor_id", market-trade board's "from") — rendered
+    // via the actor 表示プリミティブ ahead of item_text instead of the raw id
+    // string (author display name, fallback short hash).
+    const actorField = p.item_actor_field ? String(p.item_actor_field) : "";
     return (
       <ul className="civ-list">
         {items.map((it, i) => (
           <li key={i}>
             <article className="civ-card">
+              {actorField && <ActorLabel actorId={String(getPath(it, actorField) ?? "")} />}
               {textTpl && <p className="civ-text">{interpolate(textTpl, it)}</p>}
               {imgTpl && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -1108,6 +1129,11 @@ function renderCell(col: Record<string, unknown>, row: unknown): React.ReactNode
   if (cell === "date") {
     return formatDateJa(value) || "—";
   }
+  if (cell === "actor") {
+    // c8#5: an actor_id column (e.g. market-trade's bids-table "bidder") shows
+    // the display name (fallback short hash) instead of the raw id string.
+    return value ? <ActorLabel actorId={String(value)} /> : "—";
+  }
   if (cell === "observed") {
     // V3-AIP-101 磨き直し fix#2: date + a representative measurement in one
     // column ("2026-07-11・82.5g") — col.key is the date field, col.measurement_key
@@ -1155,7 +1181,14 @@ function TableNode({ node }: { node: ScreenNode }) {
           {items.map((row, ri) => (
             <tr key={ri}>
               {columns.map((c, ci) => (
-                <td key={ci}>{renderCell(c, row)}</td>
+                // c8磨き第2弾#7: data-label feeds the <=560px responsive
+                // card-mode CSS (globals.css) — each cell shows its own
+                // column label via ::before, so a table reflows into a
+                // stacked card list instead of a squeezed horizontal scroll
+                // (受領10 モバイル「詳細を開く」ボタン潰れの根本対処)。
+                <td key={ci} data-label={displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}>
+                  {renderCell(c, row)}
+                </td>
               ))}
             </tr>
           ))}
@@ -1228,9 +1261,24 @@ function TabsNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// True if ANY "{{path}}" reference in `tpl` resolves to null/"" against
+// `scope` — used by ImageGridNode to tell "no photo uploaded yet" (e.g.
+// item_image references a row's optional cover_photo_id) apart from "photo
+// exists", so a missing photo renders an honest placeholder instead of a
+// broken <img src="…/photo/">.
+function templateHasMissingRef(tpl: string, scope: unknown): boolean {
+  for (const m of tpl.matchAll(/\{\{\s*([\w.]+)\s*\}\}/g)) {
+    const v = getPath(scope, m[1]);
+    if (v == null || v === "") return true;
+  }
+  return false;
+}
+
 // Image grid / thumbnail cards (§2-6) — the bind_items twin of ListNode's
 // image branch, laid out as a grid instead of a stacked list, each cell
-// carrying a meta line + optional Badge.
+// carrying a meta line + optional Badge. c8磨き第2弾#2(受領10「画像を押せば
+// 詳細が出る」): item_href makes the whole card a click-through link — no
+// separate "詳細を開く" button to squeeze on mobile.
 function ImageGridNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const items = useBoundItems(node);
@@ -1243,13 +1291,23 @@ function ImageGridNode({ node }: { node: ScreenNode }) {
   const metaTpl = p.item_meta ? String(p.item_meta) : "";
   const badgeTpl = p.item_badge ? String(p.item_badge) : "";
   const badgeToneTpl = p.item_badge_tone ? String(p.item_badge_tone) : "";
+  const hrefTpl = p.item_href ? String(p.item_href) : "";
+  // Dynamic tag: <a> when the card navigates, <figure> otherwise — same
+  // .civ-thumb-card box either way (see globals.css, tag-agnostic selector).
+  const Wrapper = hrefTpl ? "a" : "figure";
   return (
     <div className="civ-image-grid">
       {items.map((it, i) => (
-        <figure className="civ-thumb-card" key={i}>
-          {imgTpl && (
+        <Wrapper className="civ-thumb-card" key={i} {...(hrefTpl ? { href: interpolate(hrefTpl, it) } : {})}>
+          {imgTpl && !templateHasMissingRef(imgTpl, it) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img className="civ-image" src={interpolate(imgTpl, it)} alt={interpolate(altTpl, it)} />
+          ) : (
+            imgTpl && (
+              <div className="civ-thumb-placeholder" aria-hidden="true">
+                📷
+              </div>
+            )
           )}
           <figcaption>
             {labelTpl && <p className="civ-text">{interpolate(labelTpl, it)}</p>}
@@ -1265,7 +1323,7 @@ function ImageGridNode({ node }: { node: ScreenNode }) {
               />
             )}
           </figcaption>
-        </figure>
+        </Wrapper>
       ))}
     </div>
   );
@@ -4937,9 +4995,11 @@ type ThreadView = {
   tombstones?: Array<{ ref: { type: string; id: string }; reason: string }>;
 };
 
-// No display-name/avatar field exists anywhere in the actor data model (only
-// actor_id) — c8-ui-asset-catalog §gaps. The monogram is derived FROM the real
-// id (not an invented name), same honesty bar as the raw-id label next to it.
+// The avatar monogram is derived FROM the real actor_id (not an invented
+// name) — same honesty bar as the short-hash label next to it. A self-
+// reported display_name (ihl.actor.display_name.v1, c8 UI磨き第2弾#5) may
+// additionally exist now; monogram stays id-derived either way (a stable,
+// always-available glyph even before the name has resolved/if never set).
 function monogram(actorId: string): string {
   return actorId.trim().slice(0, 1).toUpperCase() || "?";
 }
@@ -4951,6 +5011,75 @@ function monogram(actorId: string): string {
 // copy it (e.g. into the dispute screen's respondent_id field).
 function shortActorId(actorId: string): string {
   return actorId.length > 12 ? `${actorId.slice(0, 10)}…` : actorId;
+}
+
+// c8 UI磨き第2弾#5(受領10・actor_id 生ハッシュ露出の解消): actor 表示プリミティブ。
+// display_name があればそれを、無ければ shortActorId フォールバックを表示する。
+// module-level cache は同一 actor_id が同一画面内で何度も出る(スレの各投稿・
+// 入札テーブルの各行等)ため、per-instance に毎回 fetch させない最小の共有(React
+// state ではなく素朴な Map ひとつ — 新アーキテクチャは要らない)。"" はキャッシュ
+// 済みだが display_name 未設定を意味し、再フェッチしない。
+const actorNameCache = new Map<string, string>();
+
+function ActorLabel({ actorId }: { actorId: string }) {
+  const execute = useContext(ExecuteCtx);
+  const [name, setName] = useState<string>(() => actorNameCache.get(actorId) ?? "");
+  useEffect(() => {
+    if (!actorId || actorNameCache.has(actorId)) return;
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: `/api/v1/users/${actorId}/profile` }))
+      .then((r) => {
+        const dn = String((r as { display_name?: string } | undefined)?.display_name ?? "");
+        actorNameCache.set(actorId, dn);
+        if (alive) setName(dn);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actorId]);
+  return <span title={actorId}>{name || shortActorId(actorId)}</span>;
+}
+
+// c8 UI磨き第2弾#3(受領10「『…』のなかに畳んで」): a kebab ("⋮") trigger that
+// reveals its children on tap and closes again on: (a) selecting a menu item
+// (click bubbles from the item up to the wrapping div — this fires AFTER the
+// item's own onClick, so the action already ran) or (b) an outside click.
+// Renderer primitive, not a declarative NodeType — the one concrete case this
+// wave has (knowledge-thread's per-post "この投稿を相談室へ") lives inside a
+// dedicated node (ThreadPostsNode), not a JSON screen-def; a table row-actions
+// cell is the natural next caller if one shows up (not built speculatively).
+function KebabMenu({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [open]);
+  return (
+    <div className="civ-kebab" ref={ref}>
+      <button
+        type="button"
+        className={cn("civ-interactive", "civ-kebab-trigger")}
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((o) => !o)}
+      >
+        ⋮
+      </button>
+      {open && (
+        <div className="civ-kebab-menu" onClick={() => setOpen(false)}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // round-16 OQ-PLZ-03 (resolve mark, thread-starter only) rides the EXISTING
@@ -4979,6 +5108,16 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
   const [viewerId, setViewerId] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
   const [resolving, setResolving] = useState(false);
+  // c8磨き第2弾#6(受領10「投稿ごとの投票ボタンに」): per-post Agree/Disagree/
+  // Pass — replaces the old screen-def stance-form's manual "対象の投稿 ID"
+  // text field entirely (a post's own id was always the thing being voted on;
+  // making the visitor type it back was the actual bug). castStance is local
+  // session feedback only (no live re-fetch of the sibling consensus table —
+  // the pre-c8 stance-form had no such refresh either, so this is parity, not
+  // a regression; a full reload already showed the updated tally before and
+  // still does).
+  const [castStance, setCastStance] = useState<Record<string, "agree" | "disagree" | "pass">>({});
+  const [votingId, setVotingId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!threadId) {
@@ -5042,6 +5181,19 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
     [execute, reload],
   );
 
+  const castVote = useCallback(
+    async (postId: string, value: "agree" | "disagree" | "pass") => {
+      setVotingId(postId);
+      try {
+        await execute({ kind: "api", method: "POST", path: "/api/v1/plaza/stances" }, { statement_id: postId, value });
+        setCastStance((m) => ({ ...m, [postId]: value }));
+      } finally {
+        setVotingId(null);
+      }
+    },
+    [execute],
+  );
+
   if (!loaded) {
     return (
       <p className="civ-text" data-muted="true">
@@ -5077,13 +5229,13 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
       <ul className="civ-list civ-thread-post-list">
         {view.posts.map((post) => (
           <li key={post.post_id}>
-            <article className="civ-card civ-thread-post">
+            <article className="civ-card civ-thread-post" data-post-id={post.post_id}>
               <div className="civ-thread-post-head">
                 <span className="civ-avatar-badge" aria-hidden="true">
                   {monogram(post.actor_id)}
                 </span>
-                <span className="civ-thread-post-actor" title={post.actor_id}>
-                  {shortActorId(post.actor_id)}
+                <span className="civ-thread-post-actor">
+                  <ActorLabel actorId={post.actor_id} />
                 </span>
                 <span className="civ-text" data-muted="true">
                   {formatDateJa(post.created_at)}
@@ -5113,21 +5265,39 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
                   })}
                 </div>
               )}
-              <button
-                type="button"
-                className={cn("civ-interactive", "civ-button")}
-                data-variant="ghost"
-                onClick={() =>
-                  navigate("dispute", {
-                    category: "board",
-                    subject_type: "post",
-                    subject_id: post.post_id,
-                    respondent_id: post.actor_id,
-                  })
-                }
-              >
-                この投稿を相談室へ
-              </button>
+              <div className="civ-thread-post-stance" role="group" aria-label="この投稿への賛否">
+                {(["agree", "disagree", "pass"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={cn("civ-interactive", "civ-button")}
+                    data-variant={castStance[post.post_id] === v ? "primary" : "secondary"}
+                    data-compact
+                    disabled={votingId === post.post_id}
+                    aria-busy={votingId === post.post_id || undefined}
+                    onClick={() => void castVote(post.post_id, v)}
+                  >
+                    {v === "agree" ? "賛成" : v === "disagree" ? "反対" : "保留"}
+                  </button>
+                ))}
+              </div>
+              <KebabMenu label="この投稿の操作">
+                <button
+                  type="button"
+                  className={cn("civ-interactive", "civ-button")}
+                  data-variant="ghost"
+                  onClick={() =>
+                    navigate("dispute", {
+                      category: "board",
+                      subject_type: "post",
+                      subject_id: post.post_id,
+                      respondent_id: post.actor_id,
+                    })
+                  }
+                >
+                  この投稿を相談室へ
+                </button>
+              </KebabMenu>
             </article>
           </li>
         ))}
@@ -5136,10 +5306,40 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// c8 UI磨き第2弾#1(受領10「買い手/売り手だけ表示」・ui-asset-catalog.md
+// 【最優先1】が指摘した「レンダラに scope 条件表示(when)が無い」P0ギャップの
+// 解消): ANY node may carry `props.when: { eq: [a, b] }` (or `not_eq`) — both
+// sides are `{{...}}` templates resolved against the SAME scope everything
+// else interpolates against, so a screen-def compares e.g.
+// {{viewer.actor_id}} to {{data.state.matched_with}} to show a button only to
+// the matched buyer. No `when` prop = always renders (upper-compatible; every
+// existing screen-def is unaffected). Deliberately just eq/not_eq of two
+// interpolated strings — not a rules engine; every role check this round-16
+// wave needs (buyer/seller/thread_owner) reduces to one id comparison.
+function evalWhen(p: Record<string, unknown>, scope: Scope): boolean {
+  const w = p.when as { eq?: [string, string]; not_eq?: [string, string] } | undefined;
+  if (!w) return true;
+  // Both templates resolving empty (the viewer/data fetch hasn't landed yet —
+  // {{viewer.actor_id}} and {{data.state.matched_with}} both "" on first
+  // render) must NOT count as a match: an eq of two unknowns is unknown, not
+  // true. Without this guard every role-gated button would flash visible for
+  // one render before the real ids arrive.
+  if (w.eq) {
+    const a = interpolate(w.eq[0], scope);
+    return a !== "" && a === interpolate(w.eq[1], scope);
+  }
+  if (w.not_eq) {
+    const a = interpolate(w.not_eq[0], scope);
+    return a !== "" && a !== interpolate(w.not_eq[1], scope);
+  }
+  return true;
+}
+
 export function NodeView({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
   const resolve = useContext(MessagesCtx);
+  if (!evalWhen(p, scope)) return null;
   switch (node.type) {
     case "app-shell":
       return (
@@ -5305,7 +5505,31 @@ export function Renderer({
 }: RendererProps) {
   const [data, setData] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<Record<string, unknown>>({});
+  const [viewer, setViewer] = useState<Record<string, unknown>>({});
   const execute = onAction ?? defaultExecute(onNavigate);
+
+  // c8#1: fetch the viewer once per screen mount so any node's `when` can
+  // compare {{viewer.actor_id}} against fetched data (buyer/seller/thread_owner
+  // role gating) without every node re-implementing its own /me/profile call
+  // (ThreadPostsNode did exactly that before this existed — same idea, lifted
+  // one level so declarative screen-defs can use it too). Only fires when THIS
+  // screen-def actually has a `when` prop somewhere — the other ~46 screens
+  // (and every existing action-count assertion in renderer.test.tsx) see zero
+  // behaviour change, and no screen pays for a fetch it never reads.
+  const needsViewer = useMemo(() => anyField(def.nodes, (n) => n.props?.when != null), [def]);
+  useEffect(() => {
+    if (!needsViewer) return;
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/me/profile" }))
+      .then((r) => {
+        if (alive && r && typeof r === "object") setViewer(r as Record<string, unknown>);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsViewer]);
 
   const navigate = useCallback(
     (to: string, query?: Record<string, string>) => {
@@ -5324,7 +5548,7 @@ export function Renderer({
     [],
   );
 
-  const scope: Scope = { params: params ?? readQuery(), data, result };
+  const scope: Scope = { params: params ?? readQuery(), data, result, viewer };
 
   return (
     <MessagesCtx.Provider value={resolveMessage ?? (() => undefined)}>

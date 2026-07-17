@@ -36,6 +36,11 @@ const LISTING_TYPE = "ihl.mkt.listing.v1";
 const LISTING_SCHEMA = "schemas/events/mkt-listing.schema.json";
 const SCHEMA_VERSION = 1;
 
+// c8 UI磨き第2弾#2(受領10「画像がない」): 出品写真は既存 mkt-listing 型を破壊
+// 変更せず別イベント型として追記する(obs-photo.schema.json と同型パターン)。
+const LISTING_PHOTO_TYPE = "ihl.mkt.listing_photo.v1";
+const LISTING_PHOTO_SCHEMA = "schemas/events/mkt-listing-photo.schema.json";
+
 // 取引状態機械イベント(design-k3 §2.1)。schema_version は string。
 const TXN_TYPE = "ihl.mkt.transaction_event.v1";
 const TXN_SCHEMA = "schemas/events/mkt-transaction-event.schema.json";
@@ -75,6 +80,38 @@ function envelope(id: string, actorId: string, data: Record<string, unknown>) {
     provenance: { generator_kind: "human", actor_id: actorId },
     data,
   };
+}
+
+function photoEnvelope(id: string, actorId: string, data: Record<string, unknown>) {
+  return {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: LISTING_PHOTO_TYPE,
+    time: new Date().toISOString(),
+    dataschema: LISTING_PHOTO_SCHEMA,
+    provenance: { generator_kind: "human", actor_id: actorId },
+    data,
+  };
+}
+
+// observation-routes.ts/cusb-routes.ts と同型の local sha256Hex(既存の局所
+// 重複パターンを踏襲・共有 export への切り出しは本タスクのスコープ外)。
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  let hex = "";
+  for (const b of digest) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+// listing_id 前方一致の prefix scan(obs-photo の capture_id 前方一致と同型・
+// O(k) not O(n) — 投影 index 不要)。ULID は生成順で単調なので配列は既にほぼ
+// 昇順(listEvents がキー順を保証しない実装でも、一覧カバーの cover 選定は
+// 「最初にアップロードされた1枚」であることが厳密には保証されないが、MVP
+// スケールでは十分・投影の完全な決定論ソートは別波)。
+async function loadListingPhotos(s: TruthStore, listingId: string): Promise<Array<{ photo_id: string }>> {
+  const rows = (await s.listEvents(`truth/${LISTING_PHOTO_TYPE}/${listingId}-`)).map(dataOf);
+  return rows.map((r) => ({ photo_id: String(r.photo_id) })).sort((a, b) => a.photo_id.localeCompare(b.photo_id));
 }
 
 // POST /market/listings — 出品を append(201/400/409)。title は必須。listing_id は
@@ -141,12 +178,17 @@ marketRoutes.get("/market/listings", async (c) => {
   const listings = [];
   for (const l of all) {
     const moderation = await projectListingModeration(s, String(l.listing_id), String(l.actor_id));
-    if (!moderation.hidden) listings.push(l);
+    if (!moderation.hidden) {
+      // c8#2: browse card cover image — first uploaded photo only (full photos[]
+      // rides the single-listing detail route; the list route stays a light card).
+      const photos = await loadListingPhotos(s, String(l.listing_id));
+      listings.push({ ...l, cover_photo_id: photos[0]?.photo_id });
+    }
   }
   return c.json({ listings });
 });
 
-// GET /market/listings/{listing_id} — 詳細投影(404 or { listing, moderation })。
+// GET /market/listings/{listing_id} — 詳細投影(404 or { listing, moderation, photos })。
 marketRoutes.get("/market/listings/:listing_id", async (c) => {
   const listingId = c.req.param("listing_id");
   const s = store(c);
@@ -154,7 +196,56 @@ marketRoutes.get("/market/listings/:listing_id", async (c) => {
   if (!ev) return c.json({ error: "NOT_FOUND" }, 404);
   const listing = dataOf(ev);
   const moderation = await projectListingModeration(s, listingId, String(listing.actor_id));
-  return c.json({ listing, moderation });
+  const photos = await loadListingPhotos(s, listingId);
+  return c.json({ listing, moderation, photos });
+});
+
+// POST /market/listings/{listing_id}/photo — multipart(file) → sha256 → putBlob
+// media/photo/<photo_id> → 写真イベント追記(出品者本人のみ・V3-AUT-17)。
+// obs-photo の POST /observation/upload と同型(2段階アップロード・design-c2 §3.2)。
+marketRoutes.post("/market/listings/:listing_id/photo", async (c) => {
+  const listingId = c.req.param("listing_id");
+  const s = store(c);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  if (!listingEv) return c.json({ error: "NOT_FOUND" }, 404);
+  const actorId = c.get("actorId");
+  if (dataOf(listingEv).actor_id !== actorId) return c.json({ error: "FORBIDDEN", details: ["seller only"] }, 403);
+
+  const form = await c.req.formData().catch(() => null);
+  const file = form?.get("file");
+  if (!(file instanceof Blob)) return c.json({ error: "INVALID_UPLOAD" }, 400);
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const contentType = file.type || "application/octet-stream";
+  const photoId = ulid();
+  const mediaKey = `media/photo/${photoId}`;
+  await s.putBlob(mediaKey, bytes, contentType);
+
+  const data = {
+    photo_id: photoId,
+    listing_id: listingId,
+    actor_id: actorId,
+    media_key: mediaKey,
+    content_type: contentType,
+    size_bytes: bytes.length,
+    sha256: await sha256Hex(bytes),
+  };
+  const key = `truth/${LISTING_PHOTO_TYPE}/${listingId}-${photoId}.json`;
+  const res = await s.putEventAt(key, photoEnvelope(photoId, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_PHOTO", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_PHOTO", key: res.key }, 409);
+  return c.json({ photo_id: photoId }, 202);
+});
+
+// GET /market/listings/{listing_id}/photo/{photo_id} — media blob(obs-photo の
+// /observation/{capture_id}/image/{photo_id} と同型)。
+marketRoutes.get("/market/listings/:listing_id/photo/:photo_id", async (c) => {
+  const photoId = c.req.param("photo_id");
+  const obj = await c.env.TRUTH.get(`media/photo/${photoId}`);
+  if (!obj) return c.json({ error: "NOT_FOUND" }, 404);
+  return new Response(await obj.arrayBuffer(), {
+    headers: { "content-type": obj.httpMetadata?.contentType ?? "application/octet-stream" },
+  });
 });
 
 // ── 取引状態機械(MKT-01/02/03/06/29)────────────────────────────────────
