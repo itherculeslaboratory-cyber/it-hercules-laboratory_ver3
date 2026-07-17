@@ -9,6 +9,7 @@
     "home",
     "obs-domain-select",
     "obs-entry",
+    "obs-templates",
     "obs-navigator",
     "obs-confirm",
     "obs-detail",
@@ -160,6 +161,16 @@
       "from": "obs-entry",
       "to": "obs-confirm",
       "label": "確認画面へ"
+    },
+    {
+      "from": "obs-entry",
+      "to": "obs-templates",
+      "label": "テンプレートを管理する(フォーク・保存)"
+    },
+    {
+      "from": "obs-templates",
+      "to": "obs-entry",
+      "label": "観測入力へ戻る"
     },
     {
       "from": "obs-navigator",

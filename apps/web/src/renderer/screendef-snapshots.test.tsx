@@ -47,6 +47,7 @@ const SCREEN_IDS = [
   "obs-register-entry",
   "obs-register-new",
   "obs-search",
+  "obs-templates",
   "paper-detail",
   "paper-match",
   "placement-qr",

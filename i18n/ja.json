@@ -63,6 +63,7 @@
   "obs-entry.life-stage.label": "発育段階の候補（任意・ユーザー入力）",
   "obs-entry.measurements.label": "計測",
   "obs-entry.device-hint.label": "IoT機器が未登録の場合はこちら → 機器管理",
+  "obs-entry.templates-hint.label": "テンプレートを管理する(フォーク・保存)",
   "obs-entry.subject.label": "対象個体 ID（任意）",
   "obs-entry.sire.label": "父個体 ID（任意）",
   "obs-entry.dam.label": "母個体 ID（任意）",
