@@ -377,7 +377,7 @@ export async function deriveDeviceBindingsForCapture(
 
     // binding: reuse the already-open one for this device (device-GLOBAL, same
     // rule as POST /device-bindings), else open a new one.
-    const openBindingIds = await projectOpenBindings(bucket, deviceId);
+    const openBindingIds = await projectOpenBindings(s, deviceId);
     let bindingId = openBindingIds[0] ?? null;
     let bindingOpened = false;
     if (!bindingId) {
