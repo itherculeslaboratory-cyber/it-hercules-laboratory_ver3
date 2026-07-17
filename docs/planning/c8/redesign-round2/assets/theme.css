@@ -1,0 +1,523 @@
+/* UI再設計round2 After案モック用スタイル。
+ * 正本トークン+コンポーネントクラスは apps/web/src/app/tokens.generated.css と
+ * apps/web/src/app/globals.css からの再利用(reuse-first・自作CSSではない)。
+ * 判定対象はレイアウト/語彙/遷移であって独自の見た目ではないため、実アプリの
+ * 色・radius・タイポ・部品クラスをそのまま持ち込む。html[data-theme="light"]を
+ * 全モックのルート要素に付け、OSのdarkモード設定に関わらず実アプリ既定(light)
+ * で撮影されるようにする。 */
+
+/* --- tokens (source: apps/web/src/app/tokens.generated.css) --- */
+:root,
+:root[data-theme="light"] {
+  --civ-bg: #fbfbf9;
+  --civ-surface: #ffffff;
+  --civ-surface-2: #f2f2ef;
+  --civ-text: #141410;
+  --civ-text-muted: #5a5a52;
+  --civ-border: #dad9d2;
+  --civ-primary: #0b7a55;
+  --civ-primary-text: #ffffff;
+  --civ-focus: #0b7a55;
+  --civ-danger: #b3261e;
+  --civ-danger-bg: #fbeae8;
+  --civ-info: #155ab8;
+  --civ-info-bg: #e8f0fb;
+  --civ-caution: #7a5b00;
+  --civ-caution-bg: #fdf3d8;
+  --civ-radius: 12px;
+  --civ-tap: 44px;
+  --civ-motion: 220ms;
+  --civ-font: Inter, "Noto Sans JP", system-ui, -apple-system, sans-serif;
+  --civ-fs-1: 0.875rem;
+  --civ-fs-2: 1rem;
+  --civ-fs-3: 1.25rem;
+  --civ-fs-4: 1.75rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--civ-bg);
+  color: var(--civ-text);
+  font-family: var(--civ-font);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+/* --- app shell / chrome (source: globals.css civ-app-shell 等) --- */
+.civ-app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--civ-bg);
+}
+.civ-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.civ-chrome-header,
+.civ-chrome-footer {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid var(--civ-border);
+}
+.civ-chrome-footer {
+  border-bottom: none;
+  border-top: 1px solid var(--civ-border);
+  margin-top: auto;
+}
+.civ-brand {
+  font-weight: 400;
+  font-size: var(--civ-fs-3);
+  color: var(--civ-text);
+  text-decoration: none;
+  margin-right: auto;
+}
+.civ-chrome-nav,
+.civ-chrome-auth {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.civ-chrome-auth {
+  margin-left: auto;
+}
+.civ-chrome-link {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-primary);
+}
+
+.civ-heading {
+  font-weight: 300;
+  font-size: var(--civ-fs-4);
+  color: var(--civ-text);
+  margin: 0;
+}
+.civ-heading[data-level="2"] {
+  font-size: var(--civ-fs-3);
+}
+.civ-text {
+  font-size: var(--civ-fs-2);
+  color: var(--civ-text);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.civ-text[data-muted="true"] {
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+}
+.civ-card {
+  background: var(--civ-surface);
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--civ-radius);
+  display: block;
+}
+
+/* button */
+.civ-interactive {
+  min-height: var(--civ-tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  font-family: inherit;
+  font-weight: 400;
+  font-size: var(--civ-fs-2);
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+}
+.civ-button {
+  padding: 0 16px;
+}
+.civ-button[data-variant="primary"] {
+  background: var(--civ-primary);
+  color: var(--civ-primary-text);
+  border-color: var(--civ-primary);
+}
+.civ-button[data-variant="secondary"] {
+  background: var(--civ-surface-2);
+  color: var(--civ-text);
+}
+.civ-button[data-variant="ghost"] {
+  background: transparent;
+  color: var(--civ-text);
+  border-color: transparent;
+}
+.civ-link {
+  color: var(--civ-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* form */
+.civ-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.civ-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.civ-label {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+  font-weight: 400;
+}
+.civ-input,
+select.civ-input {
+  min-height: var(--civ-tap);
+  padding: 8px 12px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface);
+  color: var(--civ-text);
+  font-family: inherit;
+  font-size: var(--civ-fs-2);
+  outline: none;
+}
+
+/* badge */
+.civ-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface-2);
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.civ-badge[data-tone="success"] {
+  border-color: var(--civ-primary);
+  color: var(--civ-primary);
+  background: transparent;
+}
+.civ-badge[data-tone="info"] {
+  border-color: var(--civ-info);
+  color: var(--civ-info);
+  background: var(--civ-info-bg);
+}
+.civ-badge[data-tone="caution"] {
+  border-color: var(--civ-caution);
+  color: var(--civ-caution);
+  background: var(--civ-caution-bg);
+}
+
+/* progress (合意集計バー用) */
+.civ-progress-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.civ-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--civ-surface-2);
+  overflow: hidden;
+  display: flex;
+}
+.civ-progress-seg {
+  height: 100%;
+}
+.civ-progress-value {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+}
+
+/* tabs */
+.civ-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--civ-border);
+}
+.civ-tab {
+  padding: 0 16px;
+  border-color: transparent;
+  border-radius: var(--civ-radius) var(--civ-radius) 0 0;
+  background: transparent;
+  color: var(--civ-text-muted);
+}
+.civ-tab[data-active="true"] {
+  color: var(--civ-primary);
+  border-bottom: 2px solid var(--civ-primary);
+}
+.civ-tab-panel {
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* image grid */
+.civ-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.civ-thumb-card {
+  margin: 0;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  overflow: hidden;
+  background: var(--civ-surface);
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+.civ-thumb-card .civ-thumb-ph {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--civ-surface-2);
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-3);
+}
+.civ-thumb-card figcaption {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* stepper */
+.civ-stepper {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.civ-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  color: var(--civ-text-muted);
+}
+.civ-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: var(--civ-fs-1);
+}
+.civ-step[data-state="current"] {
+  border-color: var(--civ-primary);
+  color: var(--civ-primary);
+}
+.civ-step[data-state="done"] {
+  color: var(--civ-text);
+}
+.civ-step[data-state="done"] .civ-step-index {
+  background: var(--civ-primary);
+  border-color: var(--civ-primary);
+  color: var(--civ-primary-text);
+}
+
+/* kebab menu */
+.civ-kebab {
+  position: relative;
+  display: inline-block;
+}
+.civ-kebab-trigger {
+  padding: 0 10px;
+  background: transparent;
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-3);
+  line-height: 1;
+}
+.civ-kebab-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--civ-surface);
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+}
+.civ-kebab-menu[data-open="true"] {
+  display: flex;
+}
+.civ-kebab-menu .civ-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* thread post */
+.civ-thread-post {
+  gap: 6px;
+}
+.civ-thread-post-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.civ-avatar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--civ-surface-2);
+  border: 1px solid var(--civ-border);
+  color: var(--civ-text);
+  font-size: var(--civ-fs-2);
+  flex-shrink: 0;
+}
+.civ-thread-post-actor {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+}
+
+/* disclosure(折りたたみ) */
+.civ-disclosure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-disclosure-body {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-disclosure[data-open="true"] .civ-disclosure-body {
+  display: flex;
+}
+
+/* info banner */
+.civ-info-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface-2);
+}
+
+/* sticky bottom bar */
+.civ-sticky-bar {
+  position: sticky;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--civ-surface);
+  border-top: 1px solid var(--civ-border);
+}
+.civ-sticky-bar .civ-button {
+  flex: 1;
+}
+
+/* row card(取引中一覧) */
+.civ-row-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+.civ-row-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-3);
+  flex-shrink: 0;
+}
+.civ-row-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* サンプルデータ表記 */
+.mock-sample-tag {
+  font-size: var(--civ-fs-1);
+  color: var(--civ-text-muted);
+}
+
+/* 目的タグ(話し合いの場) */
+.civ-purpose-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  min-height: 24px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-info);
+  color: var(--civ-info);
+  background: var(--civ-info-bg);
+  font-size: var(--civ-fs-1);
+}
+
+/* 対象カード(話し合いの場・話し合いの入口) */
+.civ-subject-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

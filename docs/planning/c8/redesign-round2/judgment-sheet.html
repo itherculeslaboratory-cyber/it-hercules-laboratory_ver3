@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>UI再設計 第2ラウンド 判定シート(C8)</title>
+<style>
+  :root{ --bg:#0d0f13; --card:#161a21; --line:#262c36; --fg:#e6e8ec; --dim:#8b94a3; --acc:#ff7a1a;
+         --ok:#4caf7d; --warn:#e8c547; --bad:#e8564f; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 "Segoe UI",system-ui,sans-serif}
+  header{padding:20px 28px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  h1{margin:0 0 4px;font-size:23px}
+  .sub{color:var(--dim);font-size:13px;max-width:1180px}
+  .autosave{color:var(--acc);font-size:12px;margin-top:8px}
+  main{max-width:1180px;margin:0 auto;padding:24px 28px 150px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px 24px;margin-bottom:22px}
+  .cardhead{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .cardhead b{font-size:19px}
+  .cardhead span{color:var(--dim);font-size:13px}
+  h3.section{margin:18px 0 8px;font-size:13px;color:var(--dim);border-left:3px solid var(--acc);padding-left:8px}
+
+  /* 画面マップ図 */
+  .mapgrid{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+  .maprow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .mapbox{background:#0a0c10;border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;white-space:nowrap}
+  .mapbox.home{border-color:var(--acc);color:var(--acc)}
+  .mapbox.han{border-color:#c77dff;color:#c77dff}
+  .maparrow{color:var(--dim);font-size:12px;white-space:nowrap}
+  .maplabel{color:var(--dim);font-size:11px}
+
+  /* 語彙辞書表 */
+  table.vocab{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+  table.vocab th, table.vocab td{border-top:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  table.vocab th{color:var(--dim);font-weight:600;font-size:12px}
+  table.vocab td.bad{color:var(--bad)}
+  table.vocab td.ok{color:var(--ok)}
+
+  /* スクショグリッド */
+  .shotcol{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0}
+  .shotcol h4{margin:0 0 6px;font-size:12px;color:var(--dim);font-weight:600}
+  .frame{background:#0a0c10;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .frame img{width:100%;display:block;background:#000;cursor:zoom-in}
+  .frame .cap{padding:6px 10px;font-size:11px;color:var(--dim)}
+  .before-multi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .proto-row{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 4px}
+  .proto-row a{background:#0a0c10;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--fg);text-decoration:none}
+  .proto-row a:hover{border-color:var(--acc);color:var(--acc)}
+
+  blockquote.quote{margin:8px 0;padding:10px 14px;background:#0a0c10;border:1px solid var(--line);
+    border-left:3px solid var(--bad);border-radius:6px;font-size:14px;color:var(--fg)}
+  blockquote.quote cite{display:block;margin-top:6px;font-style:normal;color:var(--dim);font-size:12px}
+  p.transition{background:#0d1a14;border:1px solid #1e3a2c;color:#8fd6b0;border-radius:6px;padding:8px 12px;font-size:13px;margin:8px 0}
+  .purposeline{color:var(--dim);font-size:13px;margin:2px 0 10px}
+
+  .scorebox{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:start;margin-top:16px}
+  .scorebox label{font-size:13px;color:var(--dim);padding-top:8px}
+  input[type=number]{width:110px;background:#0a0c10;color:var(--fg);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font:16px/1 ui-monospace,monospace;accent-color:var(--acc)}
+  textarea{width:100%;min-height:60px;background:#0a0c10;color:var(--fg);border:1px solid var(--line);
+    border-radius:8px;padding:10px;font:13px/1.5 ui-monospace,monospace}
+  .picks{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:13px}
+  .picks label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .picks input{accent-color:var(--acc)}
+  .go-decision{font-size:16px;font-weight:700;margin-top:4px}
+  .go-decision span{color:var(--acc)}
+  .memorow{margin-top:14px}
+  .memorow label{font-size:13px;color:var(--dim);display:block;margin-bottom:4px}
+
+  .bar{position:fixed;bottom:0;left:0;right:0;background:#11141a;border-top:1px solid var(--line);
+    padding:12px 28px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  button{background:var(--acc);color:#111;border:0;border-radius:7px;padding:9px 16px;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+  #lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:20;align-items:center;justify-content:center;cursor:zoom-out}
+  #lightbox img{max-width:96vw;max-height:96vh}
+  .hint{color:var(--dim);font-size:12px;white-space:pre-wrap}
+  .barnote{color:var(--acc);font-size:11.5px}
+  pre.fallback{color:var(--dim);background:#0a0c10;border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre-wrap;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>UI再設計 第2ラウンド 判定シート(C8)</h1>
+  <div class="sub">正本: docs/planning/c8/ui-redesign-round2.md(受領11=全体約15点への構造回答)。各カードは Before(現行スクショ)→ユーザー指摘(逐語)→After案(390px/1440px)→遷移の変更点→採点欄の順です。末尾の総合判定でGO(この設計で実装)/NO(再設計)を選んでください。</div>
+  <div class="autosave">✓ 入力は自動保存されます(このPC内)・自由に記入OK。消える心配は不要です。</div>
+</header>
+<main>
+
+<!-- ============ 画面マップ ============ -->
+<div class="card">
+  <div class="cardhead"><b>画面マップ(一次ナビ)</b><span>正本 §3</span></div>
+  <div class="mapgrid">
+    <div class="maprow"><div class="mapbox home">ホーム(司令塔)</div></div>
+    <div class="maprow">
+      <span class="maparrow">↓</span>
+      <div class="mapbox">観測</div>
+      <div class="mapbox">個体</div>
+      <div class="mapbox">市場: 買う|出品</div>
+      <div class="mapbox">取引中(一覧→詳細)</div>
+      <div class="mapbox">知の広場</div>
+      <div class="mapbox">マイページ</div>
+    </div>
+    <div class="maprow">
+      <span class="maplabel">市場 --成立--&gt; 取引中</span>
+    </div>
+    <div class="maprow">
+      <span class="maplabel">取引中 -.「…」トラブル.-&gt;</span>
+      <div class="mapbox han">話し合いの場</div>
+      <span class="maplabel">&lt;-.「…」表現指摘.- 知の広場 / &lt;-.「…」規約疑い.- 市場</span>
+    </div>
+    <div class="maprow">
+      <span class="maplabel">話し合いの場 --不成立--&gt;</span>
+      <div class="mapbox">公開投票(GOV-07)</div>
+    </div>
+  </div>
+  <p class="purposeline">市場のタブは「買う」「出品」の2つだけ(「この出品/取引」タブは廃止)。取引中は独立画面。話し合いの場への入口は対象側の「…」のみ(ナビ常設なし)。</p>
+</div>
+
+<!-- ============ 語彙辞書 ============ -->
+<div class="card">
+  <div class="cardhead"><b>語彙辞書(画面に出してよい語/禁止語)</b><span>正本 §1</span></div>
+  <table class="vocab">
+    <tr><th>内部語(禁止)</th><th>ユーザー語(正)</th></tr>
+    <tr><td class="bad">相談室 / dispute / 二人部屋</td><td class="ok">話し合いの場</td></tr>
+    <tr><td class="bad">買い手/売り手(ラベル表示)</td><td class="ok">表示しない(whenで自分のボタンだけ出す)</td></tr>
+    <tr><td class="bad">actor_id 生ハッシュ</td><td class="ok">表示名(fallback短縮のみ)</td></tr>
+    <tr><td class="bad">listing/trade等のID露出</td><td class="ok">対象カード(画像+名前)で示す</td></tr>
+    <tr><td class="bad">「この出品取引」等の複合内部語</td><td class="ok">買う / 出品 / 取引中</td></tr>
+  </table>
+  <p class="purposeline">新語を画面に出すときは初出画面に1行説明を添える(login 100点の条件を全画面規則化)。</p>
+</div>
+
+<!-- ============ 話し合いの場 概念 ============ -->
+<div class="card">
+  <div class="cardhead"><b>概念: 話し合いの場</b><span>正本 §2・ユーザー裁定 2026-07-17</span></div>
+  <blockquote class="quote">「わかりやすく改名して、『話し合いの場』。概念をもっと上にして。取引トラブルから、掲示板の表現がよくない指摘、出品物規約違反じゃないか?って指摘っていろんなことができる。タグや遷移もとで少し工夫すればとても便利なトラブル解決するかもしれない機能になりませんか?」<cite>round-16-answers-raw.md 受領4</cite></blockquote>
+  <p class="purposeline"><b style="color:var(--fg)">定義:</b> あらゆる対象に紐づけて開ける当事者間の部屋。構成 = 対象カード(元の取引/投稿/出品へ戻れる)+用途タグ+メッセージ+合意記録。</p>
+  <p class="purposeline"><b style="color:var(--fg)">用途タグ:</b> 取引トラブル / 表現についての指摘 / 規約違反の疑い / その他の相談</p>
+  <p class="purposeline"><b style="color:var(--fg)">入口:</b> 対象側の「…」メニューのみ(取引詳細「トラブルについて話し合う」/掲示板投稿「この表現について話し合う」/出品「規約違反の疑いを相談する」)。</p>
+  <p class="purposeline"><b style="color:var(--fg)">出口:</b> ①合意(合意文が記録に残る=透明ログ) ②不成立→「公開して投票」(GOV-07・当事者opt-in・7日) ③立ち消え(期限で自動クローズ)</p>
+</div>
+
+<!-- ============ 1. market-buy ============ -->
+<div class="card">
+  <div class="cardhead"><b>market-buy(買うタブ)</b><span>目的: 出品中の個体を画像で探して詳細へ進む</span></div>
+
+  <h3 class="section">Before(現行・market-trade-browse=買うタブ)</h3>
+  <div class="frame"><img class="zoom" src="../screens/market-trade-browse-1440.png" alt="before market-trade-browse"><div class="cap">現行: 「この出品/取引・買う・出品する」の3タブ構成の一部。画像がない。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「market-trade「買う」タブ 70点: 使いやすそう。この出品/取引タブがあるのが変。」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+  <blockquote class="quote">「無駄な文字が多すぎる。「買い手」って要る?「この出品取引」タブが変・ここじゃない。ここは買うと出品だけでいい。遷移が変。」<cite>round-16-answers-raw.md 受領11(market-trade全体への指摘)</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="market-buy-390.png" alt="after market-buy 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="market-buy-1440.png" alt="after market-buy 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/market-buy.html" target="_blank">▶ market-buy.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: タブは「買う」「出品」の2つだけ(「この出品/取引」タブを廃止)。役割ラベル・自明な説明文を全削除。画像タップで詳細へ。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreMB" min="0" max="100" placeholder="例: 85">
+    <label>良い点</label>
+    <textarea id="goodMB" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badMB" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 2. market-sell ============ -->
+<div class="card">
+  <div class="cardhead"><b>market-sell(出品タブ)</b><span>目的: 自分の出品を管理し、新しく出品する</span></div>
+
+  <h3 class="section">Before(現行・market-trade-detail=タブ構成の一部)</h3>
+  <div class="frame"><img class="zoom" src="../screens/market-trade-detail-1440.png" alt="before market-trade-detail"><div class="cap">現行: 「出品する」は独立画面ではなく「この出品/取引」タブ内に相乗り。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「無駄な文字が多すぎる。「買い手」って要る?「この出品取引」タブが変・ここじゃない。ここは買うと出品だけでいい。遷移が変。」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="market-sell-390.png" alt="after market-sell 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="market-sell-1440.png" alt="after market-sell 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/market-sell.html" target="_blank">▶ market-sell.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: 自分の出品管理+新規出品をこのタブに統合。成立時は「取引中に移動しました」トースト+リンクで trades-list へ。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreMS" min="0" max="100" placeholder="例: 80">
+    <label>良い点</label>
+    <textarea id="goodMS" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badMS" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 3. trades-list ============ -->
+<div class="card">
+  <div class="cardhead"><b>trades-list(取引中一覧)</b><span>目的: 進行中の取引を一目で見て、自分の次アクションへ進む</span></div>
+
+  <h3 class="section">Before(現行・market-trade-detail=取引ボードが市場タブに相乗り)</h3>
+  <div class="frame"><img class="zoom" src="../screens/market-trade-detail-1440.png" alt="before trade board tab"><div class="cap">現行: 取引一覧という独立画面が無く、市場タブの中に混在。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「無駄な文字が多すぎる。…「この出品取引」タブが変・ここじゃない。ここは買うと出品だけでいい。遷移が変。」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="trades-list-390.png" alt="after trades-list 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="trades-list-1440.png" alt="after trades-list 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/trades-list.html" target="_blank">▶ trades-list.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: 取引ボードを市場から独立させた新画面。1取引=1行カード(相手表示名・対象サムネ・現在ステップ・自分の次アクションボタン1つ)。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreTL" min="0" max="100" placeholder="例: 80">
+    <label>良い点</label>
+    <textarea id="goodTL" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badTL" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 4. trade-detail ============ -->
+<div class="card">
+  <div class="cardhead"><b>trade-detail(取引詳細ステップバー)</b><span>目的: 今の取引ステップを見て、自分がすべき1アクションを行う</span></div>
+
+  <h3 class="section">Before(現行・market-trade-detail)</h3>
+  <div class="frame"><img class="zoom" src="../screens/market-trade-detail-1440.png" alt="before market-trade-detail"><div class="cap">現行: 「振込済みを申告する」「受け取りました」の両方+「相違・死着→dispute相談室へ」が常時表示。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「無駄な文字が多すぎる。「買い手」って要る?…遷移が変。」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+  <blockquote class="quote">「①market-trade-detail 悪い点: 振り込みを申請する、入金を確認した、って、両方表示されているが、買い手、売り手のみ表示されるでいいものがありますよね。そこらへん調整して。」<cite>round-16-answers-raw.md 受領10(同一画面への先行指摘)</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="trade-detail-390.png" alt="after trade-detail 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="trade-detail-1440.png" alt="after trade-detail 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/trade-detail.html" target="_blank">▶ trade-detail.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: ステップバー(合意→支払→発送→受取→完了)+whenで自分のアクションのみ表示。「話し合いの場」入口は「…」内に格下げ(常設ボタンにしない)。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreTD" min="0" max="100" placeholder="例: 85">
+    <label>良い点</label>
+    <textarea id="goodTD" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badTD" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 5. knowledge-thread ============ -->
+<div class="card">
+  <div class="cardhead"><b>knowledge-thread(議題カード固定+会話)</b><span>目的: 1つの議題について話し合い、賛否を1箇所に集約する</span></div>
+
+  <h3 class="section">Before(現行・knowledge-thread)</h3>
+  <div class="frame"><img class="zoom" src="../screens/knowledge-thread-1440.png" alt="before knowledge-thread"><div class="cap">現行: 投稿ごとに賛成/反対/保留ボタンが並び、「相談室へ」導線が毎回表示。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「knowledge-thread 0点: 何のための画面か分からない。話し合いやすさが一番大事。賛成反対保留がなんで全部の投稿にあるの?議題に対してじゃないの?考え直して。やり直し。相談室ってなんだよ、知らないよその概念。」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="knowledge-thread-390.png" alt="after knowledge-thread 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="knowledge-thread-1440.png" alt="after knowledge-thread 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/knowledge-thread.html" target="_blank">▶ knowledge-thread.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: 議題カードを最上部に固定し、賛成/反対/保留+集計バーはここ1箇所だけに統合。各投稿の「…」に引用/リンクコピー/この表現について話し合う(→話し合いの場)/通報を格納。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreKT" min="0" max="100" placeholder="例: 85">
+    <label>良い点</label>
+    <textarea id="goodKT" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badKT" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 6. hanashiai-room ============ -->
+<div class="card">
+  <div class="cardhead"><b>hanashiai-room(話し合いの場)</b><span>目的: 対象を見失わずに当事者同士で話し合い、合意または投票で終える</span></div>
+
+  <h3 class="section">Before(現行・dispute=紛争相談室)</h3>
+  <div class="frame"><img class="zoom" src="../screens/dispute-1440.png" alt="before dispute"><div class="cap">現行: 「紛争相談室」。actor IDを手入力させる導線・「判例タイトル」など内部語が露出。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「dispute 0点(ごみ・導線が変。以降レビュー拒否)」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="hanashiai-room-390.png" alt="after hanashiai-room 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="hanashiai-room-1440.png" alt="after hanashiai-room 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/hanashiai-room.html" target="_blank">▶ hanashiai-room.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: 入口は対象側「…」のみ(actor ID手入力を廃止)。ヘッダー=対象カード+用途タグ、フッター=「合意する」「公開して投票」。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreHR" min="0" max="100" placeholder="例: 80">
+    <label>良い点</label>
+    <textarea id="goodHR" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badHR" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 7. login ============ -->
+<div class="card">
+  <div class="cardhead"><b>login(説明1行追加版)</b><span>目的: メールアドレスだけでログインする</span></div>
+
+  <h3 class="section">Before(現行・login=100点)</h3>
+  <div class="frame"><img class="zoom" src="../screens/login-1440.png" alt="before login"><div class="cap">現行: 100点評価済み。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「login 100点: おもろい。あり。ただし初見に説明要る。」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="login-390.png" alt="after login 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="login-1440.png" alt="after login 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/login.html" target="_blank">▶ login.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: 変更なし。初見向け説明1行を追加(「メールアドレスだけでログインできます。パスワードはありません」)。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreLG" min="0" max="100" placeholder="例: 100">
+    <label>良い点</label>
+    <textarea id="goodLG" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badLG" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 8. login-sent ============ -->
+<div class="card">
+  <div class="cardhead"><b>login-sent(リンク主導+コード折りたたみ)</b><span>目的: 送られたメールのリンクをクリックしてログインを完了する</span></div>
+
+  <h3 class="section">Before(現行・login-sent=0点)</h3>
+  <div class="frame"><img class="zoom" src="../screens/login-sent-1440.png" alt="before login-sent"><div class="cap">現行: 6桁コード入力が主動線として最初から表示される。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「login-sent 0点: マジックリンクはURLクリックでログインでしょう?こんな番号じゃない。」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="login-sent-390.png" alt="after login-sent 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="login-sent-1440.png" alt="after login-sent 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/login-sent.html" target="_blank">▶ login-sent.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: 主従を反転。「届いたリンクをクリックするとログイン完了」+再送を主動線にし、6桁コードは「別の端末でメールを開いた場合」の折りたたみ内フォールバックに格下げ。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreLS" min="0" max="100" placeholder="例: 85">
+    <label>良い点</label>
+    <textarea id="goodLS" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badLS" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 9. setup-profile ============ -->
+<div class="card">
+  <div class="cardhead"><b>setup-profile(言語+国統合)</b><span>目的: 初回に表示名・言語・国だけ決めて始める</span></div>
+
+  <h3 class="section">Before(現行・setup-profile=言語のみ / country-select・language-select=別画面)</h3>
+  <div class="before-multi">
+    <div class="frame"><img class="zoom" src="../screens/setup-profile-1440.png" alt="before setup-profile"><div class="cap">現行 setup-profile(表示名+言語のみ)</div></div>
+    <div class="frame"><img class="zoom" src="../screens/country-select-1440.png" alt="before country-select"><div class="cap">現行 country-select(90点・独立画面)</div></div>
+    <div class="frame"><img class="zoom" src="../screens/language-select-1440.png" alt="before language-select"><div class="cap">現行 language-select(0点・独立画面)</div></div>
+  </div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「country-select 90点(言語もまとめて) / language-select 0点(独立画面不要・統合)」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="setup-profile-390.png" alt="after setup-profile 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="setup-profile-1440.png" alt="after setup-profile 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/setup-profile.html" target="_blank">▶ setup-profile.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: language-select独立画面を廃止しsetup-profileに統合。表示名+言語(必須・上)+国(必須・下・「表示されません。地域ルールの適用にだけ使います」1行)の1画面。country-select(90点)の見た目を国フィールドに流用。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreSP" min="0" max="100" placeholder="例: 85">
+    <label>良い点</label>
+    <textarea id="goodSP" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badSP" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 10. terms ============ -->
+<div class="card">
+  <div class="cardhead"><b>terms(わかりやすい版⇔正式版タブ)</b><span>目的: 何に同意しているかを理解した上で同意する</span></div>
+
+  <h3 class="section">Before(現行・terms=30点)</h3>
+  <div class="frame"><img class="zoom" src="../screens/terms-1440.png" alt="before terms"><div class="cap">現行: 本文がほぼ無く、「同意して始める」ボタンのみ。</div></div>
+
+  <h3 class="section">ユーザー指摘(逐語・受領11)</h3>
+  <blockquote class="quote">「terms 30点(本文追加・わかりやすい版切替・解説動画導線)」<cite>round-16-answers-raw.md 受領11</cite></blockquote>
+
+  <h3 class="section">After案(390px / 1440px)</h3>
+  <div class="shotcol">
+    <div><h4>390px</h4><div class="frame"><img class="zoom" src="terms-390.png" alt="after terms 390"></div></div>
+    <div><h4>1440px</h4><div class="frame"><img class="zoom" src="terms-1440.png" alt="after terms 1440"></div></div>
+  </div>
+  <div class="proto-row"><a href="mocks/terms.html" target="_blank">▶ terms.html(触れるプロトタイプ)</a></div>
+
+  <p class="transition">遷移の変更点: タブ化(わかりやすい版=要約カード⇔正式版=全文)。同意ボタンは両タブ共通下部に固定。解説動画導線は設定にURLがある時だけ表示(空なら非表示)。</p>
+
+  <div class="scorebox">
+    <label>点数(0〜100)</label>
+    <input type="number" id="scoreTM" min="0" max="100" placeholder="例: 80">
+    <label>良い点</label>
+    <textarea id="goodTM" placeholder="良い点"></textarea>
+    <label>悪い点</label>
+    <textarea id="badTM" placeholder="悪い点"></textarea>
+  </div>
+</div>
+
+<!-- ============ 総合判定 ============ -->
+<div class="card">
+  <div class="cardhead"><b>総合判定</b><span>10画面+画面マップ/語彙辞書/話し合いの場概念を踏まえた全体の可否</span></div>
+  <div class="go-decision">判定 = <span id="goLabel">(未選択)</span></div>
+  <div class="picks">
+    <label><input type="radio" name="goDecision" value="GO"> GO(この設計で実装へ進む)</label>
+    <label><input type="radio" name="goDecision" value="NO"> NO(再設計)</label>
+  </div>
+  <div class="memorow">
+    <label>自由コメント</label>
+    <textarea id="overallMemo" placeholder="例: この方向でOK。ただし◯◯だけ直して 等"></textarea>
+  </div>
+</div>
+
+</main>
+
+<div class="bar">
+  <button onclick="copyOut()">まとめをコピー</button>
+  <button class="ghost" onclick="clearAll()">クリア</button>
+  <span class="barnote">※ このファイルは自動保存されます</span>
+  <span class="hint" id="copied"></span>
+</div>
+
+<div id="lightbox" onclick="this.style.display='none'"><img id="lbimg"></div>
+
+<script>
+document.querySelectorAll('img.zoom').forEach(img=>img.addEventListener('click',()=>{
+  document.getElementById('lbimg').src=img.src; document.getElementById('lightbox').style.display='flex';
+}));
+
+function val(id){ return document.getElementById(id).value.trim(); }
+function scoreOrBlank(id){ const v=document.getElementById(id).value; return v===''?'(未入力)':v+'点'; }
+function radioVal(name){ const el=document.querySelector('input[name='+name+']:checked'); return el?el.value:'(未選択)'; }
+
+function updateGoLabel(){
+  document.getElementById('goLabel').textContent = radioVal('goDecision');
+}
+
+const SCREENS = [
+  {id:'MB', title:'market-buy(買うタブ)'},
+  {id:'MS', title:'market-sell(出品タブ)'},
+  {id:'TL', title:'trades-list(取引中一覧)'},
+  {id:'TD', title:'trade-detail(取引詳細ステップバー)'},
+  {id:'KT', title:'knowledge-thread(議題カード固定+会話)'},
+  {id:'HR', title:'hanashiai-room(話し合いの場)'},
+  {id:'LG', title:'login(説明1行追加版)'},
+  {id:'LS', title:'login-sent(リンク主導+コード折りたたみ)'},
+  {id:'SP', title:'setup-profile(言語+国統合)'},
+  {id:'TM', title:'terms(わかりやすい版⇔正式版タブ)'}
+];
+
+function summary(){
+  const lines = ['# UI再設計round2 判定(C8)', ''];
+  SCREENS.forEach(s=>{
+    lines.push('## '+s.title);
+    lines.push('点数: '+scoreOrBlank('score'+s.id));
+    lines.push('良い点: '+(val('good'+s.id)||'(なし)'));
+    lines.push('悪い点: '+(val('bad'+s.id)||'(なし)'));
+    lines.push('');
+  });
+  lines.push('## 総合判定');
+  lines.push('GO/NO: '+radioVal('goDecision'));
+  lines.push('自由コメント: '+(val('overallMemo')||'(なし)'));
+  return lines.join('\n');
+}
+
+function copyOut(){
+  const t=summary();
+  const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta);
+  ta.select(); let ok=false; try{ok=document.execCommand('copy')}catch(e){}
+  document.body.removeChild(ta);
+  const out=document.getElementById('copied');
+  document.querySelectorAll('pre.fallback').forEach(p=>p.remove());
+  if(ok){
+    out.textContent='コピーしました。私に貼り戻してください。';
+  }else{
+    out.textContent='コピー不可→下記を手動選択:';
+    const pre=document.createElement('pre'); pre.className='fallback'; pre.textContent=t;
+    document.querySelector('main').appendChild(pre);
+  }
+}
+
+function clearAll(){
+  document.querySelectorAll('main input[type=number], main textarea').forEach(e=>e.value='');
+  document.querySelectorAll('main input[type=radio]').forEach(e=>e.checked=false);
+  document.getElementById('copied').textContent='';
+  document.querySelectorAll('pre.fallback').forEach(p=>p.remove());
+  updateGoLabel();
+  clearAutosave();
+}
+
+// 自動保存(localStorage・このPC内のみ): main配下のinput/textarea/radioをid/name基準で保存・復元
+const LS_PREFIX = 'ihlRound2JudgeSheet_';
+function autosaveKey(el){
+  return el.type === 'radio' ? LS_PREFIX + 'radio_' + el.name : LS_PREFIX + el.id;
+}
+function restoreAutosave(){
+  document.querySelectorAll('main input[id], main textarea[id]').forEach(el=>{
+    const v = localStorage.getItem(autosaveKey(el));
+    if(v !== null) el.value = v;
+  });
+  document.querySelectorAll('main input[type=radio][name]').forEach(el=>{
+    const v = localStorage.getItem(autosaveKey(el));
+    if(v !== null) el.checked = (el.value === v);
+  });
+  updateGoLabel();
+}
+function saveAutosave(e){
+  const el = e.target;
+  if(el.type === 'radio' || el.id) localStorage.setItem(autosaveKey(el), el.value);
+  if(el.type === 'radio' && el.name === 'goDecision') updateGoLabel();
+}
+function clearAutosave(){
+  Object.keys(localStorage).filter(k=>k.startsWith(LS_PREFIX)).forEach(k=>localStorage.removeItem(k));
+}
+document.addEventListener('DOMContentLoaded', restoreAutosave);
+document.querySelector('main').addEventListener('input', saveAutosave);
+document.querySelector('main').addEventListener('change', saveAutosave);
+</script>
+</body>
+</html>

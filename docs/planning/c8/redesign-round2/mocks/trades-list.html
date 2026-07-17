@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>取引中 — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <h1 class="civ-heading">取引中</h1>
+
+    <ul class="civ-list">
+      <li class="civ-card civ-row-card">
+        <div class="civ-row-thumb">🪲</div>
+        <div class="civ-row-main">
+          <span class="civ-text">たろうさん / ヘラクレスオオカブト(F2)</span>
+          <span class="civ-text" data-muted="true">ステップ: 支払い</span>
+        </div>
+        <a class="civ-interactive civ-button" data-variant="primary" href="trade-detail.html">振込済みを申告する</a>
+      </li>
+      <li class="civ-card civ-row-card">
+        <div class="civ-row-thumb">🪲</div>
+        <div class="civ-row-main">
+          <span class="civ-text">はなこさん / アトラスオオカブト</span>
+          <span class="civ-text" data-muted="true">ステップ: 発送</span>
+        </div>
+        <a class="civ-interactive civ-button" data-variant="primary" href="trade-detail.html">発送する</a>
+      </li>
+      <li class="civ-card civ-row-card">
+        <div class="civ-row-thumb">🪲</div>
+        <div class="civ-row-main">
+          <span class="civ-text">じろうさん / コーカサスオオカブト(ペア)</span>
+          <span class="civ-text" data-muted="true">ステップ: 受取</span>
+        </div>
+        <a class="civ-interactive civ-button" data-variant="primary" href="trade-detail.html">受け取りました</a>
+      </li>
+      <li class="civ-card civ-row-card">
+        <div class="civ-row-thumb">🪲</div>
+        <div class="civ-row-main">
+          <span class="civ-text">みさきさん / パラワンオオヒラタ</span>
+          <span class="civ-text" data-muted="true">完了</span>
+        </div>
+        <span class="civ-badge" data-tone="success">完了</span>
+      </li>
+    </ul>
+
+    <p class="mock-sample-tag">サンプルデータ(実データではありません)・自分の次アクションボタンは1つだけ表示</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — trades-list</span>
+  </footer>
+</div>
+</body>
+</html>

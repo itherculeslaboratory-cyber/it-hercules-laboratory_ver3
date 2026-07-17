@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>プロフィールを整える — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <h1 class="civ-heading">プロフィールを整える</h1>
+    <span class="civ-text" data-muted="true">最初に表示名・言語・国だけ決めます(あとで設定から変更できます)。</span>
+
+    <form class="civ-form">
+      <div class="civ-field">
+        <label class="civ-label" for="handle">表示名(handle) *</label>
+        <input class="civ-input" id="handle" placeholder="他の人にはこの名前で表示されます">
+      </div>
+
+      <div class="civ-field">
+        <label class="civ-label" for="lang">表示言語 *</label>
+        <select class="civ-input" id="lang">
+          <option>言語を選ぶ</option>
+          <option>日本語</option>
+          <option>English</option>
+        </select>
+      </div>
+
+      <div class="civ-field">
+        <label class="civ-label" for="country">国 *</label>
+        <select class="civ-input" id="country">
+          <option>国を選択</option>
+          <option>日本</option>
+          <option>台湾</option>
+        </select>
+        <span class="civ-text" data-muted="true">表示されません。地域ルールの適用にだけ使います。</span>
+      </div>
+
+      <button class="civ-interactive civ-button" data-variant="primary" type="button">はじめる</button>
+    </form>
+
+    <p class="mock-sample-tag">サンプル・country-select(90点)の見た目を正としlanguage-select独立画面は廃止・1画面に統合</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — setup-profile</span>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>スレッド — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+<style>
+  .agenda-card{position:sticky;top:0;background:var(--civ-surface);z-index:2}
+  .agenda-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .agenda-bar-track{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--civ-surface-2)}
+  .seg-for{background:var(--civ-primary)}
+  .seg-against{background:var(--civ-danger)}
+  .seg-hold{background:var(--civ-text-muted)}
+</style>
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <h1 class="civ-heading" data-level="2">スレッド</h1>
+
+    <!-- 議題カード(最上部固定・賛成/反対/保留はここ1箇所だけ) -->
+    <div class="civ-card agenda-card">
+      <span class="civ-text" data-muted="true">議題</span>
+      <span class="civ-text">出品時の写真は何枚まで必須にするか</span>
+      <span class="civ-text" data-muted="true">ルールを決めるための話し合いです</span>
+      <div class="agenda-actions">
+        <button class="civ-interactive civ-button" data-variant="primary">賛成</button>
+        <button class="civ-interactive civ-button" data-variant="secondary">反対</button>
+        <button class="civ-interactive civ-button" data-variant="ghost">保留</button>
+      </div>
+      <div class="civ-progress-field">
+        <div class="agenda-bar-track">
+          <div class="seg-for" style="width:70%"></div>
+          <div class="seg-against" style="width:18%"></div>
+          <div class="seg-hold" style="width:12%"></div>
+        </div>
+        <span class="civ-progress-value">賛成12・反対3・保留2</span>
+      </div>
+    </div>
+
+    <!-- 本文=会話に専念。投稿ごとの賛否ボタンは無い -->
+    <div class="civ-card civ-thread-post">
+      <div class="civ-thread-post-head">
+        <span class="civ-avatar-badge">た</span>
+        <span class="civ-text">たろう</span>
+        <span class="civ-thread-post-actor">スレ主</span>
+      </div>
+      <span class="civ-text">写真1枚だと状態が分かりにくい取引があったので、3枚以上を必須にしたいです。</span>
+      <div class="civ-kebab">
+        <button class="civ-interactive civ-kebab-trigger" aria-expanded="false">⋮</button>
+        <div class="civ-kebab-menu">
+          <button class="civ-interactive civ-button">引用</button>
+          <button class="civ-interactive civ-button">リンクコピー</button>
+          <a class="civ-interactive civ-button" href="hanashiai-room.html">この表現について話し合う</a>
+          <button class="civ-interactive civ-button">通報</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="civ-card civ-thread-post">
+      <div class="civ-thread-post-head">
+        <span class="civ-avatar-badge">は</span>
+        <span class="civ-text">はなこ</span>
+      </div>
+      <span class="civ-text">3枚は撮影の負担が大きいので、2枚+任意追加くらいが現実的かなと思います。</span>
+      <div class="civ-kebab">
+        <button class="civ-interactive civ-kebab-trigger" aria-expanded="false">⋮</button>
+        <div class="civ-kebab-menu">
+          <button class="civ-interactive civ-button">引用</button>
+          <button class="civ-interactive civ-button">リンクコピー</button>
+          <a class="civ-interactive civ-button" href="hanashiai-room.html">この表現について話し合う</a>
+          <button class="civ-interactive civ-button">通報</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="civ-field">
+      <label class="civ-label" for="reply">返信本文</label>
+      <textarea class="civ-input" id="reply" rows="3" placeholder="返信を書く"></textarea>
+      <button class="civ-interactive civ-button" data-variant="primary">返信する</button>
+    </div>
+
+    <p class="mock-sample-tag">サンプルデータ・賛成/反対/保留は議題1箇所のみ。投稿の「⋮」に「この表現について話し合う」を格納</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — knowledge-thread</span>
+  </footer>
+</div>
+</body>
+</html>

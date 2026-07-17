@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>取引詳細 — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <div style="display:flex;align-items:center;gap:8px">
+      <h1 class="civ-heading" data-level="2" style="flex:1">たろうさん / ヘラクレスオオカブト(F2)</h1>
+      <div class="civ-kebab">
+        <button class="civ-interactive civ-kebab-trigger" aria-expanded="true" onclick="void 0">⋮</button>
+        <div class="civ-kebab-menu" data-open="true">
+          <a class="civ-interactive civ-button" href="hanashiai-room.html">トラブルについて話し合う</a>
+        </div>
+      </div>
+    </div>
+
+    <ol class="civ-stepper">
+      <li class="civ-step" data-state="done"><span class="civ-step-index">✓</span>合意</li>
+      <li class="civ-step" data-state="current"><span class="civ-step-index">2</span>支払</li>
+      <li class="civ-step" data-state="upcoming"><span class="civ-step-index">3</span>発送</li>
+      <li class="civ-step" data-state="upcoming"><span class="civ-step-index">4</span>受取</li>
+      <li class="civ-step" data-state="upcoming"><span class="civ-step-index">5</span>完了</li>
+    </ol>
+
+    <div class="civ-card">
+      <span class="civ-text" data-muted="true">支払い方法: 銀行振込(既定・無料)</span>
+      <span class="civ-text">12,000円</span>
+    </div>
+
+    <button class="civ-interactive civ-button" data-variant="primary">振込済みを申告する</button>
+
+    <p class="mock-sample-tag">サンプルデータ・自分(買い手)のアクションのみ表示。「トラブルについて話し合う」は「⋮」内(常設ボタンにしない)</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — trade-detail</span>
+  </footer>
+</div>
+</body>
+</html>

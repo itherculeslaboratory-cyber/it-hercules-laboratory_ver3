@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ログイン — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <h1 class="civ-heading">IHL にログイン</h1>
+    <span class="civ-text" data-muted="true">メールアドレスにログインリンクを送ります。</span>
+    <span class="civ-text" data-muted="true">メールアドレスだけでログインできます。パスワードはありません。</span>
+
+    <form class="civ-form">
+      <div class="civ-field">
+        <label class="civ-label" for="email">メールアドレス *</label>
+        <input class="civ-input" id="email" type="email" placeholder="you@example.com">
+      </div>
+      <label class="civ-checkbox-row" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox">
+        <span class="civ-label">利用規約に同意する</span>
+      </label>
+      <button class="civ-interactive civ-button" data-variant="primary" type="button">ログインリンクを送る</button>
+    </form>
+
+    <span class="civ-text" data-muted="true">リンクを開けない場合は、届いた数字コードでもログインできます。</span>
+    <form class="civ-form">
+      <div class="civ-field">
+        <label class="civ-label" for="email2">メールアドレス *</label>
+        <input class="civ-input" id="email2" type="email" placeholder="you@example.com">
+      </div>
+      <div class="civ-field">
+        <label class="civ-label" for="code">数字コード(6桁) *</label>
+        <input class="civ-input" id="code" placeholder="123456">
+      </div>
+      <button class="civ-interactive civ-button" data-variant="secondary" type="button">コードでログイン</button>
+    </form>
+
+    <p class="mock-sample-tag">login=100点維持。差分は説明1行の追加のみ</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — login</span>
+  </footer>
+</div>
+</body>
+</html>

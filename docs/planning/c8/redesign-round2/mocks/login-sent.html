@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ログインリンクを送りました — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <h1 class="civ-heading">メールを送りました</h1>
+    <span class="civ-text">届いたリンクをクリックするとログイン完了です。</span>
+
+    <button class="civ-interactive civ-button" data-variant="primary">リンクをもう一度送る</button>
+    <a class="civ-link" href="login.html">違うメールアドレスだった? 入力し直す</a>
+
+    <div class="civ-disclosure">
+      <button class="civ-interactive civ-button" data-variant="ghost">別の端末でメールを開いた場合 ▾</button>
+      <div class="civ-disclosure-body">
+        <span class="civ-text" data-muted="true">6桁コードを入力してください。</span>
+        <div class="civ-field">
+          <label class="civ-label" for="code">数字コード(6桁) *</label>
+          <input class="civ-input" id="code" placeholder="123456">
+        </div>
+        <button class="civ-interactive civ-button" data-variant="secondary">コードでログイン</button>
+      </div>
+    </div>
+
+    <p class="mock-sample-tag">サンプル・主=リンククリック/従=別端末フォールバック(既定は折りたたみ)</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — login-sent</span>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>市場(出品) — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <h1 class="civ-heading">市場</h1>
+
+    <div class="civ-tab-list" role="tablist">
+      <a class="civ-interactive civ-tab" role="tab" href="market-buy.html">買う</a>
+      <button class="civ-interactive civ-tab" data-active="true" role="tab" aria-selected="true">出品</button>
+    </div>
+
+    <div class="civ-tab-panel" role="tabpanel">
+      <button class="civ-interactive civ-button" data-variant="primary">+ 新しく出品する</button>
+
+      <ul class="civ-list">
+        <li class="civ-card civ-row-card">
+          <div class="civ-row-thumb">🪲</div>
+          <div class="civ-row-main">
+            <span class="civ-text">ヘラクレスオオカブト(F2・153mm) / 12,000円</span>
+            <span class="civ-text" data-muted="true">出品中</span>
+          </div>
+          <span class="civ-badge" data-tone="success">公開中</span>
+        </li>
+        <li class="civ-card civ-row-card">
+          <div class="civ-row-thumb">🪲</div>
+          <div class="civ-row-main">
+            <span class="civ-text">ネプチューンオオカブト / 15,000円</span>
+            <span class="civ-text" data-muted="true">下書き・写真未追加</span>
+          </div>
+          <span class="civ-badge">下書き</span>
+        </li>
+        <li class="civ-card civ-row-card">
+          <div class="civ-row-thumb">🪲</div>
+          <div class="civ-row-main">
+            <span class="civ-text">コーカサスオオカブト(ペア) / 20,000円</span>
+            <span class="civ-text" data-muted="true">たろうさんと成立</span>
+          </div>
+          <span class="civ-badge" data-tone="info">取引中に移動しました</span>
+        </li>
+      </ul>
+    </div>
+
+    <p class="mock-sample-tag">サンプルデータ(実データではありません)</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — market-sell</span>
+  </footer>
+</div>
+</body>
+</html>

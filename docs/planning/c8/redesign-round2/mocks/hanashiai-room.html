@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>話し合いの場 — After案モック(round2)</title>
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<div class="civ-app-shell">
+  <header class="civ-chrome-header">
+    <a class="civ-brand" href="#">IHL</a>
+    <nav class="civ-chrome-nav">
+      <a class="civ-chrome-link" href="#">観測対象を探す</a>
+      <a class="civ-chrome-link" href="#">マイページ</a>
+      <a class="civ-chrome-link" href="#">通知</a>
+      <a class="civ-chrome-link" href="#">設定</a>
+    </nav>
+    <div class="civ-chrome-auth"><a class="civ-chrome-link" href="#">ログアウト</a></div>
+  </header>
+
+  <main class="civ-page">
+    <h1 class="civ-heading" data-level="2">話し合いの場</h1>
+    <span class="civ-text" data-muted="true">話し合いの場は、取引・投稿・出品などについて当事者同士で話し合うための部屋です。</span>
+
+    <!-- ヘッダー = 対象カード + 用途タグ -->
+    <div class="civ-card civ-subject-card">
+      <div class="civ-row-thumb">🪲</div>
+      <div class="civ-row-main">
+        <span class="civ-text">対象: 取引 — たろうさん / ヘラクレスオオカブト(F2)</span>
+        <a class="civ-link" href="trade-detail.html">元の取引に戻る</a>
+      </div>
+      <span class="civ-purpose-tag">取引トラブル</span>
+    </div>
+
+    <!-- 本文 = 2者メッセージ -->
+    <div class="civ-card civ-thread-post">
+      <div class="civ-thread-post-head">
+        <span class="civ-avatar-badge">じ</span>
+        <span class="civ-text">じろう(自分)</span>
+      </div>
+      <span class="civ-text">発送していただいた個体が、写真と状態が違うように見えます。確認をお願いできますか。</span>
+    </div>
+    <div class="civ-card civ-thread-post">
+      <div class="civ-thread-post-head">
+        <span class="civ-avatar-badge">た</span>
+        <span class="civ-text">たろう</span>
+      </div>
+      <span class="civ-text">発送時の輸送で角の先が少し欠けたかもしれません。写真を追加でお送りします。</span>
+    </div>
+
+    <div class="civ-field">
+      <label class="civ-label" for="msg">発言</label>
+      <textarea class="civ-input" id="msg" rows="3" placeholder="メッセージを書く"></textarea>
+    </div>
+
+    <!-- フッター = 合意する / 公開して投票 -->
+    <div class="civ-sticky-bar">
+      <button class="civ-interactive civ-button" data-variant="primary">合意する</button>
+      <button class="civ-interactive civ-button" data-variant="secondary">公開して投票</button>
+    </div>
+
+    <p class="mock-sample-tag">サンプルデータ・出口は合意(記録に残る)/公開して投票(GOV-07・7日)/立ち消え(期限で自動クローズ)</p>
+  </main>
+
+  <footer class="civ-chrome-footer">
+    <span class="mock-sample-tag">UI再設計round2 After案モック — hanashiai-room</span>
+  </footer>
+</div>
+</body>
+</html>
