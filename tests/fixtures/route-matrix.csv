@@ -18,7 +18,9 @@
 #   (infra-route-085・V3-PPR-12・protected。reanalyze バッチは既存 /observation/batch-commit
 #   kind:"reanalyze" 拡張のため新規 route 無し)を追加 → 77 rows、同レーンが知識セル横断投影
 #   新規 1 route(infra-route-086・V3-WIK-20・protected)を追加 → 78 rows、同レーンが
-#   月次Lint新規 2 route(infra-route-087/088・V3-WIK-07・protected)を追加 → 80 rows。
+#   月次Lint新規 2 route(infra-route-087/088・V3-WIK-07・protected)を追加 → 80 rows、
+#   同レーンが外部知識取り込み新規 1 route(infra-route-089・V3-WIK-29・protected)を
+#   追加 → 81 rows。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
 #   + payjp-webhook のみ / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
@@ -102,3 +104,4 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/knowledge/cell/{id},VPS,Workers,W2,infra-route-086,protected,implemented,V3-WIK-20 意図/系譜/被引用を1クエリで返す横断投影・既存cite_refs/cited_paper_ids/citations/forked_fromを束ねる決定論(常駐グラフDBなし)
 —,POST,/api/v1/wiki/lint,VPS,Workers,W2,infra-route-087,protected,implemented,V3-WIK-07 月次Lint(矛盾/孤立ページ/古い記述/リンク切れ)を手動実行しWIK-01 wiki_node(level=lint_log)へlog.md形式で記録・月次cron配線は人間ゲート
 —,GET,/api/v1/wiki/lint-log,VPS,Workers,W2,infra-route-088,protected,implemented,V3-WIK-07 月次Lint実行履歴(created_at降順)
+—,POST,/api/v1/research/external-import,VPS,Workers,W2,infra-route-089,protected,implemented,V3-WIK-29 外部知識(GitHub公開リポジトリ)をcontent(article)へ決定論正規化して取り込み・常駐フェッチ無し(呼び手が本文供給)・citations型はPPR-23のurlを再利用

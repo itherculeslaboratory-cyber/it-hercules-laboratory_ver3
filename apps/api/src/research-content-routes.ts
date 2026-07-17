@@ -373,3 +373,62 @@ researchContentRoutes.post("/research/shared", async (c) => {
 researchContentRoutes.get("/research/chat-index", async (c) => {
   return c.json({ items: await chatIndex(store(c)) });
 });
+
+// ── 外部知識取り込みアダプタ(WIK-29)────────────────────────────────────────────
+// adaptGithubSource — anthropics/life-sciences 等の外部 GitHub 公開リポジトリの本文を
+// content(article)へ正規化する決定論アダプタ。常駐フェッチは行わない(呼び手=手順書に
+// 従った人間/ローカルスクリプトが本文を取得し markdown をそのまま渡す・不変条項①)。
+// 引用は PPR-23 の CiteRef(type="url")を再利用し、statement 側で新規正規化フォーマットは
+// 作らない(reuse-first)。
+export interface GithubSourceMeta {
+  repo: string; // 例: "anthropics/life-sciences"
+  path: string; // 例: "README.md"
+  url: string; // 実URL(citations.url の id として保存・実フェッチはしない)
+}
+export interface AdaptedExternalContent {
+  title: string;
+  body_markdown: string;
+  system_tags: string[];
+  citations: CiteRef[];
+}
+
+export function adaptGithubSource(meta: GithubSourceMeta, markdown: string): AdaptedExternalContent {
+  const strip = (v: string) => v.replace(/[\\$]/g, ""); // LaTeX 禁止(PPR-03と同じ規約)
+  const heading = markdown.match(/^#\s+(.+)$/m)?.[1];
+  const title = strip(heading || `${meta.repo}: ${meta.path}`);
+  return {
+    title,
+    body_markdown: strip(markdown),
+    system_tags: ["external", "github", meta.repo],
+    citations: [{ type: "url", id: meta.url, label: meta.repo }],
+  };
+}
+
+// POST /research/external-import — 外部知識(GitHub公開リポジトリ)を content(article)として
+// 取り込む(WIK-29)。body: {repo, path, url, markdown}。常駐フェッチ無し(呼び手が本文を
+// 供給・サーバは決定論正規化+append のみ)。
+researchContentRoutes.post("/research/external-import", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const { repo, path, url, markdown } = body as Record<string, unknown>;
+  if (typeof repo !== "string" || !repo || typeof path !== "string" || !path || typeof url !== "string" || !url || typeof markdown !== "string") {
+    return c.json({ error: "INVALID_EXTERNAL_IMPORT", details: ["repo, path, url, markdown (string) required"] }, 400);
+  }
+  const adapted = adaptGithubSource({ repo, path, url }, markdown);
+  const actorId = c.get("actorId");
+  const contentId = ulid();
+  const data: Record<string, unknown> = {
+    content_id: contentId,
+    actor_id: actorId,
+    content_type: "article",
+    title: adapted.title,
+    body_markdown: adapted.body_markdown,
+    system_tags: adapted.system_tags,
+    citations: adapted.citations,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  const res = await store(c).putEventAt(contentKey(contentId), envelope(CONTENT_TYPE, CONTENT_SCHEMA, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_CONTENT", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_CONTENT", key: res.key }, 409);
+  return c.json({ content_id: contentId }, 201);
+});
