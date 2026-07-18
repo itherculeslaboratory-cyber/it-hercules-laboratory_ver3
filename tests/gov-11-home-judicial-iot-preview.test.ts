@@ -65,7 +65,11 @@ describe("V3-GOV-11 GET /home/summary judicial_inbox preview", () => {
     const env = makeEnv();
     const h = await authOf("gov11-iot");
     for (let i = 0; i < 5; i++) {
-      await post(env, h, "/observation/schedule", { individual_id: `ind-${i}`, stage: "first_to_second", from: "2000-01-01T00:00:00Z" }); // far past -> overdue
+      // T-71 GAP① A-1: /observation/schedule now requires the caller to own
+      // individual_id — create a real one (same actor) instead of a bare literal.
+      const indRes = await post(env, h, "/individuals", {});
+      const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+      await post(env, h, "/observation/schedule", { individual_id: individualId, stage: "first_to_second", from: "2000-01-01T00:00:00Z" }); // far past -> overdue
     }
     const summary = (await (await get(env, h, "/home/summary")).json()) as { iot_due: unknown[]; overdue: unknown[] };
     expect(summary.overdue.length).toBe(5); // underlying projection unaffected

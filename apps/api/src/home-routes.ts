@@ -13,6 +13,7 @@ import { projectJudicialInboxPreview } from "./gov-routes";
 import { KARMA_TYPE } from "./ledger-routes";
 import { CULTURE_TEMPLATE_TYPE } from "./culture";
 import { KARMA_VALUE_MIN, KARMA_VALUE_MAX, INTL_TRUST_MIN, INTL_TRUST_MAX } from "./economy-constants";
+import { projectCurrentOwner } from "./source-routes";
 
 export const homeRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -281,6 +282,11 @@ homeRoutes.post("/observation/schedule", async (c) => {
   if (nextAt === null) return c.json({ error: "INVALID_STAGE" }, 400);
 
   const actorId = c.get("actorId");
+  // Ownership guard (fail-closed, T-71 GAP① A-1): sibling of
+  // individual-routes.ts POST /individuals/:id/schedule/generate — same
+  // projectCurrentOwner trust boundary as POST /occupancy.
+  const owner = await projectCurrentOwner(c.env.TRUTH, body.individual_id);
+  if (owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
   const scheduleId = ulid();
   const data: Record<string, unknown> = {
     schedule_id: scheduleId,
