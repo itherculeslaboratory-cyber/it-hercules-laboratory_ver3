@@ -150,6 +150,18 @@ proposalRoutes.post("/proposals/:id/transition", async (c) => {
     extra.rank = body!.rank;
   } else if (kind === "hypothesis_transition") {
     if (!isState(body?.state)) return c.json({ error: "INVALID_TRANSITION", details: ["state required"] }, 400);
+    // supported/rejected へのクライアント直接指定は投票収束(reduceProposal の
+    // CONVERGE_MIN_VOTES/SUPPORT_TRUST/LOW_TRUST)を完全バイパスできてしまう
+    // (T-71 GAP④/SEC-A4)。hypothesis_transition は draft→hypothesis の1方向のみ
+    // 許可し、supported/rejected は support/reject 投票の収束ロジックが導く値に限定
+    // する(official/recommended への rank_change 直接指定を拒否する RANK_GATED と
+    // 同型のガード)。
+    if (body!.state !== "hypothesis") {
+      return c.json(
+        { error: "STATE_GATED", details: [`${body!.state} is derived from vote convergence only, not client-directed`] },
+        403,
+      );
+    }
     extra.state = body!.state;
   } else if (kind !== "support" && kind !== "reject") {
     return c.json({ error: "INVALID_TRANSITION", details: ["kind must be rank_change|hypothesis_transition|support|reject"] }, 400);
