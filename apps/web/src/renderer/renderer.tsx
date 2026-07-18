@@ -963,6 +963,12 @@ function ListNode({ node }: { node: ScreenNode }) {
   if (p.variant === "knowledge-hub") {
     return <KnowledgeHubNode node={node} />;
   }
+  // T-71 KNW wave1(スレッド=グループチャット化・承認モックアップ section3 の
+  // verbatim 採用): 同じ in-scope トリック — 新ノード種を起こさず list +
+  // props.variant で分岐する(schema node type enum は C9 スコープ外)。
+  if (p.variant === "knowledge-thread-chat") {
+    return <KnowledgeThreadChatNode node={node} />;
+  }
   useSource(node);
   const scope = useContext(ScopeCtx);
 
@@ -7699,6 +7705,201 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
             </a>
           </section>
         )}
+      </div>
+    </div>
+  );
+}
+
+// T-71 KNW wave1(スレッド=みんなのグループチャット — 承認モックアップ section3
+// の verbatim 採用・R94「既存を捨てる」): 旧 ThreadPostsNode(投稿ごとの賛否
+// Agree/Disagree/Pass ボタン + Polis型合意可視化テーブル + テキストエリア返信
+// フォーム + 引用ref + スレ主限定解決マーク)は削除対象 — オーナーモデルは
+// 「投票スレ」ではなくグループチャットなので、その UI をこの画面から撤去する
+// (提案ベース撤去・関数自体/他画面からの参照は残置=最小diff)。バックエンド
+// (GET /plaza/threads/:thread_id・POST /plaza/posts)は第一級資産としてそのまま
+// 再利用する。ctx-chips(🌡26℃/💧60%/🧬系統/令 — mockup section3 のヘッダー
+// チップ)は実装前に schemas/events/plaza-post.schema.json を確認したが、
+// temperature/humidity/lineage/stage に相当するフィールドは存在せず
+// additionalProperties:false のため今後も投稿へ紛れ込めない。捏造しない
+// (誇張ゼロ)ため、このチップ列と .ctx-note は丸ごと省略する(タスク報告に記載)。
+// 同様に .photo-block(写真添付)に対応するフィールドも plaza-post スキーマに
+// 存在しないため、投機的な分岐コードを足さず丸ごと省略する。
+type KnwChatPost = ThreadPost;
+
+// avatar の背景色 — mockup はユーザーごとに固定色の実例(青/緑/橙/灰の4色、
+// 値は .knw-thread の --blue/--primary/--secondary/--muted トークンと同一)を
+// 示すのみで正本カラーパレットは無い。ui-tokens GATE(raw hex 禁止・design-c2
+// §4.4)に従い、raw hex を書かずトークン var() 経由で再利用する(speciesColorVar
+// と同じ「決定論ハッシュ→固定パレット選択」の流儀・per-user Truth フィールド
+// は新設しない・見た目は毎回同じ actor_id で安定)。
+const KNW_CHAT_AVATAR_VARS = ["var(--blue)", "var(--primary)", "var(--secondary)", "var(--muted)"];
+function knwChatAvatarColor(actorId: string): string {
+  let h = 0;
+  for (let i = 0; i < actorId.length; i++) h = (h * 31 + actorId.charCodeAt(i)) >>> 0;
+  return KNW_CHAT_AVATAR_VARS[h % KNW_CHAT_AVATAR_VARS.length];
+}
+
+// formatDateJa(renderer 唯一の日付整形)は "YYYY-MM-DD" 専用 — チャットの
+// msg-meta は mockup 通り時刻(HH:MM)なので別関数にする(既存を再利用できない
+// 唯一の理由=フォーマットの粒度そのものが違う)。
+function knwChatTime(value: unknown): string {
+  const d = new Date(String(value ?? ""));
+  if (Number.isNaN(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function KnwChatMessage({ post, me }: { post: KnwChatPost; me: boolean }) {
+  const time = knwChatTime(post.created_at);
+  // own posts: mockup section3's .msg.me demo shows avatar "あ" + name "あなた"
+  // literally, not the viewer's own actor_id/ActorLabel lookup — showing the
+  // raw actor_id hash for yourself is a needless ID leak (owner report).
+  return (
+    <div className={cn("msg", me && "me")} data-post-id={post.post_id}>
+      <div className="avatar" style={{ background: knwChatAvatarColor(post.actor_id) }} aria-hidden="true">
+        {me ? "あ" : monogram(post.actor_id)}
+      </div>
+      <div className="msg-body">
+        <div className="msg-meta">
+          {me ? "あなた" : <ActorLabel actorId={post.actor_id} />}
+          {time && ` ・ ${time}`}
+        </div>
+        <div className="bubble">{post.body}</div>
+        {/* .photo-block omitted — no photo/attachment field exists on
+            ihl.plaza.post.v1 (see comment above); not fabricated. */}
+      </div>
+    </div>
+  );
+}
+
+function KnowledgeThreadChatNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const execute = useContext(ExecuteCtx);
+  const scope = useContext(ScopeCtx);
+  const threadId = String(scope.params.thread_id ?? "");
+  const basePath = String(p.source_path ?? "/api/v1/plaza/threads");
+  const [view, setView] = useState<ThreadView | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [viewerId, setViewerId] = useState("");
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const reload = useCallback(async () => {
+    if (!threadId) {
+      setLoaded(true);
+      return;
+    }
+    try {
+      const v = (await execute({ kind: "api", method: "GET", path: `${basePath}/${threadId}` })) as ThreadView;
+      setView(v);
+    } catch {
+      setView(null);
+    } finally {
+      setLoaded(true);
+    }
+  }, [execute, basePath, threadId]);
+
+  useEffect(() => {
+    let alive = true;
+    void reload();
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/me/profile" }))
+      .then((r) => {
+        if (alive) setViewerId(String((r as { actor_id?: string } | undefined)?.actor_id ?? ""));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId]);
+
+  // リアルタイム = クライアントポーリング(5秒ごと)。websocket/常駐サーバー
+  // ではない(不変条項①10年ランニングコスト最小 — マウント中のみ・アンマウ
+  // ントで確実に clearInterval)。
+  useEffect(() => {
+    if (!threadId) return;
+    const timer = setInterval(() => {
+      void reload();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [threadId, reload]);
+
+  const posts = view?.posts ?? [];
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [posts.length]);
+
+  const send = useCallback(async () => {
+    const body = draft.trim();
+    if (!body || !view || sending) return;
+    setSending(true);
+    try {
+      await execute(
+        { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
+        {
+          channel: view.channel,
+          topic: view.topic,
+          board_kind: view.posts[0]?.board_kind,
+          thread_id: threadId,
+          body,
+        },
+      );
+      setDraft("");
+      await reload();
+    } finally {
+      setSending(false);
+    }
+  }, [draft, view, sending, execute, threadId, reload]);
+
+  const title = !loaded ? "読み込み中…" : (view?.topic ?? "");
+
+  return (
+    <div className="knw-thread">
+      <div className="card thread-card">
+        <div className="thread-header">
+          <h3 className="thread-title">{title}</h3>
+          {/* .ctx-chips/.ctx-note omitted — no real breeding-context data
+              (temp/humidity/lineage/stage) attaches to a plaza post today;
+              see comment above. Not fabricated (誇張ゼロ). */}
+        </div>
+        <div className="chat-scroll" ref={scrollRef}>
+          {!loaded ? (
+            <p className="civ-text" data-muted="true">
+              読み込み中…
+            </p>
+          ) : posts.length === 0 ? (
+            <p className="civ-empty">まだ投稿がありません。最初のメッセージを送ってみましょう。</p>
+          ) : (
+            posts.map((post) => <KnwChatMessage key={post.post_id} post={post} me={!!viewerId && post.actor_id === viewerId} />)
+          )}
+        </div>
+        <div className="chat-input-bar">
+          <input
+            className="chat-input"
+            type="text"
+            placeholder="メッセージを送る…"
+            aria-label="メッセージを送る"
+            value={draft}
+            disabled={sending}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="send-btn"
+            aria-label="送信"
+            disabled={sending || !draft.trim()}
+            onClick={() => void send()}
+          >
+            ➤
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1782,6 +1782,265 @@ a.civ-thumb-card:focus-visible {
 }
 
 /* =============================================================================
+ * T-71 KNW wave1(スレッド=みんなのグループチャット — 承認モックアップの
+ * verbatim 採用・caseB7/knw-hub と同じパターン)。以下は
+ * D:\claude\00-hq\review-queue\evidence\knw-redesign-forecast\mockup.html の
+ * <style> ブロックのうち section3(💬 スレッド = みんなのグループチャット)が
+ * 依存する規則を「値を一切変えず」".knw-thread " を祖先に付けて再配置したもの
+ * (選択子以外は一字一句そのまま)。.card は section shell 側の共有規則だが
+ * section3 の markup(class="card thread-card")がそのまま依存するためここにも
+ * 複製する。ctx-chips/.chip/.ctx-note は KnowledgeThreadChatNode が実データ
+ * (temp/humidity/lineage/stage)が存在しないため描画しない(renderer.tsx の
+ * コメント参照・誇張ゼロ)が、CSS 自体は section3 の一部として verbatim 保持
+ * する(将来 real context フィールドが増えた時に markup だけ足せば済む)。
+ * section0/1/2/4/5 はここでは未採用(knw-hub 側/次波)。CSS custom properties
+ * は mockup の :root ではなく .knw-thread に載せ、knw-hub と同じ data-theme
+ * hard override も追加する。
+ * ========================================================================== */
+.knw-thread {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+  color: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+  .knw-thread {
+    --bg: #14171a;
+    --card: #1c2024;
+    --text: #e8ece8;
+    --muted: #9aa39a;
+    --primary: #49a672;
+    --primary-bg: #183024;
+    --secondary: #e0975a;
+    --secondary-bg: #33261a;
+    --blue: #6a9bd1;
+    --blue-bg: #182634;
+    --border: #2b3138;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --caution-bg: #2c2717;
+    --caution-text: #d8bd7a;
+  }
+}
+/* アプリの手動テーマ切替(lib/theme.ts が :root[data-theme] を刻印)にも追従
+ * させる hard override — mockup 自体にはこのブロックは存在しない(上の注記)。 */
+:root[data-theme="dark"] .knw-thread {
+  --bg: #14171a;
+  --card: #1c2024;
+  --text: #e8ece8;
+  --muted: #9aa39a;
+  --primary: #49a672;
+  --primary-bg: #183024;
+  --secondary: #e0975a;
+  --secondary-bg: #33261a;
+  --blue: #6a9bd1;
+  --blue-bg: #182634;
+  --border: #2b3138;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --caution-bg: #2c2717;
+  --caution-text: #d8bd7a;
+}
+:root[data-theme="light"] .knw-thread {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+}
+
+.knw-thread .card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+}
+
+/* 3. thread chat */
+.knw-thread .thread-card {
+  padding: 0;
+  overflow: hidden;
+}
+.knw-thread .thread-header {
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.knw-thread .thread-title {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+.knw-thread .ctx-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.knw-thread .chip {
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--primary-bg);
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 4px 11px;
+  border: 1px solid var(--border);
+}
+.knw-thread .ctx-note {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.knw-thread .chat-scroll {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg);
+}
+.knw-thread .msg {
+  display: flex;
+  gap: 10px;
+  max-width: 80%;
+}
+.knw-thread .msg.me {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+  max-width: 78%;
+}
+.knw-thread .avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+}
+.knw-thread .msg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.knw-thread .msg.me .msg-body {
+  align-items: flex-end;
+}
+.knw-thread .msg-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.knw-thread .bubble {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+.knw-thread .msg.me .bubble {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.knw-thread .msg:not(.me) .bubble {
+  border-top-left-radius: 4px;
+}
+.knw-thread .msg.me .bubble {
+  border-top-right-radius: 4px;
+}
+.knw-thread .photo-block {
+  margin-top: 6px;
+  width: 180px;
+  height: 120px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #c9772e, #e0975a, #f0c98a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.knw-thread .chat-input-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+.knw-thread .chat-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--muted);
+  background: var(--bg);
+}
+.knw-thread .send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* --- functional-only additions: the mockup's .chat-input/.send-btn were
+ * static demo markup (a placeholder-styled div + a plain glyph div) —
+ * KnowledgeThreadChatNode wires them to a real <input>/<button>. These rules
+ * only reset default input/button chrome so the adopted look is unchanged;
+ * no spacing/color/radius value above was touched. */
+.knw-thread .chat-input {
+  outline: none;
+  font-family: inherit;
+  color: var(--text);
+}
+.knw-thread .chat-input::placeholder {
+  color: var(--muted);
+}
+.knw-thread .send-btn {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.knw-thread .send-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* =============================================================================
  * c8 UI磨き第2弾#3(受領10「『…』のなかに畳んで」) — kebab メニュー(renderer
  * プリミティブ KebabMenu)。shadow forbidden(design-c2 §4.3) — 境界は border
  * のみで表現する。
