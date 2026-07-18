@@ -137,6 +137,17 @@ body {
   border-top: 1px solid var(--civ-border);
   margin-top: auto;
 }
+
+/* design-home-round.md 是正(統合オーナー追加指示・SL-1診断「.civ-page
+ * max-width:720px は幅の広い画面で使い切れない(finder R52-54と同型)」)。
+ * def.layout==="wide" を宣言した画面**だけ**、その app-shell 配下(header/
+ * page/footer)の上限をデスクトップ向けに広げる。他画面の .civ-page 既定
+ * (720px)はグローバルに無変更のまま — home.json のみが現在この属性を持つ。 */
+.civ-app-shell[data-layout="wide"] .civ-page,
+.civ-app-shell[data-layout="wide"] .civ-chrome-header,
+.civ-app-shell[data-layout="wide"] .civ-chrome-footer {
+  max-width: 1160px;
+}
 .civ-brand {
   font-weight: 400;
   font-size: var(--civ-fs-3);
@@ -815,6 +826,34 @@ a.civ-thumb-card:focus-visible {
   font-size: var(--civ-fs-1);
   color: var(--civ-text-muted);
 }
+
+/* home「今日の状態」4タイル是正(統合オーナー差し戻し・design-home-round.md
+ * 続き): screen-defs/home.json が4つの kpi-tile を chrome最小の card
+ * `todaystats-group` へ children 化した — その card だけを :has() で特定し
+ * (kpi-tile を直接childrenに持つ card はこの1箇所のみ・market-trade の
+ * kpi-tile は tabs 経由でネストが違うため無関係)、中身をCSS gridで横並びに
+ * する。コンテナ自体の枠線/背景/paddingは打ち消し(「chrome最小」)、タイル
+ * 個別の見た目(.civ-kpi-tile)はそのまま。狭幅(〜480px)は現状どおり1列積み、
+ * 中間幅は2×2、≥1024pxで4列。 */
+.civ-card:has(> .civ-kpi-tile) {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+@media (min-width: 481px) {
+  .civ-card:has(> .civ-kpi-tile) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .civ-card:has(> .civ-kpi-tile) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .civ-form-error {
   background: var(--civ-danger-bg);
   color: var(--civ-danger);

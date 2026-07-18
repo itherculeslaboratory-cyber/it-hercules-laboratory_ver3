@@ -2,8 +2,8 @@
   "screen_id": "home",
   "route": "/",
   "title": "ホーム",
-  "layout": "standard",
-  "notes": "V3-UIX-25(司令塔=今日の状態kpi+次の一手today_lines)/26(文明ミニマップ非PII集計)/27(today_linesは最大3行・deep link)。既存の観測開始1クリック(start-observe)・FeatureNode入口(open-*/chip-*)・設定とテーマ(open-theme/open-ui-templates/open-settings)は tests/nav-reachability.test.ts の click-budget契約とe2e(observation.spec.ts)のラベル契約のため id/label/href を変更していない — 追加のみ。",
+  "layout": "wide",
+  "notes": "V3-UIX-25(司令塔=今日の状態kpi+次の一手today_lines)/26(文明ミニマップ非PII集計)/27(today_linesは最大3行・deep link)。既存の観測開始1クリック(start-observe)・FeatureNode入口(open-*/chip-*)・設定とテーマ(open-theme/open-ui-templates/open-settings)は tests/nav-reachability.test.ts の click-budget契約とe2e(observation.spec.ts)のラベル契約のため id/label/href を変更していない — 追加のみ。統合オーナー差し戻し(幅使い切り・10秒把握密度・design-home-round.md是正の続き): 「今日の状態」4タイル(todaystats/kpi-near/kpi-inbox/kpi-karma)は表示順・id・label・データバインドを変えずchrome最小のcard `todaystats-group` でchildren化し、そのcard配下だけをCSS gridで横並び(≥1024px 4列/中間2×2/〜480px積み・globals.css `.civ-card:has(> .civ-kpi-tile)`)。加えてこのhome画面のみ `layout:\"wide\"` を宣言し、app-shell配下(header/page/footer)のmax-widthをデスクトップで拡張(globals.css `.civ-app-shell[data-layout=\"wide\"]`)——全画面共有の `.civ-page` グローバル値は無変更(他画面は従来どおり720px)。civstatsの3タイルは今回も無変更(設計書「④以降無変更」維持)。",
   "nodes": [
     {
       "id": "shell",
@@ -17,24 +17,30 @@
             { "id": "lead", "type": "text", "props": { "text_key": "home.lead.text", "text": "今日の状態と次の一手だけをここに置いています。", "muted": true } },
             { "id": "here-title", "type": "heading", "props": { "text_key": "home.here-title.text", "text": "今日の状態", "level": 2 } },
             {
-              "id": "todaystats",
-              "type": "kpi-tile",
-              "props": { "source_path": "/api/v1/home/summary", "label_key": "home.kpi-overdue.label", "label": "超過", "value": "{{data.todaystats.overdue.length}}", "fallback": "0" }
-            },
-            {
-              "id": "kpi-near",
-              "type": "kpi-tile",
-              "props": { "label_key": "home.kpi-near.label", "label": "近接", "value": "{{data.todaystats.near.length}}", "fallback": "0" }
-            },
-            {
-              "id": "kpi-inbox",
-              "type": "kpi-tile",
-              "props": { "label_key": "home.kpi-inbox.label", "label": "届いた出来事", "value": "{{data.todaystats.judicial_inbox.length}}", "fallback": "0" }
-            },
-            {
-              "id": "kpi-karma",
-              "type": "kpi-tile",
-              "props": { "source_path": "/api/v1/me/ledger", "label_key": "home.kpi-karma.label", "label": "貢献度", "value": "{{data.kpi-karma.karma_value}}", "fallback": "0" }
+              "id": "todaystats-group",
+              "type": "card",
+              "children": [
+                {
+                  "id": "todaystats",
+                  "type": "kpi-tile",
+                  "props": { "source_path": "/api/v1/home/summary", "label_key": "home.kpi-overdue.label", "label": "超過", "value": "{{data.todaystats.overdue.length}}", "fallback": "0" }
+                },
+                {
+                  "id": "kpi-near",
+                  "type": "kpi-tile",
+                  "props": { "label_key": "home.kpi-near.label", "label": "近接", "value": "{{data.todaystats.near.length}}", "fallback": "0" }
+                },
+                {
+                  "id": "kpi-inbox",
+                  "type": "kpi-tile",
+                  "props": { "label_key": "home.kpi-inbox.label", "label": "届いた出来事", "value": "{{data.todaystats.judicial_inbox.length}}", "fallback": "0" }
+                },
+                {
+                  "id": "kpi-karma",
+                  "type": "kpi-tile",
+                  "props": { "source_path": "/api/v1/me/ledger", "label_key": "home.kpi-karma.label", "label": "貢献度", "value": "{{data.kpi-karma.karma_value}}", "fallback": "0" }
+                }
+              ]
             },
             { "id": "platinum", "type": "text", "props": { "text_key": "home.platinum.text", "text": "プラチナコイン: {{data.kpi-karma.platinum_coins}}", "muted": true } },
             { "id": "today-title", "type": "heading", "props": { "text_key": "home.today-title.text", "text": "次の一手", "level": 2 } },

@@ -90,6 +90,12 @@ export const MessagesCtx = createContext<ResolveMessage>(() => undefined);
 // I18-06: viewer locale for the on-device UGC translate affordance. authored
 // language is ja, so that is the default when i18n has not set one.
 export const LocaleCtx = createContext<string>("ja");
+// design-home-round.md 是正(統合オーナー追加指示・SL-1「.civ-page max-width:720px
+// は幅の広い画面で使い切れない」診断): def.layout(schema既存の任意string・従来は
+// 未消費)をAppShellNodeへ届け、その画面の.civ-app-shellへdata-layoutとして出す
+// だけの最小フック。globals.cssの`.civ-app-shell[data-layout="wide"] …`が実際の
+// 幅拡張を行う——.civ-pageのグローバル既定(720px)は他画面向けに無変更のまま。
+export const LayoutCtx = createContext<string>("standard");
 
 // Resolve a node's display string: prefer the i18n catalog value for `keyVal`,
 // else the literal, else `fallback`. Empty catalog hits fall through to literal.
@@ -5908,6 +5914,7 @@ function ThemeToggleButton() {
 
 function AppShellNode({ node }: { node: ScreenNode }) {
   const execute = useContext(ExecuteCtx);
+  const layout = useContext(LayoutCtx);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -5946,7 +5953,7 @@ function AppShellNode({ node }: { node: ScreenNode }) {
   }, [execute]);
 
   return (
-    <div className="civ-app-shell">
+    <div className="civ-app-shell" data-layout={layout !== "standard" ? layout : undefined}>
       {/* design-home-round.md §③: "headbar" is the class theme.js's own contract
           names for its slim header bar (theme.js:9) — kept as the documented
           marker even though ThemeToggleButton below (not theme.js's injector)
@@ -6382,20 +6389,22 @@ export function Renderer({
   return (
     <MessagesCtx.Provider value={resolvedMessage}>
       <LocaleCtx.Provider value={viewerLocale ?? "ja"}>
-        <ExecuteCtx.Provider value={execute}>
-          <ScopeCtx.Provider value={scope}>
-            <TransitionsCtx.Provider value={def.transitions ?? []}>
-              <NavigateCtx.Provider value={navigate}>
-                <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
-                  {def.nodes.map((n) => (
-                    <NodeView key={n.id} node={n} />
-                  ))}
-                  <ScreenBoardsFooter screenId={def.screen_id} />
-                </DataSinkCtx.Provider>
-              </NavigateCtx.Provider>
-            </TransitionsCtx.Provider>
-          </ScopeCtx.Provider>
-        </ExecuteCtx.Provider>
+        <LayoutCtx.Provider value={def.layout ?? "standard"}>
+          <ExecuteCtx.Provider value={execute}>
+            <ScopeCtx.Provider value={scope}>
+              <TransitionsCtx.Provider value={def.transitions ?? []}>
+                <NavigateCtx.Provider value={navigate}>
+                  <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
+                    {def.nodes.map((n) => (
+                      <NodeView key={n.id} node={n} />
+                    ))}
+                    <ScreenBoardsFooter screenId={def.screen_id} />
+                  </DataSinkCtx.Provider>
+                </NavigateCtx.Provider>
+              </TransitionsCtx.Provider>
+            </ScopeCtx.Provider>
+          </ExecuteCtx.Provider>
+        </LayoutCtx.Provider>
       </LocaleCtx.Provider>
     </MessagesCtx.Provider>
   );
