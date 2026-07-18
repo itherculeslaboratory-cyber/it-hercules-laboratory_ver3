@@ -150,6 +150,10 @@
   .chip:hover,.btn:hover{border-color:var(--linehover);}
   .chip.on{color:#0d0f13; font-weight:700;}
   .chip.on.all{background:var(--fg); border-color:var(--fg);}
+  /* R54(2026-07-18): finder.htmlと同型 — ライトモードで.chip.on.allの背景が
+     var(--fg)(暗色)に反転する一方.chip.onの文字色は#0d0f13固定のため黒地に
+     黒文字化していた。原型(上2行)は不変・このオーバーライドを追加するのみ。 */
+  [data-theme="light"] .chip.on.all{color:var(--bg);}
   .btn.primary{background:var(--accbg); border-color:var(--acc); color:var(--acc); font-weight:700;}
   .btn.primary:disabled{opacity:.4; cursor:default; border-color:var(--line); color:var(--dim); background:var(--chipbg);}
   .btn.ghost{background:transparent;}

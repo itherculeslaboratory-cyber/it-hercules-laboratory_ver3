@@ -54,6 +54,10 @@
   .chip:hover,.btn:hover{border-color:var(--linehover);}
   .chip.on{color:#0d0f13; font-weight:700;}
   .chip.on.all{background:var(--fg); border-color:var(--fg);}
+  /* R54(2026-07-18): ライトモードで.chip.on.allの背景がvar(--fg)(暗色)に反転する一方
+     .chip.onの文字色は#0d0f13(常時ほぼ黒)固定のため黒地に黒文字化していた
+     (ユーザー実機報告)。原型(上2行)は不変・このオーバーライドを追加するのみ。 */
+  [data-theme="light"] .chip.on.all{color:var(--bg);}
   select,input[type=number]{
     font-family:inherit; font-size:13px; color:var(--fg); background:var(--chipbg);
     border:1px solid var(--line); border-radius:7px; padding:6px 9px; width:88px;
