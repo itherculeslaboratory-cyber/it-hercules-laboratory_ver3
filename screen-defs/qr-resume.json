@@ -3,6 +3,7 @@
   "route": "/qr/resume",
   "title": "観測を再開する",
   "layout": "standard",
+  "notes": "wave1-obs R1(QR→観測の最短導線): /qr/{token} の3解決(個体QR/棚QR占有/棚QR空)を画面側で分岐(observation-routes.ts GET /qr/:token)。空の棚(entry_mode=qr_placement_empty・individual_id:null)は『個体が見つかりました』と偽らず新規個体登録へ導く(旧: resumeボタンがid=nullで追観測へ死路になっていた・OBS目的宣言『最少クリックで記録』の綻び)。分岐はrenderer props.when(eq/not_eq・NodeView先頭で全ノード評価)のみで表現し、schemas/・renderer.tsx・共有物は無改変。占有パスの文言(個体が見つかりました/個体 ID:/この個体で観測を続ける)は既存E2E(observation.spec §7-8)の資産のため不変で維持。",
   "nodes": [
     {
       "id": "shell",
@@ -12,23 +13,103 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text_key": "qr-resume.title.text", "text": "個体が見つかりました", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text_key": "qr-resume.lead.text", "text": "この個体の文脈で、前回値を引き継いで観測を続けます。", "muted": true } },
+            {
+              "id": "title-found",
+              "type": "heading",
+              "props": {
+                "text_key": "qr-resume.title.text",
+                "text": "個体が見つかりました",
+                "level": 1,
+                "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+              }
+            },
+            {
+              "id": "title-empty",
+              "type": "heading",
+              "props": {
+                "text_key": "qr-resume.title-empty.text",
+                "text": "空の棚です",
+                "level": 1,
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
+              }
+            },
+            {
+              "id": "lead-found",
+              "type": "text",
+              "props": {
+                "text_key": "qr-resume.lead.text",
+                "text": "この個体の文脈で、前回値を引き継いで観測を続けます。",
+                "muted": true,
+                "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+              }
+            },
+            {
+              "id": "lead-empty",
+              "type": "text",
+              "props": {
+                "text_key": "qr-resume.lead-empty.text",
+                "text": "この棚にはまだ個体がいません。この棚で新規個体を登録できます。",
+                "muted": true,
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
+              }
+            },
             {
               "id": "resolve",
               "type": "card",
               "props": { "source_path": "/api/v1/qr/{{params.token}}?prefill=1" },
               "children": [
-                { "id": "ind-id", "type": "text", "props": { "text_key": "qr-resume.ind-id.text", "text": "個体 ID: {{data.resolve.individual_id}}" } },
-                { "id": "entry-mode", "type": "text", "props": { "text_key": "qr-resume.entry-mode.text", "text": "入力モード: {{data.resolve.entry_mode}}", "muted": true } },
-                { "id": "prefill-species", "type": "text", "props": { "text_key": "qr-resume.prefill-species.text", "text": "前回の種の候補: {{data.resolve.prefill.species_candidate}}", "muted": true } }
+                {
+                  "id": "ind-id",
+                  "type": "text",
+                  "props": {
+                    "text_key": "qr-resume.ind-id.text",
+                    "text": "個体 ID: {{data.resolve.individual_id}}",
+                    "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+                  }
+                },
+                {
+                  "id": "prefill-species",
+                  "type": "text",
+                  "props": {
+                    "text_key": "qr-resume.prefill-species.text",
+                    "text": "前回の種の候補: {{data.resolve.prefill.species_candidate}}",
+                    "muted": true,
+                    "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+                  }
+                },
+                {
+                  "id": "placement-id",
+                  "type": "text",
+                  "props": {
+                    "text_key": "qr-resume.placement-id.text",
+                    "text": "棚 ID: {{data.resolve.placement_id}}",
+                    "muted": true,
+                    "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
+                  }
+                }
               ]
             },
             {
               "id": "resume",
               "type": "button",
-              "props": { "label_key": "qr-resume.resume.label", "label": "この個体で観測を続ける", "variant": "primary" },
+              "props": {
+                "label_key": "qr-resume.resume.label",
+                "label": "この個体で観測を続ける",
+                "variant": "primary",
+                "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+              },
               "action": { "kind": "navigate", "to": "obs-register-entry?id={{data.resolve.individual_id}}" }
+            },
+            {
+              "id": "resume-new",
+              "type": "button",
+              "props": {
+                "label_key": "qr-resume.resume-new.label",
+                "label": "この棚で新規個体を登録",
+                "variant": "primary",
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
+              },
+              "action": { "kind": "navigate", "to": "obs-register-new" }
             }
           ]
         }
@@ -36,6 +117,7 @@
     }
   ],
   "transitions": [
-    { "from": "resume", "to_screen_id": "obs-register-entry", "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)" }
+    { "from": "resume", "to_screen_id": "obs-register-entry", "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)" },
+    { "from": "resume-new", "to_screen_id": "obs-register-new", "label": "空の棚から新規個体登録へ" }
   ]
 }
