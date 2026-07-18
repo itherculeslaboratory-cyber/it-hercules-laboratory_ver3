@@ -20,6 +20,8 @@
 // だけを鍵として本 API(GET /v1/charges/:id・Basic 認証=秘密鍵)へ再照会し、PAY.JP が
 // 返した正真の charge オブジェクト(paid/amount/metadata)だけを信頼する「2段構え」を採用する
 // (実装は fee-routes.ts の POST /fees/payjp-webhook route)。
+import { SETTLEMENT_ACCRUAL_RATE } from "./economy-constants";
+
 export interface PayjpCharge {
   id: string;
   amount: number;
@@ -29,10 +31,46 @@ export interface PayjpCharge {
   metadata: Record<string, string>;
 }
 
+export interface PayjpTenant {
+  id: string;
+  name?: string;
+  platform_fee_rate?: number;
+}
+
+export interface PayjpPlatformCharge extends PayjpCharge {
+  tenant?: string;
+  platform_fee: number;
+  platform_fee_rate?: number;
+  total_platform_fee?: number;
+}
+
+export interface CreateTenantParams {
+  id: string;
+  name: string;
+  platformFeeRate: number;
+  minimumTransferAmount: number;
+  bankAccountHolderName: string;
+  bankCode: string;
+  bankBranchCode: string;
+  bankAccountType: string;
+  bankAccountNumber: string;
+}
+
+export interface CreatePlatformChargeParams {
+  amount: number;
+  card: string;
+  tenant: string;
+  currency?: string;
+}
+
 export interface PayjpConnector {
   readonly mode: string;
   /** charge id で GET /v1/charges/:id を照会。存在しない(404)は null。 */
   getCharge(chargeId: string): Promise<PayjpCharge | null>;
+  /** POST /v1/tenants でテナント(売主)を作成。 */
+  createTenant(params: CreateTenantParams): Promise<PayjpTenant>;
+  /** POST /v1/charges でテナント宛て Platform charge(5%自動控除)を作成。カードトークンはログ禁止。 */
+  createPlatformCharge(params: CreatePlatformChargeParams): Promise<PayjpPlatformCharge>;
 }
 
 export interface PayjpEnv {
@@ -43,9 +81,13 @@ export interface PayjpEnv {
 
 const DEFAULT_API_BASE = "https://api.pay.jp/v1";
 
-// charge id の許容形状(PAY.JP は "ch_" prefix の英数字)。外部入力の無害化・URL 注入防止。
-function safeChargeId(id: string): boolean {
+// PAY.JP オブジェクト id の許容形状(charge/tenant 共通・英数字+アンダースコア)。
+// 外部入力の無害化・URL 注入防止(charge id 個別の意味合いは safeChargeId で保つ)。
+function safeId(id: string): boolean {
   return /^[A-Za-z0-9_]{1,255}$/.test(id);
+}
+function safeChargeId(id: string): boolean {
+  return safeId(id);
 }
 
 /** PAY.JP /v1/charges/:id の生レスポンス → PayjpCharge へ防御的パース。不正形状は null。 */
@@ -82,6 +124,81 @@ export function parseChargeIdFromWebhook(rawBody: string): string | null {
   return typeof id === "string" && safeChargeId(id) ? id : null;
 }
 
+// ── PAY.JP Platform(Payouts型)test-mode 配線(V3-MKT-62 P2P カード決済選択肢・
+// V3-MKT-63 5%自動控除)。根拠: docs/planning/b2-research/research-payjp-platform.md §D
+// (Payouts型=CtoC専用・テナント個別審査不要・IHLは資金非接触)。
+// ここは test モード配線のみ — live は下の throwLive で従来通り人間ゲート済み(実鍵投入/
+// live 昇格まで未実装)。Platform 申込・プラットフォーマー側審査・実鍵・資金移動業/前払式
+// 支払手段 非該当の法的確認は §D 記載の通り人間ゲートとして残存(未確認・本コードは
+// それらの完了を主張しない)。
+
+/** V3-MKT-63: Platform charge の IHL 取り分(5%自動控除)。 */
+export function platformFeeFor(amount: number): number {
+  return Math.round(amount * SETTLEMENT_ACCRUAL_RATE);
+}
+
+/** POST /v1/tenants 用フォームを構築。id 形状・platform_fee_rate 範囲(0..0.95)を検証。 */
+export function buildTenantForm(params: CreateTenantParams): Record<string, string> {
+  if (!safeId(params.id)) throw new Error(`payjp tenant id invalid shape: ${params.id}`);
+  if (!(params.platformFeeRate >= 0 && params.platformFeeRate <= 0.95)) {
+    throw new Error(`payjp platform_fee_rate out of range (0..0.95): ${params.platformFeeRate}`);
+  }
+  return {
+    id: params.id,
+    name: params.name,
+    platform_fee_rate: String(params.platformFeeRate),
+    minimum_transfer_amount: String(params.minimumTransferAmount),
+    bank_account_holder_name: params.bankAccountHolderName,
+    bank_code: params.bankCode,
+    bank_branch_code: params.bankBranchCode,
+    bank_account_type: params.bankAccountType,
+    bank_account_number: params.bankAccountNumber,
+  };
+}
+
+/** PAY.JP /v1/tenants の生レスポンス → PayjpTenant へ防御的パース。不正形状は null。 */
+export function parseTenant(raw: unknown): PayjpTenant | null {
+  const t = raw as Record<string, unknown> | null;
+  if (!t || typeof t.id !== "string") return null;
+  return {
+    id: t.id,
+    ...(typeof t.name === "string" ? { name: t.name } : {}),
+    ...(typeof t.platform_fee_rate === "number" ? { platform_fee_rate: t.platform_fee_rate } : {}),
+  };
+}
+
+/**
+ * POST /v1/charges(テナント宛て Platform charge)用フォームを構築。amount>0・
+ * card/tenant 非空を検証。platform_fee は platformFeeFor() で都度算出(常駐 DB 禁止)。
+ * card はフロントエンド専有のカードトークン — ここでも他所でもログしない。
+ */
+export function buildPlatformChargeForm(params: CreatePlatformChargeParams): Record<string, string> {
+  if (!(params.amount > 0)) throw new Error("payjp platform charge amount must be > 0");
+  if (!params.tenant) throw new Error("payjp platform charge tenant is required");
+  if (!params.card) throw new Error("payjp platform charge card is required");
+  return {
+    amount: String(params.amount),
+    currency: params.currency ?? "jpy",
+    card: params.card,
+    tenant: params.tenant,
+    platform_fee: String(platformFeeFor(params.amount)),
+  };
+}
+
+/** PAY.JP /v1/charges(Platform)の生レスポンス → PayjpPlatformCharge へ防御的パース。 */
+export function parsePlatformCharge(raw: unknown): PayjpPlatformCharge | null {
+  const base = parseCharge(raw);
+  if (!base) return null;
+  const p = raw as Record<string, unknown>;
+  return {
+    ...base,
+    platform_fee: typeof p.platform_fee === "number" ? p.platform_fee : 0,
+    ...(typeof p.tenant === "string" ? { tenant: p.tenant } : {}),
+    ...(typeof p.platform_fee_rate === "number" ? { platform_fee_rate: p.platform_fee_rate } : {}),
+    ...(typeof p.total_platform_fee === "number" ? { total_platform_fee: p.total_platform_fee } : {}),
+  };
+}
+
 export function makePayjpConnector(env: PayjpEnv): PayjpConnector {
   const mode = env.PAYJP_MODE ?? "test";
 
@@ -93,7 +210,7 @@ export function makePayjpConnector(env: PayjpEnv): PayjpConnector {
         "PAY.JP live connector not implemented — 本番接続は人間ゲート(実鍵投入/live 昇格)",
       );
     };
-    return { mode, getCharge: throwLive };
+    return { mode, getCharge: throwLive, createTenant: throwLive, createPlatformCharge: throwLive };
   }
   if (mode !== "test") throw new Error(`unknown PAYJP_MODE: ${mode}`);
 
@@ -111,6 +228,38 @@ export function makePayjpConnector(env: PayjpEnv): PayjpConnector {
       if (res.status === 404) return null;
       if (!res.ok) throw new Error(`payjp charges HTTP ${res.status}`);
       return parseCharge(await res.json());
+    },
+    async createTenant(params: CreateTenantParams): Promise<PayjpTenant> {
+      if (!secret) throw new Error("payjp connector missing PAYJP_SECRET_KEY");
+      const form = buildTenantForm(params);
+      const res = await fetch(`${base}/tenants`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`${secret}:`)}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(form).toString(),
+      });
+      if (!res.ok) throw new Error(`payjp tenants HTTP ${res.status}`);
+      const tenant = parseTenant(await res.json());
+      if (!tenant) throw new Error("payjp tenants response missing id");
+      return tenant;
+    },
+    async createPlatformCharge(params: CreatePlatformChargeParams): Promise<PayjpPlatformCharge> {
+      if (!secret) throw new Error("payjp connector missing PAYJP_SECRET_KEY");
+      const form = buildPlatformChargeForm(params);
+      const res = await fetch(`${base}/charges`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`${secret}:`)}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(form).toString(),
+      });
+      if (!res.ok) throw new Error(`payjp charges HTTP ${res.status}`);
+      const charge = parsePlatformCharge(await res.json());
+      if (!charge) throw new Error("payjp charges response missing id");
+      return charge;
     },
   };
 }
