@@ -2,17 +2,19 @@
 // ようにする。既存の POST /market/offers は listing_id 必須(=既に出品された商品への
 // オファー)で「未出品個体」には使えなかった — 本ファイルはそれとは別の薄い経路
 // (ihl.mkt.individual_offer.v1)を個体(individual_id)へ直接ぶら下げる。オファーの
-// 拒否設定(offer_policy)はその個体の現観測者(=個体マスタ ihl.ind.master.v1 の
-// actor_id)が設定する(closed=完全拒否/research_only=研究目的申告のみ/open=既定)。
+// 拒否設定(offer_policy)はその個体の現所有者(closed=完全拒否/research_only=研究目的
+// 申告のみ/open=既定)が設定する。現所有者は projectCurrentOwner(source-routes.ts・
+// 市場transfer反映版)で判定(T-71 GAP③/SEC-A3・2026-07-19修正: 従来は個体マスタ
+// ihl.ind.master.v1 の作成者actor_id固定=currentObserverだったため、市場で正当に
+// 売買(transfer)された個体でもoffer-policy設定権/offers閲覧権が旧所有者に残る業務
+// 不整合があった。POST /occupancy 等と同じ trust boundary へ統一)。
 // 全 route PROTECTED・actor_id はセッション principal 強制(V3-AUT-17)。
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { isBlockedPair } from "./market-block-routes";
+import { projectCurrentOwner } from "./source-routes";
 
-// ihl.ind.master.v1 は individual-routes.ts の非 export 定数(あちらを改変せず型名だけ
-// 参照する・命名は design-k1 の個体マスタ規約に固定)。
-const MASTER_TYPE = "ihl.ind.master.v1";
 const POLICY_TYPE = "ihl.mkt.offer_policy.v1";
 const POLICY_SCHEMA = "schemas/events/mkt-offer-policy.schema.json";
 const OFFER_TYPE = "ihl.mkt.individual_offer.v1";
@@ -27,13 +29,6 @@ function store(c: { env: Bindings }): TruthStore {
 }
 function dataOf(e: Record<string, unknown>): Record<string, unknown> {
   return (e.data ?? {}) as Record<string, unknown>;
-}
-
-async function currentObserver(s: TruthStore, individualId: string): Promise<string | null> {
-  const master = await s.readEvent(`truth/${MASTER_TYPE}/${individualId}.json`);
-  if (!master) return null;
-  const owner = dataOf(master).actor_id;
-  return typeof owner === "string" ? owner : null;
 }
 
 // 個体ごとのオファーポリシー投影(pref-set.ts と同じ last-write-wins・都度再計算)。
@@ -77,12 +72,13 @@ function offerEnvelope(id: string, actorId: string, data: Record<string, unknown
   };
 }
 
-// POST /individuals/{id}/offer-policy — 現観測者のみ設定可(拒否設定は現観測者が設定・
-// V3-MKT-06/V3-MKT-29共通文言)。
+// POST /individuals/{id}/offer-policy — 現所有者のみ設定可(拒否設定は現所有者が設定・
+// V3-MKT-06/V3-MKT-29共通文言)。所有者は市場transfer反映版(projectCurrentOwner・
+// T-71 GAP③/SEC-A3)——売買成立後は旧所有者でなく新所有者がこの権限を持つ。
 marketIndividualOfferRoutes.post("/individuals/:individual_id/offer-policy", async (c) => {
   const individualId = c.req.param("individual_id");
   const s = store(c);
-  const owner = await currentObserver(s, individualId);
+  const owner = await projectCurrentOwner(c.env.TRUTH, individualId);
   if (!owner) return c.json({ error: "NOT_FOUND" }, 404);
   const actorId = c.get("actorId");
   if (owner !== actorId) return c.json({ error: "FORBIDDEN", details: ["current observer only"] }, 403);
@@ -118,7 +114,7 @@ marketIndividualOfferRoutes.get("/individuals/:individual_id/offer-policy", asyn
 marketIndividualOfferRoutes.post("/individuals/:individual_id/offers", async (c) => {
   const individualId = c.req.param("individual_id");
   const s = store(c);
-  const owner = await currentObserver(s, individualId);
+  const owner = await projectCurrentOwner(c.env.TRUTH, individualId);
   if (!owner) return c.json({ error: "NOT_FOUND" }, 404);
   const actorId = c.get("actorId");
   if (owner === actorId) return c.json({ error: "FORBIDDEN", details: ["cannot offer on your own individual"] }, 403);
@@ -154,12 +150,12 @@ marketIndividualOfferRoutes.post("/individuals/:individual_id/offers", async (c)
   return c.json({ offer_id: id, individual_id: individualId, kind }, 201);
 });
 
-// GET /individuals/{id}/offers — 現観測者のみ閲覧可(love_letter は値段非開示・
-// POST /market/offers の board 集約と同じ規約)。
+// GET /individuals/{id}/offers — 現所有者のみ閲覧可(love_letter は値段非開示・
+// POST /market/offers の board 集約と同じ規約・所有者判定は projectCurrentOwner)。
 marketIndividualOfferRoutes.get("/individuals/:individual_id/offers", async (c) => {
   const individualId = c.req.param("individual_id");
   const s = store(c);
-  const owner = await currentObserver(s, individualId);
+  const owner = await projectCurrentOwner(c.env.TRUTH, individualId);
   if (!owner) return c.json({ error: "NOT_FOUND" }, 404);
   const actorId = c.get("actorId");
   if (owner !== actorId) return c.json({ error: "FORBIDDEN", details: ["current observer only"] }, 403);
