@@ -104,8 +104,8 @@ status: draft
 
 | ファイル | 変更内容 | 理由・再利用ラダー |
 |---|---|---|
-| `apps/web/src/app/layout.tsx` | `next/script` の `strategy="beforeInteractive"` で `/assets/theme.js` を読み込む | Next.js純正機能(既存依存の範囲・新規ライブラリ不要)。`beforeInteractive` はハイドレーション前の`<head>`に注入されるため、theme.js の「DOMContentLoaded を待たず即実行」契約(FOUC対策)をNext.js側でも満たす |
-| `apps/web/src/renderer/renderer.tsx`(`AppShellNode`) | ヘッダーの `className="civ-chrome-header"` に `headbar` を追加(`"civ-chrome-header headbar"`) | theme.js は `.headbar` 要素の末尾にトグルボタンを自動注入する契約(theme.js:8-9, 56)。**クラスを1つ足すだけ**でこの既存機構がそのまま使え、新規JSは一切書かない |
+| `apps/web/src/app/layout.tsx` | ~~`next/script` beforeInteractive~~ → **【実装時修正】素のJSX `<script src="/assets/theme.js">` を `<body>` 先頭子要素に置く** | 実装時にNext.js 15.5系の `beforeInteractive` が真のブロッキングscriptを出力しない(`__next_s`キュー経由で非同期実行=実FOUCをE2Eで実測)ことが判明。素の同期scriptタグがtheme.jsの「可視コンテンツより前に同期実行」契約(theme.js:16-18)を満たす正しい形 |
+| `apps/web/src/renderer/renderer.tsx`(`AppShellNode`) | ヘッダーに `headbar` クラス追加 + **【実装時修正】トグルボタンをReactコンポーネント(`ThemeToggleButton`・SSR描画)として自前レンダー** | theme.jsの自動注入をReact管理DOMに行うとハイドレーション不整合が発生(E2Eで55/175 fail実測)。theme.js既存契約「id=hqThemeTogleが既にあれば注入しない」を利用し、同idのボタンをSSRで先置き(`suppressHydrationWarning`でクライアント専用属性を許容)。**theme.js本体は無改変**=HQ側との二重管理同期は発生しない |
 | `apps/web/src/app/globals.css` | `.hdtoggle`(トグルボタン)のスタイルを追加 | theme.js のコメント(theme.js:10-12)が明記: 「`.hdtoggle` は各ページが自前でスタイルすること、theme.js 自体はCSSを持ち出さない」契約。**HQダッシュボード側の `.hdtoggle` はこのアプリのCSSファイルに存在しない**ため、素のまま注入すると無装飾ボタンになる。既存の `--civ-*` トークン(`--civ-surface-2`/`--civ-border`/`--civ-text`)だけで数行のスタイルを足す(新規トークンは作らない・`tokens.generated.css` は生成物のため手を触れない) |
 
 `tokens.generated.css` は変更不要(既にdata-theme上書きブロックが実在)。`config/design-tokens.json`(正本)も無変更。
