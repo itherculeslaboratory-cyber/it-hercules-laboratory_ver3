@@ -143,6 +143,15 @@ test("観測登録スライス2: F3(割り出し)→F4(まとめて記録)→F5b
   await clutchBRow.getByRole("button", { name: "昇格する" }).click();
   await expect(clutchBRow.getByText("8体を個体化しました")).toBeVisible();
 
+  // 昇格は他の一括操作(move等)と同じくローカルにステージされるだけで、
+  // この時点ではまだ API に書き込まれない(F4 即時POSTの廃止契約)— API を
+  // 直接叩いて current_count が発行前の 8 のまま不変であることを確認する。
+  const clutchBBeforeSave = await page.evaluate(
+    (id) => fetch(`/api/v1/clutches/${id}`, { credentials: "include" }).then((r) => r.json()),
+    seed.clutchBId,
+  );
+  expect(clutchBBeforeSave.current_count).toBe(8);
+
   await shot(page, "f4");
   await page.getByRole("button", { name: "確認へ →" }).click();
 
@@ -168,4 +177,12 @@ test("観測登録スライス2: F3(割り出し)→F4(まとめて記録)→F5b
   await expect(page.getByText(/8体を昇格/)).toBeVisible();
   await expect(page.getByText(/✓ 次の目安 登録済み — \d+件/)).toBeVisible();
   await shot(page, "f6b");
+
+  // 一括保存が完了して初めて昇格が反映される(遅延コミットの契約): 保存前は
+  // current_count=8 のままだったのが、保存後は 8 体分の個体化で 0 になる。
+  const clutchBAfterSave = await page.evaluate(
+    (id) => fetch(`/api/v1/clutches/${id}`, { credentials: "include" }).then((r) => r.json()),
+    seed.clutchBId,
+  );
+  expect(clutchBAfterSave.current_count).toBe(0);
 });

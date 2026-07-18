@@ -1,9 +1,9 @@
 // C7 スライス2 (V3-AIP-101 §F4/F5/F6 まとめて記録バッチ)。F4 で組み立てた保存
 // 予定行を F5b(確認)→F6b(完了)へ運ぶための sessionStorage キャリー。
 // 単発の draft.ts(F2→F5 の 1 件 body+file)と同じ「下書き」思想だが、バッチは
-// 複数行+種別ごとの表示情報+一部は F4 ですでに直接コミット済み(昇格=個体ID
-// 即時発行)を運ぶ必要があるため別モジュールにした(単発と形が違いすぎる二重化
-// より、別の小さいモジュールの方が単純)。
+// 複数行+種別ごとの表示情報を運ぶ必要があるため別モジュールにした(単発と
+// 形が違いすぎる二重化より、別の小さいモジュールの方が単純)。全 group
+// (昇格を含む)は同じく items[] に積まれ確認画面の一括保存まで未コミット。
 
 const KEY = "ihl:batch-draft";
 const RESULTS_KEY = "ihl:batch-results";
@@ -22,8 +22,7 @@ export type DraftRow = {
   valueText?: string;
   deltaText?: string;
   attention?: boolean; // Δマイナス等・F5b の「この行だけ見てください」
-  alreadyCommitted?: boolean; // 昇格(promote)は F4 で即時実行済み — 再送しない
-  itemIndex?: number; // items[] 内のインデックス(alreadyCommitted な行は無し)
+  itemIndex?: number; // items[] 内のインデックス(全 group が items[] を持つ — 昇格も他と同じく確認保存まで遅延)
 };
 
 export type ScheduleTarget = { individual_id: string; label: string };

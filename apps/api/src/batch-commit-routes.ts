@@ -8,12 +8,13 @@
 //   life-event   → individual-routes.writeLifeEvent
 //   clutch-event → clutch-routes.writeClutchEvent (recount/attrition のみ・超過ゲート込み)
 //   move         → source-routes.moveOccupancy (旧placementのend(あれば)+新placementのstartを束ねる)
+//   promote      → clutch-routes.promoteClutch (個別容器へ分割・個体マスタ発行は確認保存まで遅延)
 import { Hono } from "hono";
 import { TruthStore, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { writeCaptureFromCommitBody, writeAnalysisFromReanalyzeBody } from "./observation-routes";
 import { writeLifeEvent } from "./individual-routes";
-import { writeClutchEvent } from "./clutch-routes";
+import { writeClutchEvent, promoteClutch } from "./clutch-routes";
 import { moveOccupancy, type DerivedDeviceBinding } from "./source-routes";
 
 export const batchCommitRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -59,6 +60,17 @@ async function commitOne(
     if (typeof captureId !== "string" || !captureId) return { ok: false, error: "INVALID_ITEM" };
     const r = await writeAnalysisFromReanalyzeBody(s, actorId, captureId, body);
     return r.ok ? { ok: true, id: r.analysis_id } : { ok: false, error: r.error };
+  }
+
+  if (kind === "promote") {
+    const clutchId = item.clutch_id;
+    const count = item.count;
+    if (typeof clutchId !== "string" || !clutchId) return { ok: false, error: "INVALID_ITEM" };
+    if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return { ok: false, error: "INVALID_ITEM" };
+    const deathCount = item.death_count === undefined ? 0 : item.death_count;
+    const at = typeof item.at === "string" && item.at ? item.at : new Date().toISOString();
+    const r = await promoteClutch(bucket, actorId, clutchId, { count, death_count: deathCount, at });
+    return r.ok ? { ok: true, id: clutchId } : { ok: false, error: r.error };
   }
 
   if (kind === "move") {

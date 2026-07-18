@@ -9,7 +9,7 @@
 // クラッチ=匿名プール: 5mmの初令にQRは貼れない。個体IDは個別容器分割
 // (promote)の瞬間に初めて発生する(F3設計注記)。
 import { Hono } from "hono";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { subspeciesGateError } from "./observation-routes";
 import { createIndividualMaster, linkParent } from "./individual-routes";
@@ -307,33 +307,40 @@ clutchRoutes.post("/clutches/:id/events", async (c) => {
   );
 });
 
-// POST /clutches/{id}/promote — 個別容器へ分割(昇格): count 体の個体を
-// individual-routes 相当のロジックで生成し(species/sire_id/dam_id/hatch系日付を
-// クラッチから継承)、promote イベントに promoted_individual_ids を記録する。
-// count + death_count が current_count を超えるなら 400(F4 昇格ダイアログ)。
-clutchRoutes.post("/clutches/:id/promote", async (c) => {
-  const clutchId = c.req.param("id");
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
-  const actorId = c.get("actorId");
-  const s = store(c);
+// Shared promote (個別容器へ分割・昇格) logic, reused by POST
+// /clutches/:id/promote AND batch-commit kind:"promote" (コピペ二重化しない —
+// F4 の即時操作も一括保存も同じ経路)。count 体の個体を individual-routes
+// 相当のロジックで生成し(species/sire_id/dam_id/hatch系日付をクラッチから
+// 継承)、promote イベントに promoted_individual_ids を記録する。count +
+// death_count が current_count を超えるなら失敗を返す(F4 昇格ダイアログ)。
+export async function promoteClutch(
+  bucket: R2BucketLite,
+  actorId: string,
+  clutchId: string,
+  body: Record<string, unknown>,
+): Promise<
+  | { ok: true; individual_ids: string[]; current_count: number | null }
+  | { ok: false; error: string; details?: string[]; current_count?: number | null }
+> {
+  const s = new TruthStore(bucket);
 
   const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
-  if (!clutch) return c.json({ error: "NOT_FOUND" }, 404);
+  if (!clutch) return { ok: false, error: "NOT_FOUND" };
   const cd = dataOf(clutch);
 
   const count = body.count;
   if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
-    return c.json({ error: "INVALID_COUNT" }, 400);
+    return { ok: false, error: "INVALID_COUNT" };
   }
   const deathCount = body.death_count === undefined ? 0 : body.death_count;
   if (typeof deathCount !== "number" || !Number.isInteger(deathCount) || deathCount < 0) {
-    return c.json({ error: "INVALID_DEATH_COUNT" }, 400);
+    return { ok: false, error: "INVALID_DEATH_COUNT" };
   }
-  if (typeof body.at !== "string" || !body.at) return c.json({ error: "INVALID_AT" }, 400);
+  if (typeof body.at !== "string" || !body.at) return { ok: false, error: "INVALID_AT" };
 
   const currentCount = await projectClutchCurrentCount(s, clutchId);
   if (currentCount === null || count + deathCount > currentCount) {
-    return c.json({ error: "PROMOTE_EXCEEDS_COUNT", current_count: currentCount }, 400);
+    return { ok: false, error: "PROMOTE_EXCEEDS_COUNT", current_count: currentCount };
   }
 
   const individualIds: string[] = [];
@@ -368,9 +375,27 @@ clutchRoutes.post("/clutches/:id/promote", async (c) => {
     `truth/${CLUTCH_EVENT_TYPE}/${clutchId}-${eventId}.json`,
     envelope(CLUTCH_EVENT_TYPE, SCHEMA.event, actorId, eventData),
   );
-  if (evRes.status === "invalid") return c.json({ error: "INVALID_CLUTCH_EVENT", details: evRes.errors }, 400);
-  if (evRes.status === "conflict") return c.json({ error: "DUPLICATE_CLUTCH_EVENT" }, 409);
+  if (evRes.status === "invalid") return { ok: false, error: "INVALID_CLUTCH_EVENT", details: evRes.errors };
+  if (evRes.status === "conflict") return { ok: false, error: "DUPLICATE_CLUTCH_EVENT" };
 
   const newCount = await projectClutchCurrentCount(s, clutchId);
-  return c.json({ individual_ids: individualIds, current_count: newCount }, 201);
+  return { ok: true, individual_ids: individualIds, current_count: newCount };
+}
+
+// POST /clutches/{id}/promote — 個別容器へ分割(昇格)。単発操作用の薄いルート
+// (ロジック本体は promoteClutch — batch-commit と共有)。
+clutchRoutes.post("/clutches/:id/promote", async (c) => {
+  const clutchId = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+
+  const r = await promoteClutch(c.env.TRUTH, actorId, clutchId, body);
+  if (!r.ok) {
+    const status = r.error === "NOT_FOUND" ? 404 : r.error === "DUPLICATE_CLUTCH_EVENT" ? 409 : 400;
+    const payload: Record<string, unknown> = { error: r.error };
+    if (r.details !== undefined) payload.details = r.details;
+    if (r.error === "PROMOTE_EXCEEDS_COUNT") payload.current_count = r.current_count;
+    return c.json(payload, status);
+  }
+  return c.json({ individual_ids: r.individual_ids, current_count: r.current_count }, 201);
 });

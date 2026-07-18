@@ -300,6 +300,37 @@ describe("observation/batch-commit — F4/F5 一括保存", () => {
     expect(((await res.json()) as { error: string }).error).toBe("TOO_MANY_ITEMS");
   });
 
+  it("kind:promote performs the same effect as the direct route (individuals issued, current_count drops), and reports per-item results without failing the whole batch", async () => {
+    const { env } = ctx();
+    const clutchId = await createClutch(env, { initial_count: 10, species: "Dynastes hercules" });
+
+    const res = await post(
+      "/api/v1/observation/batch-commit",
+      {
+        items: [
+          { kind: "promote", clutch_id: clutchId, count: 4, death_count: 1, at: "2026-08-01T00:00:00Z" },
+          { kind: "promote", clutch_id: "nope-does-not-exist", count: 1, at: "2026-08-01T00:00:00Z" }, // per-item failure, not a whole-batch 500
+          { kind: "promote", clutch_id: clutchId, body: {} }, // missing count -> per-item failure
+        ],
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { ok: boolean; id?: string; error?: string }[] };
+    expect(body.results).toHaveLength(3);
+    expect(body.results[0]).toEqual({ ok: true, id: clutchId });
+    expect(body.results[1]).toEqual({ ok: false, error: "NOT_FOUND" });
+    expect(body.results[2]).toEqual({ ok: false, error: "INVALID_ITEM" });
+
+    // same effect as POST /clutches/:id/promote: current_count dropped by count+death_count,
+    // and exactly `count` new individuals exist (address/UID only exists after promote).
+    const clutchDetail = (await (await get(`/api/v1/clutches/${clutchId}`, env)).json()) as { current_count: number };
+    expect(clutchDetail.current_count).toBe(5); // 10 - 4 - 1
+    const individuals = (await (await get("/api/v1/individuals", env)).json()) as { individuals: { species: string }[] };
+    expect(individuals.individuals).toHaveLength(4);
+    expect(individuals.individuals.every((i) => i.species === "Dynastes hercules")).toBe(true);
+  });
+
   it("capture item enforces the SAME subspecies gate as solid-observation/commit", async () => {
     const { env } = ctx();
     const res = await post(
