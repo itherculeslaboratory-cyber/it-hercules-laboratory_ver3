@@ -6050,6 +6050,7 @@ function IndividualUniverseNode() {
   const imgRefs = useRef(new Map<string, HTMLDivElement>());
   const glowRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const stateRef = useRef({
     selectedId: null as string | null,
     ancestors: new Set<string>(),
@@ -6308,8 +6309,24 @@ function IndividualUniverseNode() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .onNodeClick((n: any) => selectNode(n.id));
 
-        graph.cameraPosition({ x: 0, y: UNIVERSE_SPREAD * 0.6, z: UNIVERSE_SPREAD * 3.3 });
         graphRef.current = graph;
+        // three-render-objects(3d-force-graphの内部依存)はwidth/heightの既定値が
+        // window.innerWidth/innerHeightで、コンテナに自動追従しない(T-66自己QA
+        // 発覚: containerRef実サイズに合わせず全ビューポート解像度で描画するため、
+        // overflow:hiddenの70vh枠に切り取られて星々が隅に圧縮されて見える)。
+        // コンテナの実サイズへ明示的に合わせ、リサイズにも追従させる。
+        const applySize = () => {
+          const el = containerRef.current;
+          if (!el || !graphRef.current) return;
+          const w = el.clientWidth;
+          const h = el.clientHeight;
+          if (w > 0 && h > 0) graphRef.current.width(w).height(h);
+        };
+        applySize();
+        const resizeObserver = new ResizeObserver(applySize);
+        resizeObserver.observe(containerRef.current);
+        resizeObserverRef.current = resizeObserver;
+        graph.cameraPosition({ x: 0, y: UNIVERSE_SPREAD * 0.6, z: UNIVERSE_SPREAD * 3.3 });
         setWebglOk(true);
 
         // ?focus=個体ID 受信で自動フォーカス+バナー(design doc §1.2)。一覧に
@@ -6385,6 +6402,8 @@ function IndividualUniverseNode() {
     return () => {
       alive = false;
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       try {
         (graph as any)?._destructor?.();

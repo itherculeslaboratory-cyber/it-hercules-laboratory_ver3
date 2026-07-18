@@ -1172,11 +1172,18 @@ a.civ-thumb-card:focus-visible {
   position: absolute;
   inset: 0;
   z-index: 2;
+  /* T-66自己QA是正: overlayはlabel/imgcardをcanvas上に絶対配置するための
+   * 透明な入れ物だが、pointer-eventsの既定autoのままだとcanvas全面を覆って
+   * WebGLキャンバス自体へのクリック/ホイールを奪ってしまう(星の直接クリック
+   * 選択・ドラッグ回転・ホイールズームが機能しなくなる)。coverはnoneにし、
+   * クリックが必要な子要素だけautoへ戻す。 */
+  pointer-events: none;
 }
 .civ-universe-label {
   position: absolute;
   transform: translate(-50%, -150%);
   cursor: pointer;
+  pointer-events: auto;
   font-size: var(--civ-fs-1);
   font-weight: 700;
   background: var(--civ-surface);
@@ -1190,6 +1197,7 @@ a.civ-thumb-card:focus-visible {
   position: absolute;
   transform: translate(-50%, -50%);
   cursor: pointer;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1288,6 +1296,14 @@ a.civ-thumb-card:focus-visible {
   width: min(300px, 42%);
   overflow-y: auto;
   z-index: 3;
+}
+/* T-66自己QA是正: 個体ファインダーと共用の.civ-pedigree-chipは.civ-badge由来の
+ * white-space:nowrapで、finder本体の広い列幅では問題ないが、この300px幅の
+ * 右カラムに3世代分ネストすると先祖チップが列幅からはみ出して見切れる
+ * (個体ファインダー側の見た目には影響しないようスコープを絞る)。 */
+.civ-universe-rightcol .civ-pedigree-chip {
+  white-space: normal;
+  text-align: left;
 }
 .civ-universe-controls {
   position: absolute;
