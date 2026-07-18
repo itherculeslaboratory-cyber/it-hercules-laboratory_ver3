@@ -531,11 +531,90 @@ app.route("/api/v1", aiRoutes);
 // board_kind=improvement)を再利用 — 既存「改善の板」画面に無改造で表示される。
 app.route("/api/v1", aiDigestRoutes);
 
+// SECURITY: POST /events is a generic raw Truth-append — it force-stamps
+// provenance.actor_id but does NOT touch the data body, so a caller can name
+// ANY subject (someone else's individual, an arbitrary ownership/value claim)
+// inside data and still get a 201. For most event types that's fine (the data
+// is self-describing and actor-scoped on read). But some event types have a
+// DEDICATED route that enforces an authz check (ownership/role/moderation-
+// state) the raw data body itself cannot express — e.g. POST /occupancy checks
+// projectCurrentOwner() before allowing an individual to be placed; /events
+// has no such check and would let anyone forge the same envelope shape.
+// ROUTE_ONLY_EVENT_TYPES denylists exactly those — self-service /events must
+// refuse them and point the caller at the typed route. This is a DENYLIST
+// (fail-closed on known-sensitive types), not a full ALLOWLIST — a proper
+// self-service allowlist covering the whole event catalogue is deferred
+// platform hardening (C9); this closes the demonstrated + adjacent vectors.
+const ROUTE_ONLY_EVENT_TYPES = new Set<string>([
+  // Demonstrated bypass: forging this via /events lets any user place ANY
+  // individual (including one they don't own) on their own shelf — POST
+  // /occupancy enforces projectCurrentOwner(individual) === actor (source-routes.ts).
+  "ihl.src.occupancy.v1",
+  // Ownership transfer / money settlement — the market state machine
+  // (market-routes.ts /market/listings/{id}/transition) is the only legitimate
+  // writer; a forged transfer here moves individual ownership with no consent.
+  "ihl.mkt.transaction_event.v1",
+  // Device-placement state machine: POST /device-bindings enforces "one open
+  // binding per device" (409 DEVICE_ALREADY_BOUND) and POST /device-bindings/end
+  // enforces the ender owns the start record (source-routes.ts). A forged
+  // /events post bypasses both and can end another actor's binding.
+  "ihl.src.device_binding.v1",
+  // Karma ledger: no user-facing "create karma event" route exists at all —
+  // karma_event is a server-internal grant side effect (ledger-routes.ts).
+  // Any self-service append here is pure reputation-value forgery.
+  "ihl.economy.karma_event.v1",
+  // Coin ledger: same as karma_event — grants are server-internal only
+  // (ledger-routes.ts). Self-service append forges platinum-coin balance.
+  "ihl.economy.coin_event.v1",
+  // Market listing: POST /market/listings enforces SELLER_SUSPENDED
+  // (moderation gate — market-routes.ts). Forging this bypasses seller
+  // suspension entirely.
+  "ihl.mkt.listing.v1",
+  // Listing moderation flags: POST /market/listings/{id}/flags blocks
+  // self-flagging + enforces same-country scope, and scope="government" is
+  // ONLY reachable via the requireRole("operator","admin")-gated /gov-stop
+  // route (market-flag-routes.ts). Forging this via /events lets anyone grant
+  // themselves a government-scope moderation stop with no role check.
+  "ihl.mkt.listing_flag.v1",
+  // Governance flags: POST /gov/flags is requireRole("operator","admin")
+  // (gov-routes.ts) — the clearest role-authz gate in the platform. Forging
+  // this via /events bypasses the role check outright.
+  "ihl.gov.flag.v1",
+  // Individual ownership record: the typed route (POST /individuals,
+  // individual-routes.ts createIndividualMaster) always forces data.actor_id
+  // from the session, so the "owner" field is trustworthy. /events does NOT
+  // strip client-controlled data.actor_id, and this record is the base case
+  // projectCurrentOwner() falls back to (source-routes.ts) when no transfer
+  // exists — forging it poisons the ownership oracle that occupancy/listing
+  // authz checks rely on, and (put-if-absent) permanently squats the id.
+  "ihl.ind.master.v1",
+  // Fee settlement: /me/fees marks an obligation paid when any settlement event
+  // matches its obligation_id, and legitimate settlements are agent/payjp-webhook
+  // only (fee-routes.ts). Forging one via /events lets a user mark their OWN fee
+  // obligation paid. Low-stakes today (the 5% fee flow is honor-based, the paid
+  // flag gates nothing) but it is still a route-owned type a user should never
+  // self-append — denied for integrity (adversarial critic hardening, 2026-07-18).
+  "ihl.fee.settlement.v1",
+]);
+
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);
   const actorId = c.get("actorId");
   if (body && typeof body === "object" && typeof (body as { provenance?: unknown }).provenance === "object" && (body as { provenance?: unknown }).provenance) {
     (body as { provenance: Record<string, unknown> }).provenance.actor_id = actorId;
+  }
+  if (body && typeof body === "object") {
+    const eventType = (body as { type?: unknown }).type;
+    if (typeof eventType === "string" && ROUTE_ONLY_EVENT_TYPES.has(eventType)) {
+      return c.json(
+        {
+          error: "USE_TYPED_ROUTE",
+          type: eventType,
+          hint: "この型は専用の認可付きエンドポイント経由でのみ作成できます",
+        },
+        403,
+      );
+    }
   }
   const result = await new TruthStore(c.env.TRUTH).putEvent(body);
   if (result.status === "invalid") {
