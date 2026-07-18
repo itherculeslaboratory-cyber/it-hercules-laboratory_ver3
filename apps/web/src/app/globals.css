@@ -1473,6 +1473,48 @@ a.civ-thumb-card:focus-visible {
 }
 
 /* =============================================================================
+ * c9 wave1 KNW Slice1(公式掲示板を探せる板にする) — board-threads 専用ノード:
+ * 板チップ行(.civ-chip-row/.civ-facet-chip は既存を再利用・ここでは再定義
+ * しない)+スレ行カード。既存トークンのみ(raw hex 禁止・check-ui-tokens GATE)。
+ * ========================================================================== */
+.civ-board-threads {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.civ-board-thread-row {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.civ-board-thread-topic {
+  display: block;
+  font-size: var(--civ-fs-3);
+  font-weight: 400;
+  color: var(--civ-text);
+}
+.civ-board-thread-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+}
+.civ-board-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  min-height: 20px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  background: var(--civ-surface-2);
+  color: var(--civ-text-muted);
+  font-size: var(--civ-fs-1);
+}
+
+/* =============================================================================
  * c8 UI磨き第2弾#3(受領10「『…』のなかに畳んで」) — kebab メニュー(renderer
  * プリミティブ KebabMenu)。shadow forbidden(design-c2 §4.3) — 境界は border
  * のみで表現する。

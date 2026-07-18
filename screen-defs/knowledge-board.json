@@ -3,7 +3,7 @@
   "route": "/knowledge/board",
   "title": "公式掲示板",
   "layout": "standard",
-  "notes": "BBS-01/03/05 柱1（design-c5.md §K6 §2.4）。channel=screen_id をキーに GET /plaza/channels/{channel}/threads でスレを引く。3板（説明/愚痴/改善）は board_kind データフィルタ（ponytail: 現状は同一画面のフィルタ導線。チップ化は Renderer 拡張の別波）。投稿 form は POST /plaza/posts、引用は柱2の論文選択へ導線。",
+  "notes": "BBS-01/03/05 柱1（design-c5.md §K6 §2.4）。channel=screen_id をキーに GET /plaza/channels/{channel}/threads でスレを引く。c9 wave1 KNW Slice1: 3板（説明/愚痴/改善）のフィルタ+スレ一覧は list ノードの props.variant=\"threads\"（schemas/ の node type enum は C9 スコープ外のため新規ノード種は起こさない — FieldNode の props.variant 分岐と同じ流儀）に統一（旧: 汎用 list の item_text で生 English board_kind を表示し、常に空 thread_id へ飛ぶ「スレッドを開く」リンクを別途持っていたバグを解消）。投稿 form は POST /plaza/posts、引用は柱2の論文選択へ導線。",
   "nodes": [
     {
       "id": "shell",
@@ -15,18 +15,10 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text_key": "knowledge-board.title.text", "text": "公式掲示板", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text_key": "knowledge-board.lead.text", "text": "説明・愚痴・改善の3板でスレを追います。", "muted": true } },
-            { "id": "board-guide", "type": "link", "props": { "label_key": "knowledge-board.board-guide.label", "label": "説明の板", "href": "/knowledge/board?board=guide" } },
-            { "id": "board-complaint", "type": "link", "props": { "label_key": "knowledge-board.board-complaint.label", "label": "愚痴の板", "href": "/knowledge/board?board=complaint" } },
-            { "id": "board-improvement", "type": "link", "props": { "label_key": "knowledge-board.board-improvement.label", "label": "改善の板", "href": "/knowledge/board?board=improvement" } },
-            { "id": "open-thread", "type": "link", "props": { "label_key": "knowledge-board.open-thread.label", "label": "スレッドを開く", "href": "/s/knowledge-thread" } },
             {
               "id": "threads",
               "type": "list",
-              "props": {
-                "source_path": "/api/v1/plaza/channels/knowledge-board/threads",
-                "bind_items": "data.threads.threads",
-                "item_text": "{{topic}}（{{board_kind}} / {{post_count}}）"
-              }
+              "props": { "variant": "threads", "source_path": "/api/v1/plaza/channels/knowledge-board/threads" }
             },
             { "id": "post-title", "type": "heading", "props": { "text_key": "knowledge-board.post-title.text", "text": "投稿する", "level": 2 } },
             {

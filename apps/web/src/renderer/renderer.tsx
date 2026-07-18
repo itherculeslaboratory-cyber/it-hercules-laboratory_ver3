@@ -950,6 +950,13 @@ function FormNode({ node }: { node: ScreenNode }) {
 
 function ListNode({ node }: { node: ScreenNode }) {
   const p = props(node);
+  // c9 wave1 KNW Slice1: board-threads is a `list` variant (schemas/ node type
+  // enum is C9-owned/out of scope — reuse "list" + props.variant, same
+  // dispatch convention as FieldNode's props.variant, instead of adding a
+  // new node type).
+  if (p.variant === "threads") {
+    return <BoardThreadsNode node={node} />;
+  }
   useSource(node);
   const scope = useContext(ScopeCtx);
 
@@ -7387,6 +7394,118 @@ function ScreenBoardsFooter({ screenId }: { screenId: string }) {
         </button>
       </form>
     </section>
+  );
+}
+
+// c9 wave1 KNW Slice1(公式掲示板を探せる板にする): board-threads 専用ノード —
+// 旧実装(汎用 list の item_text: "{{topic}}（{{board_kind}} / {{post_count}}）"
+// + 常に空の thread_id へ飛ぶ「スレッドを開く」リンク)を置き換える。生の
+// English board_kind・区切り無しの件数・デッドリンクの3点がバグだった。
+// ThreadPostsNode(6719行)と同じ自前 fetch/reload パターン(useSource は使わ
+// ない — 板フィルタはこのノードだけのローカル state で、他ノードと共有する
+// 必要が無い)。板ラベルは ScreenBoardsFooter が既に持つ FILE_BOARD_KINDS を
+// そのまま再利用(新規辞書を作らない — 同じ3板の日本語訳をここで再定義する
+// 理由が無い)。
+interface KnwBoardThread {
+  thread_id: string;
+  topic: string;
+  board_kind: string;
+  post_count: number;
+  latest_at?: string;
+}
+interface KnwBoardThreadsView {
+  channel: string;
+  threads: KnwBoardThread[];
+}
+
+function boardLabel(kind: string): string {
+  return FILE_BOARD_KINDS.find((b) => b.kind === kind)?.label ?? kind;
+}
+
+function BoardThreadsNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const execute = useContext(ExecuteCtx);
+  const path = String(p.source_path ?? "/api/v1/plaza/channels/knowledge-board/threads");
+  const [view, setView] = useState<KnwBoardThreadsView | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [activeBoard, setActiveBoard] = useState<string>("all");
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path }))
+      .then((v) => {
+        if (alive) setView((v ?? null) as KnwBoardThreadsView | null);
+      })
+      .catch(() => {
+        if (alive) setView(null);
+      })
+      .finally(() => {
+        if (alive) setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path]);
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
+
+  const threads = view?.threads ?? [];
+  const filtered = activeBoard === "all" ? threads : threads.filter((t) => t.board_kind === activeBoard);
+
+  return (
+    <div className="civ-board-threads">
+      <div className="civ-chip-row">
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+          data-active={activeBoard === "all" || undefined}
+          aria-pressed={activeBoard === "all"}
+          onClick={() => setActiveBoard("all")}
+        >
+          すべて
+        </button>
+        {FILE_BOARD_KINDS.map(({ kind, label }) => (
+          <button
+            key={kind}
+            type="button"
+            className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+            data-active={activeBoard === kind || undefined}
+            aria-pressed={activeBoard === kind}
+            onClick={() => setActiveBoard(kind)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <p className="civ-empty">この板にはまだスレッドがありません。</p>
+      ) : (
+        <ul className="civ-list">
+          {filtered.map((t) => (
+            <li key={t.thread_id}>
+              <a
+                className={cn("civ-card", "civ-interactive", "civ-board-thread-row")}
+                href={`/s/knowledge-thread?thread_id=${t.thread_id}`}
+              >
+                <span className="civ-board-thread-topic">{t.topic}</span>
+                <span className="civ-board-thread-meta">
+                  <span className="civ-board-tag">{boardLabel(t.board_kind)}</span>
+                  <span>{t.post_count}件の投稿</span>
+                  <span>最終更新 {formatDateJa(t.latest_at)}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
