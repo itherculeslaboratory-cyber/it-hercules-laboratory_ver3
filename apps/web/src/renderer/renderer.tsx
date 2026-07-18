@@ -91,10 +91,11 @@ export const MessagesCtx = createContext<ResolveMessage>(() => undefined);
 // language is ja, so that is the default when i18n has not set one.
 export const LocaleCtx = createContext<string>("ja");
 // design-home-round.md 是正(統合オーナー追加指示・SL-1「.civ-page max-width:720px
-// は幅の広い画面で使い切れない」診断): def.layout(schema既存の任意string・従来は
-// 未消費)をAppShellNodeへ届け、その画面の.civ-app-shellへdata-layoutとして出す
-// だけの最小フック。globals.cssの`.civ-app-shell[data-layout="wide"] …`が実際の
-// 幅拡張を行う——.civ-pageのグローバル既定(720px)は他画面向けに無変更のまま。
+// は幅の広い画面で使い切れない」診断・STRIP-1で720px自体を全ゾーン1160pxへ
+// 統一済み): def.layout(schema既存の任意string)をAppShellNodeへ届け、その画面の
+// .civ-app-shellへdata-layoutとして出すだけの最小フック。全幅化がグローバル
+// 既定になったため、globals.css側の"wide"専用CSSは不要化して削除済み——この
+// Ctx/data-layout配線自体は他消費者が現れた場合に備えて残置(無害)。
 export const LayoutCtx = createContext<string>("standard");
 
 // Resolve a node's display string: prefer the i18n catalog value for `keyVal`,
@@ -2644,7 +2645,6 @@ function BatchRosterNode() {
   const [promoteOpen, setPromoteOpen] = useState<Record<string, boolean>>({});
   const [promoteCount, setPromoteCount] = useState<Record<string, string>>({});
   const [promoted, setPromoted] = useState<Record<string, { count: number; deathCount: number }>>({});
-  const [promotePending, setPromotePending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const filteredIndividuals = individuals.filter((i) => {
@@ -5979,19 +5979,6 @@ function AppShellNode({ node }: { node: ScreenNode }) {
         <ThemeToggleButton />
       </header>
       <Children nodes={node.children} />
-      {authLoaded && authenticated && (
-        <footer className="civ-chrome-footer">
-          <a className="civ-link civ-chrome-link" href="/s/knowledge-board">
-            愚痴・改善
-          </a>
-          <a className="civ-link civ-chrome-link" href="/s/template-market">
-            投票・Fork
-          </a>
-          <a className="civ-link civ-chrome-link" href="/s/ui-templates">
-            Builder
-          </a>
-        </footer>
-      )}
     </div>
   );
 }
@@ -6152,152 +6139,6 @@ export function NodeView({ node }: { node: ScreenNode }) {
   }
 }
 
-// V3-BBS-03: 「全ファイル・全コンポーネント・全画面テンプレート」に説明/愚痴/改善の
-// 3板を必須付与する要求文の「全画面」側を、50 本の screen-def JSON を個別編集する
-// 代わりに Renderer 本体へ 1 回だけ差し込むことで機械的に満たす(per-file 手編集は
-// 増える screen-def ごとに漏れる・ここが唯一の差し込み点なら漏れようがない)。
-// channel = `screen-${screen_id}` に固定し、plaza-routes.ts の既存 3 板グルーピング
-// (projectChannelThreads・plaza-constants.ts BOARD_KINDS)をそのまま再利用する
-// (新 Truth 型なし・新 route なし)。コンポーネント編集/入れ替え/Fork一覧ポップアップ/
-// IDE 導線は要求文の別の柱で、identity/Fork lineage UI の設計待ち(progress.json note
-// に継続明記・捏造しない)。
-const FILE_BOARD_KINDS = [
-  { kind: "guide", label: "説明" },
-  { kind: "complaint", label: "愚痴" },
-  { kind: "improvement", label: "改善" },
-] as const;
-type FileBoardKind = (typeof FILE_BOARD_KINDS)[number]["kind"];
-
-interface FileBoardThread { thread_id: string; topic: string; board_kind: string; post_count: number }
-interface FileBoardsView { channel: string; threads: FileBoardThread[]; boards: Record<string, FileBoardThread[]> }
-
-function ScreenBoardsFooter({ screenId }: { screenId: string }) {
-  const execute = useContext(ExecuteCtx);
-  const channel = `screen-${screenId}`;
-  // ponytail: collapsed by default (same trigger convention as the `disclosure`
-  // node — V3-AIP-101 fix#5/#6) instead of auto-fetching on every screen mount.
-  // Firing a GET unconditionally on mount made this footer an invisible side
-  // effect that inflated onAction call-count assertions across ~100 unrelated
-  // renderer tests (form-submit-count checks, mock.calls[0] ordering) that
-  // were written before this footer existed. Gating the fetch behind an
-  // explicit tap keeps every existing screen's zero-interaction render at
-  // zero extra API calls, which is also the honest UX default (nobody wants
-  // a board panel auto-loading under every screen they open).
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<FileBoardsView | null>(null);
-  const [kind, setKind] = useState<FileBoardKind>("complaint");
-  const [topic, setTopic] = useState("");
-  const [body, setBody] = useState("");
-  const [pending, setPending] = useState(false);
-
-  const reload = useCallback(async () => {
-    try {
-      const v = await execute({ kind: "api", method: "GET", path: `/api/v1/plaza/channels/${channel}/threads` });
-      setView((v ?? null) as FileBoardsView | null);
-    } catch {
-      setView(null);
-    }
-  }, [execute, channel]);
-
-  useEffect(() => {
-    if (!open) return;
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, open]);
-
-  const submit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!topic.trim() || !body.trim() || pending) return;
-      setPending(true);
-      try {
-        await execute(
-          { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
-          { channel, board_kind: kind, topic: topic.trim(), body: body.trim() },
-        );
-        setTopic("");
-        setBody("");
-        await reload();
-      } finally {
-        setPending(false);
-      }
-    },
-    [execute, channel, kind, topic, body, pending, reload],
-  );
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className={cn("civ-interactive", "civ-button")}
-        data-variant="secondary"
-        onClick={() => setOpen(true)}
-      >
-        このページの掲示板を開く(説明・愚痴・改善)
-      </button>
-    );
-  }
-
-  const boards = view?.boards ?? {};
-  return (
-    <section className="civ-card" aria-label="このページの掲示板(説明/愚痴/改善)">
-      <h2 className="civ-heading" data-level="2">
-        このページの掲示板
-      </h2>
-      {FILE_BOARD_KINDS.map(({ kind: k, label }) => {
-        const threads = boards[k] ?? [];
-        return (
-          <div key={k}>
-            <span className="civ-badge">
-              {label}（{threads.length}）
-            </span>
-            {threads.length === 0 ? (
-              <p className="civ-empty">まだ投稿がありません。</p>
-            ) : (
-              <ul className="civ-list">
-                {threads.map((t) => (
-                  <li key={t.thread_id}>
-                    <a className="civ-link" href={`/s/knowledge-thread?thread_id=${t.thread_id}`}>
-                      {t.topic}（{t.post_count}）
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
-      <form className="civ-form" onSubmit={(e) => void submit(e)}>
-        <div className="civ-field">
-          <label htmlFor={`${screenId}-board-kind`}>板</label>
-          <select
-            id={`${screenId}-board-kind`}
-            value={kind}
-            onChange={(e) => setKind(e.target.value as FileBoardKind)}
-          >
-            {FILE_BOARD_KINDS.map(({ kind: k, label }) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="civ-field">
-          <label htmlFor={`${screenId}-board-topic`}>話題</label>
-          <input id={`${screenId}-board-topic`} value={topic} onChange={(e) => setTopic(e.target.value)} />
-        </div>
-        <div className="civ-field">
-          <label htmlFor={`${screenId}-board-body`}>本文</label>
-          <textarea id={`${screenId}-board-body`} value={body} onChange={(e) => setBody(e.target.value)} />
-        </div>
-        <button type="submit" className={cn("civ-interactive", "civ-button")} data-variant="primary" disabled={pending}>
-          投稿する
-        </button>
-      </form>
-    </section>
-  );
-}
-
 export interface RendererProps {
   def: ScreenDef;
   onAction?: Execute;
@@ -6392,7 +6233,6 @@ export function Renderer({
                     {def.nodes.map((n) => (
                       <NodeView key={n.id} node={n} />
                     ))}
-                    <ScreenBoardsFooter screenId={def.screen_id} />
                   </DataSinkCtx.Provider>
                 </NavigateCtx.Provider>
               </TransitionsCtx.Provider>

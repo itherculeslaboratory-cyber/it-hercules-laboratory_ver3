@@ -106,9 +106,15 @@ body {
   flex-direction: column;
   background: var(--civ-bg);
 }
+/* STRIP-1(2026-07-19・R95採用・knw-to-c9-strip-chrome/SL-1): 720px細カラムは
+ * 幅の広い画面で使い切れない(finder R52-54と同型指摘)。全ゾーン共通で
+ * home.jsonのlayout:"wide"実績値(1160px)へ統一 — 画面種別ごとの可変化は
+ * せず一律拡張(過剰設計を避ける)。旧・layout="wide"限定の上書きブロックは
+ * これでグローバル既定と同値になり冗長化したため削除(LayoutCtx/data-layout
+ * 自体はJS側に残置・無害)。 */
 .civ-page {
   width: 100%;
-  max-width: 720px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 24px 16px;
   display: flex;
@@ -118,12 +124,14 @@ body {
 
 /* V3-UIX-28 全画面共通ブランドクロム(app-shell 1箇所に実装・全画面へ横展開)。
  * 第3回裁定: モバイル下タブ/デスクトップサイドナビのレスポンシブ標準形は
- * 将来のDeepNav強化の話 — この最小クロムはヘッダー/フッターの横並びのみ
- * (作り込みすぎない・V3-UIX-32の方針に合わせる)。 */
+ * 将来のDeepNav強化の話 — この最小クロムはヘッダーの横並びのみ
+ * (作り込みすぎない・V3-UIX-32の方針に合わせる)。フッター(愚痴・改善/
+ * 投票・Fork/Builder)はSTRIP-1で撤去済み(renderer.tsx AppShellNode) —
+ * .civ-chrome-footerセレクタは既存screen向けの後方互換として残す。 */
 .civ-chrome-header,
 .civ-chrome-footer {
   width: 100%;
-  max-width: 720px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 12px 16px;
   display: flex;
@@ -136,17 +144,6 @@ body {
   border-bottom: none;
   border-top: 1px solid var(--civ-border);
   margin-top: auto;
-}
-
-/* design-home-round.md 是正(統合オーナー追加指示・SL-1診断「.civ-page
- * max-width:720px は幅の広い画面で使い切れない(finder R52-54と同型)」)。
- * def.layout==="wide" を宣言した画面**だけ**、その app-shell 配下(header/
- * page/footer)の上限をデスクトップ向けに広げる。他画面の .civ-page 既定
- * (720px)はグローバルに無変更のまま — home.json のみが現在この属性を持つ。 */
-.civ-app-shell[data-layout="wide"] .civ-page,
-.civ-app-shell[data-layout="wide"] .civ-chrome-header,
-.civ-app-shell[data-layout="wide"] .civ-chrome-footer {
-  max-width: 1160px;
 }
 .civ-brand {
   font-weight: 400;

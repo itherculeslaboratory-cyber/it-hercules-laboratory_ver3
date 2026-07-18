@@ -1313,7 +1313,7 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     };
   }
 
-  it("logged out: shows brand + login/register links only (no dead links to protected footer/nav)", async () => {
+  it("logged out: shows brand + login/register links only (no dead links to protected nav)", async () => {
     const onAction = vi.fn(async () => ({ authenticated: false }));
     render(<Renderer def={shellDef()} onAction={onAction} />);
     expect(screen.getByRole("link", { name: "IHL" })).toHaveAttribute("href", "/");
@@ -1323,12 +1323,28 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     });
     expect(screen.queryByRole("button", { name: "ログアウト" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "設定" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "投票・Fork" })).not.toBeInTheDocument();
     // the screen's own content still renders under the chrome
     expect(screen.getByRole("heading", { name: "本文" })).toBeInTheDocument();
   });
 
-  it("logged in: shows primary nav + logout button + footer, and logout calls the API", async () => {
+  // STRIP-1(2026-07-19・knw-to-c9-strip-chrome): shared footer(愚痴・改善/
+  // 投票・Fork/Builder)撤去済み — 以下は撤去の恒久回帰ガード。
+  it("STRIP-1: never renders the retired shared footer links, logged in or out", async () => {
+    const onAction = vi.fn(async (action: Action) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
+      return undefined;
+    });
+    render(<Renderer def={shellDef()} onAction={onAction} />);
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/s/settings");
+    });
+    expect(screen.queryByRole("link", { name: "愚痴・改善" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "投票・Fork" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Builder" })).not.toBeInTheDocument();
+    expect(document.querySelector(".civ-chrome-footer")).toBeNull();
+  });
+
+  it("logged in: shows primary nav + logout button, and logout calls the API", async () => {
     const onAction = vi.fn(async (action: Action) => {
       if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
       return undefined;
@@ -1338,8 +1354,6 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
       expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/s/settings");
     });
     expect(screen.getByRole("link", { name: "マイページ" })).toHaveAttribute("href", "/s/profile");
-    expect(screen.getByRole("link", { name: "投票・Fork" })).toHaveAttribute("href", "/s/template-market");
-    expect(screen.getByRole("link", { name: "Builder" })).toHaveAttribute("href", "/s/ui-templates");
     expect(screen.queryByRole("link", { name: "ログイン" })).not.toBeInTheDocument();
 
     // logout redirects via a raw browser navigation afterwards (jsdom logs a
