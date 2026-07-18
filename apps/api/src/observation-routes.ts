@@ -15,7 +15,8 @@ import {
   NAVIGATOR_TARGET_QUESTIONS,
   CONFIDENCE_ORDER,
 } from "./observation-constants";
-import { ENV_QR_TYPE, projectOccupantAt, projectOpenOccupancy, projectLabEnvironmentAt } from "./source-routes";
+import { ENV_QR_TYPE, projectOccupantsAt, projectOpenOccupancy, projectLabEnvironmentAt } from "./source-routes";
+import { projectIndividualSummary } from "./individual-routes";
 import { parseObservationFreetext } from "./freetext-parser";
 import { projectPreferenceWeights, dot } from "./match-routes";
 import type { Bindings, Variables } from "./env";
@@ -1190,10 +1191,13 @@ async function buildIndividualPrefill(
 // A token not found in the individual-QR store (ihl.ind.qr.v1) also falls back
 // to the placement/shelf-QR store (ihl.env.qr.v1, source-routes.ts POST
 // /placements/:id/qr — CL-10 env_qr_token_v1 shape): a shelf label resolves to
-// whichever individual currently occupies it (projectOccupantAt), then chains
-// the SAME prefill lookup. No current occupant (empty shelf) still resolves
-// (individual_id: null, entry_mode: qr_placement_empty) rather than 404 — the
-// shelf is still scannable to start a brand-new individual there.
+// whichever individual(s) currently occupy it (projectOccupantsAt). No current
+// occupant (empty shelf) still resolves (individual_id: null,
+// entry_mode: qr_placement_empty) rather than 404 — the shelf is still
+// scannable to start a brand-new individual there. Exactly one occupant keeps
+// the original entry_mode: qr_placement + prefill chain. 2+ occupants (a shelf
+// holding multiple adults — persona R75) is entry_mode: qr_placement_multi
+// with an `occupants` list the user must pick from (OBS wave1 R2).
 obsRoutes.get("/qr/:token", async (c) => {
   const token = c.req.param("token");
   const st = store(c);
@@ -1216,11 +1220,27 @@ obsRoutes.get("/qr/:token", async (c) => {
     return c.json({ error: "QR_EXPIRED" }, 410);
   }
   const placementId = String(ed.placement_id);
-  const occupant = await projectOccupantAt(c.env.TRUTH, placementId);
-  const individualId =
-    occupant && occupant.subject_ref.startsWith("individual/")
-      ? occupant.subject_ref.slice("individual/".length)
-      : null;
+  // V3-OBS-2x (OBS wave1 R2・persona R75): a shelf can hold multiple adults at
+  // once — resolve ALL current occupants first and only collapse to a single
+  // individual_id when there is exactly one, matching the pre-existing
+  // occupied/empty contract exactly. 2+ occupants is a NEW branch (below) the
+  // user must pick from; it does not change the 0/1 shapes at all.
+  const occupants = (await projectOccupantsAt(c.env.TRUTH, placementId)).filter((o) =>
+    o.subject_ref.startsWith("individual/"),
+  );
+  if (occupants.length >= 2) {
+    if (!c.req.query("prefill")) return c.json({ placement_id: placementId, individual_id: null });
+    const rows = await Promise.all(
+      occupants.map((o) => projectIndividualSummary(st, o.subject_ref.slice("individual/".length))),
+    );
+    return c.json({
+      placement_id: placementId,
+      individual_id: null,
+      entry_mode: "qr_placement_multi",
+      occupants: rows,
+    });
+  }
+  const individualId = occupants.length === 1 ? occupants[0].subject_ref.slice("individual/".length) : null;
   if (!c.req.query("prefill")) return c.json({ placement_id: placementId, individual_id: individualId });
   const prefill = individualId ? await buildIndividualPrefill(st, individualId) : null;
   return c.json({

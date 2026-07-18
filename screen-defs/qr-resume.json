@@ -3,7 +3,7 @@
   "route": "/qr/resume",
   "title": "観測を再開する",
   "layout": "standard",
-  "notes": "wave1-obs R1(QR→観測の最短導線): /qr/{token} の3解決(個体QR/棚QR占有/棚QR空)を画面側で分岐(observation-routes.ts GET /qr/:token)。空の棚(entry_mode=qr_placement_empty・individual_id:null)は『個体が見つかりました』と偽らず新規個体登録へ導く(旧: resumeボタンがid=nullで追観測へ死路になっていた・OBS目的宣言『最少クリックで記録』の綻び)。分岐はrenderer props.when(eq/not_eq・NodeView先頭で全ノード評価)のみで表現し、schemas/・renderer.tsx・共有物は無改変。占有パスの文言(個体が見つかりました/個体 ID:/この個体で観測を続ける)は既存E2E(observation.spec §7-8)の資産のため不変で維持。",
+  "notes": "wave1-obs R1(QR→観測の最短導線): /qr/{token} の3解決(個体QR/棚QR占有/棚QR空)を画面側で分岐(observation-routes.ts GET /qr/:token)。空の棚(entry_mode=qr_placement_empty・individual_id:null)は『個体が見つかりました』と偽らず新規個体登録へ導く(旧: resumeボタンがid=nullで追観測へ死路になっていた・OBS目的宣言『最少クリックで記録』の綻び)。分岐はrenderer props.when(eq/not_eq・NodeView先頭で全ノード評価)のみで表現し、schemas/・renderer.tsx・共有物は無改変。占有パスの文言(個体が見つかりました/個体 ID:/この個体で観測を続ける)は既存E2E(observation.spec §7-8)の資産のため不変で維持。wave1-obs R2(persona R75・棚は複数個体を同時に保持できる): projectOccupantAt が最初の1件だけ返し多頭棚を無言で1個体に潰していた欠陥を是正(source-routes.ts projectOccupantsAt)。entry_mode=qr_placement_multi(2+在棚)は新規分岐で個体を選ばせる(GET /individuals一覧と同じ行データ=individual-routes.ts summarizeIndividualRow/projectIndividualSummary を再利用・二重実装しない)。R3でQRスキャン→紐付け側を追加予定。",
   "nodes": [
     {
       "id": "shell",
@@ -14,12 +14,21 @@
           "type": "page",
           "children": [
             {
+              "id": "title-page",
+              "type": "heading",
+              "props": {
+                "text_key": "qr-resume.page-title.text",
+                "text": "観測を再開する",
+                "level": 1
+              }
+            },
+            {
               "id": "title-found",
               "type": "heading",
               "props": {
                 "text_key": "qr-resume.title.text",
                 "text": "個体が見つかりました",
-                "level": 1,
+                "level": 2,
                 "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
               }
             },
@@ -29,8 +38,18 @@
               "props": {
                 "text_key": "qr-resume.title-empty.text",
                 "text": "空の棚です",
-                "level": 1,
+                "level": 2,
                 "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
+              }
+            },
+            {
+              "id": "title-multi",
+              "type": "heading",
+              "props": {
+                "text_key": "qr-resume.title-multi.text",
+                "text": "この棚の個体を選ぶ",
+                "level": 2,
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_multi"] }
               }
             },
             {
@@ -51,6 +70,16 @@
                 "text": "この棚にはまだ個体がいません。この棚で新規個体を登録できます。",
                 "muted": true,
                 "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
+              }
+            },
+            {
+              "id": "lead-multi",
+              "type": "text",
+              "props": {
+                "text_key": "qr-resume.lead-multi.text",
+                "text": "この棚には複数の個体がいます。観測する個体を選んでください。",
+                "muted": true,
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_multi"] }
               }
             },
             {
@@ -88,6 +117,42 @@
                   }
                 }
               ]
+            },
+            {
+              "id": "occupants-table",
+              "type": "table",
+              "props": {
+                "bind_items": "data.resolve.occupants",
+                "empty_text": "在棚の個体が取得できませんでした。",
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_multi"] },
+                "columns": [
+                  { "key": "label", "label": "個体" },
+                  { "key": "species", "label": "種" },
+                  {
+                    "key": "last_capture_at",
+                    "label": "最終観測",
+                    "cell": "observed",
+                    "measurement_key": "last_measurement_summary"
+                  },
+                  {
+                    "key": "individual_id",
+                    "label": "",
+                    "cell": "link",
+                    "href_tpl": "/s/obs-register-entry?id={{individual_id}}",
+                    "link_label": "追観測へ →"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "add-to-shelf",
+              "type": "link",
+              "props": {
+                "label_key": "qr-resume.add-to-shelf.label",
+                "label": "この棚に新規個体を追加 →",
+                "href": "/s/obs-register-new",
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_multi"] }
+              }
             },
             {
               "id": "resume",

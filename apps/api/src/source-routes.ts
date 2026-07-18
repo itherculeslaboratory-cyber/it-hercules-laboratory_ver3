@@ -293,6 +293,33 @@ export async function projectOccupantAt(
 }
 
 /**
+ * ALL occupants currently AT a placement (persona R75: a shelf can hold
+ * multiple adults — projectOccupantAt above silently picks just the first
+ * one, which is fine for empty/single-occupant shelves but wrong once a
+ * shelf has 2+; callers that must disambiguate use this instead). Same
+ * open-interval projection, collecting every started-and-not-ended occupancy
+ * for the placement rather than returning after the first (OBS wave1 R2).
+ */
+export async function projectOccupantsAt(
+  bucket: R2BucketLite,
+  placementId: string,
+): Promise<{ occupancy_id: string; subject_ref: string }[]> {
+  const events = (await new TruthStore(bucket).listEvents(`truth/${OCCUPANCY_TYPE}/`)).map(dataOf);
+  const started = new Map<string, string>(); // occupancy_id -> subject_ref
+  const ended = new Set<string>();
+  for (const d of events) {
+    if (d.placement_id !== placementId) continue;
+    if (d.phase === "start") started.set(String(d.occupancy_id), String(d.subject_ref));
+    else if (d.phase === "end") ended.add(String(d.occupancy_id));
+  }
+  const occupants: { occupancy_id: string; subject_ref: string }[] = [];
+  for (const [id, subjectRef] of started) {
+    if (!ended.has(id)) occupants.push({ occupancy_id: id, subject_ref: subjectRef });
+  }
+  return occupants;
+}
+
+/**
  * Move a subject to a new placement: end the currently-open occupancy (if
  * any) + start a new one, as ONE logical action (F4 wireframe「移動」/
  * batch-commit kind:"move" — device-binding start/end と同型の2相append).
