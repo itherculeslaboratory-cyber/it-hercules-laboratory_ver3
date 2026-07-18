@@ -1478,6 +1478,9 @@ individualRoutes.get("/individuals/:id/authenticity", async (c) => {
 // 専用route——血統/真正性の疑義は GET .../authenticity の doubts[] に集約表示
 // される。append-only: action="withdrawn" は元の raised レコードを消さず、同じ
 // doubt_id で新規追記する(不変条項③)。
+// Raiser guard (fail-closed, T-71 GAP②/SEC-A2): action="withdrawn" is limited to
+// the actor who raised the doubt_id being withdrawn — a third party knowing the
+// doubt_id must not be able to make someone else's doubt appear withdrawn.
 individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
   const id = c.req.param("id");
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -1485,6 +1488,15 @@ individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
   const action = body.action === "withdrawn" ? "withdrawn" : "raised";
   if (action === "raised" && (typeof body.reason !== "string" || !body.reason.trim())) {
     return c.json({ error: "REASON_REQUIRED" }, 400);
+  }
+  const s = store(c);
+  if (action === "withdrawn") {
+    const raisedRows = (await s.listEvents(`truth/${LINEAGE_DOUBT_TYPE}/${id}-`))
+      .map(dataOf)
+      .filter((d) => d.individual_id === id && d.doubt_id === body.doubt_id && d.action === "raised")
+      .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+    const raiser = raisedRows[raisedRows.length - 1]?.actor_id;
+    if (raiser !== actorId) return c.json({ error: "FORBIDDEN", details: ["raiser only"] }, 403);
   }
   const doubtId = typeof body.doubt_id === "string" && body.doubt_id ? body.doubt_id : ulid();
   const data: Record<string, unknown> = {
@@ -1496,7 +1508,7 @@ individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
   };
   if (typeof body.reason === "string" && body.reason.trim()) data.reason = body.reason;
   if (typeof body.listing_id === "string" && body.listing_id) data.listing_id = body.listing_id;
-  const res = await store(c).putEventAt(
+  const res = await s.putEventAt(
     `truth/${LINEAGE_DOUBT_TYPE}/${id}-${ulid()}.json`,
     envelope(LINEAGE_DOUBT_TYPE, SCHEMA.lineageDoubt, actorId, data),
   );
