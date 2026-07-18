@@ -7801,7 +7801,7 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
                 />
                 {dupMatch ? (
                   <div className="dup-banner">
-                    <div className="dt">⚠ 似たスレがあります(一致度 {similarity}%)</div>
+                    <div className="dt">これに近い相談があります — これですか?</div>
                     <div className="dm">
                       「<b>{dupMatch.topic}</b>」
                     </div>

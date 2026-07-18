@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { Renderer, titleSimilarity } from "./renderer";
 import type { Action, ScreenDef } from "./types";
 
@@ -62,11 +62,11 @@ describe("KnowledgeHubNode dup-confirm compose — T-72 KNW wave1", () => {
     const input = openCompose();
     fireEvent.change(input, { target: { value: "梱包のコツ" } });
     await new Promise((r) => setTimeout(r, 250));
-    expect(screen.queryByText(/似たスレがあります/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/これに近い相談があります/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "この内容で相談を始める" })).toBeInTheDocument();
   });
 
-  it("shows .dup-banner with the honest similarity % once a close match is found", async () => {
+  it("shows .dup-banner with the matched TITLE (no percentage) once a close match is found", async () => {
     const onAction = vi.fn(async (a: Action) => {
       if (a.kind === "api" && a.path.startsWith("/api/v1/plaza/search")) {
         return {
@@ -82,8 +82,13 @@ describe("KnowledgeHubNode dup-confirm compose — T-72 KNW wave1", () => {
     const input = openCompose();
     fireEvent.change(input, { target: { value: "コバエがわいた" } });
 
-    await waitFor(() => expect(screen.getByText("⚠ 似たスレがあります(一致度 29%)")).toBeInTheDocument());
-    expect(screen.getByText("コバエが大量発生した — 対策まとめ").closest(".dm b")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/これに近い相談があります/)).toBeInTheDocument());
+    const banner = screen.getByText(/これに近い相談があります/).closest(".dup-banner") as HTMLElement;
+    expect(within(banner).getByText("コバエが大量発生した — 対策まとめ").closest(".dm b")).toBeInTheDocument();
+    // R94 follow-up (user ruling DUP-PCT=○): no percentage anywhere in the banner —
+    // title-only confirmation, no fake-precision number.
+    expect(banner.textContent).not.toMatch(/%/);
+    expect(banner.textContent).not.toContain("一致度");
     expect(screen.getByRole("button", { name: "これだ・開く" })).toHaveClass("btn", "primary");
     expect(screen.getByRole("button", { name: "全然違う・新規で作る" })).toHaveClass("btn", "ghost");
   });
@@ -146,7 +151,7 @@ describe("KnowledgeHubNode dup-confirm compose — T-72 KNW wave1", () => {
     const input = openCompose();
     fireEvent.change(input, { target: { value: "梱包のコツ" } });
     await waitFor(() => expect(screen.getByRole("button", { name: "この内容で相談を始める" })).toBeInTheDocument());
-    expect(screen.queryByText(/似たスレがあります/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/これに近い相談があります/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "この内容で相談を始める" }));
 
     await waitFor(() =>
