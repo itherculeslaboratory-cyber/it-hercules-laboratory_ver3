@@ -4472,9 +4472,17 @@ function profileLabel(profile: IndividualProfile): string {
   return safeLabel(raw, profile.species);
 }
 
+// Same string-tolerant coercion as latestMeasurement() below: a capture's
+// measurement value is schema-typed number|string (obs-capture.schema.json),
+// and template-interpolated writes (obs-register-confirm.json's static
+// "{{params.weight_g}}") always produce a string. A strict typeof==="number"
+// filter here would silently drop every such capture from the growth chart
+// and timeline delta — coerce instead of filtering out valid string values.
 function measureValue(cap: ProfileCapture, item: string): number | null {
-  const m = (cap.measurements ?? []).find((mm) => mm.item === item && typeof mm.value === "number");
-  return m ? (m.value as number) : null;
+  const m = (cap.measurements ?? []).find((mm) => mm.item === item);
+  if (!m) return null;
+  const n = typeof m.value === "number" ? m.value : Number(m.value);
+  return Number.isFinite(n) ? n : null;
 }
 
 // 系列(x=経過時間[日]・系列ごとに自分の初回観測を0とする・y=値)。実観測間隔
@@ -5146,7 +5154,12 @@ function TimelineRow({
     );
   }
   const cap = entry.capture;
-  const ms = (cap.measurements ?? []).filter((m): m is ProfileMeasurement & { value: number } => typeof m.value === "number");
+  // Coerce string-valued measurements too (see measureValue() above) — a strict
+  // typeof==="number" filter would silently drop template-interpolated writes
+  // (obs-register-confirm.json's "{{params.weight_g}}") from the timeline row.
+  const ms = (cap.measurements ?? [])
+    .map((m) => ({ ...m, value: typeof m.value === "number" ? m.value : Number(m.value) }))
+    .filter((m): m is ProfileMeasurement & { value: number } => Number.isFinite(m.value));
   return (
     <li className="civ-timeline-row">
       <span aria-hidden="true">📏</span>
