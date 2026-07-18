@@ -1,6 +1,6 @@
 // T-63 波1(design-individual-finder.md §2.3/§4): 個体ファインダー一覧面の純関数。
-// レンダラ本体(IndividualFinderNode)から呼ばれる — ここに切り出したのはユニット
-// テストで rendering 抜きに検算するため(既存 i18n.ts/i18n.test.ts と同じ切り出し方)。
+// 実データ配線は apps/web/public/finder/lib/finder-data.js(caseB7実物)側 — ここに
+// 切り出したのはユニットテストで rendering 抜きに検算するため(既存 i18n.ts/i18n.test.ts と同じ切り出し方)。
 
 // バックエンドの sort ホワイトリスト(individual-routes.ts LIST_SORT_FIELDS)と
 // 同じ5値。個体一覧はここに無い項目ではソートしない(決定論を崩さない)。
