@@ -41,7 +41,7 @@ describe("CL-13 tag event shape", () => {
 });
 
 // T-71: ihl.obs.tag_event.v1 は typed route(POST /api/v1/tags, tag-routes.ts)を持つ
-// ため、汎用 POST /events は allowlist 対象外(events-route-only-exploit.test.ts で
+// ため、汎用 POST /events は allowlist 対象外(events-allowlist-exploit.test.ts で
 // 403 を確認)。append-only/frozen 形状の検算そのものは Truth 層(TruthStore.putEvent)
 // が担う場所なので、ここは store level で直接検算する(HTTP 層のルーティング可否は別テスト)。
 describe("CL-13 tag event append-only (Truth store level)", () => {
