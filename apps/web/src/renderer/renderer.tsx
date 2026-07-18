@@ -6833,6 +6833,13 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
   const resolved = resolvedStatus(view.posts);
   const isStarter = !!viewerId && viewerId === root.actor_id;
   const tombstoned = new Set((view.tombstones ?? []).map((t) => `${t.ref.type}:${t.ref.id}`));
+  // c9 wave1 KNW Slice2(スレッドの生ID撲滅): reply_to was rendered as a raw
+  // ULID (">>p1"形式) — unreadable to a human reader. Resolve it to the parent
+  // post's own body excerpt instead; a parent outside the loaded post list
+  // (should not happen today, but posts is append-only so nothing is ever
+  // truly deleted — defensive) falls back to an honest generic phrase, never
+  // the raw id.
+  const postById = new Map(view.posts.map((pp) => [pp.post_id, pp]));
 
   return (
     <div className="civ-thread-posts">
@@ -6867,11 +6874,24 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
                 </span>
                 {post.post_id === root.post_id && <Badge text="スレ主" tone="neutral" />}
               </div>
-              {post.reply_to && (
-                <p className="civ-text" data-muted="true">
-                  &gt;&gt;{post.reply_to}
-                </p>
-              )}
+              {post.reply_to &&
+                (() => {
+                  const parent = postById.get(post.reply_to);
+                  if (parent) {
+                    const body = parent.body ?? "";
+                    const excerpt = body.length > 24 ? `${body.slice(0, 24)}…` : body;
+                    return (
+                      <p className="civ-text civ-thread-reply-ref" data-muted="true">
+                        ↩ 「{excerpt}」への返信
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="civ-text civ-thread-reply-ref" data-muted="true">
+                      ↩ 以前の投稿への返信
+                    </p>
+                  );
+                })()}
               <p className="civ-text">{post.body}</p>
               {(post.cite_refs ?? []).length > 0 && (
                 <div className="civ-card-badges">

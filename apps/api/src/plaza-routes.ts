@@ -471,7 +471,16 @@ plazaRoutes.get("/plaza/threads/:thread_id/consensus", async (c) => {
   const posts = (await store(c).listEvents(`truth/${POST_TYPE}/`)).map(dataOf).filter((d) => d.thread_id === threadId);
   const statementIds = posts.map((p) => str(p.post_id));
   const statements = await projectConsensus(store(c), statementIds);
-  return c.json({ thread_id: threadId, statements });
+  // c9 wave1 KNW Slice2(スレッドの生ID撲滅): the consensus table's UI column
+  // showed the raw statement_id (= post_id ULID) — attach a readable excerpt
+  // of the statement's own post body so the UI never has to render the id.
+  // Read-side projection only (statement_id itself is kept, not replaced).
+  const bodyById = new Map(posts.map((p) => [str(p.post_id), str(p.body)]));
+  const withExcerpt = statements.map((s) => {
+    const body = bodyById.get(s.statement_id) ?? "";
+    return { ...s, excerpt: body.length > 30 ? `${body.slice(0, 30)}…` : body };
+  });
+  return c.json({ thread_id: threadId, statements: withExcerpt });
 });
 
 // ── Fork / Rank(BBS-29/GOV-19/23)──────────────────────────────────────

@@ -1465,6 +1465,13 @@ a.civ-thumb-card:focus-visible {
   font-size: var(--civ-fs-1);
   color: var(--civ-text-muted);
 }
+/* c9 wave1 KNW Slice2(スレッドの生ID撲滅) — reply_to now shows a readable
+ * excerpt of the parent post instead of a raw post_id ULID. Subtle quote bar,
+ * same muted text color as the rest of .civ-thread-post (no new hex). */
+.civ-thread-reply-ref {
+  border-left: 2px solid var(--civ-border);
+  padding-left: 8px;
+}
 .civ-thread-post-stance {
   display: flex;
   flex-wrap: wrap;

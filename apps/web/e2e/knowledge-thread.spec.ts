@@ -44,7 +44,10 @@ test("knowledge thread: view (avatar/body/cite) -> reply -> stance vote -> threa
 
   // head card (topic) + thread-posts (real body text, not a mock).
   await expect(page.getByText("話題: E2E consensus check（チャンネル knowledge-board）")).toBeVisible();
-  await expect(page.getByText("first post")).toBeVisible();
+  // c9 wave1 KNW Slice2: "first post" now also appears as the consensus
+  // table's readable excerpt (論点 column), so scope this to the post article
+  // itself rather than a page-wide getByText (which would be ambiguous).
+  await expect(page.locator("article.civ-thread-post").getByText("first post")).toBeVisible();
   // starter-only resolve mark (round-16 OQ-PLZ-03) — dev actor authored the
   // root post, so it must be visible and start unresolved.
   await expect(page.getByText("未解決")).toBeVisible();
@@ -68,7 +71,9 @@ test("knowledge thread: view (avatar/body/cite) -> reply -> stance vote -> threa
   await page.waitForLoadState("networkidle");
   await page.reload(); // per-post vote has no self-navigate transition (matches the pre-c8 stance-form behaviour)
   await page.waitForLoadState("networkidle");
-  const row = page.locator("tr", { hasText: postId });
+  // c9 wave1 KNW Slice2: the consensus table's 論点 column now shows a
+  // readable post-body excerpt instead of the raw post_id ULID.
+  const row = page.locator("tr", { hasText: "first post" });
   await expect(row).toBeVisible();
   await expect(row.locator("td").nth(1)).toHaveText("1"); // agree count
 

@@ -36,7 +36,7 @@
                 "source_path": "/api/v1/plaza/threads/{{params.thread_id}}/consensus",
                 "bind_items": "data.consensus-table.statements",
                 "columns": [
-                  { "key": "statement_id", "label": "論点(投稿ID)" },
+                  { "key": "excerpt", "label": "論点" },
                   { "key": "agree", "label": "賛成" },
                   { "key": "disagree", "label": "反対" },
                   { "key": "pass", "label": "保留" },
