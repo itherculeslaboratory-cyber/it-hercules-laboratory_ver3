@@ -237,6 +237,14 @@ export async function writeClutchEvent(
 > {
   const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
   if (!clutch) return { ok: false, error: "NOT_FOUND" };
+  const cd = dataOf(clutch);
+  // Ownership guard (fail-closed): only the clutch's creator (its only
+  // owner, no transfer mechanism exists for clutches) may append
+  // recount/attrition events — mirrors promoteClutch's guard above.
+  // Missing/empty owner on the record denies too. Checked BEFORE any write.
+  if (typeof cd.actor_id !== "string" || !cd.actor_id || cd.actor_id !== actorId) {
+    return { ok: false, error: "NOT_OWNER" };
+  }
 
   const kind = body.kind;
   if (kind !== "recount" && kind !== "attrition") {
@@ -298,7 +306,8 @@ clutchRoutes.post("/clutches/:id/events", async (c) => {
   const actorId = c.get("actorId");
   const r = await writeClutchEvent(store(c), actorId, clutchId, body);
   if (!r.ok) {
-    const status = r.error === "NOT_FOUND" ? 404 : r.error === "DUPLICATE_CLUTCH_EVENT" ? 409 : 400;
+    const status =
+      r.error === "NOT_FOUND" ? 404 : r.error === "NOT_OWNER" ? 403 : r.error === "DUPLICATE_CLUTCH_EVENT" ? 409 : 400;
     return c.json({ error: r.error, details: r.details }, status);
   }
   return c.json(

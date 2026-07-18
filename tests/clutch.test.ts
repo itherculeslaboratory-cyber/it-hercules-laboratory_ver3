@@ -294,6 +294,89 @@ describe("clutch promote ownership guard (fail-closed — promote mints individu
   });
 });
 
+describe("clutch event (recount/attrition) ownership guard (fail-closed — only the clutch's creator may append events)", () => {
+  it("route: actor B posting a recount event to actor A's clutch -> 403 NOT_OWNER, no event written; actor A recounting own clutch still succeeds", async () => {
+    const { bucket, env } = ctx();
+    const aH = await bearer("actor-a");
+    const bH = await bearer("actor-b");
+
+    const createRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: aH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 10 }) },
+      env,
+    );
+    expect(createRes.status).toBe(201);
+    const clutchId = ((await createRes.json()) as { clutch_id: string }).clutch_id;
+
+    const stolen = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: bH, body: JSON.stringify({ kind: "recount", counted: 3, at: "2026-07-13T00:00:00Z" }) },
+      env,
+    );
+    expect(stolen.status).toBe(403);
+    expect(await stolen.json()).toEqual({ error: "NOT_OWNER" });
+
+    // no write happened: zero clutch-events for A's clutch
+    const eventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${clutchId}-`));
+    expect(eventKeys).toHaveLength(0);
+
+    // actor A (the real owner) recounting the same clutch still works
+    const legit = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: aH, body: JSON.stringify({ kind: "recount", counted: 9, at: "2026-07-13T00:00:00Z" }) },
+      env,
+    );
+    expect(legit.status).toBe(201);
+    const legitBody = (await legit.json()) as { discrepancy: number };
+    expect(legitBody.discrepancy).toBe(-1);
+  });
+
+  it("batch-commit: actor B's clutch-event item for actor A's clutch is a per-item NOT_OWNER failure, no event written, and other items in the same batch still commit", async () => {
+    const { bucket, env } = ctx();
+    const aH = await bearer("actor-a");
+    const bH = await bearer("actor-b");
+
+    const aClutchRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: aH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 10 }) },
+      env,
+    );
+    const aClutchId = ((await aClutchRes.json()) as { clutch_id: string }).clutch_id;
+
+    const bClutchRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: bH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 5 }) },
+      env,
+    );
+    const bClutchId = ((await bClutchRes.json()) as { clutch_id: string }).clutch_id;
+
+    const res = await app.request(
+      "/api/v1/observation/batch-commit",
+      {
+        method: "POST",
+        headers: bH,
+        body: JSON.stringify({
+          items: [
+            { kind: "clutch-event", clutch_id: aClutchId, body: { kind: "attrition", death_count: 2, at: "2026-07-13T00:00:00Z" } }, // B stealing A's clutch
+            { kind: "clutch-event", clutch_id: bClutchId, body: { kind: "attrition", death_count: 1, at: "2026-07-13T00:00:00Z" } }, // B's own clutch — must still succeed
+          ],
+        }),
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { ok: boolean; id?: string; error?: string }[] };
+    expect(body.results).toHaveLength(2);
+    expect(body.results[0]).toEqual({ ok: false, error: "NOT_OWNER" });
+    expect(body.results[1].ok).toBe(true);
+
+    const aEventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${aClutchId}-`));
+    expect(aEventKeys).toHaveLength(0); // A's clutch untouched
+    const bEventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${bClutchId}-`));
+    expect(bEventKeys).toHaveLength(1); // B's own event committed
+  });
+});
+
 describe("V3-IND-02 但し書き — アドレス(individual層のUID)は昇格(promote)時にしか発生しない", () => {
   it("count層のまま(promote前)は個体マスタが1件も存在せず、promote後にちょうど count 件だけ現れる", async () => {
     const { env } = ctx();
