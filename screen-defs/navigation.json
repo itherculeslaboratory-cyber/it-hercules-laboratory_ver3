@@ -26,6 +26,7 @@
     "obs-freetext",
     "individual-detail",
     "individual-finder",
+    "individual-universe",
     "cross",
     "bio-card",
     "match",
@@ -128,6 +129,16 @@
       "from": "individual-finder",
       "to": "obs-entry",
       "label": "個体0件時の案内: 観測を始める"
+    },
+    {
+      "from": "individual-finder",
+      "to": "individual-universe",
+      "label": "★ 宇宙で見る"
+    },
+    {
+      "from": "individual-universe",
+      "to": "individual-detail",
+      "label": "詳細画面を開く"
     },
     {
       "from": "home",

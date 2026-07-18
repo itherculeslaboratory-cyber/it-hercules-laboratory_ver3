@@ -1132,6 +1132,185 @@ a.civ-thumb-card:focus-visible {
 }
 
 /* =============================================================================
+ * T-66(design-individual-finder.md §1.2/§3/§5波2-3・V3-UIX-83後続波) — 個体宇宙面
+ * (全個体星空)。3d-force-graph のキャンバスは既存の civ-page パディングを崩さない
+ * よう「固定高さの枠内」に収める(mockupの全画面オーバーレイとは違いアプリの
+ * ヘッダー/フッターを常に残す)。色はすべて既存トークン(raw hex 禁止・
+ * check-ui-tokens GATE)。呼吸発光は 2.8s ease-in-out(R45: 周期2.5s以上)。
+ * ========================================================================== */
+.civ-universe-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.civ-universe {
+  position: relative;
+  width: 100%;
+  height: 70vh;
+  min-height: 480px;
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  overflow: hidden;
+  background: var(--civ-surface-2);
+}
+.civ-universe-canvas {
+  position: absolute;
+  inset: 0;
+}
+.civ-universe-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  background: var(--civ-surface-2);
+}
+.civ-universe-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.civ-universe-label {
+  position: absolute;
+  transform: translate(-50%, -150%);
+  cursor: pointer;
+  font-size: var(--civ-fs-1);
+  font-weight: 700;
+  background: var(--civ-surface);
+  color: var(--civ-text);
+  border: 1px solid var(--civ-border);
+  border-radius: 6px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+.civ-universe-imgcard {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 64px;
+}
+.civ-universe-imgcard img {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid var(--civ-border);
+}
+.civ-universe-imgcard-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--civ-text);
+  background: var(--civ-surface);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.civ-universe-glow {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: civ-universe-breathe 2.8s ease-in-out infinite;
+}
+@keyframes civ-universe-breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
+}
+.civ-universe-banner {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  background: var(--civ-caution-bg);
+  border: 1px solid var(--civ-caution);
+  color: var(--civ-caution);
+  border-radius: var(--civ-radius);
+  padding: 6px 14px;
+  font-size: var(--civ-fs-1);
+  font-weight: 700;
+}
+.civ-universe-topleft {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-universe-legend {
+  background: var(--civ-surface);
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  padding: 12px;
+  font-size: var(--civ-fs-1);
+}
+.civ-universe-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.civ-universe-legend-mode {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--civ-border);
+}
+.civ-universe-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.civ-universe-rightcol {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: min(300px, 42%);
+  overflow-y: auto;
+  z-index: 3;
+}
+.civ-universe-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  background: var(--civ-surface);
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  padding: 8px 10px;
+  max-width: 92%;
+}
+.civ-universe-status {
+  flex-basis: 100%;
+  text-align: center;
+}
+
+/* =============================================================================
  * V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2) — growth-chart
  * (手書き SVG)/血縁レールの chip/判断3指標2カラム/sticky下端バー。既存トークン
  * のみ(raw hex 禁止・check-ui-tokens GATE)。

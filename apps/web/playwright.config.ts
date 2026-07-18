@@ -22,7 +22,17 @@ export default defineConfig({
   use: {
     baseURL: WEB,
     // Pure-local run: never route 127.0.0.1 through any system/WARP proxy.
-    launchOptions: { args: ["--no-proxy-server"] },
+    // T-66(個体宇宙面・3d-force-graph/WebGL): headless Chromium needs a software
+    // GL backend to create a WebGL2 context at all (no real GPU in CI/sandbox).
+    launchOptions: {
+      args: [
+        "--no-proxy-server",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader",
+        "--ignore-gpu-blocklist",
+      ],
+    },
     screenshot: "off",
   },
   webServer: [

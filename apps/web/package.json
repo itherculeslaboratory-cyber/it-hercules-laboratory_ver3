@@ -12,6 +12,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "3d-force-graph": "^1.80.0",
     "clsx": "^2.1.1",
     "next": "^15.5.0",
     "qrcode": "^1.5.4",

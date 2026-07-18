@@ -1,0 +1,25 @@
+{
+  "screen_id": "individual-universe",
+  "route": "/individuals/universe",
+  "title": "個体の宇宙",
+  "layout": "standard",
+  "notes": "T-66(design-individual-finder.md §1.2/§3/§5波2-3・V3-UIX-83後続波)。individual-finderの「★宇宙で見る」(行選択時のみ有効)から?focus=個体IDで遷移する全個体星空。実装は individual-universe ノード1個: GET /individuals(全件)+GET /individuals/pedigree-links(血統エッジ・T-66新設read-only route)を1回ずつ取得し、世代(pedigree-linksから都度計算)・体長・体重の3軸をuniverse-utils.tsの純関数(buildUniverseCoords)でfx/fy/fz固定配置する(3d-force-graph力学シミュ不要・決定論・embedding/cosineは一切使わない=誇張ゼロ)。ノードクリックで血統(先祖=info/子孫=primary/選択=caution/無関係=減光)発光+親→子方向パーティクル、右カラムは individual-finder の FinderDetailPanel をそのまま再利用(血統リンククリックでジャンプ・「詳細画面を開く」で individual-detail 遷移)。「★この個体に近い」は形質軸空間のユークリッド距離上位12体を切り出しカメラフレーミング(nearestByCoord)。3d-force-graph(MIT)は client-only dynamic import(SSR不可)・WebGL非対応環境はフォールバック文言を出す(クラッシュしない)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "個体の宇宙", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "すべての個体を星として眺め、血統のつながりをたどれます。", "muted": true } },
+            { "id": "universe", "type": "individual-universe" }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}
