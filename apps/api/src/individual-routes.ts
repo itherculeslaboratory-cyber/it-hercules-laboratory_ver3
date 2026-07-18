@@ -8,12 +8,12 @@
 // in observation-routes.ts / ledger-routes.ts and cannot be imported — same
 // precedent as projectLedger's inline helpers · 批評家#3).
 import { Hono, type Context } from "hono";
-import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES, STAGE_TO_NEXT_TRANSITION } from "./observation-constants";
 import { appendContribution } from "./contribution";
 import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
-import { projectOpenBindings } from "./source-routes";
+import { projectOpenBindings, projectCurrentOwner } from "./source-routes";
 import { computeNextObservationAt } from "./home-routes";
 import { aggregateTags } from "./tag-routes";
 import { loadVector, EMBEDDING_DIM } from "./observation-routes";
@@ -882,13 +882,22 @@ export async function createIndividualMaster(
 
 // Shared blood-link logic (IND-01/12), reused by clutch promote to inherit
 // sire_id/dam_id (コピペ二重化しない). Same key/conflict semantics as the route.
+// Ownership guard (fail-closed, T-71 GAP①): only the CHILD's current owner
+// (source-routes.ts projectCurrentOwner — transfer-aware, same trust boundary
+// as POST /occupancy) may append a blood link for it. clutch promote's calls
+// pass a freshly-minted individualId it just created (owner===actorId there
+// by construction), so this is a no-op guard on that path and the real gate
+// on the direct route below.
 export async function linkParent(
+  bucket: R2BucketLite,
   s: TruthStore,
   actorId: string,
   childId: string,
   parentId: string,
   role: string,
-): Promise<Awaited<ReturnType<TruthStore["putEventAt"]>>> {
+): Promise<Awaited<ReturnType<TruthStore["putEventAt"]>> | { status: "forbidden" }> {
+  const owner = await projectCurrentOwner(bucket, childId);
+  if (owner !== actorId) return { status: "forbidden" };
   const data: Record<string, unknown> = {
     child_id: childId,
     parent_id: parentId,
@@ -1261,7 +1270,8 @@ individualRoutes.post("/individuals/:id/parents", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
   const role = body.parent_role;
-  const res = await linkParent(store(c), actorId, childId, String(body.parent_id), String(role));
+  const res = await linkParent(c.env.TRUTH, store(c), actorId, childId, String(body.parent_id), String(role));
+  if (res.status === "forbidden") return c.json({ error: "NOT_OWNER" }, 403);
   if (res.status === "invalid") return c.json({ error: "INVALID_PARENT", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_PARENT", key: res.key }, 409);
   return c.json({ child_id: childId, parent_role: role }, 201);
@@ -1296,8 +1306,12 @@ individualRoutes.get("/individuals/:id/cross", async (c) => {
 // (back-dating a historical name); default now.
 individualRoutes.post("/individuals/:id/name", async (c) => {
   const id = c.req.param("id");
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
+  // Ownership guard (fail-closed, T-71 GAP①) — same trust boundary as
+  // POST /occupancy (source-routes.ts:265): transfer-aware current owner only.
+  const owner = await projectCurrentOwner(c.env.TRUTH, id);
+  if (owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const data: Record<string, unknown> = {
     individual_id: id,
     name: body.name,
@@ -1493,12 +1507,18 @@ individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
 
 // Shared life-event append (IND-12/13), reused by batch-commit kind:"life-event"
 // (コピペ二重化しない — F4 行メニュー/一括どちらも同じ append 経路)。
+// Ownership guard (fail-closed, T-71 GAP①): same projectCurrentOwner trust
+// boundary as POST /occupancy — covers BOTH entry points (direct route below
+// and batch-commit-routes.ts kind:"life-event") since both funnel through here.
 export async function writeLifeEvent(
+  bucket: R2BucketLite,
   s: TruthStore,
   actorId: string,
   individualId: string,
   body: Record<string, unknown>,
 ): Promise<{ ok: true; individual_id: string; kind: unknown } | { ok: false; error: string; details?: string[] }> {
+  const owner = await projectCurrentOwner(bucket, individualId);
+  if (owner !== actorId) return { ok: false, error: "NOT_OWNER" };
   const data: Record<string, unknown> = {
     individual_id: individualId,
     kind: body.kind,
@@ -1521,8 +1541,11 @@ individualRoutes.post("/individuals/:id/life-events", async (c) => {
   const id = c.req.param("id");
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
-  const r = await writeLifeEvent(store(c), actorId, id, body);
-  if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_LIFE_EVENT" ? 409 : 400);
+  const r = await writeLifeEvent(c.env.TRUTH, store(c), actorId, id, body);
+  if (!r.ok) {
+    const status = r.error === "NOT_OWNER" ? 403 : r.error === "DUPLICATE_LIFE_EVENT" ? 409 : 400;
+    return c.json({ error: r.error, details: r.details }, status);
+  }
   return c.json({ individual_id: r.individual_id, kind: r.kind }, 201);
 });
 
@@ -1537,6 +1560,10 @@ individualRoutes.post("/individuals/:id/schedule/generate", async (c) => {
   const id = c.req.param("id");
   const s = store(c);
   const actorId = c.get("actorId");
+  // Ownership guard (fail-closed, T-71 GAP①) — same trust boundary as
+  // POST /occupancy (source-routes.ts:265): transfer-aware current owner only.
+  const owner = await projectCurrentOwner(c.env.TRUTH, id);
+  if (owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
   const life = (await s.listEvents(`truth/${LIFE_TYPE}/${id}-`))
     .map(dataOf)
     .filter((d) => d.individual_id === id)

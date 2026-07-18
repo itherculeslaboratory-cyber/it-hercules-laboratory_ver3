@@ -42,7 +42,7 @@ async function commitOne(
   if (kind === "life-event") {
     const individualId = item.individual_id;
     if (typeof individualId !== "string" || !individualId) return { ok: false, error: "INVALID_ITEM" };
-    const r = await writeLifeEvent(s, actorId, individualId, body);
+    const r = await writeLifeEvent(bucket, s, actorId, individualId, body);
     return r.ok ? { ok: true, id: individualId } : { ok: false, error: r.error };
   }
 

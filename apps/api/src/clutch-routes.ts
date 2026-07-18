@@ -372,8 +372,8 @@ export async function promoteClutch(
     });
     if (res.status !== "inserted") continue; // ULID衝突は事実上不到達(128bit)
     individualIds.push(individualId);
-    if (typeof cd.sire_id === "string") await linkParent(s, actorId, individualId, cd.sire_id, "sire");
-    if (typeof cd.dam_id === "string") await linkParent(s, actorId, individualId, cd.dam_id, "dam");
+    if (typeof cd.sire_id === "string") await linkParent(bucket, s, actorId, individualId, cd.sire_id, "sire");
+    if (typeof cd.dam_id === "string") await linkParent(bucket, s, actorId, individualId, cd.dam_id, "dam");
   }
 
   const eventId = ulid();
