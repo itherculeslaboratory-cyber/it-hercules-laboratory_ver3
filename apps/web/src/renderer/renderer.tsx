@@ -5990,7 +5990,7 @@ function IndividualFinderNode() {
 
 // =============================================================================
 // T-66(design-individual-finder.md §1.2/§3/§5波2-3・V3-UIX-83後続波) — 個体宇宙面
-// (全個体星空・実測形質軸配置・血統フロー)。3d-force-graph(MIT)を client-only
+// (全個体星空・実測形質軸の順位ベース配置・血統フロー)。3d-force-graph(MIT)を client-only
 // dynamic import で使う(SSR不可・WebGL前提・useEffect 内でのみ import する)。座標
 // は fx/fy/fz 固定(力学シミュ不要・決定論)= 体長mm(x)・体重g(y)・世代(z・
 // pedigree-links から都度計算、無ければ0=中央)。誇張ゼロ: embedding/cosine類似は
@@ -6442,7 +6442,7 @@ function IndividualUniverseNode() {
   return (
     <div className="civ-form civ-universe-shell">
       <p className="civ-text" data-muted="true">
-        配置は実測値(体の大きさ・世代)による近さです。姿の似ている判定(画像の類似)は使っていません。
+        配置は実測値(体の大きさ・世代)の順位で並べたものです。姿の似ている判定(画像の類似)は使っていません。
       </p>
       <div className="civ-chip-row">
         <button
@@ -6517,7 +6517,7 @@ function IndividualUniverseNode() {
 
         <div className="civ-universe-topleft">
           <p className="civ-text">
-            {rows.length}個体 ・ 血統エッジ {links.length}本
+            {rows.length}個体 ・ 血統のつながり {links.length}本
           </p>
           <div className="civ-universe-legend">
             <p className="civ-label">種族</p>

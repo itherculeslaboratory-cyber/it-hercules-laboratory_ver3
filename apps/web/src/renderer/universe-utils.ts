@@ -131,28 +131,49 @@ export interface UniverseCoord {
   estimated: boolean;
 }
 
-/** 1軸を -1..1 へ min-max 正規化。欠測(null)はそのまま null で返し、
- *  既知値の中央値(同じ -1..1 スケール)も併せて返す(欠測の中央値フォールバック用)。
- *  既知値が0件はどちらもnull。既知値が1件/全同値(span=0)は0扱い(倒れない)。 */
-function normalizeAxis(values: (number | null)[]): { norm: (number | null)[]; median: number | null } {
-  const known = values.filter((v): v is number => v != null).sort((a, b) => a - b);
-  if (known.length === 0) return { norm: values.map(() => null), median: null };
-  const min = known[0];
-  const max = known[known.length - 1];
-  const span = max - min;
-  const mid = Math.floor(known.length / 2);
-  const medianRaw = known.length % 2 ? known[mid] : (known[mid - 1] + known[mid]) / 2;
-  const scale = (v: number) => (span === 0 ? 0 : ((v - min) / span) * 2 - 1);
-  return { norm: values.map((v) => (v == null ? null : scale(v))), median: scale(medianRaw) };
+/** 1軸を順位(rank)ベースで -1..1 へ正規化する。min-maxだと外れ値1体だけが
+ *  極へ飛び、残りの母集団が線状につぶれる(実データ172体で確認・批評家指摘)ため、
+ *  値そのものの間隔ではなく「小さい順に並べた順位」を等間隔配置する。同値は
+ *  平均順位(タイの中間)を使う(標準的な fractional ranking)。欠測(null)はそのまま
+ *  null で返し、既知順位の中央値(同じ -1..1 スケール)も併せて返す(欠測の
+ *  中央値フォールバック用)。既知値が0件はどちらもnull。既知値が1件/全同値は
+ *  0扱い(倒れない)。 */
+function rankNormalizeAxis(values: (number | null)[]): { norm: (number | null)[]; median: number | null } {
+  const known = values
+    .map((v, index) => ({ v, index }))
+    .filter((e): e is { v: number; index: number } => e.v != null)
+    .sort((a, b) => a.v - b.v);
+  const n = known.length;
+  if (n === 0) return { norm: values.map(() => null), median: null };
+
+  const ranks = new Array<number>(n);
+  let i = 0;
+  while (i < n) {
+    let j = i;
+    while (j + 1 < n && known[j + 1].v === known[i].v) j++;
+    const avgRank = (i + j) / 2; // タイ区間 [i, j] は平均順位で並べる
+    for (let k = i; k <= j; k++) ranks[k] = avgRank;
+    i = j + 1;
+  }
+  const rankByIndex = new Map<number, number>(known.map((e, k) => [e.index, ranks[k]]));
+  const scale = (rank: number) => (n === 1 ? 0 : (rank / (n - 1)) * 2 - 1);
+
+  const mid = Math.floor(n / 2);
+  const medianRank = n % 2 ? ranks[mid] : (ranks[mid - 1] + ranks[mid]) / 2;
+  return {
+    norm: values.map((v, index) => (v == null ? null : scale(rankByIndex.get(index)!))),
+    median: scale(medianRank),
+  };
 }
 
 /** 実測形質軸(体長・体重・世代)を fx/fy/fz(-spread..spread)へ決定論配置する。
- *  欠測軸は中央値配置(呼び出し側の「配置は実測値による近さ」注記+減光とセット)。
- *  類似度(embedding/cosine)は使わない(誇張ゼロ)。 */
+ *  順位ベース配置(rankNormalizeAxis)なので外れ値1体がいても他の母集団は
+ *  つぶれない。欠測軸は中央値配置(呼び出し側の「配置は実測値の順位」注記+
+ *  減光とセット)。類似度(embedding/cosine)は使わない(誇張ゼロ)。 */
 export function buildUniverseCoords(points: AxisPoint[], spread = 250): UniverseCoord[] {
-  const lengths = normalizeAxis(points.map((p) => p.length_mm));
-  const weights = normalizeAxis(points.map((p) => p.weight_g));
-  const gens = normalizeAxis(points.map((p) => p.generation));
+  const lengths = rankNormalizeAxis(points.map((p) => p.length_mm));
+  const weights = rankNormalizeAxis(points.map((p) => p.weight_g));
+  const gens = rankNormalizeAxis(points.map((p) => p.generation));
   return points.map((p, i) => {
     const lx = lengths.norm[i];
     const wy = weights.norm[i];

@@ -80,8 +80,8 @@ describe("computeLineage(先祖/子孫の再帰探索・循環検出)", () => {
   });
 });
 
-describe("buildUniverseCoords(実測形質軸の決定論配置)", () => {
-  it("min-maxで-spread..spreadへ正規化する", () => {
+describe("buildUniverseCoords(実測形質軸の順位ベース決定論配置)", () => {
+  it("順位を等間隔で-spread..spreadへ正規化する", () => {
     const coords = buildUniverseCoords(
       [
         { individual_id: "a", length_mm: 10, weight_g: 1, generation: 0 },
@@ -97,7 +97,45 @@ describe("buildUniverseCoords(実測形質軸の決定論配置)", () => {
     expect(coords.every((c) => !c.estimated)).toBe(true);
   });
 
-  it("欠測軸は既知値の中央値へフォールバックし estimated=true になる", () => {
+  it("外れ値1体が10倍の値でも他の母集団はつぶれない(等間隔のまま)", () => {
+    // min-maxなら a〜dは-1近辺に線状につぶれ、eだけ+1へ飛ぶ。順位ベースなら
+    // 5体を等間隔(-100,-50,0,50,100)に配置し、外れ値1体の影響を受けない。
+    const coords = buildUniverseCoords(
+      [
+        { individual_id: "a", length_mm: 10, weight_g: 1, generation: 0 },
+        { individual_id: "b", length_mm: 11, weight_g: 1, generation: 0 },
+        { individual_id: "c", length_mm: 12, weight_g: 1, generation: 0 },
+        { individual_id: "d", length_mm: 13, weight_g: 1, generation: 0 },
+        { individual_id: "e", length_mm: 130, weight_g: 1, generation: 0 }, // 10倍の外れ値
+      ],
+      100,
+    );
+    const byId = new Map(coords.map((c) => [c.individual_id, c]));
+    expect(byId.get("a")!.x).toBeCloseTo(-100);
+    expect(byId.get("b")!.x).toBeCloseTo(-50);
+    expect(byId.get("c")!.x).toBeCloseTo(0);
+    expect(byId.get("d")!.x).toBeCloseTo(50);
+    expect(byId.get("e")!.x).toBeCloseTo(100);
+  });
+
+  it("同値(タイ)は平均順位でまとめて並ぶ", () => {
+    // 値: 10,10,30,40 → 昇順順位 0,1,2,3。10が2件タイなので平均順位0.5を共有。
+    const coords = buildUniverseCoords(
+      [
+        { individual_id: "a", length_mm: 10, weight_g: 1, generation: 0 },
+        { individual_id: "b", length_mm: 10, weight_g: 1, generation: 0 },
+        { individual_id: "c", length_mm: 30, weight_g: 1, generation: 0 },
+        { individual_id: "d", length_mm: 40, weight_g: 1, generation: 0 },
+      ],
+      100,
+    );
+    const byId = new Map(coords.map((c) => [c.individual_id, c]));
+    expect(byId.get("a")!.x).toBeCloseTo(byId.get("b")!.x);
+    expect(byId.get("a")!.x).toBeLessThan(byId.get("c")!.x);
+    expect(byId.get("c")!.x).toBeLessThan(byId.get("d")!.x);
+  });
+
+  it("欠測軸は既知順位の中央値へフォールバックし estimated=true になる", () => {
     const coords = buildUniverseCoords(
       [
         { individual_id: "a", length_mm: 10, weight_g: 1, generation: 0 },
@@ -108,7 +146,7 @@ describe("buildUniverseCoords(実測形質軸の決定論配置)", () => {
     );
     const b = coords.find((c) => c.individual_id === "b")!;
     expect(b.estimated).toBe(true);
-    // 体長の中央値(10,30の中間=20mm)相当の正規化位置(0)に配置される。
+    // 既知2件(10,30)の中央値順位(0.5)相当の正規化位置(0)に配置される。
     expect(b.x).toBeCloseTo(0);
   });
 
