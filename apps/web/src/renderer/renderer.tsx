@@ -3088,7 +3088,6 @@ function BatchRosterNode() {
                       className={cn("civ-interactive", "civ-button")}
                       data-variant="primary"
                       data-compact
-                      aria-busy={promotePending === cl.clutch_id || undefined}
                       onClick={() => confirmPromote(cl.clutch_id, effectiveCurrent)}
                     >
                       昇格する
