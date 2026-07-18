@@ -6,6 +6,7 @@ import { Renderer, interpolate } from "./renderer";
 import { ApiError } from "@/lib/error-messages";
 import type { Action, ScreenDef } from "./types";
 import { allScreenDefs, loadScreenDef } from "@/lib/screendefs";
+import { saveBatchDraft, saveBatchResults, clearBatch } from "./batch-draft";
 // GATE logic under test (color discipline). Imported for the negative case.
 import { scanColors } from "../../../../scripts/check-ui-tokens.mjs";
 
@@ -511,6 +512,27 @@ describe("Renderer — API error copy (V3-UIX-03)", () => {
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(needle);
     expect(alert.textContent ?? "").not.toMatch(/api\s*\d/i);
+  });
+});
+
+describe("BatchDoneNode — per-item failure copy never leaks the raw backend code (V3-UIX-01)", () => {
+  afterEach(() => clearBatch());
+
+  it("maps a failed row's raw error code (e.g. OBSERVATION_FROZEN) to calm Japanese, not the raw code", async () => {
+    saveBatchDraft({
+      items: [{}],
+      rows: [{ key: "r1", group: "measure", label: "個体A", itemIndex: 0 }],
+      scheduleTargets: [],
+    });
+    saveBatchResults({ results: [{ ok: false, error: "OBSERVATION_FROZEN" }] });
+
+    render(
+      <Renderer def={screenDef([{ id: "d", type: "batch-done" }])} onAction={vi.fn()} />,
+    );
+
+    const row = await screen.findByText(/保存できませんでした/);
+    expect(row.textContent).toContain("この観測は現在変更できません。");
+    expect(row.textContent).not.toContain("OBSERVATION_FROZEN");
   });
 });
 

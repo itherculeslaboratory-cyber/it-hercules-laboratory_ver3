@@ -2670,26 +2670,18 @@ function BatchRosterNode() {
     setReconcileOpen((o) => ({ ...o, [clutchId]: false }));
   };
 
-  const confirmPromote = async (clutchId: string, current: number) => {
+  // 昇格(個体ID発行)は他の一括操作(move等)と同じく、ここではローカルに
+  // ステージするだけ — 実際の個体発行は確認画面の「一括保存」まで遅延する
+  // (F4 での即時POSTは不可逆な個体ID発行がユーザー確認前に走ってしまうため廃止)。
+  const confirmPromote = (clutchId: string, current: number) => {
     const k = Number(promoteCount[clutchId]);
     if (!Number.isInteger(k) || k <= 0 || k > current) {
       setError("昇格する数を確認してください");
       return;
     }
-    setPromotePending(clutchId);
     setError(null);
-    try {
-      await execute(
-        { kind: "api", method: "POST", path: `/api/v1/clutches/${clutchId}/promote` },
-        { count: k, death_count: 0, at: new Date().toISOString() },
-      );
-      setPromoted((p) => ({ ...p, [clutchId]: { count: k, deathCount: 0 } }));
-      setPromoteOpen((o) => ({ ...o, [clutchId]: false }));
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setPromotePending(null);
-    }
+    setPromoted((p) => ({ ...p, [clutchId]: { count: k, deathCount: 0 } }));
+    setPromoteOpen((o) => ({ ...o, [clutchId]: false }));
   };
 
   const confirm = () => {
@@ -2781,12 +2773,14 @@ function BatchRosterNode() {
 
     for (const [clutchId, pr] of Object.entries(promoted)) {
       const cl = clutches.find((c) => c.clutch_id === clutchId);
+      const idx = items.length;
+      items.push({ kind: "promote", clutch_id: clutchId, count: pr.count, death_count: pr.deathCount, at: now });
       rows.push({
         key: `promote-${clutchId}`,
         group: "clutch-promote",
         label: cl ? `クラッチ ${cl.harvested_at ?? ""}` : "クラッチ",
         valueText: `${pr.count}体を昇格`,
-        alreadyCommitted: true,
+        itemIndex: idx,
       });
     }
 
@@ -3405,14 +3399,14 @@ function BatchDoneNode() {
     <div className="civ-form">
       <ul className="civ-list">
         {draft.rows.map((r) => {
-          const result = !r.alreadyCommitted && r.itemIndex != null ? results.results[r.itemIndex] : undefined;
+          const result = r.itemIndex != null ? results.results[r.itemIndex] : undefined;
           const failed = result != null && result.ok === false;
           return (
             <li key={r.key}>
               <article className="civ-card">
                 {failed ? (
                   <p className="civ-text">
-                    {r.label}: 保存できませんでした({(result as { ok: false; error: string }).error})
+                    {r.label}: 保存できませんでした({mapError((result as { ok: false; error: string }).error)})
                   </p>
                 ) : (
                   <div className="civ-card-badges">

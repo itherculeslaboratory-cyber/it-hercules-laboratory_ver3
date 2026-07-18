@@ -219,6 +219,11 @@
       "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)"
     },
     {
+      "from": "qr-resume",
+      "to": "obs-register-new",
+      "label": "空の棚から新規個体登録へ"
+    },
+    {
       "from": "economy-status",
       "to": "platinum-shop",
       "label": "プラチナコインショップへ"

@@ -929,6 +929,46 @@ function representativeMeasurement(data: Record<string, unknown>): string | null
   return pick ? `${pick.value}${pick.unit ?? ""}` : null;
 }
 
+// Shared label/species/last_capture_at/last_measurement_summary derivation —
+// the exact fallback formulas GET /individuals rows use. Extracted (unchanged
+// behavior) so the multi-occupant shelf-QR branch (OBS wave1 R2・
+// projectIndividualSummary below) reuses ONE projection instead of a
+// re-derived variant (source-routes projectOccupantsAt callers).
+function summarizeIndividualRow(
+  id: string,
+  master: Record<string, unknown> | null,
+  name: string | null,
+  caps: { data: Record<string, unknown>; time: string }[],
+): { label: string; species: string | null; last_capture_at: string | null; last_measurement_summary: string | null } {
+  const rawLabel = typeof master?.local_label_text === "string" ? master.local_label_text : "";
+  const rawSpecies = typeof master?.species === "string" ? master.species : "";
+  const sorted = caps.slice().sort((a, b) => String(a.data.capture_id ?? "").localeCompare(String(b.data.capture_id ?? "")));
+  const latest = sorted[sorted.length - 1];
+  return {
+    label: rawLabel || name || id,
+    species: rawSpecies || null,
+    last_capture_at: latest ? latest.time || null : null,
+    last_measurement_summary: latest ? representativeMeasurement(latest.data) : null,
+  };
+}
+
+/** Per-id fetch + summarizeIndividualRow — for a single individual outside the
+ * bulk GET /individuals scan (small occupant counts on a multi-occupant shelf,
+ * OBS wave1 R2 V3-OBS-2x qr_placement_multi). Same fields, same fallback rules. */
+export async function projectIndividualSummary(
+  s: TruthStore,
+  id: string,
+): Promise<{ individual_id: string; label: string; species: string | null; last_capture_at: string | null; last_measurement_summary: string | null }> {
+  const masterEv = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
+  const master = masterEv ? dataOf(masterEv) : null;
+  const name = await projectName(s, id);
+  const ref = `individual/${id}`;
+  const caps = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
+    .filter((e) => dataOf(e).subject_ref === ref)
+    .map((e) => ({ data: dataOf(e), time: String(e.time ?? "") }));
+  return { individual_id: id, ...summarizeIndividualRow(id, master, name, caps) };
+}
+
 // V3-IND-14 一覧フィルタ軸「状態(生体/蛹/幼虫/死亡/標本)」の5値判定。優先度:
 // 直近の終端 life-event(death/survival_correction/specimen・at 昇順末尾)が
 // specimen なら standing の死活を問わず標本、death なら死亡。survival_correction
@@ -1110,13 +1150,14 @@ async function listIndividualsFor(
         break;
       }
     }
+    const row = summarizeIndividualRow(id, m, name, caps);
     individuals.push({
       individual_id: id,
-      label: label || name || id,
+      label: row.label,
       name,
-      species: species || null,
-      last_capture_at: latest ? latest.time || null : null,
-      last_measurement_summary: latest ? representativeMeasurement(latest.data) : null,
+      species: row.species,
+      last_capture_at: row.last_capture_at,
+      last_measurement_summary: row.last_measurement_summary,
       stage,
       placement_id: latestPlacement ? (latestPlacement.placement_id as string) : null,
       last_care_at: latest ? latest.time || null : null,

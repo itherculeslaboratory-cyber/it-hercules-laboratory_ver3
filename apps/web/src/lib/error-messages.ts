@@ -42,6 +42,14 @@ const MESSAGES: Record<string, string> = {
   TOO_MANY_ATTEMPTS: "試行回数の上限に達しました。しばらくしてからお試しください。",
   HANDLE_TAKEN: "この@IDはすでに使われています。別の@IDをお試しください。",
   HANDLE_IMMUTABLE: "@IDは一度決めると変更できません。",
+
+  // 観測登録(バッチ)一括保存の細別
+  OBSERVATION_FROZEN: "この観測は現在変更できません。",
+  INVALID_CAPTURE: "観測内容に誤りがあります。入力を確認してください。",
+  DUPLICATE_CAPTURE: "同じ観測がすでに登録されています。",
+  INVALID_ITEM: "この項目は登録できませんでした。入力を確認してください。",
+  UNKNOWN_KIND: "この操作には対応していません。",
+  NOT_OWNER: "自分が所有していない個体は登録できません。",
 };
 
 const FALLBACK = "エラーが発生しました。時間をおいて再度お試しください。";

@@ -359,6 +359,9 @@ describe("OBS-20 placement/shelf QR (棚→個体 連鎖)", () => {
     const { placement_id } = (await (await post("/api/v1/placements", { label: "棚B" }, env)).json()) as {
       placement_id: string;
     };
+    // occupancy authz (Task 1): move requires the caller to own indId — create
+    // its master first (DEV_TOKEN's actor becomes its owner).
+    await post("/api/v1/individuals", { individual_id: indId }, env);
     // "move" (kind:"move") is the phase:"start"/"end"-tagged occupancy path
     // (moveOccupancy, source-routes.ts) — plain POST /occupancy writes a
     // phase-less legacy record that is never "open" (see the ended-occupancy
@@ -602,6 +605,8 @@ describe("OBS-72 individual → placement → lab-environment 連鎖", () => {
     const { placement_id } = (await (await post("/api/v1/placements", { label: "棚Z" }, env)).json()) as {
       placement_id: string;
     };
+    // occupancy authz (Task 1): move requires the caller to own indId.
+    await post("/api/v1/individuals", { individual_id: indId }, env);
     await post(
       "/api/v1/observation/batch-commit",
       { items: [{ kind: "move", subject_ref: `individual/${indId}`, to_placement_id: placement_id }] },
