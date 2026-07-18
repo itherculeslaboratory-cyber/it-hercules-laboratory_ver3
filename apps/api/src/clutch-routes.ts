@@ -327,6 +327,13 @@ export async function promoteClutch(
   const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
   if (!clutch) return { ok: false, error: "NOT_FOUND" };
   const cd = dataOf(clutch);
+  // Ownership guard (fail-closed): promote mints NEW individuals owned by
+  // actorId — only the clutch's creator (its only owner, no transfer
+  // mechanism exists for clutches) may promote it. Missing/empty owner on
+  // the record denies too. Checked BEFORE any write below.
+  if (typeof cd.actor_id !== "string" || !cd.actor_id || cd.actor_id !== actorId) {
+    return { ok: false, error: "NOT_OWNER" };
+  }
 
   const count = body.count;
   if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
@@ -391,7 +398,8 @@ clutchRoutes.post("/clutches/:id/promote", async (c) => {
 
   const r = await promoteClutch(c.env.TRUTH, actorId, clutchId, body);
   if (!r.ok) {
-    const status = r.error === "NOT_FOUND" ? 404 : r.error === "DUPLICATE_CLUTCH_EVENT" ? 409 : 400;
+    const status =
+      r.error === "NOT_FOUND" ? 404 : r.error === "NOT_OWNER" ? 403 : r.error === "DUPLICATE_CLUTCH_EVENT" ? 409 : 400;
     const payload: Record<string, unknown> = { error: r.error };
     if (r.details !== undefined) payload.details = r.details;
     if (r.error === "PROMOTE_EXCEEDS_COUNT") payload.current_count = r.current_count;
