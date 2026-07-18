@@ -957,10 +957,11 @@ function ListNode({ node }: { node: ScreenNode }) {
   if (p.variant === "threads") {
     return <BoardThreadsNode node={node} />;
   }
-  // c9 wave1 KNW Stage1(「これ?」重複防止検索): same in-scope trick — a `list`
-  // variant instead of a new node type (schema enum is C9-owned/out of scope).
-  if (p.variant === "thread-search") {
-    return <ThreadSearchNode node={node} />;
+  // T-70 KNW wave1(知の広場ハブ・承認モックアップの verbatim 採用): same
+  // in-scope trick — a `list` variant instead of a new node type (schema enum
+  // is C9-owned/out of scope). Replaces the earlier "thread-search" variant.
+  if (p.variant === "knowledge-hub") {
+    return <KnowledgeHubNode node={node} />;
   }
   useSource(node);
   const scope = useContext(ScopeCtx);
@@ -7534,29 +7535,35 @@ function BoardThreadsNode({ node }: { node: ScreenNode }) {
   );
 }
 
-// T-69 KNW wave1 Stage1(知の広場「これ?」重複防止検索): list variant="thread-search"
-// 専用ノード(BoardThreadsNode と同じ自前 fetch パターン)。入力から 200ms デバウンスで
-// GET /plaza/search を叩き、上位3件を .civ-board-thread-row と同じ行スタイルで出す。
-// 決定論マッチング(apps/api/src/plaza-routes.ts の rankThreadSearch・embedding/LLM 不使用)
-// のため待ち時間中の中間表示は「読み込み中」ではなく単に前回結果の据え置き(チラつき防止)。
-interface ThreadSearchMatch {
+// T-70 KNW wave1(知の広場ハブ — 承認モックアップの verbatim 採用): list
+// variant="knowledge-hub" 専用ノード。オーナー30点評価(汎用レンダラで再解釈し
+// 見た目を損なった)の是正として、承認済みモックアップ section0(ヘッダー3タブ)+
+// section1(まず探す)の markup/className を寸分違わず採用し(globals.css の
+// `.knw-hub `スコープCSS参照)、実データだけを流し込む(caseB7 と同じ実物採用
+// パターン)。section2-5(dup-confirm/chat/summary/tree)は次波のため未着手。
+// 検索は既存 GET /plaza/search + rankThreadSearch(決定論・embedding/LLM不使用)
+// を200msデバウンスで叩く(旧 ThreadSearchNode と同じ fetch パターン)。
+interface KnwHubMatch {
   thread_id: string;
   topic: string;
   post_count: number;
   latest_at: string;
   score: number;
+  resolved?: boolean;
 }
-interface ThreadSearchView {
+interface KnwHubSearchView {
   query: string;
-  matches: ThreadSearchMatch[];
+  matches: KnwHubMatch[];
 }
+type KnwHubTab = "komatta" | "hanashitai" | "ronbun";
 
-function ThreadSearchNode({ node }: { node: ScreenNode }) {
+function KnowledgeHubNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const execute = useContext(ExecuteCtx);
   const path = String(p.source_path ?? "/api/v1/plaza/search");
+  const [tab, setTab] = useState<KnwHubTab>("komatta");
   const [q, setQ] = useState("");
-  const [matches, setMatches] = useState<ThreadSearchMatch[]>([]);
+  const [matches, setMatches] = useState<KnwHubMatch[]>([]);
   const [searched, setSearched] = useState(false);
 
   useEffect(() => {
@@ -7570,7 +7577,7 @@ function ThreadSearchNode({ node }: { node: ScreenNode }) {
     const timer = setTimeout(() => {
       Promise.resolve(execute({ kind: "api", method: "GET", path: `${path}?q=${encodeURIComponent(query)}` }))
         .then((v) => {
-          if (alive) setMatches(((v as ThreadSearchView | undefined)?.matches ?? []).slice(0, 3));
+          if (alive) setMatches(((v as KnwHubSearchView | undefined)?.matches ?? []).slice(0, 3));
         })
         .catch(() => {
           if (alive) setMatches([]);
@@ -7586,39 +7593,113 @@ function ThreadSearchNode({ node }: { node: ScreenNode }) {
   }, [q, path, execute]);
 
   return (
-    <div className="civ-thread-search">
-      <input
-        className="civ-input"
-        type="search"
-        placeholder="何に困ってる?"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        aria-label="困りごとを検索"
-      />
-      {searched &&
-        (matches.length === 0 ? (
-          <p className="civ-empty">まだ近いスレはありません。新しく相談できます。</p>
-        ) : (
-          <ul className="civ-list">
-            {matches.map((m) => (
-              <li key={m.thread_id}>
-                <a
-                  className={cn("civ-card", "civ-interactive", "civ-board-thread-row")}
-                  href={`/s/knowledge-thread?thread_id=${m.thread_id}`}
-                >
-                  <span className="civ-board-thread-topic">{m.topic}</span>
-                  <span className="civ-board-thread-meta">
-                    <span>{m.post_count}件のやりとり</span>
-                    <span>最終更新 {formatDateJa(m.latest_at)}</span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        ))}
-      <a className={cn("civ-interactive", "civ-thread-search-new")} href="/s/knowledge-board">
-        見つからない? → 新しく相談する
-      </a>
+    <div className="knw-hub">
+      <div className="wrap">
+        {/* 0. header — mockup section0 (verbatim markup) */}
+        <header className="top">
+          <div className="wordmark">知の広場</div>
+          <nav className="tabs">
+            <button
+              type="button"
+              className={cn("tab", tab === "hanashitai" && "active")}
+              aria-pressed={tab === "hanashitai"}
+              onClick={() => setTab("hanashitai")}
+            >
+              話したい
+            </button>
+            <button
+              type="button"
+              className={cn("tab", tab === "komatta" && "active")}
+              aria-pressed={tab === "komatta"}
+              onClick={() => setTab("komatta")}
+            >
+              困った
+            </button>
+            <button
+              type="button"
+              className={cn("tab", tab === "ronbun" && "active")}
+              aria-pressed={tab === "ronbun"}
+              onClick={() => setTab("ronbun")}
+            >
+              論文
+            </button>
+          </nav>
+        </header>
+        <p className="lead">みんなの記録から答えを探して、いっしょに解決する場所。</p>
+
+        {/* 1. search first — mockup section1 (verbatim markup, real data wired) */}
+        {tab === "komatta" && (
+          <section className="block">
+            <div className="section-head">
+              <h2 className="section-title">🔍 まず探す</h2>
+              <p className="section-caption">打っている途中から「これ?」を3件出す。同じ悩みのスレがばらけない。</p>
+            </div>
+            <div className="card">
+              <div className="search-box">
+                <span className="icon">🔍</span>
+                <input
+                  type="search"
+                  placeholder="何に困ってる?"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  aria-label="困りごとを検索"
+                />
+              </div>
+              {searched && matches.length > 0 && (
+                <div className="suggest">
+                  {matches.map((m) => (
+                    <a key={m.thread_id} className="suggest-row" href={`/s/knowledge-thread?thread_id=${m.thread_id}`}>
+                      <div>
+                        <div className="st-title">{m.topic}</div>
+                        <div className="st-meta">
+                          {m.post_count}件のやりとり ・ 最終更新 {formatDateJa(m.latest_at)}
+                          {m.resolved && (
+                            <>
+                              {" "}
+                              ・ <span className="badge-solved">✔解決済みの答えあり</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="go">›</div>
+                    </a>
+                  ))}
+                </div>
+              )}
+              {searched && matches.length === 0 ? (
+                <p className="helper-note">まだ近いスレはありません。新しく相談できます。</p>
+              ) : (
+                <p className="helper-note">当てはまるものがあれば、そこへ流れ着く → 情報が1か所に集まる</p>
+              )}
+            </div>
+            <p className="lead" style={{ marginTop: 12, marginBottom: 0 }}>
+              <a className="civ-link" href="/s/knowledge-board">
+                新しく相談する
+              </a>
+            </p>
+          </section>
+        )}
+
+        {tab === "hanashitai" && (
+          <section className="block">
+            <p className="lead">同じ趣味の人と交流する。</p>
+            <a className="card" href="/s/knowledge-board">
+              <h2 className="section-title">公式掲示板</h2>
+              <p className="section-caption">説明・愚痴・改善の3板でチャネルごとに集約します。</p>
+            </a>
+          </section>
+        )}
+
+        {tab === "ronbun" && (
+          <section className="block">
+            <p className="lead">論文を読む・書く・議論する。</p>
+            <a className="card" href="/s/knowledge-paper">
+              <h2 className="section-title">論文</h2>
+              <p className="section-caption">論文の照合と引用の正本です。</p>
+            </a>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

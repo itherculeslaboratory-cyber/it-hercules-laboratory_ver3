@@ -331,13 +331,19 @@ export function rankThreadSearch(
 }
 
 // GET /plaza/search?q=<text>&channel=<optional> — 決定論スレ検索投影。空 q は空配列
-// (エラーにしない)。読み取り専用・Truth 追記なし。
+// (エラーにしない)。読み取り専用・Truth 追記なし。T-70 KNW wave1(知の広場ハブ実物採用):
+// 各マッチに resolved(✔解決済みバッジ表示可否)を同梱。既存 projectResolution(BBS-05・
+// OQ-PLZ-03)をマッチ上位5件だけに適用する薄い追加投影(常駐 index 無し・都度再計算)。
 plazaRoutes.get("/plaza/search", async (c) => {
   const q = c.req.query("q") ?? "";
   const channel = c.req.query("channel") || undefined;
   if (!q.trim()) return c.json({ query: q, matches: [] });
-  const threads = await collectSearchThreads(store(c), channel);
-  const matches = rankThreadSearch(threads, q);
+  const s = store(c);
+  const threads = await collectSearchThreads(s, channel);
+  const ranked = rankThreadSearch(threads, q);
+  const matches = await Promise.all(
+    ranked.map(async (t) => ({ ...t, resolved: (await projectResolution(s, t.thread_id)).resolved })),
+  );
   return c.json({ query: q, matches });
 });
 
