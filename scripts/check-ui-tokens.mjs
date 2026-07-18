@@ -24,7 +24,10 @@ const TOKEN_FILES = new Set([
   "apps/web/src/app/globals.css",
   "apps/web/src/app/tokens.generated.css",
 ]);
-const TOKEN_DIRS = ["theme-packs/"];
+// apps/web/public/finder/lib/: vendored third-party static assets (Tabulator
+// MIT・3d-force-graph MIT — R52 caseB7実物採用・T-67). Raw hex is upstream's own
+// CSS, not our ThemePack tokens; same exemption class as theme-packs/ below.
+const TOKEN_DIRS = ["theme-packs/", "apps/web/public/finder/lib/"];
 
 // Flow maps under screen-defs/ that are not ScreenDefs (exempt from schema check).
 const NON_SCREENDEF = new Set(["screen-defs/navigation.json"]);

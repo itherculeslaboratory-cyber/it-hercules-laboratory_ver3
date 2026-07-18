@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/assets/theme.js"></script>
+<title>IHL 個体の宇宙</title>
+<style>
+  /* R52(2026-07-18): caseB7原型(universe-focus.html)のCSSをそのまま採用
+     (レイアウト・密度・ダーク配色・呼吸発光2.8sは不変)。変更はデータ配線
+     (universe.js)と語彙(下記テキスト)のみ — CSSは1行も変えていない。 */
+  :root{
+    --bg:#0d0f13; --card:#161a21; --line:#262c36; --fg:#e6e8ec; --dim:#8b94a3; --acc:#ff7a1a;
+    --sp-h:#ff7a1a; --sp-d:#5b8cff; --sp-c:#46c39a;
+    --panel:rgba(22,26,33,.92); --chipbg:#1b202a; --linehover:#3a4557;
+    --accbg:#2a1c0c; --accstrong:#ffd0a0; --accdim:#c9a06a; --phbg1:#1b202a; --phbg2:#20262f;
+  }
+  [data-theme="light"] {
+    --bg:#f4f5f7; --card:#ffffff; --line:#d9dee6; --fg:#1b1f26; --dim:#5c6572; --acc:#e66a00;
+    --panel:#ffffff; --chipbg:#eef0f3; --linehover:#c3cad4;
+    --accbg:#fff1e0; --accstrong:#8a4a00; --accdim:#8a5a10; --phbg1:#eef0f3; --phbg2:#e4e8ee;
+  }
+  #canvashonest{display:none; font-size:9.5px; color:var(--dim); letter-spacing:.2px; margin-top:6px;}
+  [data-theme="light"] #canvashonest{display:block;}
+  [data-theme="light"] #topleft { --fg:#e6e8ec; --dim:#8b94a3; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--fg);
+    font-family:-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;
+    overflow:hidden;
+  }
+  #graph3d{position:absolute; inset:0;}
+
+  #labels{position:absolute; inset:0; z-index:4; pointer-events:none;}
+  .plabel{
+    position:absolute; transform:translate(-50%,-150%); display:none;
+    font-size:12px; font-weight:700; color:#fff; white-space:nowrap;
+    background:rgba(13,15,19,.78); border-left:3px solid #888; border-radius:4px;
+    padding:3px 8px; letter-spacing:.2px;
+  }
+
+  #imagecards{position:absolute; inset:0; z-index:5; pointer-events:none;}
+  .imgcard{
+    position:absolute; transform:translate(-50%,-50%); display:none;
+    width:76px; flex-direction:column; align-items:center; gap:3px;
+  }
+  .imgcard-ph{
+    width:76px; height:76px; border-radius:9px; border:2px solid;
+    background:repeating-linear-gradient(45deg,#1b202a,#1b202a 6px,#20262f 6px,#20262f 12px);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:#c9ccd3; font-size:9px; line-height:1.3; font-weight:700; padding:4px;
+    box-shadow:0 0 10px rgba(0,0,0,.6);
+  }
+  .imgcard-ph img{width:100%; height:100%; object-fit:cover; border-radius:7px;}
+  .imgcard-lab{
+    font-size:10.5px; font-weight:700; color:#fff; background:rgba(13,15,19,.85);
+    border-radius:4px; padding:2px 6px; white-space:nowrap;
+  }
+
+  #topleft{position:absolute; top:16px; left:18px; z-index:6; pointer-events:none; max-width:380px;}
+  #topleft .headbar{display:flex; align-items:center; gap:8px;}
+  #topleft .brand{font-size:19px; font-weight:800; letter-spacing:1.5px; color:var(--fg);}
+  #topleft .hdtoggle{pointer-events:auto; margin-left:8px; background:var(--panel); border:1px solid var(--line); color:var(--acc);
+    border-radius:6px; width:24px; height:24px; line-height:1; cursor:pointer; font-size:11px; flex:0 0 auto;}
+  #topleft .hdtoggle:hover{border-color:var(--acc);}
+  #topleft .sub{font-size:14px; color:var(--dim); letter-spacing:.3px; margin-top:4px;}
+  #topleft .count{font-size:13px; color:var(--acc); letter-spacing:.3px; margin-top:6px;}
+  #samplebadge{
+    margin-top:10px; display:inline-block; pointer-events:none;
+    background:var(--accbg); border:1px solid var(--acc); color:var(--acc);
+    border-radius:6px; padding:7px 11px; font-size:11.5px; line-height:1.55; font-weight:700; max-width:350px;
+  }
+  #samplebadge b{color:var(--accstrong);}
+  #samplebadge .m{color:var(--accdim); font-weight:600;}
+
+  #rightcol{position:absolute; top:16px; right:16px; bottom:16px; width:310px; z-index:6; display:flex; flex-direction:column; gap:12px; pointer-events:none;}
+  #rightcol>*{pointer-events:auto;}
+
+  #legend{
+    flex:none; width:100%;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:15px 16px; font-size:13px; backdrop-filter:blur(3px);
+  }
+  #legend .lab{color:var(--dim); font-size:11.5px; letter-spacing:1px; margin-bottom:9px;}
+  #legend .row{display:flex; align-items:center; gap:9px; margin-bottom:8px;}
+  #legend .dot{width:11px; height:11px; border-radius:50%; flex:none; box-shadow:0 0 6px currentColor;}
+  #legend .mode{margin-top:12px; padding-top:11px; border-top:1px solid var(--line);}
+  #legend .mode .k{color:var(--dim); font-size:11.5px; letter-spacing:.5px;}
+  #legend .mode .v{color:var(--fg); font-size:15px; font-weight:700; margin-top:4px;}
+  #legend .hint{margin-top:11px; padding-top:10px; border-top:1px solid var(--line); color:var(--dim); font-size:11.5px; line-height:1.7;}
+
+  #detail{
+    display:none; flex:1 1 auto; min-height:0; overflow-y:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:17px; font-size:13px; line-height:1.5;
+  }
+  #detail.show{display:block;}
+  #detail .d-top{display:flex; gap:13px; margin-bottom:14px;}
+  #detail .d-img{
+    width:76px; height:76px; flex:none; border-radius:8px;
+    background:repeating-linear-gradient(45deg,var(--phbg1),var(--phbg1) 6px,var(--phbg2) 6px,var(--phbg2) 12px);
+    border:1px dashed var(--line); display:flex; align-items:center; justify-content:center;
+    color:var(--dim); font-size:9.5px; text-align:center; line-height:1.35; padding:4px; overflow:hidden;
+  }
+  #detail .d-img img{width:100%; height:100%; object-fit:cover;}
+  #detail .d-name{font-size:18px; font-weight:800; color:var(--fg); line-height:1.25;}
+  #detail .d-species{font-size:14.5px; font-weight:700; margin-top:4px;}
+  #detail .d-species .sci{color:var(--dim); font-weight:400; font-size:11.5px; font-style:italic;}
+  #detail .d-gen{font-size:12px; color:var(--dim); margin-top:5px;}
+  #detail .d-sec{margin-top:14px; padding-top:13px; border-top:1px solid var(--line);}
+  #detail .d-lab{font-size:11px; color:var(--dim); letter-spacing:.6px; margin-bottom:7px; text-transform:uppercase; font-weight:700;}
+  #detail .d-id{font-family:"SF Mono",Consolas,monospace; font-size:13px; color:var(--acc); font-weight:700;}
+  #detail .d-rel{font-size:12.5px; line-height:1.9;}
+  #detail .d-rel b{color:var(--dim); font-weight:600; margin-right:5px; display:inline-block; min-width:78px;}
+  #detail a.d-link{color:var(--acc); text-decoration:none; border-bottom:1px dotted var(--acc); cursor:pointer;}
+  #detail a.d-link:hover{color:#ffb066; border-bottom-color:#ffb066;}
+  #detail .d-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px 8px; margin-top:2px;}
+  #detail .d-grid div{display:flex; justify-content:space-between; gap:6px; font-family:Consolas,monospace; font-size:11.5px; background:var(--chipbg); border:1px solid var(--line); border-radius:5px; padding:5px 8px;}
+  #detail .d-grid .k{color:var(--dim);}
+  #detail .d-grid .v{color:var(--fg); font-weight:700;}
+  #detail .d-note{margin-top:15px; padding-top:13px; border-top:1px solid var(--line); font-size:11px; color:var(--dim); line-height:1.65;}
+  #detail .d-note b{color:var(--acc);}
+  #detail .btn{margin-top:4px;}
+  /* R52自己QA: 「詳細画面を開く」ボタン(CREED⑤の新規導線・原型にはなかった)を
+     追加した結果、内容が短い個体では#detailの最後の要素が右下固定の#mockbadge
+     (原型どおり・変更禁止)と重なって見えることがあった。原型CSSは一切変えず、
+     この新規セクションにだけ下マージンを足してバッジの下を避ける。 */
+  #detail .d-sec-cta{margin-bottom:34px;}
+
+  @media (max-width:400px){
+    #rightcol{ top:262px; bottom:225px; }
+  }
+
+  #controls{
+    position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:7;
+    display:flex; flex-direction:column; gap:9px; align-items:center; width:min(760px,94vw);
+  }
+  .bar{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 13px; backdrop-filter:blur(3px);
+  }
+  .chip,.btn{
+    font-family:inherit; font-size:13px; color:var(--fg); cursor:pointer;
+    background:var(--chipbg); border:1px solid var(--line); border-radius:20px;
+    padding:7px 14px; transition:border-color .18s ease, background .18s ease, color .18s ease;
+    white-space:nowrap;
+  }
+  .chip:hover,.btn:hover{border-color:var(--linehover);}
+  .chip.on{color:#0d0f13; font-weight:700;}
+  .chip.on.all{background:var(--fg); border-color:var(--fg);}
+  .btn.primary{background:var(--accbg); border-color:var(--acc); color:var(--acc); font-weight:700;}
+  .btn.primary:disabled{opacity:.4; cursor:default; border-color:var(--line); color:var(--dim); background:var(--chipbg);}
+  .btn.ghost{background:transparent;}
+  .sep{width:1px; height:22px; background:var(--line); margin:0 3px;}
+  #selinfo{
+    font-size:13px; color:var(--dim); text-align:center; line-height:1.6;
+    background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:8px 14px;
+    min-height:0; max-width:100%;
+  }
+  #selinfo b{color:var(--fg);}
+  #selinfo .accent{color:var(--acc);}
+
+  /* --- breathing glow that tracks the selected star (CSS ease, period 2.8s, no flicker) --- */
+  #starglow{
+    position:absolute; width:64px; height:64px; margin:-32px 0 0 -32px; left:-999px; top:-999px;
+    border-radius:50%; pointer-events:none; z-index:3; display:none;
+    background:radial-gradient(circle, rgba(255,122,26,.9) 0%, rgba(255,122,26,0) 68%);
+    animation:breathe 2.8s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{opacity:.45; transform:scale(.8);} 50%{opacity:.95; transform:scale(1.18);}}
+
+  #mockbadge{
+    position:absolute; bottom:14px; right:16px; z-index:8;
+    background:var(--card); color:var(--dim); border:1px solid var(--line);
+    border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700; letter-spacing:.3px;
+  }
+  #mockbadge .live{color:var(--sp-c);}
+  #focusbanner{
+    position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:9;
+    background:var(--accbg); border:1px solid var(--acc); color:var(--accstrong);
+    border-radius:8px; padding:8px 16px; font-size:13px; font-weight:700; display:none;
+  }
+  .civ-universe-fallback{
+    position:absolute; inset:0; z-index:10; display:none;
+    align-items:center; justify-content:center; text-align:center;
+    background:var(--bg); color:var(--dim); font-size:14px; padding:40px;
+  }
+</style>
+</head>
+<body>
+<div id="graph3d"></div>
+<div id="labels"></div>
+<div id="imagecards"></div>
+<div id="starglow"></div>
+<div id="focusbanner"></div>
+<p id="fallback" class="civ-universe-fallback">この端末では3D宇宙を表示できません。個体は<a class="d-link" href="finder.html" style="color:var(--acc)">ファインダーの一覧</a>から選べます。</p>
+
+<div id="topleft">
+  <div class="headbar"><div class="brand">IHL — HERAKLES 3D UNIVERSE <span style="color:var(--acc)">個体フォーカス</span></div></div>
+  <div class="sub">個体・血統・観測の宇宙 / 星をクリックして血統(親子)を確認する画面</div>
+  <div class="count" id="count"></div>
+  <div id="samplebadge">
+    <b>実データ</b>(あなたが記録した個体です)<br>
+    <span class="m">配置は体長・体重の順位(rank)と血統上の世代です。姿の類似(画像)は使っていません。</span>
+  </div>
+  <div id="canvashonest">発光表現のためキャンバスは暗色固定です</div>
+</div>
+
+<div id="rightcol">
+  <div id="legend">
+    <div class="lab">種族(SPECIES)</div>
+    <div id="speciesLegend"></div>
+    <div class="mode"><div class="k">MODE</div><div class="v" id="modelabel">全体表示(星空)</div></div>
+    <div class="mode" id="lineageLegend" style="display:none">
+      <div class="k">血統フロー(選択中のみ)</div>
+      <div class="row" style="margin-top:8px"><span class="dot" style="color:#4da3ff;background:#4da3ff"></span>先祖 側(親 → )</div>
+      <div class="row"><span class="dot" style="color:#ff7a1a;background:#ff7a1a"></span>選択中の個体</div>
+      <div class="row" style="margin-bottom:0"><span class="dot" style="color:#6ee7a8;background:#6ee7a8"></span>子孫 側( → 子)</div>
+    </div>
+    <div class="hint">ドラッグで回転 / スクロールでズーム<br>星をクリック → 血統発光 + 個体詳細<br>カーソルを乗せる → 個体情報カード<br>近づく → 個体名ラベル → さらに近づく → 写真カード(撮影済みの個体のみ)</div>
+  </div>
+
+  <div id="detail"></div>
+</div>
+
+<div id="controls">
+  <div id="selinfo">星(個体)をクリックすると血統ラインが発光し、右に個体詳細が開きます。</div>
+  <div class="bar">
+    <button class="chip all on" data-sp="">全種族</button>
+    <span id="speciesChips"></span>
+    <span class="sep"></span>
+    <button class="btn primary" id="btnSimilar" disabled>★ この個体に近い</button>
+    <button class="btn ghost" id="btnReset">全体表示(星空)</button>
+  </div>
+</div>
+
+<div id="mockbadge"><span class="live">実データ</span> · 3d-force-graph(MIT・ローカル同梱)</div>
+
+<script src="lib/3d-force-graph.min.js"></script>
+<script type="module" src="universe.js"></script>
+</body>
+</html>
