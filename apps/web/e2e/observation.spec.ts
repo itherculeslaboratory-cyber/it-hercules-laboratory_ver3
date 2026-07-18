@@ -119,23 +119,28 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await expect(page.getByText(`個体 ID: ${bareId}`)).toBeVisible();
   await shot(page, "08-qr-resume");
 
-  // 8. resume → create a 2nd observation in the same individual context.
+  // 8. resume → obs-register-entry ("追観測", V3-AIP-101). qr-resume's transition
+  //    target was corrected from obs-entry to obs-register-entry in d7e499c
+  //    ("id無しnavigate是正"): the old obs-entry target carried no individual id
+  //    and never fulfilled this screen's own lead text promise ("前回値を引き継いで
+  //    観測を続けます") — obs-entry has no per-individual prefill/compare at all,
+  //    only a generic species/life-stage localStorage carry. obs-register-entry
+  //    is the screen that actually shows the individual's card + previous-value
+  //    deltas, so it is the correct 2nd-capture target, not obs-entry.
   await page.getByRole("button", { name: "この個体で観測を続ける" }).click();
-  await expect(page.getByRole("heading", { name: "観測を記録する" })).toBeVisible();
-  await page.waitForLoadState("networkidle"); // hydration gate (see step 2)
-  await page.getByLabel("観測ドメイン").selectOption("biology");
-  await page.getByLabel("項目 1").selectOption("体重");
-  await page.getByLabel("数値 1").fill("32");
-  await page.getByLabel("対象個体 ID").fill(subjectRef);
-  await page.getByRole("button", { name: "確認へ進む" }).click();
-  await expect(page.getByRole("heading", { name: "観測を確認する" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "追観測" })).toBeVisible();
+  await page.waitForLoadState("networkidle"); // hydration + individual/pedigree fetch gate (see step 2)
+  await page.getByLabel("体重(g)").fill("32");
+  await page.getByLabel("体長(mm)").fill("40");
+  await page.getByRole("button", { name: "確認へ →" }).click();
+  await expect(page.getByRole("heading", { name: "確認" })).toBeVisible();
   await page.waitForLoadState("networkidle"); // hydration gate before commit (see step 4)
-  await page.getByRole("button", { name: "登録する" }).click();
-  await expect(page.getByRole("heading", { name: "観測の詳細" })).toBeVisible();
+  await expect(page.getByText("体重 32g")).toBeVisible();
+  await expect(page.getByText("体長 40mm")).toBeVisible();
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByRole("heading", { name: "保存しました" })).toBeVisible();
   const capture2Id = new URL(page.url()).searchParams.get("id")!;
-  const measureGroup2 = page.getByRole("group", { name: "計測" });
-  await expect(measureGroup2).toContainText("体重");
-  await expect(measureGroup2).toContainText("32");
+  expect(capture2Id).toBeTruthy();
   await shot(page, "09-obs-detail-2");
 
   // 9. the individual history now shows BOTH captures — persisted in real Truth.
@@ -143,7 +148,8 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await page.waitForLoadState("networkidle"); // profile fetch gate (see step 2)
   const timeline = page.locator(".civ-timeline");
   await expect(timeline.getByText("65")).toBeVisible();
-  await expect(timeline.getByText("32")).toBeVisible();
+  await expect(timeline.getByText(/32g/)).toBeVisible();
+  await expect(timeline.getByText(/40mm/)).toBeVisible();
 
   // Enumerate Truth keys via a same-origin authenticated read (proves the
   // browser cookie authenticates; yields photo_id for the key list).
