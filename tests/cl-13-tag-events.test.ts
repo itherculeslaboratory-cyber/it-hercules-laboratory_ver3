@@ -1,9 +1,8 @@
 // CL-13: タグ append-only イベント — schemas/frozen/tag-event.schema.json。
 // 集約(aggregate)ビューは投影層の派生物で Truth ではない (README 対応表)。
 import { describe, expect, it } from "vitest";
-import { validateFrozen } from "@ihl/truth";
-import app from "../apps/api/src/index";
-import { AUTH_HEADERS, loadFixture, makeEnv, makeEnvelope } from "./helpers";
+import { TruthStore, validateFrozen } from "@ihl/truth";
+import { FakeR2Bucket, loadFixture, makeEnvelope } from "./helpers";
 
 const sample = loadFixture("cl-shape-samples.json")["cl-13"] as Record<
   string,
@@ -41,32 +40,26 @@ describe("CL-13 tag event shape", () => {
   });
 });
 
-describe("CL-13 tag event append-only (HTTP level)", () => {
-  it("duplicate tag event id → 409; invalid shape → 400", async () => {
-    const env = makeEnv();
+// T-71: ihl.obs.tag_event.v1 は typed route(POST /api/v1/tags, tag-routes.ts)を持つ
+// ため、汎用 POST /events は allowlist 対象外(events-allowlist-exploit.test.ts で
+// 403 を確認)。append-only/frozen 形状の検算そのものは Truth 層(TruthStore.putEvent)
+// が担う場所なので、ここは store level で直接検算する(HTTP 層のルーティング可否は別テスト)。
+describe("CL-13 tag event append-only (Truth store level)", () => {
+  it("duplicate tag event id → conflict; invalid shape → invalid", async () => {
+    const store = new TruthStore(new FakeR2Bucket());
     const good = makeEnvelope({
       type: "ihl.obs.tag_event.v1",
       dataschema: DATASCHEMA,
       data: sample,
     });
-    const init = {
-      method: "POST",
-      headers: AUTH_HEADERS,
-      body: JSON.stringify(good),
-    };
-    expect((await app.request("/events", init, env)).status).toBe(201);
-    expect((await app.request("/events", init, env)).status).toBe(409);
+    expect((await store.putEvent(good)).status).toBe("inserted");
+    expect((await store.putEvent(good)).status).toBe("conflict");
 
     const bad = makeEnvelope({
       type: "ihl.obs.tag_event.v1",
       dataschema: DATASCHEMA,
       data: { ...sample, target_type: "planet" },
     });
-    const res = await app.request(
-      "/events",
-      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify(bad) },
-      env,
-    );
-    expect(res.status).toBe(400);
+    expect((await store.putEvent(bad)).status).toBe("invalid");
   });
 });
