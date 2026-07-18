@@ -1491,11 +1491,16 @@ individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
   }
   const s = store(c);
   if (action === "withdrawn") {
+    // Oldest raised row = the original raiser (doubt_id is client-chosen on
+    // raise, so an attacker can re-raise the SAME doubt_id after the victim —
+    // taking "latest raised" as raiser lets the attacker's own withdrawn pass.
+    // created_at is server-stamped monotonic nowIso(), so raisedRows[0] after
+    // this explicit ascending sort is always the true first raiser).
     const raisedRows = (await s.listEvents(`truth/${LINEAGE_DOUBT_TYPE}/${id}-`))
       .map(dataOf)
       .filter((d) => d.individual_id === id && d.doubt_id === body.doubt_id && d.action === "raised")
       .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
-    const raiser = raisedRows[raisedRows.length - 1]?.actor_id;
+    const raiser = raisedRows[0]?.actor_id;
     if (raiser !== actorId) return c.json({ error: "FORBIDDEN", details: ["raiser only"] }, 403);
   }
   const doubtId = typeof body.doubt_id === "string" && body.doubt_id ? body.doubt_id : ulid();
