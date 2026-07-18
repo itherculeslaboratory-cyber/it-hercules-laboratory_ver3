@@ -1522,6 +1522,26 @@ a.civ-thumb-card:focus-visible {
 }
 
 /* =============================================================================
+ * T-69 KNW wave1 Stage1(知の広場「これ?」重複防止検索) — ThreadSearchNode。
+ * 行スタイルは .civ-board-thread-row を再利用(ここでは検索欄+「新しく相談する」
+ * 導線のみ追加・既存トークンのみ)。
+ * ========================================================================== */
+.civ-thread-search {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.civ-thread-search > .civ-input {
+  width: 100%;
+}
+.civ-thread-search-new {
+  align-self: flex-start;
+  color: var(--civ-primary);
+  font-size: var(--civ-fs-2);
+  text-decoration: none;
+}
+
+/* =============================================================================
  * c8 UI磨き第2弾#3(受領10「『…』のなかに畳んで」) — kebab メニュー(renderer
  * プリミティブ KebabMenu)。shadow forbidden(design-c2 §4.3) — 境界は border
  * のみで表現する。

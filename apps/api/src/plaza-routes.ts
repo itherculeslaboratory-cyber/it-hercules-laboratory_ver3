@@ -265,6 +265,82 @@ plazaRoutes.get("/plaza/channels/:channel/threads", async (c) => {
   return c.json(await projectChannelThreads(store(c), c.req.param("channel")));
 });
 
+// ── 検索(T-69 KNW wave1 Stage1「これ?」重複防止検索)────────────────────────
+// projectChannelThreads と同じ post 全走査(常駐 index 無し・都度再計算=不変
+// 条項①)を channel 未指定でも使えるよう素通しした薄いスレ集約(board_kind は
+// 検索に不要なので持たない)。
+export interface PlazaSearchThread {
+  thread_id: string;
+  topic: string;
+  post_count: number;
+  latest_at: string;
+}
+
+async function collectSearchThreads(s: TruthStore, channel?: string): Promise<PlazaSearchThread[]> {
+  const prefix = channel ? `truth/${POST_TYPE}/${channel}/` : `truth/${POST_TYPE}/`;
+  const posts = (await s.listEvents(prefix)).map(dataOf);
+  const threads = new Map<string, PlazaSearchThread>();
+  for (const p of posts) {
+    const tid = str(p.thread_id);
+    const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), post_count: 0, latest_at: "" };
+    t.post_count += 1;
+    if (str(p.created_at) > t.latest_at) t.latest_at = str(p.created_at);
+    if (str(p.post_id) === tid) t.topic = str(p.topic); // root post の topic を代表値に採る。
+    threads.set(tid, t);
+  }
+  return [...threads.values()];
+}
+
+// normalizeSearchText — 小文字化+空白除去のみ(不変条項①: embedding/FAISS/LLM 不使用の
+// 決定論正規化)。
+function normalizeSearchText(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+// rankThreadSearch — 「これ?」候補ランキング(純関数・TruthStore 非依存でテスト可能)。
+// (1) 正規化後の完全部分文字列一致(最優先=1000点)、(2) 先頭一致(prefix・直接マッチを
+// 中間一致より上に出す=+100点)、(3) クエリを空白区切りトークンへ分割した各トークンの
+// 部分一致(10点/トークン)を加点。同点は latest_at 降順→thread_id 昇順で安定ソート
+// (同一入力→同一出力・決定論)。上位5件のみ返す。
+export function rankThreadSearch(
+  threads: PlazaSearchThread[],
+  query: string,
+): (PlazaSearchThread & { score: number })[] {
+  const q = query.trim();
+  if (!q) return [];
+  const normQ = normalizeSearchText(q);
+  const tokens = q.split(/\s+/).filter(Boolean).map(normalizeSearchText);
+  const scored = threads
+    .map((t) => {
+      const normTopic = normalizeSearchText(t.topic);
+      let score = 0;
+      if (normQ && normTopic.includes(normQ)) score += 1000;
+      if (normQ && normTopic.startsWith(normQ)) score += 100;
+      for (const tok of tokens) {
+        if (tok && normTopic.includes(tok)) score += 10;
+      }
+      return { ...t, score };
+    })
+    .filter((t) => t.score > 0);
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.latest_at !== b.latest_at) return a.latest_at < b.latest_at ? 1 : -1;
+    return a.thread_id < b.thread_id ? -1 : 1;
+  });
+  return scored.slice(0, 5);
+}
+
+// GET /plaza/search?q=<text>&channel=<optional> — 決定論スレ検索投影。空 q は空配列
+// (エラーにしない)。読み取り専用・Truth 追記なし。
+plazaRoutes.get("/plaza/search", async (c) => {
+  const q = c.req.query("q") ?? "";
+  const channel = c.req.query("channel") || undefined;
+  if (!q.trim()) return c.json({ query: q, matches: [] });
+  const threads = await collectSearchThreads(store(c), channel);
+  const matches = rankThreadSearch(threads, q);
+  return c.json({ query: q, matches });
+});
+
 // ── 改善要求 優先度キュー(BBS-14)────────────────────────────────────────
 // projectImprovementQueue — board_kind=improvement のスレ(root post=thread_id)を
 // プラチナ投票合計(target_id=thread_id・既存 KRM-25 基盤を再利用・GOV-07/MKT-35 と同一方式)

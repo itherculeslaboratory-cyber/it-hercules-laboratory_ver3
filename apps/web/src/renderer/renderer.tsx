@@ -957,6 +957,11 @@ function ListNode({ node }: { node: ScreenNode }) {
   if (p.variant === "threads") {
     return <BoardThreadsNode node={node} />;
   }
+  // c9 wave1 KNW Stage1(「これ?」重複防止検索): same in-scope trick — a `list`
+  // variant instead of a new node type (schema enum is C9-owned/out of scope).
+  if (p.variant === "thread-search") {
+    return <ThreadSearchNode node={node} />;
+  }
   useSource(node);
   const scope = useContext(ScopeCtx);
 
@@ -7525,6 +7530,95 @@ function BoardThreadsNode({ node }: { node: ScreenNode }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// T-69 KNW wave1 Stage1(知の広場「これ?」重複防止検索): list variant="thread-search"
+// 専用ノード(BoardThreadsNode と同じ自前 fetch パターン)。入力から 200ms デバウンスで
+// GET /plaza/search を叩き、上位3件を .civ-board-thread-row と同じ行スタイルで出す。
+// 決定論マッチング(apps/api/src/plaza-routes.ts の rankThreadSearch・embedding/LLM 不使用)
+// のため待ち時間中の中間表示は「読み込み中」ではなく単に前回結果の据え置き(チラつき防止)。
+interface ThreadSearchMatch {
+  thread_id: string;
+  topic: string;
+  post_count: number;
+  latest_at: string;
+  score: number;
+}
+interface ThreadSearchView {
+  query: string;
+  matches: ThreadSearchMatch[];
+}
+
+function ThreadSearchNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const execute = useContext(ExecuteCtx);
+  const path = String(p.source_path ?? "/api/v1/plaza/search");
+  const [q, setQ] = useState("");
+  const [matches, setMatches] = useState<ThreadSearchMatch[]>([]);
+  const [searched, setSearched] = useState(false);
+
+  useEffect(() => {
+    const query = q.trim();
+    if (!query) {
+      setMatches([]);
+      setSearched(false);
+      return;
+    }
+    let alive = true;
+    const timer = setTimeout(() => {
+      Promise.resolve(execute({ kind: "api", method: "GET", path: `${path}?q=${encodeURIComponent(query)}` }))
+        .then((v) => {
+          if (alive) setMatches(((v as ThreadSearchView | undefined)?.matches ?? []).slice(0, 3));
+        })
+        .catch(() => {
+          if (alive) setMatches([]);
+        })
+        .finally(() => {
+          if (alive) setSearched(true);
+        });
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [q, path, execute]);
+
+  return (
+    <div className="civ-thread-search">
+      <input
+        className="civ-input"
+        type="search"
+        placeholder="何に困ってる?"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        aria-label="困りごとを検索"
+      />
+      {searched &&
+        (matches.length === 0 ? (
+          <p className="civ-empty">まだ近いスレはありません。新しく相談できます。</p>
+        ) : (
+          <ul className="civ-list">
+            {matches.map((m) => (
+              <li key={m.thread_id}>
+                <a
+                  className={cn("civ-card", "civ-interactive", "civ-board-thread-row")}
+                  href={`/s/knowledge-thread?thread_id=${m.thread_id}`}
+                >
+                  <span className="civ-board-thread-topic">{m.topic}</span>
+                  <span className="civ-board-thread-meta">
+                    <span>{m.post_count}件のやりとり</span>
+                    <span>最終更新 {formatDateJa(m.latest_at)}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        ))}
+      <a className={cn("civ-interactive", "civ-thread-search-new")} href="/s/knowledge-board">
+        見つからない? → 新しく相談する
+      </a>
     </div>
   );
 }

@@ -3,7 +3,7 @@
   "route": "/knowledge",
   "title": "知の広場",
   "layout": "standard",
-  "notes": "BBS-01/36 知の広場ハブ（design-c5.md §K6 §2.4・HG-KN-08=B 仮置き）。3柱カードのみ・ナビ1層・タブノード不在（タブとカードの重複禁止=BBS-01）。各カード action=navigate。裁定確定後は JSON 差替でコード不変。",
+  "notes": "BBS-01/36 知の広場ハブ Stage1(T-69 KNW wave1・裁定100点採用の再設計・参照 D:\\claude\\00-hq\\review-queue\\evidence\\knw-redesign-forecast\\mockup.html『ヘッダー(3モードタブ)』『まず探す』)。旧3カード構成(タブとカードの重複禁止=旧BBS-01注記)を本改訂で解消し、既存 tabs ノード(schema enum 既存)で3モード入口(困った/話したい/論文)を表現する。「困った」タブは list variant=thread-search(ThreadSearchNode・c9 board-threads の list variant 拡張と同じ in-scope トリック・新ノード型なし)で決定論スレ検索(GET /plaza/search・embedding/LLM不使用)を先出しし、同じ悩みのスレが乱立しないよう「これ?」候補を出す。「話したい」「論文」タブは既存の実遷移先(公式掲示板/論文)へのカード導線を踏襲。新規投稿時の90%一致確認バナー・GitHub掲示板の3本目の柱はこのStage1では対象外(次波)。",
   "nodes": [
     {
       "id": "shell",
@@ -14,32 +14,78 @@
           "type": "page",
           "children": [
             { "id": "title", "type": "heading", "props": { "text_key": "knowledge-hub.title.text", "text": "知の広場", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text_key": "knowledge-hub.lead.text", "text": "3つの柱から選びます。", "muted": true } },
+            { "id": "lead", "type": "text", "props": { "text_key": "knowledge-hub.lead.text", "text": "みんなの記録から答えを探して、いっしょに解決する場所。", "muted": true } },
             {
-              "id": "pillar-board",
-              "type": "card",
-              "action": { "kind": "navigate", "to": "knowledge-board" },
+              "id": "mode-tabs",
+              "type": "tabs",
+              "props": {
+                "tabs": [
+                  { "id": "komatta", "label": "困った" },
+                  { "id": "hanashitai", "label": "話したい" },
+                  { "id": "ronbun", "label": "論文" }
+                ],
+                "default_tab": "komatta"
+              },
               "children": [
-                { "id": "pillar-board-title", "type": "heading", "props": { "text_key": "knowledge-hub.board.text", "text": "公式掲示板", "level": 2 } },
-                { "id": "pillar-board-desc", "type": "text", "props": { "text_key": "knowledge-hub.board-desc.text", "text": "説明・愚痴・改善の3板でチャネルごとに集約します。", "muted": true } }
-              ]
-            },
-            {
-              "id": "pillar-paper",
-              "type": "card",
-              "action": { "kind": "navigate", "to": "knowledge-paper" },
-              "children": [
-                { "id": "pillar-paper-title", "type": "heading", "props": { "text_key": "knowledge-hub.paper.text", "text": "論文", "level": 2 } },
-                { "id": "pillar-paper-desc", "type": "text", "props": { "text_key": "knowledge-hub.paper-desc.text", "text": "論文の照合と引用の正本です。", "muted": true } }
-              ]
-            },
-            {
-              "id": "pillar-github",
-              "type": "card",
-              "action": { "kind": "navigate", "to": "knowledge-github" },
-              "children": [
-                { "id": "pillar-github-title", "type": "heading", "props": { "text_key": "knowledge-hub.github.text", "text": "GitHub 掲示板", "level": 2 } },
-                { "id": "pillar-github-desc", "type": "text", "props": { "text_key": "knowledge-hub.github-desc.text", "text": "改善履歴とフォークを追います。", "muted": true } }
+                {
+                  "id": "komatta-lead",
+                  "type": "text",
+                  "props": {
+                    "tab_id": "komatta",
+                    "text_key": "knowledge-hub.komatta-lead.text",
+                    "text": "何に困っているか打ってみてください。近いスレがあればそこへ合流できます。",
+                    "muted": true
+                  }
+                },
+                {
+                  "id": "komatta-search",
+                  "type": "list",
+                  "props": {
+                    "tab_id": "komatta",
+                    "variant": "thread-search",
+                    "source_path": "/api/v1/plaza/search"
+                  }
+                },
+                {
+                  "id": "hanashitai-lead",
+                  "type": "text",
+                  "props": {
+                    "tab_id": "hanashitai",
+                    "text_key": "knowledge-hub.hanashitai-lead.text",
+                    "text": "同じ趣味の人と交流する。",
+                    "muted": true
+                  }
+                },
+                {
+                  "id": "hanashitai-board",
+                  "type": "card",
+                  "props": { "tab_id": "hanashitai" },
+                  "action": { "kind": "navigate", "to": "knowledge-board" },
+                  "children": [
+                    { "id": "hanashitai-board-title", "type": "heading", "props": { "text_key": "knowledge-hub.board.text", "text": "公式掲示板", "level": 2 } },
+                    { "id": "hanashitai-board-desc", "type": "text", "props": { "text_key": "knowledge-hub.board-desc.text", "text": "説明・愚痴・改善の3板でチャネルごとに集約します。", "muted": true } }
+                  ]
+                },
+                {
+                  "id": "ronbun-lead",
+                  "type": "text",
+                  "props": {
+                    "tab_id": "ronbun",
+                    "text_key": "knowledge-hub.ronbun-lead.text",
+                    "text": "論文を読む・書く・議論する。",
+                    "muted": true
+                  }
+                },
+                {
+                  "id": "ronbun-paper",
+                  "type": "card",
+                  "props": { "tab_id": "ronbun" },
+                  "action": { "kind": "navigate", "to": "knowledge-paper" },
+                  "children": [
+                    { "id": "ronbun-paper-title", "type": "heading", "props": { "text_key": "knowledge-hub.paper.text", "text": "論文", "level": 2 } },
+                    { "id": "ronbun-paper-desc", "type": "text", "props": { "text_key": "knowledge-hub.paper-desc.text", "text": "論文の照合と引用の正本です。", "muted": true } }
+                  ]
+                }
               ]
             }
           ]
@@ -48,8 +94,7 @@
     }
   ],
   "transitions": [
-    { "from": "pillar-board", "to_screen_id": "knowledge-board", "label": "公式掲示板へ" },
-    { "from": "pillar-paper", "to_screen_id": "knowledge-paper", "label": "論文へ" },
-    { "from": "pillar-github", "to_screen_id": "knowledge-github", "label": "GitHub 掲示板へ" }
+    { "from": "hanashitai-board", "to_screen_id": "knowledge-board", "label": "公式掲示板へ" },
+    { "from": "ronbun-paper", "to_screen_id": "knowledge-paper", "label": "論文へ" }
   ]
 }
