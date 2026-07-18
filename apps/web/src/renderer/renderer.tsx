@@ -5849,6 +5849,63 @@ function ChromeAuthLinks({
   );
 }
 
+// design-home-round.md §③: theme.js (public/assets/theme.js) auto-injects a
+// #hqThemeToggle.hdtoggle button as the last child of the first ".headbar" it
+// finds — that pattern works on the static caseB7 HTML pages, but on this
+// React app it races the framework's hydration: theme.js's DOMContentLoaded
+// listener frequently fires before/while React hydrates the header, and a
+// DOM node appearing inside a React-managed subtree that React didn't render
+// itself trips a hard "Hydration failed" error in `next dev` (verified via
+// e2e — 55/175 screen-sweep failures). theme.js's own contract already
+// documents the escape hatch: `injectToggleButton()` no-ops immediately if an
+// element with id="hqThemeToggle" already exists. So this renders that same
+// button as ordinary React output (present identically in the SSR HTML and
+// the client's first render — no diff, no race) and replicates the ~10 lines
+// of toggle behaviour theme.js itself uses. theme.js is unmodified; its
+// auto-injection simply never fires on this app because the id is already
+// taken care of.
+//
+// suppressHydrationWarning on the button: theme.js's own top-level
+// `applyTheme(currentTheme())` call (the same synchronous, pre-hydration call
+// that sets <html data-theme>) ALSO does `document.getElementById(
+// 'hqThemeToggle').setAttribute('aria-pressed', ...)` if the button already
+// exists — which, once this button is SSR-rendered, it does. So aria-pressed
+// gets the same "real value written before React hydrates" treatment as
+// data-theme (verified via e2e: SSR always renders aria-pressed=false since
+// useState starts null, but theme.js overwrites it to the real value
+// pre-hydration — an intentional attribute mismatch, not a bug, same pattern
+// the <html> tag already carries).
+function ThemeToggleButton() {
+  const [theme, setTheme] = useState<string | null>(null);
+  useEffect(() => {
+    setTheme(document.documentElement.getAttribute("data-theme"));
+  }, []);
+  const onClick = useCallback(() => {
+    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    try {
+      localStorage.setItem("hqTheme", next);
+    } catch {
+      // file:// or blocked storage — same tolerance as theme.js.
+    }
+    document.documentElement.setAttribute("data-theme", next);
+    setTheme(next);
+  }, []);
+  return (
+    <button
+      type="button"
+      id="hqThemeToggle"
+      className="hdtoggle"
+      title="ライト/ダーク切替"
+      aria-label="ライト/ダーク切替"
+      aria-pressed={theme === "light"}
+      suppressHydrationWarning
+      onClick={onClick}
+    >
+      🌓
+    </button>
+  );
+}
+
 function AppShellNode({ node }: { node: ScreenNode }) {
   const execute = useContext(ExecuteCtx);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -5890,7 +5947,12 @@ function AppShellNode({ node }: { node: ScreenNode }) {
 
   return (
     <div className="civ-app-shell">
-      <header className="civ-chrome-header">
+      {/* design-home-round.md §③: "headbar" is the class theme.js's own contract
+          names for its slim header bar (theme.js:9) — kept as the documented
+          marker even though ThemeToggleButton below (not theme.js's injector)
+          is what actually renders the button here, see that component's
+          comment for why. */}
+      <header className="civ-chrome-header headbar">
         <a className="civ-brand" href="/">
           IHL
         </a>
@@ -5913,6 +5975,7 @@ function AppShellNode({ node }: { node: ScreenNode }) {
         <div className="civ-chrome-auth">
           <ChromeAuthLinks authenticated={authLoaded && authenticated} loggingOut={loggingOut} onLogout={onLogout} />
         </div>
+        <ThemeToggleButton />
       </header>
       <Children nodes={node.children} />
       {authLoaded && authenticated && (

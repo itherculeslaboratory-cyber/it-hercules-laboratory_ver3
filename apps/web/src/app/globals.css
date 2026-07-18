@@ -158,6 +158,29 @@ body {
   font-size: var(--civ-fs-1);
 }
 
+/* design-home-round.md §③: a #hqThemeToggle.hdtoggle button lives at the end
+ * of the app-shell header (renderer.tsx ThemeToggleButton). theme.js ships no
+ * CSS for ".hdtoggle" of its own — its documented contract is that each host
+ * page styles it. --civ-* tokens only, so it inherits both theme packs and
+ * both light/dark overrides automatically (no hand-picked colour — the R70
+ * light-mode black-on-black bug came from exactly that shortcut on the
+ * caseB7 pages). */
+.hdtoggle {
+  background: transparent;
+  border: 1px solid var(--civ-border);
+  color: var(--civ-text);
+  border-radius: var(--civ-radius);
+  min-height: var(--civ-tap);
+  min-width: var(--civ-tap);
+  cursor: pointer;
+  font-size: var(--civ-fs-3);
+  line-height: 1;
+}
+.hdtoggle:hover {
+  border-color: var(--civ-text-muted);
+  background: var(--civ-surface-2);
+}
+
 .civ-heading {
   font-weight: 300;
   font-size: var(--civ-fs-4);

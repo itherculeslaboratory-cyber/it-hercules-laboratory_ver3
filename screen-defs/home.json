@@ -15,16 +15,7 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text_key": "home.title.text", "text": "観測ホーム", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text_key": "home.lead.text", "text": "今日の状態と次の一手だけをここに置いています。", "muted": true } },
-            {
-              "id": "ledger",
-              "type": "card",
-              "props": { "source_path": "/api/v1/me/ledger" },
-              "children": [
-                { "id": "here-title", "type": "heading", "props": { "text_key": "home.here-title.text", "text": "今日の状態", "level": 2 } },
-                { "id": "kpi-karma", "type": "kpi-tile", "props": { "label_key": "home.kpi-karma.label", "label": "カルマ", "value": "{{data.ledger.karma_value}}", "fallback": "0" } },
-                { "id": "platinum", "type": "text", "props": { "text_key": "home.platinum.text", "text": "プラチナコイン: {{data.ledger.platinum_coins}}", "muted": true } }
-              ]
-            },
+            { "id": "here-title", "type": "heading", "props": { "text_key": "home.here-title.text", "text": "今日の状態", "level": 2 } },
             {
               "id": "todaystats",
               "type": "kpi-tile",
@@ -35,6 +26,17 @@
               "type": "kpi-tile",
               "props": { "label_key": "home.kpi-near.label", "label": "近接", "value": "{{data.todaystats.near.length}}", "fallback": "0" }
             },
+            {
+              "id": "kpi-inbox",
+              "type": "kpi-tile",
+              "props": { "label_key": "home.kpi-inbox.label", "label": "届いた出来事", "value": "{{data.todaystats.judicial_inbox.length}}", "fallback": "0" }
+            },
+            {
+              "id": "kpi-karma",
+              "type": "kpi-tile",
+              "props": { "source_path": "/api/v1/me/ledger", "label_key": "home.kpi-karma.label", "label": "貢献度", "value": "{{data.kpi-karma.karma_value}}", "fallback": "0" }
+            },
+            { "id": "platinum", "type": "text", "props": { "text_key": "home.platinum.text", "text": "プラチナコイン: {{data.kpi-karma.platinum_coins}}", "muted": true } },
             { "id": "today-title", "type": "heading", "props": { "text_key": "home.today-title.text", "text": "次の一手", "level": 2 } },
             {
               "id": "today",
@@ -46,6 +48,19 @@
                   { "key": "individual_id", "label_key": "home.today.col-individual.label", "label": "個体" },
                   { "key": "days", "label_key": "home.today.col-days.label", "label": "日数" },
                   { "key": "deep_link", "cell": "link", "href_tpl": "{{deep_link}}", "link_label": "記録する" }
+                ]
+              }
+            },
+            { "id": "inbox-title", "type": "heading", "props": { "text_key": "home.inbox-title.text", "text": "届いた出来事", "level": 2 } },
+            {
+              "id": "inbox-table",
+              "type": "table",
+              "props": {
+                "bind_items": "data.todaystats.judicial_inbox",
+                "empty_text": "新しく届いた話し合いはありません",
+                "columns": [
+                  { "key": "vote_deadline", "cell": "date", "label_key": "home.inbox-table.col-deadline.label", "label": "締切" },
+                  { "key": "dispute_id", "cell": "link", "label": "", "href_tpl": "/s/dispute?dispute_id={{dispute_id}}", "link_label": "話し合いを見る" }
                 ]
               }
             },
