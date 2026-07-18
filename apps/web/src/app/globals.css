@@ -1782,6 +1782,92 @@ a.civ-thumb-card:focus-visible {
 }
 
 /* =============================================================================
+ * T-72 KNW wave1(新規スレ重複確認 — 承認モックアップの verbatim 採用・caseB7/
+ * knw-hub と同じパターン)。以下は mockup.html の <style> ブロックのうち
+ * section2(✏️ 新しく書く時も、もう一度だけ確認)が依存する規則を「値を一切
+ * 変えず」".knw-hub " を祖先に付けて再配置したもの(選択子以外は一字一句その
+ * まま・:root カスタムプロパティは上の .knw-hub 定義を再利用)。
+ * ========================================================================== */
+/* 2. dup confirm */
+.knw-hub .compose-title-field {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--bg);
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.knw-hub .dup-banner {
+  background: var(--secondary-bg);
+  border: 1px solid var(--secondary);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.knw-hub .dup-banner .dt {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--secondary);
+  margin-bottom: 4px;
+}
+.knw-hub .dup-banner .dm {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.knw-hub .dup-banner .dm b {
+  background: var(--card);
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.knw-hub .btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.knw-hub .btn {
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: default;
+}
+.knw-hub .btn.primary {
+  background: var(--secondary);
+  color: #fff;
+}
+.knw-hub .btn.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* --- functional-only additions: mockup's .compose-title-field/.btn were
+ * static demo markup (a plain div, cursor:default buttons). KnowledgeHubNode
+ * wires them to a real <input>/<button> — these rules only reset browser
+ * default input/button chrome (width/box-sizing/font-family/outline) so the
+ * adopted look is unchanged; no spacing/color/radius/cursor value above was
+ * touched (cursor stays "default" per verbatim adoption). */
+.knw-hub .compose-title-field {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--text);
+  outline: none;
+}
+.knw-hub .compose-title-field::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+.knw-hub .btn {
+  font-family: inherit;
+}
+.knw-hub .btn:disabled {
+  opacity: 0.6;
+}
+
+/* =============================================================================
  * T-71 KNW wave1(スレッド=みんなのグループチャット — 承認モックアップの
  * verbatim 採用・caseB7/knw-hub と同じパターン)。以下は
  * D:\claude\00-hq\review-queue\evidence\knw-redesign-forecast\mockup.html の

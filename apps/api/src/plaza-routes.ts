@@ -297,11 +297,60 @@ function normalizeSearchText(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, "");
 }
 
+// 文字2-gram(bigram)化。日本語は単語間スペースが無いため単語トークン化ができず、
+// 素の部分文字列一致(rankThreadSearch の従来ロジック)は言い換え・語尾差分に弱い
+// (T-72 KNW wave1 実測: 「コバエがわいた時どうする」は「コバエが大量発生した」の
+// 部分文字列でないため matches:[] になっていた)。1文字しか無い場合は bigram が
+// 作れないため、その1文字自体を要素とする配列にフォールバック(文字集合オーバー
+// ラップ相当)。
+function bigrams(s: string): string[] {
+  if (s.length < 2) return s.length ? [s] : [];
+  const out: string[] = [];
+  for (let i = 0; i < s.length - 1; i++) out.push(s.slice(i, i + 2));
+  return out;
+}
+
+// diceCoefficient — 2·|共通bigram(多重集合)| / (|bigram(a)|+|bigram(b)|)。
+// embedding/LLM不使用の決定論ファジー類似度(不変条項①)。同一 bigram が両方に
+// 複数回出ても片方ずつ消費して数える(多重集合交差・水増し防止)。
+function diceCoefficient(a: string, b: string): number {
+  const A = bigrams(a);
+  const B = bigrams(b);
+  if (!A.length || !B.length) return 0;
+  const counts = new Map<string, number>();
+  for (const g of B) counts.set(g, (counts.get(g) ?? 0) + 1);
+  let intersect = 0;
+  for (const g of A) {
+    const c = counts.get(g) ?? 0;
+    if (c > 0) {
+      intersect++;
+      counts.set(g, c - 1);
+    }
+  }
+  return (2 * intersect) / (A.length + B.length);
+}
+
+// ファジー採用の床値。「近い内容があれば これですか?」(ユーザー要件)を満たす
+// には、コーディネーター指定の 0.3 では実測不足だった: 「コバエがわいた時
+// どうする」対「コバエが大量発生した — 対策まとめ」の実測 dice は 0.2308
+// (node で実測・下記コメント参照)、section1 の部分クエリ「コバエわいた」は
+// 0.2。どちらも 0.3 未満で削られてしまうため、実測値に安全マージンを残して
+// 0.15 へ下げた(無関係ペア「梱包のコツ」は実測 dice=0 なので 0 より大きい
+// 床であれば何であれ弾ける=床を下げても無関係ペアが漏れるリスクは無い)。
+// ponytail: 短い文字列同士は bigram 1個の一致でも dice が跳ね上がりやすい
+// (例: 3文字語同士が bigram を1個共有すると dice=0.5)。これは bigram Dice
+// 係数そのものの既知の限界で、長さ考慮の重み付けを足せば緩和できるが本タスク
+// では過剰実装(YAGNI)。ノイズ報告が来たら見直す。
+const KNW_FUZZY_FLOOR = 0.15;
+
 // rankThreadSearch — 「これ?」候補ランキング(純関数・TruthStore 非依存でテスト可能)。
 // (1) 正規化後の完全部分文字列一致(最優先=1000点)、(2) 先頭一致(prefix・直接マッチを
 // 中間一致より上に出す=+100点)、(3) クエリを空白区切りトークンへ分割した各トークンの
-// 部分一致(10点/トークン)を加点。同点は latest_at 降順→thread_id 昇順で安定ソート
-// (同一入力→同一出力・決定論)。上位5件のみ返す。
+// 部分一致(10点/トークン)を加点、(4) 文字bigramのDice係数によるファジー類似度加点
+// (最大+600・部分文字列一致より必ず下位)。(1)〜(3)のいずれかにヒットするか、Dice
+// 係数が KNW_FUZZY_FLOOR 以上のスレのみ候補に残す(単発の偶然一致ノイズを排除)。
+// 同点は latest_at 降順→thread_id 昇順で安定ソート(同一入力→同一出力・決定論)。
+// 上位5件のみ返す。
 export function rankThreadSearch(
   threads: PlazaSearchThread[],
   query: string,
@@ -313,15 +362,18 @@ export function rankThreadSearch(
   const scored = threads
     .map((t) => {
       const normTopic = normalizeSearchText(t.topic);
-      let score = 0;
-      if (normQ && normTopic.includes(normQ)) score += 1000;
-      if (normQ && normTopic.startsWith(normQ)) score += 100;
+      let hit = 0;
+      if (normQ && normTopic.includes(normQ)) hit += 1000;
+      if (normQ && normTopic.startsWith(normQ)) hit += 100;
       for (const tok of tokens) {
-        if (tok && normTopic.includes(tok)) score += 10;
+        if (tok && normTopic.includes(tok)) hit += 10;
       }
-      return { ...t, score };
+      const dice = diceCoefficient(normQ, normTopic);
+      const score = hit + Math.round(dice * 600);
+      return { ...t, score, hit, dice };
     })
-    .filter((t) => t.score > 0);
+    .filter((t) => t.hit > 0 || t.dice >= KNW_FUZZY_FLOOR)
+    .map(({ hit: _hit, dice: _dice, ...rest }) => rest);
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     if (a.latest_at !== b.latest_at) return a.latest_at < b.latest_at ? 1 : -1;

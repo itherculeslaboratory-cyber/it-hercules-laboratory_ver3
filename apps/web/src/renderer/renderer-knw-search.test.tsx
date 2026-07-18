@@ -97,10 +97,11 @@ describe("KnowledgeHubNode — T-70 KNW wave1 (mockup verbatim adoption)", () =>
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("always offers a new-post link to /s/knowledge-board", () => {
+  it("新しく相談する reveals the compose title field instead of navigating away", () => {
     render(<Renderer onAction={mockSearch([])} def={screenDef(hubNode())} />);
-    const link = screen.getByText("新しく相談する").closest("a");
-    expect(link).toHaveAttribute("href", "/s/knowledge-board");
+    expect(screen.queryByPlaceholderText("相談したいことを入力")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("新しく相談する"));
+    expect(screen.getByPlaceholderText("相談したいことを入力")).toBeInTheDocument();
   });
 
   it("話したい tab shows a lead line + a card linking to 公式掲示板", () => {

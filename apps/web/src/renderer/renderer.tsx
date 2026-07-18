@@ -7563,14 +7563,68 @@ interface KnwHubSearchView {
 }
 type KnwHubTab = "komatta" | "hanashitai" | "ronbun";
 
+// T-72 KNW wave1(新規スレ重複確認 — 承認モックアップ section2 の verbatim 採用)。
+// 一致度%は決定論の文字bigram Dice係数(= 2・|共通bigram(多重集合)| /
+// (|bigram(a)|+|bigram(b)|))。plaza-routes.ts の rankThreadSearch に追加した
+// ファジー加点と「同じ定義」を使う(元は文字集合オーバーラップ係数だったが、
+// バックエンドを bigram Dice に統一した後に両者の数値が食い違い-- 例:
+// 「コバエがわいた時どうする」対「コバエが大量発生した — 対策まとめ」で
+// バックエンドは一致扱い(dice=0.2308)なのにフロント側の別指標が70%未満で
+// バナー不発、という実バグを本番相当のE2Eで検出したため、単一の定義に統一した
+// (コメント参照: plaza-routes.ts の diceCoefficient と同一アルゴリズム)。
+// normalizeSearchText(plaza-routes.ts)と同じ空白除去のみの正規化を踏襲
+// (embedding/LLM不使用・不変条項①)。
+function knwBigrams(s: string): string[] {
+  if (s.length < 2) return s.length ? [s] : [];
+  const out: string[] = [];
+  for (let i = 0; i < s.length - 1; i++) out.push(s.slice(i, i + 2));
+  return out;
+}
+export function titleSimilarity(a: string, b: string): number {
+  const norm = (s: string) => s.trim().replace(/\s+/g, "");
+  const A = knwBigrams(norm(a));
+  const B = knwBigrams(norm(b));
+  if (!A.length || !B.length) return 0;
+  const counts = new Map<string, number>();
+  for (const g of B) counts.set(g, (counts.get(g) ?? 0) + 1);
+  let intersect = 0;
+  for (const g of A) {
+    const c = counts.get(g) ?? 0;
+    if (c > 0) {
+      intersect++;
+      counts.set(g, c - 1);
+    }
+  }
+  return Math.round((2 * intersect) / (A.length + B.length) * 100);
+}
+// バックエンドの検索対象フロア(KNW_FUZZY_FLOOR=0.15=単なる検索結果への採用)より
+// 高く設定(「重複の確認でユーザーの手を止める」には弱い偶然一致より強い確信が
+// 要る)。実測 dice=0.2308(「コバエがわいた時どうする」対 seed トピック)を安全
+// マージン込みで超える 20 に設定(plaza-search.test.ts の実測値と揃える)。
+const KNW_DUP_THRESHOLD = 20;
+// channel/board_kind は knowledge-board 板の既定値(KnowledgeThreadChatNode の
+// 返信 POST と同じ組=既存スレの実データが channel:"knowledge-board"・
+// board_kind:"guide" で運用されている前提を踏襲・renderer-knw-thread-chat.test.tsx
+// 参照)。「困った」相談は board_kind enum(guide/complaint/improvement/engagement)の
+// どれとも完全一致しないが、既存 knowledge-board 板の実運用値と揃えるのが最小の
+// 選択(新しい enum 値は schemas/ 側の変更が要り本タスクのスコープ外)。
+const KNW_COMPOSE_CHANNEL = "knowledge-board";
+const KNW_COMPOSE_BOARD_KIND = "guide";
+
 function KnowledgeHubNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
   const path = String(p.source_path ?? "/api/v1/plaza/search");
   const [tab, setTab] = useState<KnwHubTab>("komatta");
   const [q, setQ] = useState("");
   const [matches, setMatches] = useState<KnwHubMatch[]>([]);
   const [searched, setSearched] = useState(false);
+  // section2 dup-confirm(新しく相談する → タイトル入力 → 一致度確認)。
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [topMatch, setTopMatch] = useState<KnwHubMatch | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const query = q.trim();
@@ -7597,6 +7651,51 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
       clearTimeout(timer);
     };
   }, [q, path, execute]);
+
+  // section2 dup-confirm — 同じ 200ms デバウンス+同じ GET /plaza/search を、
+  // compose のタイトル入力に対してだけ再利用する(section1 の検索ボックスとは
+  // 独立した state・上位1件だけ使う)。
+  useEffect(() => {
+    if (!composeOpen) return;
+    const query = title.trim();
+    if (!query) {
+      setTopMatch(null);
+      return;
+    }
+    let alive = true;
+    const timer = setTimeout(() => {
+      Promise.resolve(execute({ kind: "api", method: "GET", path: `${path}?q=${encodeURIComponent(query)}` }))
+        .then((v) => {
+          if (alive) setTopMatch(((v as KnwHubSearchView | undefined)?.matches ?? [])[0] ?? null);
+        })
+        .catch(() => {
+          if (alive) setTopMatch(null);
+        });
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [title, composeOpen, path, execute]);
+
+  const similarity = topMatch ? titleSimilarity(title, topMatch.topic) : 0;
+  const dupMatch = topMatch && similarity >= KNW_DUP_THRESHOLD ? topMatch : null;
+
+  const createThread = useCallback(async () => {
+    const topic = title.trim();
+    if (!topic || creating) return;
+    setCreating(true);
+    try {
+      const res = await execute(
+        { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
+        { channel: KNW_COMPOSE_CHANNEL, board_kind: KNW_COMPOSE_BOARD_KIND, topic, body: topic },
+      );
+      const threadId = (res as { thread_id?: string } | undefined)?.thread_id;
+      if (threadId) navigate("knowledge-thread", { thread_id: threadId });
+    } finally {
+      setCreating(false);
+    }
+  }, [execute, navigate, title, creating]);
 
   return (
     <div className="knw-hub">
@@ -7678,11 +7777,56 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
                 <p className="helper-note">当てはまるものがあれば、そこへ流れ着く → 情報が1か所に集まる</p>
               )}
             </div>
-            <p className="lead" style={{ marginTop: 12, marginBottom: 0 }}>
-              <a className="civ-link" href="/s/knowledge-board">
-                新しく相談する
-              </a>
-            </p>
+            {!composeOpen ? (
+              <p className="lead" style={{ marginTop: 12, marginBottom: 0 }}>
+                <button
+                  type="button"
+                  className="civ-link"
+                  style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                  onClick={() => setComposeOpen(true)}
+                >
+                  新しく相談する
+                </button>
+              </p>
+            ) : (
+              // 2. dup confirm on create — mockup section2 (verbatim markup, real data wired)
+              <div className="card" style={{ marginTop: 12 }}>
+                <input
+                  type="text"
+                  className="compose-title-field"
+                  placeholder="相談したいことを入力"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  aria-label="新しい相談のタイトル"
+                />
+                {dupMatch ? (
+                  <div className="dup-banner">
+                    <div className="dt">⚠ 似たスレがあります(一致度 {similarity}%)</div>
+                    <div className="dm">
+                      「<b>{dupMatch.topic}</b>」
+                    </div>
+                    <div className="btn-row">
+                      <button
+                        type="button"
+                        className="btn primary"
+                        onClick={() => navigate("knowledge-thread", { thread_id: dupMatch.thread_id })}
+                      >
+                        これだ・開く
+                      </button>
+                      <button type="button" className="btn ghost" disabled={creating} onClick={createThread}>
+                        全然違う・新規で作る
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="btn-row">
+                    <button type="button" className="btn primary" disabled={!title.trim() || creating} onClick={createThread}>
+                      この内容で相談を始める
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
 
