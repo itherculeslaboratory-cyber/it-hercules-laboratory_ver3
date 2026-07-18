@@ -68,6 +68,10 @@ export interface PlazaPost {
    * data スキーマ版。
    */
   schema_version: string;
+  /**
+   * どの個体についての相談かを示す任意参照（KNW環境自動付与の基盤・CTX-1）。
+   */
+  context_individual_id?: string;
 }
 /**
  * 構造化引用の共用型（CiteRef）。plaza-post の cite_refs[]・gov-dispute の subject_ref から相対 $ref で参照する単一正本（スキーマ複製禁止・V3-BBS-20）。envelope の data ではなく component schema なので created_at/schema_version は持たない。[ihl:cite type=X id=Y] トークンは従属で、cite_refs[] が正本。

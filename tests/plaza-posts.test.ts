@@ -115,6 +115,27 @@ describe("POST /api/v1/plaza/posts", () => {
     expect(detail.post.cite_refs).toEqual([{ type: "paper", id: "PAP-1" }]);
   });
 
+  it("stores an optional context_individual_id reference and round-trips it on GET", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const rootId = ulid(1000);
+    await post(env, root({ post_id: rootId, thread_id: rootId, context_individual_id: "IND-1" }));
+    const detail = (await (await app.request(`/api/v1/plaza/posts/${rootId}`, { headers: AUTH_HEADERS }, env)).json()) as {
+      post: Record<string, unknown>;
+    };
+    expect(detail.post.context_individual_id).toBe("IND-1");
+  });
+
+  it("succeeds without context_individual_id (optional field, no regression)", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const created = await post(env, root());
+    expect(created.status).toBe(201);
+    const { post_id } = (await created.json()) as { post_id: string };
+    const detail = (await (await app.request(`/api/v1/plaza/posts/${post_id}`, { headers: AUTH_HEADERS }, env)).json()) as {
+      post: Record<string, unknown>;
+    };
+    expect(detail.post.context_individual_id).toBeUndefined();
+  });
+
   it("rejects a duplicate post_id with 409 (append-only put-if-absent)", async () => {
     const env = makeEnv(new FakeR2Bucket());
     const id = ulid();

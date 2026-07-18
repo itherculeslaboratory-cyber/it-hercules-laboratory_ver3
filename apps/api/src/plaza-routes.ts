@@ -183,6 +183,7 @@ plazaRoutes.post("/plaza/posts", async (c) => {
   if (body?.body !== undefined) data.body = body.body;
   if (typeof body?.reply_to === "string") data.reply_to = body.reply_to;
   if (typeof body?.correction_of === "string") data.correction_of = body.correction_of;
+  if (typeof body?.context_individual_id === "string") data.context_individual_id = body.context_individual_id;
   if (Array.isArray(body?.mentions)) data.mentions = body.mentions;
   if (Array.isArray(body?.tags)) data.tags = body.tags;
   const refs = mergeCiteRefs(body?.cite_refs, parseCiteTokens(str(body?.body)));
