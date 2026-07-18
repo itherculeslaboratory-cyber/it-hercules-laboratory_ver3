@@ -3421,7 +3421,7 @@ function BatchDoneNode() {
               <article className="civ-card">
                 {failed ? (
                   <p className="civ-text">
-                    {r.label}: 保存できませんでした({(result as { ok: false; error: string }).error})
+                    {r.label}: 保存できませんでした({mapError((result as { ok: false; error: string }).error)})
                   </p>
                 ) : (
                   <div className="civ-card-badges">
