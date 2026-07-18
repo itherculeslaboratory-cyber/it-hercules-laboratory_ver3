@@ -39,6 +39,14 @@ import {
   type FinderSort,
   type FinderSortKey,
 } from "./individual-finder-utils";
+import {
+  buildUniverseCoords,
+  computeGenerations,
+  computeLineage,
+  nearestByCoord,
+  speciesColorVar,
+  type PedigreeLink,
+} from "./universe-utils";
 import type { Action, ScreenDef, ScreenNode, Transition } from "./types";
 
 /* -------------------------------------------------------------------------- *
@@ -5462,6 +5470,7 @@ type FinderRow = {
   last_capture_at: string | null;
   next_observation_at: string | null;
   thumbnail_path: string | null;
+  lineage_id: string | null; // V3-IND-34系統タグ(T-66宇宙面ホバーカードで表示)
 };
 
 const FINDER_STATUS_LABELS: Record<string, string> = {
@@ -5516,6 +5525,7 @@ function toFinderRow(raw: Record<string, unknown>): FinderRow {
     last_capture_at: (raw.last_capture_at as string | null) ?? null,
     next_observation_at: (raw.next_observation_at as string | null) ?? null,
     thumbnail_path: (raw.thumbnail_path as string | null) ?? null,
+    lineage_id: (raw.lineage_id as string | null) ?? null,
   };
 }
 
@@ -5660,14 +5670,26 @@ function FinderDetailPanel({
         </li>
       </ul>
 
-      <button
-        type="button"
-        className={cn("civ-interactive", "civ-button")}
-        data-variant="primary"
-        onClick={() => navigate("individual-detail", { id: row.individual_id })}
-      >
-        詳細画面を開く
-      </button>
+      <div className="civ-chip-row">
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="primary"
+          onClick={() => navigate("individual-detail", { id: row.individual_id })}
+        >
+          詳細画面を開く
+        </button>
+        {/* T-66(design-individual-finder.md §1.1・宇宙面への1クリック遷移)。行選択
+         * 時のみこのパネルごと出るため「選択時のみ有効」を自然に満たす。 */}
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="secondary"
+          onClick={() => navigate("individual-universe", { focus: row.individual_id })}
+        >
+          ★ 宇宙で見る
+        </button>
+      </div>
 
       <h4 className="civ-card-title">血統</h4>
       {!loaded ? (
@@ -5962,6 +5984,586 @@ function IndividualFinderNode() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// T-66(design-individual-finder.md §1.2/§3/§5波2-3・V3-UIX-83後続波) — 個体宇宙面
+// (全個体星空・実測形質軸配置・血統フロー)。3d-force-graph(MIT)を client-only
+// dynamic import で使う(SSR不可・WebGL前提・useEffect 内でのみ import する)。座標
+// は fx/fy/fz 固定(力学シミュ不要・決定論)= 体長mm(x)・体重g(y)・世代(z・
+// pedigree-links から都度計算、無ければ0=中央)。誇張ゼロ: embedding/cosine類似は
+// 一切使わない(universe-utils.ts に切り出した純関数のみ)。右カラム個体詳細パネル
+// は individual-finder の FinderDetailPanel をそのまま再利用する(design doc §5
+// 「レンダラ統合」の指示通り・二重実装しない)。
+// =============================================================================
+
+type UniverseRow = FinderRow & { generation: number | null };
+
+const UNIVERSE_SPREAD = 250;
+const UNIVERSE_LABEL_DIST = 340; // カメラ-個体間距離がこれ未満なら名前ラベルを出す
+const UNIVERSE_IMAGE_DIST = 130; // さらに近い場合、写真がある個体だけ丸→画像カード
+
+const idOf = (x: unknown): string => (x && typeof x === "object" ? String((x as { id: unknown }).id) : String(x));
+
+// テーマトークン(CSS変数)を実色へ解決する。3d-force-graph/three.js は CSS変数を
+// 直接受け付けないため描画のたびに getComputedStyle で引く — 色の意味は
+// var(--civ-*) 側に一元化されたまま(生hexはソースへ書かない・check-ui-tokens GATE
+// はビルド時の静的走査なので実行時に解決した文字列はそもそも対象外)。フォール
+// バックは CSS 名前色のみ(生hex禁止)。
+function resolveToken(varName: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return v || fallback;
+}
+
+// 血統発光(選択時のみ・R45): 先祖=info(青系)・子孫=primary(Badgeのsuccessトーンと
+// 同値・緑系)・選択中=caution(オレンジ系)・無関係=text-muted(減光)。種族色(未選択
+// 時)と排他に切り替わるため universe-utils.SPECIES_COLOR_VARS と同じ4トークンを
+// 別の意味で再利用する(新規トークンを増やさない)。
+function lineageColorVar(kind: "self" | "ancestor" | "descendant" | "unrelated"): string {
+  if (kind === "self") return "--civ-caution";
+  if (kind === "ancestor") return "--civ-info";
+  if (kind === "descendant") return "--civ-primary";
+  return "--civ-text-muted";
+}
+
+function IndividualUniverseNode() {
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+  const scope = useContext(ScopeCtx);
+
+  const [rows, setRows] = useState<UniverseRow[]>([]);
+  const [links, setLinks] = useState<PedigreeLink[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [speciesFilter, setSpeciesFilter] = useState<string | null>(null);
+  const [scopeIds, setScopeIds] = useState<Set<string> | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
+  const [webglOk, setWebglOk] = useState(true);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 3d-force-graph は client-only dynamic import のため静的型を持ち込まない。
+  const graphRef = useRef<any>(null);
+  const labelRefs = useRef(new Map<string, HTMLDivElement>());
+  const imgRefs = useRef(new Map<string, HTMLDivElement>());
+  const glowRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const stateRef = useRef({
+    selectedId: null as string | null,
+    ancestors: new Set<string>(),
+    descendants: new Set<string>(),
+    edgeKeys: new Set<string>(),
+    speciesFilter: null as string | null,
+    scopeIds: null as Set<string> | null,
+  });
+
+  const focusId = typeof scope.params.focus === "string" && scope.params.focus ? scope.params.focus : null;
+  const focusedRef = useRef(false);
+
+  // データ取得: GET /individuals(全件・都度再計算)+ GET /individuals/pedigree-links
+  // (血統エッジ・T-66新設)。世代はクライアント側で computeGenerations する
+  // (Truthに常駐フィールドは無い・不変条項①)。
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [indRes, linkRes] = await Promise.all([
+        execute({ kind: "api", method: "GET", path: "/api/v1/individuals" }) as Promise<
+          { individuals?: Record<string, unknown>[] } | undefined
+        >,
+        execute({ kind: "api", method: "GET", path: "/api/v1/individuals/pedigree-links" }) as Promise<
+          { links?: PedigreeLink[] } | undefined
+        >,
+      ]);
+      if (!alive) return;
+      const base = (indRes?.individuals ?? []).map(toFinderRow);
+      const gotLinks = linkRes?.links ?? [];
+      const gen = computeGenerations(base.map((r) => r.individual_id), gotLinks);
+      setRows(base.map((r) => ({ ...r, generation: gen.get(r.individual_id) ?? null })));
+      setLinks(gotLinks);
+      setLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const byId = useMemo(() => new Map(rows.map((r) => [r.individual_id, r.label])), [rows]);
+  const rowById = useMemo(() => new Map(rows.map((r) => [r.individual_id, r])), [rows]);
+  const speciesValues = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.species).filter((v): v is string => !!v))).sort(),
+    [rows],
+  );
+  const coords = useMemo(
+    () =>
+      buildUniverseCoords(
+        rows.map((r) => ({
+          individual_id: r.individual_id,
+          length_mm: r.latest_length_mm,
+          weight_g: r.latest_weight_g,
+          generation: r.generation,
+        })),
+        UNIVERSE_SPREAD,
+      ),
+    [rows],
+  );
+  const coordById = useMemo(() => new Map(coords.map((c) => [c.individual_id, c])), [coords]);
+  const lineage = useMemo(() => (selectedId ? computeLineage(selectedId, links) : null), [selectedId, links]);
+  const selectedRow = selectedId ? (rowById.get(selectedId) ?? null) : null;
+
+  // 判定用アクセサ(stateRef経由・useCallback([])で参照安定=3d-force-graphの
+  // アクセサ関数へ構築時に一度だけ渡してよい。実データはstateRef.currentへ
+  // 「選択/フィルタが変わるたび」書き戻し、下のrefresh effectで再評価させる
+  // (caseB7 refresh() と同じ手筋)。
+  const isRowVisible = useCallback((r: UniverseRow) => {
+    const st = stateRef.current;
+    if (st.speciesFilter && r.species !== st.speciesFilter) return false;
+    if (st.scopeIds && !st.scopeIds.has(r.individual_id)) return false;
+    return true;
+  }, []);
+  // nodeOpacity は three-forcegraph 側の型が定数(number)専用でノード単位の
+  // アクセサ関数を受け付けない(nodeColor/nodeVal と違う)。「欠測軸=中央値配置」
+  // の減光は色そのものを無関係トーン(muted)に落とすことで表現する(選択中の
+  // 血統色分けはこれより優先=情報の重要度が高い)。
+  const colorForId = useCallback((id: string, species: string | null, estimated: boolean) => {
+    const st = stateRef.current;
+    if (st.selectedId) {
+      if (id === st.selectedId) return resolveToken(lineageColorVar("self"), "orange");
+      if (st.ancestors.has(id)) return resolveToken(lineageColorVar("ancestor"), "steelblue");
+      if (st.descendants.has(id)) return resolveToken(lineageColorVar("descendant"), "seagreen");
+      return resolveToken(lineageColorVar("unrelated"), "gray");
+    }
+    if (estimated) return resolveToken(lineageColorVar("unrelated"), "gray");
+    return resolveToken(speciesColorVar(species ?? ""), "gray");
+  }, []);
+  const linkClassFor = useCallback((s: string, t: string): "anc" | "desc" | null => {
+    const st = stateRef.current;
+    if (!st.selectedId || !st.edgeKeys.has(`${s}->${t}`)) return null;
+    return t === st.selectedId || st.ancestors.has(t) ? "anc" : "desc";
+  }, []);
+
+  const selectNode = useCallback((id: string) => {
+    setSelectedId(id);
+    setScopeIds(null); // 血統選択は近傍スコープと排他(caseB7と同じ)
+    setBanner(null);
+  }, []);
+
+  // stateRef 同期 + 3d-force-graph へ再評価を促す(kapsuleのアクセサは値を
+  // set し直すことで再描画がかかる・caseB7 refresh() と同じトリック)。
+  useEffect(() => {
+    stateRef.current = {
+      selectedId,
+      ancestors: lineage?.ancestors ?? new Set(),
+      descendants: lineage?.descendants ?? new Set(),
+      edgeKeys: lineage?.edgeKeys ?? new Set(),
+      speciesFilter,
+      scopeIds,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = graphRef.current as any;
+    if (!g) return;
+    g.nodeColor(g.nodeColor())
+      .nodeVal(g.nodeVal())
+      .nodeOpacity(g.nodeOpacity())
+      .nodeVisibility(g.nodeVisibility())
+      .linkVisibility(g.linkVisibility())
+      .linkColor(g.linkColor())
+      .linkWidth(g.linkWidth())
+      .linkDirectionalParticles(g.linkDirectionalParticles())
+      .linkDirectionalParticleColor(g.linkDirectionalParticleColor());
+  }, [selectedId, lineage, speciesFilter, scopeIds]);
+
+  const frameOn = useCallback((ids: string[]) => {
+    const g = graphRef.current;
+    if (!g || ids.length === 0) return;
+    let cx = 0,
+      cy = 0,
+      cz = 0,
+      n = 0;
+    for (const id of ids) {
+      const c = coordById.get(id);
+      if (!c) continue;
+      cx += c.x;
+      cy += c.y;
+      cz += c.z;
+      n++;
+    }
+    if (n === 0) return;
+    cx /= n;
+    cy /= n;
+    cz /= n;
+    let maxd = 1;
+    for (const id of ids) {
+      const c = coordById.get(id);
+      if (!c) continue;
+      maxd = Math.max(maxd, Math.hypot(c.x - cx, c.y - cy, c.z - cz));
+    }
+    const dist = Math.max(80, maxd * 3 + 80);
+    g.cameraPosition({ x: cx, y: cy + 30, z: cz + dist }, { x: cx, y: cy, z: cz }, 900);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coordById]);
+
+  const scopeSimilar = useCallback(() => {
+    if (!selectedId) return;
+    const near = nearestByCoord(selectedId, coords, 12);
+    const next = new Set([selectedId, ...near]);
+    setScopeIds(next);
+    frameOn([...next]);
+  }, [selectedId, coords, frameOn]);
+
+  const resetAll = useCallback(() => {
+    setSelectedId(null);
+    setSpeciesFilter(null);
+    setScopeIds(null);
+    setBanner(null);
+    const g = graphRef.current;
+    if (g) g.cameraPosition({ x: 0, y: UNIVERSE_SPREAD * 0.6, z: UNIVERSE_SPREAD * 3.3 }, { x: 0, y: 0, z: 0 }, 900);
+  }, []);
+
+  const toggleSpecies = useCallback((sp: string | null) => {
+    setSpeciesFilter((cur) => (cur === sp ? null : sp));
+    setScopeIds(null);
+    // ponytail: 種フィルタでのカメラ再フレーミングは省略(座標は常に ±spread に
+    // 収まるため既定カメラのままでも全体が視界に入る)。必要になったら frameOn を呼ぶ。
+  }, []);
+
+  // 3D グラフ本体の構築(client-only dynamic import)+ 近接ラベル/画像カード/
+  // 選択発光のオーバーレイ更新ループ。rows/links が揃ってから一度だけ実行する。
+  useEffect(() => {
+    if (!loaded || rows.length === 0 || !containerRef.current) return;
+    let alive = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let graph: any = null;
+
+    (async () => {
+      try {
+        const mod = await import("3d-force-graph");
+        if (!alive || !containerRef.current) return;
+        const ForceGraph3D = mod.default;
+
+        const nodes = rows.map((r) => {
+          const c = coordById.get(r.individual_id)!;
+          return { id: r.individual_id, fx: c.x, fy: c.y, fz: c.z, __row: r, __estimated: c.estimated };
+        });
+        const graphLinks = links
+          .filter((l) => rowById.has(l.child_id) && rowById.has(l.parent_id))
+          .map((l) => ({ source: l.parent_id, target: l.child_id }));
+
+        graph = new ForceGraph3D(containerRef.current)
+          .backgroundColor(resolveToken("--civ-bg", "white"))
+          .graphData({ nodes, links: graphLinks })
+          .nodeId("id")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .nodeLabel((n: any) => {
+            const r: UniverseRow = n.__row;
+            const genText = r.generation != null ? `世代 G${r.generation}` : "世代不明";
+            const lineageText = r.lineage_id ? ` ・系統 ${r.lineage_id}` : "";
+            const bg = resolveToken("--civ-surface", "white");
+            const bd = resolveToken("--civ-border", "gray");
+            const tx = resolveToken("--civ-text", "black");
+            const muted = resolveToken("--civ-text-muted", "gray");
+            return `<div style="font-family:inherit;background:${bg};border:1px solid ${bd};border-radius:8px;padding:8px 10px;color:${tx};min-width:170px">
+                <div style="font-weight:800">${r.label}</div>
+                <div style="font-size:12px;margin-top:3px;color:${muted}">${r.species ?? "種未設定"} ・ ${genText}${lineageText}</div>
+              </div>`;
+          })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .nodeVal((n: any) => (n.id === stateRef.current.selectedId ? 2.2 : 1.2))
+          .nodeResolution(8)
+          .nodeOpacity(0.92)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .nodeColor((n: any) => colorForId(n.id, n.__row.species, n.__estimated))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .nodeVisibility((n: any) => isRowVisible(n.__row))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .linkVisibility((l: any) => {
+            const rs = rowById.get(idOf(l.source));
+            const rt = rowById.get(idOf(l.target));
+            return !!rs && !!rt && isRowVisible(rs) && isRowVisible(rt);
+          })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .linkColor((l: any) => {
+            const cls = linkClassFor(idOf(l.source), idOf(l.target));
+            if (cls === "anc") return resolveToken(lineageColorVar("ancestor"), "steelblue");
+            if (cls === "desc") return resolveToken(lineageColorVar("descendant"), "seagreen");
+            return resolveToken("--civ-border", "lightgray");
+          })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .linkWidth((l: any) => (linkClassFor(idOf(l.source), idOf(l.target)) ? 1.6 : 0.4))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .linkDirectionalParticles((l: any) => (linkClassFor(idOf(l.source), idOf(l.target)) ? 3 : 0))
+          .linkDirectionalParticleSpeed(0.006)
+          .linkDirectionalParticleWidth(2.2)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .linkDirectionalParticleColor((l: any) => {
+            const cls = linkClassFor(idOf(l.source), idOf(l.target));
+            return cls === "anc"
+              ? resolveToken(lineageColorVar("ancestor"), "steelblue")
+              : resolveToken(lineageColorVar("descendant"), "seagreen");
+          })
+          .enableNodeDrag(false)
+          .showNavInfo(false)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .onNodeClick((n: any) => selectNode(n.id));
+
+        graph.cameraPosition({ x: 0, y: UNIVERSE_SPREAD * 0.6, z: UNIVERSE_SPREAD * 3.3 });
+        graphRef.current = graph;
+        setWebglOk(true);
+
+        // ?focus=個体ID 受信で自動フォーカス+バナー(design doc §1.2)。一覧に
+        // 実在する個体の時だけ(でっち上げない)・二重実行防止に focusedRef を使う。
+        if (focusId && !focusedRef.current && rowById.has(focusId)) {
+          focusedRef.current = true;
+          selectNode(focusId);
+          const c = coordById.get(focusId);
+          if (c) graph.cameraPosition({ x: c.x, y: c.y + 18, z: c.z + 90 }, { x: c.x, y: c.y, z: c.z }, 900);
+          setBanner(`個体ファインダーからフォーカス中: ${rowById.get(focusId)!.label}`);
+        }
+
+        // 近接ラベル/画像カード(実写真がある個体のみ)+ 選択発光の毎フレーム更新
+        // (呼吸アニメ自体はCSS animationが担当・ここは位置だけ動かす)。
+        const loop = () => {
+          const g = graphRef.current;
+          if (!g) return;
+          const camPos = g.camera().position;
+          for (const r of rows) {
+            const c = coordById.get(r.individual_id);
+            const labelEl = labelRefs.current.get(r.individual_id);
+            const imgEl = imgRefs.current.get(r.individual_id);
+            if (!c || !labelEl || !imgEl) continue;
+            if (!isRowVisible(r)) {
+              labelEl.style.display = "none";
+              imgEl.style.display = "none";
+              continue;
+            }
+            const d = Math.hypot(c.x - camPos.x, c.y - camPos.y, c.z - camPos.z);
+            if (d < UNIVERSE_IMAGE_DIST && r.thumbnail_path) {
+              const p = g.graph2ScreenCoords(c.x, c.y, c.z);
+              imgEl.style.left = `${p.x}px`;
+              imgEl.style.top = `${p.y}px`;
+              imgEl.style.display = "flex";
+              labelEl.style.display = "none";
+            } else if (d < UNIVERSE_LABEL_DIST) {
+              const p = g.graph2ScreenCoords(c.x, c.y, c.z);
+              labelEl.style.left = `${p.x}px`;
+              labelEl.style.top = `${p.y}px`;
+              labelEl.style.display = "block";
+              imgEl.style.display = "none";
+            } else {
+              labelEl.style.display = "none";
+              imgEl.style.display = "none";
+            }
+          }
+          const glowEl = glowRef.current;
+          if (glowEl) {
+            const sel = stateRef.current.selectedId;
+            const selRow = sel ? rowById.get(sel) : null;
+            const c = sel ? coordById.get(sel) : null;
+            if (sel && selRow && c && isRowVisible(selRow)) {
+              const p = g.graph2ScreenCoords(c.x, c.y, c.z);
+              glowEl.style.left = `${p.x}px`;
+              glowEl.style.top = `${p.y}px`;
+              glowEl.style.display = "block";
+              glowEl.style.background = `radial-gradient(circle, ${resolveToken(lineageColorVar("self"), "orange")} 0%, transparent 68%)`;
+            } else {
+              glowEl.style.display = "none";
+            }
+          }
+          rafRef.current = requestAnimationFrame(loop);
+        };
+        rafRef.current = requestAnimationFrame(loop);
+      } catch {
+        // WebGL非対応/初期化失敗。ページ全体を巻き込まず、この1ノードだけ
+        // フォールバック表示に切り替える(検証されないものは納品されない=
+        // クラッシュではなく正直な代替表示)。
+        setWebglOk(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      try {
+        (graph as any)?._destructor?.();
+      } catch {
+        /* best-effort cleanup */
+      }
+      graphRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, rows.length]);
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="civ-form">
+        <p className="civ-empty">まだ個体がいません。観測を記録すると、ここに個体の宇宙ができます。</p>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="primary"
+          onClick={() => navigate("obs-entry")}
+        >
+          観測を始める
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="civ-form civ-universe-shell">
+      <p className="civ-text" data-muted="true">
+        配置は実測値(体の大きさ・世代)による近さです。姿の似ている判定(画像の類似)は使っていません。
+      </p>
+      <div className="civ-chip-row">
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+          data-active={speciesFilter === null || undefined}
+          onClick={() => toggleSpecies(null)}
+        >
+          全種族
+        </button>
+        {speciesValues.map((sp) => (
+          <button
+            key={sp}
+            type="button"
+            className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+            data-active={speciesFilter === sp || undefined}
+            onClick={() => toggleSpecies(sp)}
+          >
+            {sp}
+          </button>
+        ))}
+      </div>
+
+      <div className="civ-universe">
+        <div ref={containerRef} className="civ-universe-canvas" />
+        {!webglOk && (
+          <p className="civ-universe-fallback civ-text">
+            この端末では3D宇宙を表示できません。個体はファインダーの一覧から選べます。
+          </p>
+        )}
+        {banner && (
+          <div className="civ-universe-banner" data-tone="caution">
+            {banner}
+          </div>
+        )}
+
+        <div className="civ-universe-overlay">
+          {rows.map((r) => (
+            <div
+              key={r.individual_id}
+              ref={(el) => {
+                if (el) labelRefs.current.set(r.individual_id, el);
+                else labelRefs.current.delete(r.individual_id);
+              }}
+              className="civ-universe-label"
+              style={{ display: "none" }}
+              onClick={() => selectNode(r.individual_id)}
+            >
+              {r.label}
+            </div>
+          ))}
+          {rows
+            .filter((r) => r.thumbnail_path)
+            .map((r) => (
+              <div
+                key={r.individual_id}
+                ref={(el) => {
+                  if (el) imgRefs.current.set(r.individual_id, el);
+                  else imgRefs.current.delete(r.individual_id);
+                }}
+                className="civ-universe-imgcard"
+                style={{ display: "none" }}
+                onClick={() => selectNode(r.individual_id)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={r.thumbnail_path ?? undefined} alt="" />
+                <span className="civ-universe-imgcard-label">{r.label}</span>
+              </div>
+            ))}
+          <div ref={glowRef} className="civ-universe-glow" style={{ display: "none" }} aria-hidden="true" />
+        </div>
+
+        <div className="civ-universe-topleft">
+          <p className="civ-text">
+            {rows.length}個体 ・ 血統エッジ {links.length}本
+          </p>
+          <div className="civ-universe-legend">
+            <p className="civ-label">種族</p>
+            {speciesValues.map((sp) => (
+              <div key={sp} className="civ-universe-legend-row">
+                <span className="civ-universe-dot" style={{ background: `var(${speciesColorVar(sp)})` }} />
+                <span className="civ-text">{sp}</span>
+              </div>
+            ))}
+            {selectedId && (
+              <div className="civ-universe-legend-mode">
+                <p className="civ-label">血統フロー(選択中のみ)</p>
+                <div className="civ-universe-legend-row">
+                  <span className="civ-universe-dot" style={{ background: "var(--civ-info)" }} />
+                  <span className="civ-text">先祖</span>
+                </div>
+                <div className="civ-universe-legend-row">
+                  <span className="civ-universe-dot" style={{ background: "var(--civ-caution)" }} />
+                  <span className="civ-text">選択中</span>
+                </div>
+                <div className="civ-universe-legend-row">
+                  <span className="civ-universe-dot" style={{ background: "var(--civ-primary)" }} />
+                  <span className="civ-text">子孫</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="civ-universe-rightcol">
+          {selectedRow ? (
+            <FinderDetailPanel key={selectedRow.individual_id} row={selectedRow} byId={byId} onJump={selectNode} />
+          ) : (
+            <p className="civ-text" data-muted="true">
+              星(個体)を選ぶと、ここに詳細と血統が出ます。
+            </p>
+          )}
+        </div>
+
+        <div className="civ-universe-controls">
+          <p className="civ-universe-status civ-text" data-muted="true">
+            {selectedRow
+              ? scopeIds
+                ? `${selectedRow.label} に近い ${Math.max(scopeIds.size - 1, 0)}体を表示中`
+                : `選択中: ${selectedRow.label}${lineage ? ` — 先祖${lineage.ancestors.size}・子孫${lineage.descendants.size}` : ""}`
+              : "星(個体)をクリックすると血統ラインが発光し、右に個体詳細が開きます。"}
+          </p>
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button")}
+            data-variant="primary"
+            disabled={!selectedId}
+            onClick={scopeSimilar}
+          >
+            ★ この個体に近い
+          </button>
+          <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="secondary" onClick={resetAll}>
+            全体表示に戻す
+          </button>
+        </div>
+      </div>
+
+      <p className="civ-text" data-muted="true">
+        写真は登録済みの個体だけ、近づくと表示します。未登録の個体は名前だけ表示します。
+      </p>
     </div>
   );
 }
@@ -6608,6 +7210,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <TargetNavigatorNode />;
     case "individual-finder":
       return <IndividualFinderNode />;
+    case "individual-universe":
+      return <IndividualUniverseNode />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (

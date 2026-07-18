@@ -80,7 +80,12 @@ export type NodeType =
   // +個体詳細パネル+血統。GET /individuals を1回取得しクライアント側でフィルタ/
   // 決定論sort/分位点プリセットを組み立て、行選択で GET /individuals/{id}/pedigree
   // (先祖・多世代)+ /profile(子・1世代)を取得して血統ツリーを描く。
-  | "individual-finder";
+  | "individual-finder"
+  // T-66(design-individual-finder.md §1.2/§3/§5波2-3・V3-UIX-83後続波): 個体宇宙面
+  // (全個体星空)。GET /individuals + GET /individuals/pedigree-links(血統エッジ)を
+  // 取得し、体長・体重・世代の3軸を fx/fy/fz固定で決定論配置する3d-force-graph
+  // (client-only dynamic import)。embedding/cosine類似は使わない(誇張ゼロ)。
+  | "individual-universe";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported

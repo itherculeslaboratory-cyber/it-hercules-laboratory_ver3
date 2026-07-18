@@ -23,6 +23,7 @@ const SCREEN_IDS = [
   "home",
   "individual-detail",
   "individual-finder",
+  "individual-universe",
   "knowledge-board",
   "knowledge-github",
   "knowledge-hub",

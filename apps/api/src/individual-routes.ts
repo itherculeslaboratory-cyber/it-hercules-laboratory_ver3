@@ -1170,6 +1170,35 @@ individualRoutes.get("/individuals/lineage-check", async (c) => {
   return c.json(await checkLineageClaim(store(c), { sire_id: sireId, dam_id: damId, species }));
 });
 
+// GET /individuals/pedigree-links — T-66(design-individual-finder.md §3/§5波3・
+// V3-UIX-83後続波)全個体宇宙面の血統エッジ投影。GET /individuals(一覧)には血統
+// エッジ自体が載っていない(lineage_idは系統タグで別物・血統はper-individualの
+// /pedigree でしか取れない)ため、宇宙面が全個体を一括で血統分類(先祖/子孫発光・
+// 世代軸算出)するにはこの一覧が要る。listIndividualsFor と同じ「本人所有の個体」
+// スコープに絞る(他者の血統情報は返さない)。cross_parent Truth を都度全件scan
+// (常駐indexなし・不変条項①)。NOTE: `/individuals/:id` より前に登録
+// (lineage-check と同じ static-vs-param 順序の理由)。
+individualRoutes.get("/individuals/pedigree-links", async (c) => {
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const ownIds = new Set(
+    (await s.listEvents(`truth/${MASTER_TYPE}/`))
+      .map(dataOf)
+      .filter((m) => m.actor_id === actorId)
+      .map((m) => String(m.individual_id ?? "")),
+  );
+  const links = (await s.listEvents(`truth/${CROSS_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => ownIds.has(String(d.child_id ?? "")) && ownIds.has(String(d.parent_id ?? "")))
+    .map((d) => ({
+      child_id: String(d.child_id),
+      parent_id: String(d.parent_id),
+      parent_role: String(d.parent_role ?? ""),
+    }))
+    .sort((a, b) => a.child_id.localeCompare(b.child_id) || a.parent_id.localeCompare(b.parent_id));
+  return c.json({ links });
+});
+
 // GET /individuals/{id} — whole-individual projection (6 文化 + timeline · IND-13).
 individualRoutes.get("/individuals/:id", async (c) => {
   const proj = await projectIndividual(store(c), c.req.param("id"));
