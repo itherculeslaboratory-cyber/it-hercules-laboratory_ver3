@@ -1,6 +1,6 @@
 // T-66(design-individual-finder.md §1.2/§3/§5波2-3・V3-UIX-83後続波): 個体宇宙面
-// (全個体星空)の純関数。IndividualUniverseNode(renderer.tsx)から呼ばれる —
-// individual-finder-utils.ts と同じ切り出し方(rendering/WebGL抜きに検算するため)。
+// (全個体星空)の純関数。実データ配線は apps/web/public/finder/lib/finder-data.js
+// (caseB7実物)側 — individual-finder-utils.ts と同じ切り出し方(rendering/WebGL抜きに検算するため)。
 // 誇張ゼロ: 類似度(embedding/cosine)は一切使わない。配置は実測形質軸(体長・体重・
 // 世代)のみの決定論配置。世代は血統エッジ(pedigree-links)から都度計算する
 // (Truthに常駐フィールドは無い・不変条項①)。
