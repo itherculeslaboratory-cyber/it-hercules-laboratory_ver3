@@ -86,9 +86,8 @@
             },
             {
               "id": "open-individual-finder",
-              "type": "button",
-              "props": { "label_key": "home.open-individual-finder.label", "label": "理想の個体を探す", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "individual-finder" }
+              "type": "link",
+              "props": { "label_key": "home.open-individual-finder.label", "label": "理想の個体を探す", "href": "/finder/finder.html" }
             },
             {
               "id": "open-match",

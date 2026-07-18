@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/assets/theme.js"></script>
+<title>IHL 理想個体ファインダー</title>
+<link rel="stylesheet" href="lib/tabulator.min.css">
+<style>
+  /* R52(2026-07-18): caseB7原型のCSSをそのまま採用(レイアウト・密度・配色は不変)。
+     変更はデータ配線(finder.js)と語彙(下記テキスト)のみ — CSSは1行も変えていない。 */
+  :root{
+    --bg:#0d0f13; --card:#161a21; --line:#262c36; --fg:#e6e8ec; --dim:#8b94a3; --acc:#ff7a1a;
+    --sp-h:#ff7a1a; --sp-d:#5b8cff; --sp-c:#46c39a;
+    --accbg:#2a1c0c; --accstrong:#ffd0a0; --accdim:#c9a06a; --chipbg:#1b202a; --linehover:#3a4557; --zebra:#13161c;
+  }
+  [data-theme="light"] {
+    --bg:#f4f5f7; --card:#ffffff; --line:#d9dee6; --fg:#1b1f26; --dim:#5c6572; --acc:#e66a00;
+    --accbg:#fff1e0; --accstrong:#8a4a00; --accdim:#8a5a10; --chipbg:#eef0f3; --linehover:#c3cad4; --zebra:#f7f8fa;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--fg); min-height:100vh;
+    font-family:-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;
+    padding:20px 22px 40px;
+  }
+  header{margin-bottom:14px;}
+  .headbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .hdtoggle{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--acc);
+    border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:12px;flex:0 0 auto}
+  .hdtoggle:hover{border-color:var(--acc)}
+  .brand{font-size:20px; font-weight:800; letter-spacing:.5px; color:var(--fg);}
+  .brand span{color:var(--acc);}
+  .sub{font-size:13px; color:var(--dim); margin-top:5px;}
+  #samplebadge{
+    margin-top:10px; display:inline-block;
+    background:var(--accbg); border:1px solid var(--acc); color:var(--acc);
+    border-radius:6px; padding:7px 11px; font-size:11px; line-height:1.55; font-weight:700; max-width:640px;
+  }
+  #samplebadge b{color:var(--accstrong);}
+  #samplebadge .m{color:var(--accdim); font-weight:600;}
+
+  #filterbar{
+    margin-top:16px; display:flex; flex-wrap:wrap; gap:9px; align-items:center;
+    background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+  }
+  .flabel{font-size:11px; color:var(--dim); letter-spacing:.4px; margin-right:2px;}
+  .chip,.btn{
+    font-family:inherit; font-size:13px; color:var(--fg); cursor:pointer;
+    background:var(--chipbg); border:1px solid var(--line); border-radius:18px;
+    padding:6px 13px; transition:border-color .18s ease, background .18s ease, color .18s ease;
+    white-space:nowrap;
+  }
+  .chip:hover,.btn:hover{border-color:var(--linehover);}
+  .chip.on{color:#0d0f13; font-weight:700;}
+  .chip.on.all{background:var(--fg); border-color:var(--fg);}
+  select,input[type=number]{
+    font-family:inherit; font-size:13px; color:var(--fg); background:var(--chipbg);
+    border:1px solid var(--line); border-radius:7px; padding:6px 9px; width:88px;
+  }
+  select{width:auto;}
+  .btn.primary{background:var(--accbg); border-color:var(--acc); color:var(--acc); font-weight:700;}
+  .btn.ghost{background:transparent;}
+  .sep{width:1px; height:20px; background:var(--line); margin:0 4px;}
+
+  #tablewrap{margin-top:14px; border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  #table{width:100%;}
+
+  #actionbar{
+    margin-top:12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+  }
+  #selinfo{font-size:13px; color:var(--dim);}
+  #selinfo b{color:var(--fg);}
+  .btn.primary:disabled{opacity:.4; cursor:default; border-color:var(--line); color:var(--dim); background:var(--chipbg);}
+
+  #mockbadge{
+    margin-top:16px; display:inline-block;
+    background:var(--card); color:var(--dim); border:1px solid var(--line);
+    border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700; letter-spacing:.3px;
+  }
+  #mockbadge .live{color:var(--sp-c);}
+
+  /* tabulator theme override to match project tokens (kept minimal: tabulator_midnight base + accent) */
+  .tabulator{background:var(--card); border:none; font-family:inherit; font-size:13px;}
+  .tabulator-header{background:var(--chipbg) !important; border-bottom:1px solid var(--line);}
+  .tabulator-col{background:var(--chipbg) !important; border-right:1px solid var(--line) !important;}
+  .tabulator-col-title{color:var(--dim); font-weight:700; font-size:11px;}
+  .tabulator-row{background:var(--card) !important; border-bottom:1px solid var(--line) !important;}
+  .tabulator-row.tabulator-row-even{background:var(--zebra) !important;}
+  .tabulator-row:hover{background:var(--chipbg) !important;}
+  .tabulator-row.tabulator-selected{background:var(--accbg) !important;}
+  .tabulator-row .tabulator-cell{color:var(--fg); border-right:1px solid var(--line);}
+  .tabulator-footer{background:var(--chipbg); color:var(--dim); border-top:1px solid var(--line);}
+  .tabulator-col.tabulator-sortable .tabulator-col-title:hover{color:var(--acc);}
+  .clr-dot{width:11px; height:11px; border-radius:50%; display:inline-block; box-shadow:0 0 5px currentColor; margin-right:6px; vertical-align:-1px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="headbar"><div class="brand">IHL — <span>理想個体ファインダー</span></div></div>
+  <div class="sub">体長・体重・観測回数でsort/絞り込み = 理想個体探し / 列ヘッダクリックで即sort</div>
+  <div id="samplebadge">
+    <b>実データ</b>(あなたが記録した個体の一覧です)<br>
+    <span class="m">並び替え・フィルタ・分位点プリセットはすべて実際の観測記録から都度計算しています。</span>
+  </div>
+</header>
+
+<div id="filterbar">
+  <span class="flabel">種族</span>
+  <button class="chip all on" data-sp="">全種族</button>
+  <span id="speciesChips"></span>
+  <span class="sep"></span>
+  <span class="flabel">体長mm</span>
+  <input type="number" id="lengthMin" placeholder="最小">
+  <input type="number" id="lengthMax" placeholder="最大">
+  <span class="flabel">体重g</span>
+  <input type="number" id="weightMin" placeholder="最小">
+  <input type="number" id="weightMax" placeholder="最大">
+  <span class="sep"></span>
+  <button class="btn primary" id="btnPreset">体長 上位10%</button>
+  <button class="btn ghost" id="btnResetFilter">フィルタ解除</button>
+</div>
+
+<div id="tablewrap"><div id="table"></div></div>
+
+<div id="actionbar">
+  <div id="selinfo">行を選択すると、その個体を宇宙で見られます。</div>
+  <button class="btn primary" id="btnUniverse" disabled>★ 宇宙で見る</button>
+</div>
+
+<div id="mockbadge"><span class="live">実データ</span> · sort/フィルタは実計算 · Tabulator(MIT・ローカル同梱)</div>
+
+<script src="lib/tabulator.min.js"></script>
+<script type="module" src="finder.js"></script>
+</body>
+</html>
