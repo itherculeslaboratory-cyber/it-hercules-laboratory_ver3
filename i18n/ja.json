@@ -103,6 +103,7 @@
   "qr-resume.title-multi.text": "この棚の個体を選ぶ",
   "qr-resume.lead-multi.text": "この棚には複数の個体がいます。観測する個体を選んでください。",
   "qr-resume.add-to-shelf.label": "この棚に新規個体を追加 →",
+  "qr-resume.link-to-batch.label": "この棚に個体を移して紐づける →",
   "settings.title.text": "設定",
   "settings.current-title.text": "現在の設定",
   "settings.current-locale.text": "言語: {{data.current.locale}}",

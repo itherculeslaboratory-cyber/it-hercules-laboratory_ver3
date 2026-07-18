@@ -155,6 +155,26 @@
               }
             },
             {
+              "id": "link-to-batch-multi",
+              "type": "link",
+              "props": {
+                "label_key": "qr-resume.link-to-batch.label",
+                "label": "この棚に個体を移して紐づける →",
+                "href": "/s/obs-register-batch",
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_multi"] }
+              }
+            },
+            {
+              "id": "link-to-batch-empty",
+              "type": "link",
+              "props": {
+                "label_key": "qr-resume.link-to-batch.label",
+                "label": "この棚に個体を移して紐づける →",
+                "href": "/s/obs-register-batch",
+                "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
+              }
+            },
+            {
               "id": "resume",
               "type": "button",
               "props": {

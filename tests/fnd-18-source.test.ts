@@ -6,7 +6,7 @@
 // dup 409, placement/occupancy INSERT + put-if-absent 409, actor_id forced.
 import { describe, expect, it } from "vitest";
 import { Hono } from "hono";
-import { TruthStore } from "@ihl/truth";
+import { TruthStore, ulid } from "@ihl/truth";
 import { sourceRoutes } from "../apps/api/src/source-routes";
 import { bucketize, TELEMETRY_BUCKET_MS, TELEMETRY_SOURCE_MS } from "../apps/api/src/telemetry-merge";
 import type { Bindings, Variables } from "../apps/api/src/env";
@@ -167,13 +167,47 @@ describe("FND-18 placement + occupancy INSERT (put-if-absent)", () => {
   });
 
   it("placement without label -> 400; occupancy insert then list", async () => {
-    const { app, env } = ctx();
+    const { app, env, bucket } = ctx();
     expect((await post(app, env, "/api/v1/placements", {})).status).toBe(400);
+
+    // occupancy authz (Task 1): linking individual/ind-1 requires the caller to
+    // own it — seed a master owned by ACTOR directly (sourceRoutes-only mount
+    // has no individualRoutes to create it via API), same shape as
+    // createIndividualMaster (individual-routes.ts).
+    await new TruthStore(bucket).putEventAt("truth/ihl.ind.master.v1/ind-1.json", {
+      specversion: "1.0",
+      id: ulid(),
+      source: "test",
+      type: "ihl.ind.master.v1",
+      time: new Date().toISOString(),
+      dataschema: "schemas/events/ind-master.schema.json",
+      provenance: { generator_kind: "human", actor_id: ACTOR },
+      data: { individual_id: "ind-1", actor_id: ACTOR, created_at: new Date().toISOString() },
+    });
 
     const occ = await post(app, env, "/api/v1/occupancy", { placement_id: "plc-1", subject_ref: "individual/ind-1" });
     expect(occ.status).toBe(201);
     const list = (await (await get(app, env, "/api/v1/occupancy")).json()) as { occupancy: unknown[] };
     expect(list.occupancy).toHaveLength(1);
+  });
+
+  it("occupancy for an individual NOT owned by the caller -> 403 NOT_OWNER, no write", async () => {
+    const { app, env, bucket } = ctx();
+    await new TruthStore(bucket).putEventAt("truth/ihl.ind.master.v1/ind-other.json", {
+      specversion: "1.0",
+      id: ulid(),
+      source: "test",
+      type: "ihl.ind.master.v1",
+      time: new Date().toISOString(),
+      dataschema: "schemas/events/ind-master.schema.json",
+      provenance: { generator_kind: "human", actor_id: "someone-else" },
+      data: { individual_id: "ind-other", actor_id: "someone-else", created_at: new Date().toISOString() },
+    });
+    const occ = await post(app, env, "/api/v1/occupancy", { placement_id: "plc-1", subject_ref: "individual/ind-other" });
+    expect(occ.status).toBe(403);
+    expect(await occ.json()).toEqual({ error: "NOT_OWNER" });
+    const list = (await (await get(app, env, "/api/v1/occupancy")).json()) as { occupancy: unknown[] };
+    expect(list.occupancy).toHaveLength(0);
   });
 });
 

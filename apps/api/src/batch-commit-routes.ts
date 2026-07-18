@@ -68,6 +68,7 @@ async function commitOne(
     if (typeof subjectRef !== "string" || !subjectRef) return { ok: false, error: "INVALID_ITEM" };
     if (typeof toPlacementId !== "string" || !toPlacementId) return { ok: false, error: "INVALID_ITEM" };
     const r = await moveOccupancy(bucket, actorId, subjectRef, toPlacementId, at);
+    if ("error" in r) return { ok: false, error: r.error }; // per-item failure, not a whole-batch 500
     return { ok: true, id: r.occupancy_id };
   }
 
