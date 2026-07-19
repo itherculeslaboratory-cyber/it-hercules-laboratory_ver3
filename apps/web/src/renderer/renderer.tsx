@@ -1061,6 +1061,12 @@ function ListNode({ node }: { node: ScreenNode }) {
   if (p.variant === "knowledge-thread-chat") {
     return <KnowledgeThreadChatNode node={node} />;
   }
+  // wave1 KNW「種族の本」(R133=○○90点採用): 同じ in-scope トリック。単独
+  // mount(list variant="species-book")と KnowledgeHubNode の4本目のタブの
+  // 両方から使う(SpeciesBookNode は自己完結)。
+  if (p.variant === "species-book") {
+    return <SpeciesBookNode node={node} />;
+  }
   // home 完成予想図v2(承認済みmockup c9-home-forecast-v2.html・R112 90点)の
   // verbatim 採用: 同じ in-scope トリック(list + props.variant)。
   if (p.variant === "home-dashboard") {
@@ -6631,7 +6637,7 @@ interface KnwHubSearchView {
   query: string;
   matches: KnwHubMatch[];
 }
-type KnwHubTab = "komatta" | "hanashitai" | "ronbun";
+type KnwHubTab = "komatta" | "hanashitai" | "ronbun" | "honbook";
 
 // T-72 KNW wave1(新規スレ重複確認 — 承認モックアップ section2 の verbatim 採用)。
 // 一致度%は決定論の文字bigram Dice係数(= 2・|共通bigram(多重集合)| /
@@ -6681,10 +6687,316 @@ const KNW_DUP_THRESHOLD = 20;
 const KNW_COMPOSE_CHANNEL = "knowledge-board";
 const KNW_COMPOSE_BOARD_KIND = "guide";
 
+// wave1 KNW「種族の本」(R133=○○90点 採用・承認mockup D:\claude\00-hq\dashboard\
+// mockups\knw-species-book.html)の verbatim 採用: list variant="species-book"
+// 専用ノード(KnowledgeHubNode と同じ in-scope トリック — 新ノード種を起こさず、
+// knowledge-hub の4本目のタブ「この種族の本」として mount する)。バックエンドは
+// 実装済み(plaza-routes.ts projectSpeciesBook・GET /plaza/species/:species_id/book・
+// LLM/embedding不使用の決定論投影)。
+//
+// mockup から意図的に省いた/差し替えたもの(誇張ゼロ・HomeDashboardNode の
+// ribbon/footer承認メタ文言の省略と同じ判断基準):
+//  - ribbon(「完成予想図(まだ動きません)」バナー) — これは実物なので出さない。
+//  - section0 の header(ワードマーク+観測対象チップ+3タブ) — 知の広場の
+//    ヘッダー/タブは既に KnowledgeHubNode 側にあり(この本はその4本目のタブの
+//    中身)、観測対象チップ自体は AppShellNode の HeaderScopeSelector が画面
+//    全体で常時表示済み(二重表示を避ける)。obs-note の文言だけ「今わかって
+//    いる文脈」として残す。
+//  - footer(正直な線引き)は残す — 「後から任意で足すAI」「この本に必要な
+//    土台」は今も本当に手つかず(species_id をスレ作成フォームへ自動で
+//    添える配線は本タスクのスコープ外・下記コメント参照)なので、誇張なく
+//    そのまま当てはまる。文言だけ「予想図」→実画面の言い回しへ直す。
+interface SpeciesBookHistoryView {
+  diff: string;
+  at: string;
+}
+interface SpeciesBookChapterView {
+  topic: string;
+  thread_count: number;
+  post_count: number;
+  latest_at: string;
+  status: "verified" | "refuted" | "unresolved" | "open";
+  cite_count: number;
+  retry_reproduced: number;
+  retry_not_reproduced: number;
+  stance_total: number;
+  answer: string;
+  answer_verified: boolean;
+  history: SpeciesBookHistoryView[];
+}
+interface SpeciesBookView {
+  species_id: string;
+  species_name: string;
+  chapter_count: number;
+  thread_count: number;
+  verified_count: number;
+  chapters: SpeciesBookChapterView[];
+}
+
+// status→(badgeクラス・バッジ文言・章要約の見出し語)。plaza-routes.ts
+// classifyPromotion の4値と mockup の4バッジ(verified/unverified/open/refuted)
+// を一意に対応させる(brief 指定の対応表そのまま)。
+function speciesBookBadge(ch: SpeciesBookChapterView): { cls: string; label: string; extract: string } {
+  if (ch.status === "verified") {
+    return { cls: "verified", label: `✔ 裏取り済み(実観測${ch.cite_count}・追試${ch.retry_reproduced})`, extract: "今わかっていること" };
+  }
+  if (ch.status === "refuted") {
+    return { cls: "refuted", label: "⚠ 反証あり", extract: "今わかっていること" };
+  }
+  if (ch.status === "unresolved") {
+    return { cls: "open", label: "まだ話し合い中", extract: "まだ答えが割れています" };
+  }
+  return { cls: "unverified", label: "△ まだ未検証", extract: "今のところ多い意見" };
+}
+
+function SpeciesBookNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const execute = useContext(ExecuteCtx);
+  const scope = useContext(HeaderScopeCtx);
+  // KnowledgeHubNode mounts this component reusing its OWN node (props.variant
+  // "knowledge-hub", source_path "/api/v1/plaza/search") for its 4本目のタブ —
+  // only trust node.props.source_path when this node's own variant really is
+  // "species-book" (the standalone list-node mount), never borrow a foreign
+  // node's source_path (bug found by the e2e below: it fetched .../search/.../book).
+  const basePath = p.variant === "species-book" ? String(p.source_path ?? "/api/v1/plaza/species") : "/api/v1/plaza/species";
+  const speciesId = scope.species.trim();
+  const [book, setBook] = useState<SpeciesBookView | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!speciesId) {
+      setBook(null);
+      setLoaded(true);
+      return;
+    }
+    let alive = true;
+    setLoaded(false);
+    Promise.resolve(execute({ kind: "api", method: "GET", path: `${basePath}/${encodeURIComponent(speciesId)}/book` }))
+      .then((v) => {
+        if (alive) setBook((v as SpeciesBookView | undefined) ?? null);
+      })
+      .catch(() => {
+        if (alive) setBook(null);
+      })
+      .finally(() => {
+        if (alive) setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [speciesId, basePath, execute]);
+
+  // 正直な空状態(a): 観測対象が未選択。この本自体を出さない(誇張ゼロ)。
+  if (!speciesId) {
+    return (
+      <div className="knw-book" data-node-id={node.id}>
+        <div className="wrap">
+          <p className="empty-note">上のヘッダーで観測対象(種族)を選ぶと、その種族の本が開きます。</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return <div className="knw-book" data-node-id={node.id} />;
+  }
+
+  // 正直な空状態(b): 種族は選ばれているが、まだこの種族のスレッドが1件も無い。
+  if (!book || book.chapters.length === 0) {
+    return (
+      <div className="knw-book" data-node-id={node.id}>
+        <div className="wrap">
+          <p className="empty-note">まだこの種族のスレッドがありません。困った/話したい で相談すると、ここに章が集まります。</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 「章をひらくと」の実例(mockup section4型)は常設デモではなく、この本の
+  // 中で一番裏取りが進んだ章(無ければ先頭章)をそのまま実例として使う。
+  const featured = book.chapters.find((ch) => ch.answer_verified) ?? book.chapters[0];
+  const featuredBadge = speciesBookBadge(featured);
+
+  const conclusionCard = (
+    <div className="card">
+      <h3 className="summary-title">📌 今わかっていること</h3>
+      <div className="conclusion">
+        <div className="cl-text">{featured.answer || "まだ答えの元になる投稿がありません。"}</div>
+        {featured.answer_verified && (
+          <span className="verified-badge">
+            ✔ 裏取り済み(実観測{featured.cite_count}・追試{featured.retry_reproduced})
+          </span>
+        )}
+      </div>
+      {featured.status === "refuted" && (
+        <div className="caution-item">
+          <span className="ci-tag">⚠</span>
+          反証(追試不成立)の報告が{featured.retry_not_reproduced}件あります
+        </div>
+      )}
+      <div className="ai-note">
+        ✨ この一文は、AIを使わなくても「一番裏取りされた投稿」をそのまま出せます。読みやすく整える磨きは、開いた時だけ・後から任意で足します(継続課金なし)。
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="knw-book" data-node-id={node.id}>
+      <div className="wrap">
+        <p className="obs-note">
+          上で選んでいる「観測対象」ごとに1冊。種族を切り替えると、その種族の本に変わります。
+        </p>
+
+        {/* 1. book cover — mockup section1 (verbatim markup, real data wired) */}
+        <section className="block">
+          <div className="book-cover">
+            <h1 className="book-title">📖 {book.species_name}の本</h1>
+            <p className="book-purpose">
+              この種族について、みんなのスレッドから分かったことを1冊にまとめた総合ページ。全部読まなくても「今わかっていること」に最初からたどり着けます。
+            </p>
+            <div className="book-stats">
+              <span className="stat-chip">
+                <span className="n">{book.chapter_count}</span> 章
+              </span>
+              <span className="stat-chip">
+                束ねたスレ <span className="n">{book.thread_count}</span> 件
+              </span>
+              <span className="stat-chip verify">
+                ✔ 裏取り済みの答え <span className="n">{book.verified_count}</span> 件
+              </span>
+            </div>
+            <p className="honest-line">
+              ✨ まとめ文は、その章に新しい話が増えた時だけ、開いた瞬間に静かに整えます(ふだんは動かない=継続課金なし)。
+            </p>
+          </div>
+        </section>
+
+        {/* 2. 目次 = 章一覧 — mockup section2 (verbatim markup, real data wired) */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">📑 目次(この種族の悩みごと)</h2>
+            <p className="section-caption">
+              章 = トピック。各章に「今わかっていること」と、それが ✔裏取り済み か △まだ未検証 かを付けます。数が多い＝正しい、で騙されないように。
+            </p>
+          </div>
+          <div className="chapter-list">
+            {book.chapters.map((ch) => {
+              const badge = speciesBookBadge(ch);
+              return (
+                <div className="chapter-row" key={ch.topic}>
+                  <div className="ch-body">
+                    <div className="ch-top">
+                      <span className="ch-name">{ch.topic}</span>
+                      <span className={cn("badge", badge.cls)}>{badge.label}</span>
+                    </div>
+                    <p className="ch-answer">
+                      <span className="extract">{badge.extract}</span>
+                      {ch.answer || "まだ答えの元になる投稿がありません。"}
+                    </p>
+                    <div className="ch-meta">
+                      束ねたスレ {ch.thread_count}件 ・ 最終更新 {formatDateJa(ch.latest_at)}
+                    </div>
+                  </div>
+                  <div className="ch-go">›</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 3. 章をひらくと(section4型) — mockup section3 (verbatim markup, real
+            data wired). 歴史が空の章は timeline カードごと出さない(正直表示)。 */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">📖 章をひらくと(例: {featured.topic})</h2>
+            <p className="section-caption">
+              左に「今の有力な答え」+裏取り、右に「移り変わり(歴史)」。この章に束ねた{featured.thread_count}スレを全部読まなくてよくなります。
+            </p>
+          </div>
+          {featured.history.length > 0 ? (
+            <div className="two-col">
+              {conclusionCard}
+              <div className="card">
+                <h4 className="timeline-title">移り変わり(歴史)</h4>
+                <div className="timeline">
+                  {featured.history.map((h, i) => {
+                    const isLast = i === featured.history.length - 1;
+                    return (
+                      <div className={cn("tl-item", isLast && "now")} key={`${h.at}-${i}`}>
+                        <div className="tl-dot-col">
+                          <div className="tl-dot" />
+                          {!isLast && <div className="tl-line" />}
+                        </div>
+                        <div className="tl-content">
+                          <span className="tl-date">{isLast ? "今" : formatDateJa(h.at)}</span>
+                          {h.diff}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            conclusionCard
+          )}
+        </section>
+
+        {/* 4. 本は自然に厚くなる(section5型) — mockup section4 (verbatim markup,
+            real data wired). */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">🌳 本は自然に厚くなる</h2>
+            <p className="section-caption">
+              新しいスレが増えると、その悩みが章になり、この1冊に束ねられていく。スレ→章→種族の本、の順で積み上がります。
+            </p>
+          </div>
+          <div className="card">
+            <div className="tree-wrap">
+              <div className="tree-parent">📖 {book.species_name}の本</div>
+              <div className="tree-arrow">⬆</div>
+              <div className="tree-children">
+                {book.chapters.map((ch) => (
+                  <div className="tree-chip" key={ch.topic}>
+                    {ch.topic}
+                  </div>
+                ))}
+                <div className="tree-chip">＋ 新しい章…</div>
+              </div>
+            </div>
+            <p className="grow-note">章が増えるほど、この種族の本が自然に厚くなっていく</p>
+          </div>
+        </section>
+
+        <footer className="foot">
+          <b>この画面の正直な線引き</b>
+          <ul>
+            <li>
+              <b>いま無料・AIなしで作れる部分</b>: 本・章の束ね・✔裏取り/△未検証バッジ・章数/スレ数・歴史の日付と骨格・樹形・「今わかっていること=一番裏取りされた投稿をそのまま」。全部、既にある計算(classifyPromotion・projectSummary)の水平展開です。
+            </li>
+            <li>
+              <b>後から任意で足すAI</b>: まとめ文を1〜2行に読みやすく整えるところ「だけ」。開いた時だけ・新しい話が増えた章だけ・結果は保存して再利用。実際にAI鍵をつなぐのは人間の判断(ゲート)を待ちます。
+            </li>
+            <li>
+              <b>章の増え方</b>: ヘッダーで観測対象(種族)を選んでいる時に「困った」で始めた相談は、その種族の本に自動でひもづきます(種族を選ばずに始めた相談は全体のスレになります)。まとめ文を読みやすく整えるAIの磨きは、開いた時だけ・後から任意で足します(継続課金なし・実際にAIをつなぐのは人の判断待ち)。
+            </li>
+            <li>
+              <b>この画面に含めていないこと</b>: 論文系の画面(paper系)は別ラウンドで扱います。ここは「困った」から育つ種族の本の話です。
+            </li>
+          </ul>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
 function KnowledgeHubNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
+  // 種族の本の配線を閉じる: ヘッダーで観測対象(種族)を選んでいれば、ここで
+  // 作る相談スレに species_id を添える(plaza-post.schema.json SW-1 の意図
+  // 「ヘッダー『観測対象』の選択から付与」どおり)。未選択なら付けない=全体スレ。
   const headerScope = useContext(HeaderScopeCtx);
   const path = String(p.source_path ?? "/api/v1/plaza/search");
   const [tab, setTab] = useState<KnwHubTab>("komatta");
@@ -6771,9 +7083,10 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
     if (!topic || creating) return;
     setCreating(true);
     try {
-      // HDR-1第2bスライス(slice2b・批評家blocking是正): ヘッダー観測対象(chrome由来
-      // のproducer・C9管轄)を新規スレの species_id へ自動付与(SW-1の設計意図="選択
-      // から付与・ユーザー再入力なし")。空scope(すべて)は何も付けない。
+      // HDR-1第2bスライス(slice2b・批評家blocking是正)+ KNW stage4 種族の本の一本化:
+      // ヘッダー観測対象(chrome由来のproducer・C9管轄)を新規スレの species_id へ自動付与
+      // (SW-1の設計意図="選択から付与・ユーザー再入力なし")。空scope(すべて)は何も付けない。
+      // ※KNW branch も同値(headerScope.species)を付与していた=統合時に本HEAD版へ一本化(二重付与なし)。
       const body: Record<string, unknown> = { channel: KNW_COMPOSE_CHANNEL, board_kind: KNW_COMPOSE_BOARD_KIND, topic, body: topic };
       if (headerScope.species) body.species_id = headerScope.species;
       const res = await execute({ kind: "api", method: "POST", path: "/api/v1/plaza/posts" }, body);
@@ -6814,6 +7127,16 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
               onClick={() => setTab("ronbun")}
             >
               論文
+            </button>
+            {/* wave1 KNW「種族の本」(R133) — 4本目のタブ。話したい/困った/論文の
+                3タブは変更しない(既存動作維持)。 */}
+            <button
+              type="button"
+              className={cn("tab", tab === "honbook" && "active")}
+              aria-pressed={tab === "honbook"}
+              onClick={() => setTab("honbook")}
+            >
+              この種族の本
             </button>
           </nav>
         </header>
@@ -6936,6 +7259,12 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
             </a>
           </section>
         )}
+
+        {/* wave1 KNW「種族の本」— DRY: SpeciesBookNode 自体が list
+            variant="species-book" として単独 mount も可能な自己完結コンポーネント
+            (list dispatch 参照)。ここでは同じコンポーネントをタブの中身として
+            そのまま埋め込む。 */}
+        {tab === "honbook" && <SpeciesBookNode node={node} />}
       </div>
     </div>
   );

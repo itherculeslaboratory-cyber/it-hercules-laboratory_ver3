@@ -1981,6 +1981,453 @@ a.civ-thumb-card:focus-visible {
 }
 
 /* =============================================================================
+ * wave1 KNW「種族の本」(R133=○○90点採用・caseB7/knw-hub/knw-thread と同じ
+ * パターン)。以下は D:\claude\00-hq\dashboard\mockups\knw-species-book.html の
+ * <style> ブロックのうち header の obs-note 以降(book-cover/目次chapter-list/
+ * 章をひらくと/樹形/footer)を「値を一切変えず」".knw-book " を祖先に付けて
+ * 再配置したもの(選択子以外は一字一句そのまま)。mockup 自身の header(ワード
+ * マーク+観測対象チップ+3タブ)/ribbon は採用しない(renderer.tsx の
+ * SpeciesBookNode コメント参照 — 知の広場の共通ヘッダー/タブと二重表示になる
+ * ため)。CSS custom properties は mockup の :root ではなく .knw-book に載せる
+ * (knw-hub/knw-thread と同じ規約)。
+ * ========================================================================== */
+.knw-book {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+  color: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+  .knw-book {
+    --bg: #14171a;
+    --card: #1c2024;
+    --text: #e8ece8;
+    --muted: #9aa39a;
+    --primary: #49a672;
+    --primary-bg: #183024;
+    --secondary: #e0975a;
+    --secondary-bg: #33261a;
+    --blue: #6a9bd1;
+    --blue-bg: #182634;
+    --border: #2b3138;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --caution-bg: #2c2717;
+    --caution-text: #d8bd7a;
+  }
+}
+/* アプリの手動テーマ切替(lib/theme.ts が :root[data-theme] を刻印)にも追従
+ * させる hard override — mockup 自体にはこのブロックは存在しない(knw-hub/
+ * knw-thread と同じ注記)。 */
+:root[data-theme="dark"] .knw-book {
+  --bg: #14171a;
+  --card: #1c2024;
+  --text: #e8ece8;
+  --muted: #9aa39a;
+  --primary: #49a672;
+  --primary-bg: #183024;
+  --secondary: #e0975a;
+  --secondary-bg: #33261a;
+  --blue: #6a9bd1;
+  --blue-bg: #182634;
+  --border: #2b3138;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --caution-bg: #2c2717;
+  --caution-text: #d8bd7a;
+}
+:root[data-theme="light"] .knw-book {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+}
+
+.knw-book .wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 20px 60px;
+  color: var(--text);
+}
+@media (max-width: 600px) {
+  .knw-book .wrap {
+    padding: 14px 12px 40px;
+  }
+}
+.knw-book .obs-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 22px;
+}
+/* mockup に無い追加クラス(2つの正直な空状態専用) — 値は同じ mockup の
+ * section-caption/helper-note 相当のトーン(色/サイズ)に合わせた最小追加。 */
+.knw-book .empty-note {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* section shell */
+.knw-book section.block {
+  margin-bottom: 28px;
+}
+.knw-book .section-head {
+  margin-bottom: 12px;
+}
+.knw-book .section-title {
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+.knw-book .section-caption {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.knw-book .card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+}
+
+/* book cover */
+.knw-book .book-cover {
+  background: var(--blue-bg);
+  border: 1.5px solid var(--blue);
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 10px;
+}
+.knw-book .book-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.knw-book .book-purpose {
+  color: var(--text);
+  font-size: 14px;
+  margin: 0 0 16px;
+  opacity: 0.9;
+}
+.knw-book .book-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.knw-book .stat-chip {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 15px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+.knw-book .stat-chip .n {
+  color: var(--primary);
+}
+.knw-book .stat-chip.verify .n {
+  color: var(--primary);
+}
+.knw-book .honest-line {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 12px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* chapter list (章 = 種族 × トピック) */
+.knw-book .chapter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.knw-book .chapter-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.knw-book .ch-body {
+  flex: 1;
+  min-width: 0;
+}
+.knw-book .ch-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.knw-book .ch-name {
+  font-size: 15.5px;
+  font-weight: 800;
+}
+.knw-book .ch-answer {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.knw-book .ch-answer .extract {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  margin-right: 5px;
+}
+.knw-book .ch-meta {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.knw-book .ch-go {
+  color: var(--muted);
+  font-size: 20px;
+  align-self: center;
+}
+.knw-book .badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.knw-book .badge.verified {
+  background: var(--primary);
+  color: #fff;
+}
+.knw-book .badge.unverified {
+  background: var(--caution-bg);
+  color: var(--caution-text);
+  border: 1px dashed var(--border);
+}
+.knw-book .badge.open {
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.knw-book .badge.refuted {
+  background: var(--secondary-bg);
+  color: var(--secondary);
+  border: 1px solid var(--secondary);
+}
+
+/* expanded chapter(section4型) */
+.knw-book .summary-title {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.knw-book .conclusion {
+  background: var(--primary-bg);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.knw-book .conclusion .cl-text {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.knw-book .verified-badge {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.knw-book .caution-item {
+  background: var(--caution-bg);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--caution-text);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.knw-book .caution-item .ci-tag {
+  font-weight: 700;
+  margin-right: 4px;
+}
+.knw-book .timeline-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.knw-book .timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.knw-book .tl-item {
+  display: flex;
+  gap: 12px;
+  position: relative;
+  padding-bottom: 16px;
+}
+.knw-book .tl-item:last-child {
+  padding-bottom: 0;
+}
+.knw-book .tl-dot-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 12px;
+}
+.knw-book .tl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.knw-book .tl-item.now .tl-dot {
+  background: var(--primary);
+  width: 12px;
+  height: 12px;
+}
+.knw-book .tl-line {
+  flex: 1;
+  width: 2px;
+  background: var(--border);
+  margin-top: 2px;
+}
+.knw-book .tl-content {
+  font-size: 13px;
+  padding-top: 1px;
+}
+.knw-book .tl-date {
+  color: var(--muted);
+  font-weight: 700;
+  margin-right: 6px;
+  font-size: 12px;
+}
+.knw-book .ai-note {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.knw-book .two-col {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .knw-book .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* wiki tree(section5型・向きを本→章に) */
+.knw-book .tree-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 4px;
+}
+.knw-book .tree-parent {
+  background: var(--blue-bg);
+  border: 1.5px solid var(--blue);
+  color: var(--blue);
+  font-weight: 800;
+  font-size: 14.5px;
+  padding: 11px 22px;
+  border-radius: 12px;
+}
+.knw-book .tree-arrow {
+  font-size: 20px;
+  color: var(--muted);
+}
+.knw-book .tree-children {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.knw-book .tree-chip {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.knw-book .grow-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+
+.knw-book footer.foot {
+  color: var(--muted);
+  font-size: 12.5px;
+  padding: 18px 10px 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+}
+.knw-book footer.foot b {
+  color: var(--text);
+}
+.knw-book footer.foot ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.knw-book footer.foot li {
+  margin-bottom: 3px;
+}
+
+/* =============================================================================
  * c8 UI磨き第2弾#3(受領10「『…』のなかに畳んで」) — kebab メニュー(renderer
  * プリミティブ KebabMenu)。shadow forbidden(design-c2 §4.3) — 境界は border
  * のみで表現する。
