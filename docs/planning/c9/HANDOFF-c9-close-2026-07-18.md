@@ -192,7 +192,8 @@ D:\claude\systems\ihl-ver3 で起動して。
 ### 着弾カード処理済
 - knw-to-c9-shared-layout(SL-1/SL-2=○R132)・obs-r1-nav-edge(NAV-OBS-QR-1=○R132)=**先行統合作業で全ifYes実行済み**(NAVエッジ=OBS統合e97aa96に在・SL-2=ScreenBoardsFooter除去0/devIndicators:false・SL-1=.civ-page 1160px)。SL-1のlist/table系さらなる全幅化はヘッダーセレクタ実装スライスで扱う。
 
-### home v2=完了・push済(`842a71d`・独立検証全緑+reviewer PASS)
+### home v2=完了・**実機○採用70点(R157・2026-07-19)**・push済(`842a71d`・独立検証全緑+reviewer PASS)
+- **R157 bad対応(次スライスで必須)**: ユーザー「観測対象を特定するは、ヘッダーにあるから、ホーム画面の中にあるのおかしくない?」=正当。**ホーム内の「🔎 観測対象を特定する」ブロック(HomeDashboardNode renderer.tsx ~L6896-6935・obs-navigator3枚)は撤去し、ヘッダー観測対象セレクタへ一本化**(hq_note「その際」=ヘッダーセレクタ実装スライスと同時。ホーム内には残さない・省略した観測対象タグの復活先もヘッダーのみ)。現状header「観測対象を探す」→obs-search / home内3枚→obs-navigator(別画面)なので、セレクタ実装時にobs-navigator3モードをヘッダーに載せ+home内ブロック撤去+ctxタグ復活を一体で行う。
 - HomeDashboardNode(KnowledgeHubNode同型・mockup逐語+実データ配線fetch3本)・home.json単一list化・globals.css .home-dashboard・15 e2e spec heading更新・両テーマ両幅スクショ4枚。**信頼度タイル除外(R135-a)**。誇張ゼロ除外2点(観測対象タグ=ヘッダーセレクタ未実装/pc-badge=API無)。ナビ契約保持(obs-domain-selectはIA v2でscreendef transition外し・navigation.jsonエッジ保持)。**実機判定カード=`c9-home-v2-live-2026-07-19`投函(ready)**。
 - reviewer advisory(次スライス): pc-badge後日配線/copyハードコード=i18n未対応(KNW前例と同じ)/obs-search等の二次画面がhome直リンク喪失=到達性1回監査推奨。
 
