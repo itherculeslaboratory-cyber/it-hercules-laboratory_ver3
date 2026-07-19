@@ -6755,7 +6755,10 @@ function KnowledgeThreadChatNode({ node }: { node: ScreenNode }) {
     }
   }, [draft, view, sending, execute, threadId, reload]);
 
-  const title = !loaded ? "読み込み中…" : (view?.topic ?? "");
+  // view 未取得(thread_id 未指定 or フェッチ失敗)でも見出しは常に非空にする
+  // — 空だと .thread-title が視覚的に潰れ、画面が「空白」に見える(screen-sweep が
+  //   「見出しなし=空白ページ」として検出)。空スレ状態でも topic の器を見せる。
+  const title = !loaded ? "読み込み中…" : (view?.topic || "スレッド");
 
   return (
     <div className="knw-thread">
