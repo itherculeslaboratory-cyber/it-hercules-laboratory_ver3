@@ -144,6 +144,61 @@ describe("POST /api/v1/plaza/posts", () => {
     const dup = await post(env, root({ post_id: id, thread_id: id, body: "overwrite attempt" }));
     expect(dup.status).toBe(409);
   });
+
+  it("stores an optional species_id reference and round-trips it on GET (SW-1)", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const rootId = ulid(1000);
+    await post(env, root({ post_id: rootId, thread_id: rootId, species_id: "Dynastes hercules" }));
+    const detail = (await (await app.request(`/api/v1/plaza/posts/${rootId}`, { headers: AUTH_HEADERS }, env)).json()) as {
+      post: Record<string, unknown>;
+    };
+    expect(detail.post.species_id).toBe("Dynastes hercules");
+  });
+});
+
+// HDR-1(c9-structure-canon.md §1c・A1#4): スレの species_id はルート投稿
+// (thread_id===post_id)の値を代表値とみなし、GET /plaza/channels/:channel/threads・
+// GET /plaza/search の ?species= 絞り込みに使う(SW-1)。
+describe("HDR-1: species_id narrowing(A1#4)", () => {
+  it("GET /plaza/channels/:channel/threads の ?species= はルート投稿の species_id を代表値に完全一致(大小無視)で絞る", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const hercThread = ulid(1000);
+    await post(env, root({ post_id: hercThread, thread_id: hercThread, topic: "hercules care", species_id: "Dynastes hercules" }));
+    const otherThread = ulid(2000);
+    await post(env, root({ post_id: otherThread, thread_id: otherThread, topic: "no species tag" }));
+
+    const scoped = (await (await app.request(
+      `/api/v1/plaza/channels/${CHANNEL}/threads?species=dynastes%20hercules`,
+      { headers: AUTH_HEADERS },
+      env,
+    )).json()) as { threads: { thread_id: string }[] };
+    expect(scoped.threads.map((t) => t.thread_id)).toEqual([hercThread]);
+
+    const all = (await (await app.request(`/api/v1/plaza/channels/${CHANNEL}/threads`, { headers: AUTH_HEADERS }, env)).json()) as {
+      threads: unknown[];
+    };
+    expect(all.threads).toHaveLength(2);
+  });
+
+  it("GET /plaza/search の ?species= はルート投稿の species_id を代表値に絞る", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const hercThread = ulid(1000);
+    await post(env, root({ post_id: hercThread, thread_id: hercThread, topic: "コバエがわいた", species_id: "Dynastes hercules" }));
+    const otherThread = ulid(2000);
+    await post(env, root({ post_id: otherThread, thread_id: otherThread, topic: "コバエ大量発生" }));
+
+    const scoped = (await (await app.request(
+      "/api/v1/plaza/search?q=コバエ&species=dynastes%20hercules",
+      { headers: AUTH_HEADERS },
+      env,
+    )).json()) as { matches: { thread_id: string }[] };
+    expect(scoped.matches.map((m) => m.thread_id)).toEqual([hercThread]);
+
+    const unscoped = (await (await app.request("/api/v1/plaza/search?q=コバエ", { headers: AUTH_HEADERS }, env)).json()) as {
+      matches: { thread_id: string }[];
+    };
+    expect(unscoped.matches.map((m) => m.thread_id).sort()).toEqual([hercThread, otherThread].sort());
+  });
 });
 
 describe("plaza post routes are protected", () => {

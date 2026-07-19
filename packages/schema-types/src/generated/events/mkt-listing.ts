@@ -64,4 +64,8 @@ export interface MktListing {
    * data スキーマ版。
    */
   schema_version?: number;
+  /**
+   * どの観測対象（種族）についての出品かを示す任意参照（ヘッダー『観測対象』narrowing の基盤・plaza-post.species_id/SW-1と同型）。ユーザー再入力なしのパススルー・集約キーではなく出品自体のタグ。
+   */
+  species_id?: string;
 }

@@ -184,7 +184,10 @@ plazaRoutes.post("/plaza/posts", async (c) => {
   if (typeof body?.reply_to === "string") data.reply_to = body.reply_to;
   if (typeof body?.correction_of === "string") data.correction_of = body.correction_of;
   if (typeof body?.context_individual_id === "string") data.context_individual_id = body.context_individual_id;
-  if (typeof body?.species_id === "string") data.species_id = body.species_id;
+  // HDR-1(A1#4 slice2b是正・batch3 advisory3): market-routes.ts:152 と同様の truthy
+  // ガード。schema は species_id を minLength:1 とするため空文字を通すと 400 になる
+  // (context_individual_id 等の他 passthrough と挙動を揃える)。
+  if (typeof body?.species_id === "string" && body.species_id) data.species_id = body.species_id;
   if (Array.isArray(body?.mentions)) data.mentions = body.mentions;
   if (Array.isArray(body?.tags)) data.tags = body.tags;
   const refs = mergeCiteRefs(body?.cite_refs, parseCiteTokens(str(body?.body)));
@@ -239,32 +242,42 @@ plazaRoutes.get("/plaza/threads/:thread_id", async (c) => {
 });
 
 // projectChannelThreads — channel 内スレ一覧(thread ごと集約 + board_kind グルーピング・
-// BBS-03 の3板)。channel prefix scan。
-export async function projectChannelThreads(s: TruthStore, channel: string) {
+// BBS-03 の3板)。channel prefix scan。speciesFilter(HDR-1・A1#4・任意)はスレの
+// root 投稿(thread_id===post_id)の species_id を代表値とみなし完全一致(大小無視)
+// で絞る(plaza-post.species_id/SW-1・ヘッダー観測対象narrowingの基盤)。省略時は
+// 既存呼び出し(projectImprovementQueue 等)と挙動不変。
+export async function projectChannelThreads(s: TruthStore, channel: string, speciesFilter?: string) {
   const posts = (await s.listEvents(`truth/${POST_TYPE}/${channel}/`)).map(dataOf);
-  const threads = new Map<string, { thread_id: string; topic: string; board_kind: string; post_count: number; latest_at: string }>();
+  const threads = new Map<
+    string,
+    { thread_id: string; topic: string; board_kind: string; post_count: number; latest_at: string; species_id?: string }
+  >();
   for (const p of posts) {
     const tid = str(p.thread_id);
     const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), board_kind: str(p.board_kind), post_count: 0, latest_at: "" };
     t.post_count += 1;
     if (str(p.created_at) > t.latest_at) t.latest_at = str(p.created_at);
-    // root(thread_id===post_id)の topic/board_kind を代表値に採る。
+    // root(thread_id===post_id)の topic/board_kind/species_id を代表値に採る。
     if (str(p.post_id) === tid) {
       t.topic = str(p.topic);
       t.board_kind = str(p.board_kind);
+      if (typeof p.species_id === "string") t.species_id = p.species_id;
     }
     threads.set(tid, t);
   }
-  const list = [...threads.values()].sort((a, b) => (a.thread_id < b.thread_id ? -1 : 1));
+  let list = [...threads.values()].sort((a, b) => (a.thread_id < b.thread_id ? -1 : 1));
+  const speciesQ = (speciesFilter ?? "").trim().toLowerCase();
+  if (speciesQ) list = list.filter((t) => (t.species_id ?? "").toLowerCase() === speciesQ);
   const boards: Record<string, typeof list> = {};
   for (const k of BOARD_KINDS) boards[k] = [];
   for (const t of list) (boards[t.board_kind] ??= []).push(t);
   return { channel, threads: list, boards };
 }
 
-// GET /plaza/channels/:channel/threads — channel 別スレ一覧 + 3板。
+// GET /plaza/channels/:channel/threads — channel 別スレ一覧 + 3板。?species= は
+// HDR-1(A1#4)ヘッダー観測対象narrowing。
 plazaRoutes.get("/plaza/channels/:channel/threads", async (c) => {
-  return c.json(await projectChannelThreads(store(c), c.req.param("channel")));
+  return c.json(await projectChannelThreads(store(c), c.req.param("channel"), c.req.query("species")));
 });
 
 // ── 検索(T-69 KNW wave1 Stage1「これ?」重複防止検索)────────────────────────
@@ -276,9 +289,10 @@ export interface PlazaSearchThread {
   topic: string;
   post_count: number;
   latest_at: string;
+  species_id?: string; // HDR-1(A1#4): root投稿代表値(スレのヘッダー観測対象narrowing用)。
 }
 
-async function collectSearchThreads(s: TruthStore, channel?: string): Promise<PlazaSearchThread[]> {
+async function collectSearchThreads(s: TruthStore, channel?: string, speciesFilter?: string): Promise<PlazaSearchThread[]> {
   const prefix = channel ? `truth/${POST_TYPE}/${channel}/` : `truth/${POST_TYPE}/`;
   const posts = (await s.listEvents(prefix)).map(dataOf);
   const threads = new Map<string, PlazaSearchThread>();
@@ -287,10 +301,15 @@ async function collectSearchThreads(s: TruthStore, channel?: string): Promise<Pl
     const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), post_count: 0, latest_at: "" };
     t.post_count += 1;
     if (str(p.created_at) > t.latest_at) t.latest_at = str(p.created_at);
-    if (str(p.post_id) === tid) t.topic = str(p.topic); // root post の topic を代表値に採る。
+    if (str(p.post_id) === tid) {
+      t.topic = str(p.topic); // root post の topic を代表値に採る。
+      if (typeof p.species_id === "string") t.species_id = p.species_id;
+    }
     threads.set(tid, t);
   }
-  return [...threads.values()];
+  const speciesQ = (speciesFilter ?? "").trim().toLowerCase();
+  const list = [...threads.values()];
+  return speciesQ ? list.filter((t) => (t.species_id ?? "").toLowerCase() === speciesQ) : list;
 }
 
 // normalizeSearchText — 小文字化+空白除去のみ(不変条項①: embedding/FAISS/LLM 不使用の
@@ -384,16 +403,18 @@ export function rankThreadSearch(
   return scored.slice(0, 5);
 }
 
-// GET /plaza/search?q=<text>&channel=<optional> — 決定論スレ検索投影。空 q は空配列
-// (エラーにしない)。読み取り専用・Truth 追記なし。T-70 KNW wave1(知の広場ハブ実物採用):
-// 各マッチに resolved(✔解決済みバッジ表示可否)を同梱。既存 projectResolution(BBS-05・
-// OQ-PLZ-03)をマッチ上位5件だけに適用する薄い追加投影(常駐 index 無し・都度再計算)。
+// GET /plaza/search?q=<text>&channel=<optional>&species=<optional> — 決定論スレ検索投影。
+// 空 q は空配列(エラーにしない)。読み取り専用・Truth 追記なし。T-70 KNW wave1(知の広場
+// ハブ実物採用): 各マッチに resolved(✔解決済みバッジ表示可否)を同梱。既存
+// projectResolution(BBS-05・OQ-PLZ-03)をマッチ上位5件だけに適用する薄い追加投影
+// (常駐 index 無し・都度再計算)。?species= は HDR-1(A1#4)ヘッダー観測対象narrowing。
 plazaRoutes.get("/plaza/search", async (c) => {
   const q = c.req.query("q") ?? "";
   const channel = c.req.query("channel") || undefined;
+  const species = c.req.query("species") || undefined;
   if (!q.trim()) return c.json({ query: q, matches: [] });
   const s = store(c);
-  const threads = await collectSearchThreads(s, channel);
+  const threads = await collectSearchThreads(s, channel, species);
   const ranked = rankThreadSearch(threads, q);
   const matches = await Promise.all(
     ranked.map(async (t) => ({ ...t, resolved: (await projectResolution(s, t.thread_id)).resolved })),

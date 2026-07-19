@@ -17,6 +17,7 @@
             {
               "id": "descriptor-form",
               "type": "form",
+              "props": { "header_scoped_producer": true },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/content" },
               "children": [
                 { "id": "content-type", "type": "field", "props": { "variant": "select", "name": "content_type", "label": "種別", "required": true, "options": [ { "value": "paper", "label": "論文" } ] } },

@@ -147,6 +147,9 @@ marketRoutes.post("/market/listings", async (c) => {
   if (typeof body?.description === "string") data.description = body.description;
   const price = Number(body?.price);
   if (Number.isInteger(price) && price >= 0) data.price = price;
+  // HDR-1(c9-structure-canon.md §1c・A1#4): ヘッダー観測対象の任意タグ(plaza-post
+  // species_id/SW-1と同型パススルー・ユーザー再入力なし)。
+  if (typeof body?.species_id === "string" && body.species_id) data.species_id = body.species_id;
 
   // round-16 OQ-MKT-02: 成立方式(既定=即決・省略可)。V3-IND-35: 予約 listing 化する
   // 親個体参照+応募単位しきい値(いずれも任意)。
@@ -181,12 +184,16 @@ marketRoutes.post("/market/listings", async (c) => {
 // GET /market/listings — 一覧投影(全出品)。V3-GOV-35(round-15拡張): 非表示判定
 // (active flag >= 閾値 or government stop)された出品は一覧から除外する(直接 ID を
 // 知る当事者は GET /market/listings/{id} で参照可能・全消去はしない=safety側だが
-// 当事者への説明可能性は残す)。
+// 当事者への説明可能性は残す)。?species= は個体一覧(individual-routes.ts
+// listIndividualsFor)と同じ完全一致(大小無視)フィルタ(HDR-1・A1#4)。
 // ponytail: listing-type prefix scan = O(n) 全走査。MVP 量なら十分。投影 index は
 // 別波(design-c2 §3.1「一覧系投影は R2 prefix scan」)。
 marketRoutes.get("/market/listings", async (c) => {
+  const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
   const s = store(c);
-  const all = (await s.listEvents(`truth/${LISTING_TYPE}/`)).map(dataOf);
+  const all = (await s.listEvents(`truth/${LISTING_TYPE}/`))
+    .map(dataOf)
+    .filter((l) => !speciesFilter || (typeof l.species_id === "string" && l.species_id.toLowerCase() === speciesFilter));
   const listings = [];
   for (const l of all) {
     const moderation = await projectListingModeration(s, String(l.listing_id), String(l.actor_id));

@@ -113,6 +113,10 @@ export interface Content {
    * data スキーマ版（例: '1'）。
    */
   schema_version: string;
+  /**
+   * どの観測対象（種族）についての論文/記事かを示す任意参照（ヘッダー『観測対象』narrowing の基盤・plaza-post.species_id/SW-1と同型）。project は複数種の content を束ねる箱のため専用フィールドを持たず、GET /research/projects の種族絞り込みは本フィールド経由の project_id 結合で派生判定する。
+   */
+  species_id?: string;
 }
 export interface Section {
   filled: boolean;

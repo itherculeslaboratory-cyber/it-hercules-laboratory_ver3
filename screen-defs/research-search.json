@@ -17,6 +17,7 @@
             {
               "id": "search-form",
               "type": "form",
+              "props": { "header_scoped": true },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/search" },
               "children": [
                 { "id": "query", "type": "field", "props": { "variant": "text", "name": "query", "label": "キーワード", "placeholder": "例: 温度 飼育" } },

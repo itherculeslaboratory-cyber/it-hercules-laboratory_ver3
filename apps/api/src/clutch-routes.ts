@@ -190,15 +190,18 @@ clutchRoutes.post("/clutches", async (c) => {
 });
 
 // GET /clutches — 本人一覧。current_count は都度再計算(§1 参照)。?lineage_id=
-// で複数系統並行管理(V3-IND-34)の完全一致フィルタ。
+// で複数系統並行管理(V3-IND-34)の完全一致フィルタ。?species= は individual-routes.ts
+// listIndividualsFor と同じ完全一致(大小無視)フィルタ(HDR-1・A1#4)。
 clutchRoutes.get("/clutches", async (c) => {
   const actorId = c.get("actorId");
   const lineageFilter = c.req.query("lineage_id") ?? "";
+  const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
   const s = store(c);
   const rows = (await s.listEvents(`truth/${CLUTCH_TYPE}/`))
     .map(dataOf)
     .filter((d) => d.actor_id === actorId)
-    .filter((d) => !lineageFilter || d.lineage_id === lineageFilter);
+    .filter((d) => !lineageFilter || d.lineage_id === lineageFilter)
+    .filter((d) => !speciesFilter || (typeof d.species === "string" && d.species.toLowerCase() === speciesFilter));
   const clutches: Record<string, unknown>[] = [];
   for (const d of rows) {
     const id = String(d.clutch_id ?? "");

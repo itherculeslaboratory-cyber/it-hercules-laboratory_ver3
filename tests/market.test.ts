@@ -81,3 +81,27 @@ describe("GET /api/v1/market/listings/{id}", () => {
     expect(res.status).toBe(404);
   });
 });
+
+// HDR-1(c9-structure-canon.md §1c・A1#4): ヘッダー観測対象の species_id パススルー+
+// GET /market/listings の ?species= 絞り込み(individual-routes.ts listIndividualsFor と
+// 同じ完全一致・大小無視)。
+describe("HDR-1: species_id narrowing(A1#4)", () => {
+  it("species_id はパススルーされ、?species= が完全一致(大小無視)で絞る・省略時は全件", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const herc = await post(env, { title: "ヘラクレス", species_id: "Dynastes hercules" });
+    const { listing_id: hercId } = (await herc.json()) as { listing_id: string };
+    const other = await post(env, { title: "コーカサス", species_id: "Chalcosoma caucasus" });
+    const { listing_id: otherId } = (await other.json()) as { listing_id: string };
+    const untagged = await post(env, { title: "無タグ" }); // species_id 省略(旧出品相当)
+    const { listing_id: untaggedId } = (await untagged.json()) as { listing_id: string };
+
+    const scoped = await app.request("/api/v1/market/listings?species=dynastes%20hercules", { headers: AUTH_HEADERS }, env);
+    const { listings: scopedListings } = (await scoped.json()) as { listings: Record<string, unknown>[] };
+    expect(scopedListings.map((l) => l.listing_id)).toEqual([hercId]);
+    expect(scopedListings[0]?.species_id).toBe("Dynastes hercules");
+
+    const all = await app.request("/api/v1/market/listings", { headers: AUTH_HEADERS }, env);
+    const { listings: allListings } = (await all.json()) as { listings: Record<string, unknown>[] };
+    expect(allListings.map((l) => l.listing_id).sort()).toEqual([hercId, otherId, untaggedId].sort());
+  });
+});

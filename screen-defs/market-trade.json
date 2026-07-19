@@ -250,6 +250,7 @@
                   "type": "image-grid",
                   "props": {
                     "tab_id": "browse",
+                    "header_scoped": true,
                     "source_path": "/api/v1/market/listings",
                     "bind_items": "data.listings-grid.listings",
                     "item_image": "/api/v1/market/listings/{{listing_id}}/photo/{{cover_photo_id}}",
@@ -272,7 +273,7 @@
             {
               "id": "create-listing-form",
               "type": "form",
-              "props": { "tab_id": "create" },
+              "props": { "tab_id": "create", "header_scoped_producer": true },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings" },
               "children": [
                 { "id": "new-title", "type": "field", "props": { "variant": "text", "name": "title", "label": "出品タイトル", "required": true } },

@@ -53,6 +53,7 @@ const OPTIONAL_KEYS = [
   "body_markdown", "cited_paper_ids", "cited_session_ids", "project_id", "individual_id",
   "skin_id", "client_content_digest", "observed_at", "system_tags", "ai_tags", "user_tags",
   "sections", "completeness_pct", "conditions", "claims", "measurements", "citations", "visibility",
+  "species_id", // HDR-1(c9-structure-canon.md §1c・A1#4): ヘッダー観測対象の任意タグ(SW-1同型パススルー)。
 ] as const;
 
 // PPR-23: 論文の引用管理は CiteRef 単一正本(cite-ref.schema.json)を再利用しつつ、
@@ -108,6 +109,9 @@ export interface SearchQuery {
   // WIK-13 embedding 類似検索: embedding は content に永続保存しない(既定 OFF・不変条項①)ため
   // 呼び手が content_id→vector を注入する(gapAnalysis の neighbors 注入と同型・CL-08 dim guard)。
   content_vectors?: Record<string, number[]>;
+  // HDR-1(c9-structure-canon.md §1c・A1#4): ヘッダー観測対象narrowing。content.species_id と
+  // 完全一致(大小無視)。route 側で ?species= からも注入可(POST /research/search)。
+  species?: string;
 }
 export interface SearchHit {
   content_id: string; content_type: string; title: string; actor_id: string;
@@ -120,6 +124,8 @@ export async function unifiedSearch(s: TruthStore, q: SearchQuery): Promise<Sear
   for (const c of contents) {
     const contentId = String(c.content_id);
     if (q.type && c.content_type !== q.type) continue;
+    // HDR-1(A1#4): ヘッダー観測対象narrowing。フィルタ扱い(RAGチャネルではない)。
+    if (q.species && String(c.species_id ?? "").toLowerCase() !== q.species.toLowerCase()) continue;
     const matched = new Set<string>();
     if (q.text) {
       if (String(c.title ?? "").includes(q.text)) matched.add("summary");
@@ -216,12 +222,16 @@ researchContentRoutes.post("/research/content", async (c) => {
 // GET /research/content — 一覧投影（?type= フィルタ・content_id 昇順決定論・WIK-16/13）。
 // PPR-23 公開範囲設定: visibility="private" は本人(actor_id一致)以外の結果から除外する
 // (plaza-fork の visibility 規約と同じ=一覧のみ絞り込み・詳細 route は既存どおり素通し)。
+// ?species= は individual-routes.ts listIndividualsFor と同じ完全一致(大小無視)フィルタ
+// (HDR-1・A1#4・ヘッダー観測対象narrowing)。
 researchContentRoutes.get("/research/content", async (c) => {
   const type = c.req.query("type");
+  const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
   const actorId = c.get("actorId");
   const items = (await store(c).listEvents(`truth/${CONTENT_TYPE}/`))
     .map(dataOf)
     .filter((d) => !type || d.content_type === type)
+    .filter((d) => !speciesFilter || (typeof d.species_id === "string" && d.species_id.toLowerCase() === speciesFilter))
     .filter((d) => d.visibility !== "private" || d.actor_id === actorId)
     .sort((a, b) => String(a.content_id).localeCompare(String(b.content_id)));
   return c.json({ items });
@@ -334,9 +344,13 @@ researchContentRoutes.post("/research/content/:id/tags/suggest", async (c) => {
   return c.json({ content_id: id, ai_tags: suggestTags(dataOf(ev)), persisted: false });
 });
 
-// POST /research/search — 4 本柱統合検索投影（RAG_PRIORITY 順・WIK-13/14）。
+// POST /research/search — 4 本柱統合検索投影（RAG_PRIORITY 順・WIK-13/14）。?species= は
+// HDR-1(A1#4)ヘッダー観測対象narrowing(body.species でも渡せるが、POSTでもURLクエリで
+// 統一的に絞れるよう query 側が指定されていれば優先する)。
 researchContentRoutes.post("/research/search", async (c) => {
   const q = (await c.req.json().catch(() => ({}))) as SearchQuery;
+  const speciesQuery = c.req.query("species");
+  if (speciesQuery) q.species = speciesQuery;
   return c.json({ results: await unifiedSearch(store(c), q) });
 });
 

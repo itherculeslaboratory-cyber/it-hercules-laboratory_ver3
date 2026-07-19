@@ -266,11 +266,26 @@ projectRoutes.post("/research/projects", async (c) => {
   return c.json({ project_id: projectId, key: res.key }, 201);
 });
 
-// GET /research/projects — 一覧投影（project_id 昇順決定論・PPR-16）。
+// GET /research/projects — 一覧投影（project_id 昇順決定論・PPR-16）。?species= は HDR-1
+// (A1#4)ヘッダー観測対象narrowing。project.schema.json 自体は種を持たない(1 project が
+// 複数種の lot/content を束ねうる箱のため専用フィールドを足すと producer の無い飾りになる
+// ＝誇張ゼロ)。既存の content.project_id リンク(projectHub と同じ結合)を辿り、その
+// species_id が一致する content を1件でも持つ project だけを残す(plaza スレ代表値判定
+// と同じ派生フィルタの考え方)。
 projectRoutes.get("/research/projects", async (c) => {
-  const items = (await store(c).listEvents(`truth/${PROJECT_TYPE}/`))
-    .map(dataOf)
-    .sort((a, b) => String(a.project_id).localeCompare(String(b.project_id)));
+  const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
+  const s = store(c);
+  let items = (await s.listEvents(`truth/${PROJECT_TYPE}/`)).map(dataOf);
+  if (speciesFilter) {
+    const contents = (await s.listEvents(`truth/${CONTENT_TYPE}/`)).map(dataOf);
+    const matchingProjectIds = new Set(
+      contents
+        .filter((d) => typeof d.species_id === "string" && d.species_id.toLowerCase() === speciesFilter)
+        .map((d) => String(d.project_id)),
+    );
+    items = items.filter((d) => matchingProjectIds.has(String(d.project_id)));
+  }
+  items.sort((a, b) => String(a.project_id).localeCompare(String(b.project_id)));
   return c.json({ items });
 });
 

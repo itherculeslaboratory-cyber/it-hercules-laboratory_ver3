@@ -109,6 +109,33 @@ describe("PPR-16 projectHub aggregates by project_id (only tied content/citation
   });
 });
 
+// HDR-1(c9-structure-canon.md §1c・A1#4): project.schema.json 自体は種を持たない(複数種の
+// content を束ねうる箱)ため、GET /research/projects の ?species= は既存の
+// content.project_id リンクを辿った派生フィルタ(content.species_id が一致する content を
+// 1件でも持つ project だけを残す)。
+describe("HDR-1: species_id narrowing(A1#4) — derived via content.project_id join", () => {
+  it("?species= keeps only projects with a linked content whose species_id matches (case-insensitive)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createProject(bucket, { project_id: "SP-P1", title: "herc project" });
+    await createContent(bucket, {
+      content_id: "sp-c1", content_type: "article", title: "c1", project_id: "SP-P1", species_id: "Dynastes hercules",
+    });
+    await createProject(bucket, { project_id: "SP-P2", title: "other project" });
+    await createContent(bucket, {
+      content_id: "sp-c2", content_type: "article", title: "c2", project_id: "SP-P2", species_id: "Chalcosoma caucasus",
+    });
+    await createProject(bucket, { project_id: "SP-P3", title: "untagged project" }); // no linked content at all
+
+    const scoped = (await (await get(bucket, "/api/v1/research/projects?species=dynastes%20hercules")).json()) as {
+      items: { project_id: string }[];
+    };
+    expect(scoped.items.map((i) => i.project_id)).toEqual(["SP-P1"]);
+
+    const all = (await (await get(bucket, "/api/v1/research/projects")).json()) as { items: { project_id: string }[] };
+    expect(all.items.map((i) => i.project_id).sort()).toEqual(["SP-P1", "SP-P2", "SP-P3"].sort());
+  });
+});
+
 describe("PPR-18 citation append-only + platinum reward (no punitive karma)", () => {
   it("grants a server-fixed amount on provide, 409 on same-key re-put, appends status=updated as a new event", async () => {
     const bucket = new FakeR2Bucket();

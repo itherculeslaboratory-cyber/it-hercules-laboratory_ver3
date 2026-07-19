@@ -114,6 +114,51 @@ describe("WIK-13 four search pillars hit immediately after append (prefix scan p
   });
 });
 
+// HDR-1(c9-structure-canon.md §1c・A1#4): ヘッダー観測対象の species_id パススルー(SW-1
+// 同型)+ GET /research/content・POST /research/search の絞り込み(individual-routes.ts
+// listIndividualsFor と同じ完全一致・大小無視)。
+describe("HDR-1: species_id narrowing(A1#4)", () => {
+  it("species_id はパススルーされ round-trip する(任意フィールド)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "SP-1", content_type: "article", title: "A", species_id: "Dynastes hercules" });
+    const detail = (await (await get(bucket, "/api/v1/research/content/SP-1")).json()) as { species_id?: string };
+    expect(detail.species_id).toBe("Dynastes hercules");
+  });
+
+  it("GET /research/content の ?species= は完全一致(大小無視)で絞る・省略時は全件", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "SP-2", content_type: "article", title: "H", species_id: "Dynastes hercules" });
+    await createContent(bucket, { content_id: "SP-3", content_type: "article", title: "C", species_id: "Chalcosoma caucasus" });
+    await createContent(bucket, { content_id: "SP-4", content_type: "article", title: "無タグ" });
+
+    const scoped = (await (await get(bucket, "/api/v1/research/content?species=dynastes%20hercules")).json()) as {
+      items: { content_id: string }[];
+    };
+    expect(scoped.items.map((i) => i.content_id)).toEqual(["SP-2"]);
+
+    const all = (await (await get(bucket, "/api/v1/research/content")).json()) as { items: unknown[] };
+    expect(all.items).toHaveLength(3);
+  });
+
+  it("POST /research/search の URL ?species= は content.species_id で絞る", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, {
+      content_id: "SP-5", content_type: "article", title: "beetle notes", species_id: "Dynastes hercules",
+    });
+    await createContent(bucket, { content_id: "SP-6", content_type: "article", title: "beetle notes" });
+
+    const scoped = (await (await post(bucket, "/api/v1/research/search?species=dynastes%20hercules", { text: "beetle" })).json()) as {
+      results: { content_id: string }[];
+    };
+    expect(scoped.results.map((r) => r.content_id)).toEqual(["SP-5"]);
+
+    const all = (await (await post(bucket, "/api/v1/research/search", { text: "beetle" })).json()) as {
+      results: { content_id: string }[];
+    };
+    expect(all.results.map((r) => r.content_id).sort()).toEqual(["SP-5", "SP-6"].sort());
+  });
+});
+
 describe("WIK-14 three-layer tags + suggest + RAG_PRIORITY", () => {
   it("ai tag does not overwrite a user tag (separate layers survive)", async () => {
     const bucket = new FakeR2Bucket();

@@ -101,12 +101,44 @@ export const LayoutCtx = createContext<string>("standard");
 // HDR-1(c9-structure-canon.md §1/§1c・R112/R115採用)「観測対象」グローバル
 // 文脈スイッチ。AppShellNode がヘッダーセレクタで確定した選択(層1=学術分類の
 // 種・層2=血統ブランドタグ)を保持し、全画面の子ノードへ配る。空文字="すべて"
-// (未選択・フィルタなし)。第1スライス(HDR-1○実装方針)は種族/系統フィールドが
-// 実在する個体ドメインの消費者(SearchNavigatorNode 等)のみがこれを読む —
-// 市場/知の広場/研究はスキーマにこの2フィールドが無いため対象外(申し送り)。
-// 未配線=次スライス(A1#4正直台帳): clutches(GET /clutches・lineage_idは既存/species要追加)/
-// observation-capture一覧/BatchRosterNode(renderer.tsx obs-register-batchの /individuals fetch)。
-// これらは種族narrowingが原理的に効くが本スライスでは未配線=「配線済」と偽らない。
+// (未選択・フィルタなし)。
+//
+// 第1スライス(commit 09e7a4a・HDR-1○実装方針): 個体ドメイン(individuals/
+// pedigree-links/obs-search/universe)を配線。individual/clutch は species が
+// もともと本人入力の必須コアフィールド(subspecies 確定ゲート付き)なので、
+// この producer 機構は不要=対象外(装飾タグではなく実データそのもの)。
+//
+// 第2スライス(A1#4・read側): 残ドメインの一覧を species で絞る read 配線を
+// 追加 — 知の広場(GET /plaza/channels/:channel/threads・GET /plaza/search を
+// root投稿の species_id 代表値で絞り)・市場(GET /market/listings を絞り)・
+// 研究(GET /research/content・POST /research/search を絞り・GET
+// /research/projects は project.schema.json に種を持たせず content.project_id
+// 結合で派生フィルタ)・clutches(既存 lineage_id と並ぶ species フィルタ)・
+// BatchRosterNode(/individuals・/clutches の両 fetch)。
+//
+// 第2bスライス(slice2b・独立批評家blocking是正・本コミット): 第2スライスの
+// read配線には市場/知の広場/研究へ species_id を書き込む producer が無く、
+// scope選択時にそれらのアプリ作成コンテンツが一覧から消える(producer-less
+// decoration)問題があった。本スライスで producer を配線——
+// FormNode props.header_scoped_producer:true(market-trade.json
+// create-listing-form・data-descriptor.json descriptor-form)は送信 body へ
+// headerScope.species を自動付与(POST /market/listings・POST
+// /research/content。空 scope は何も付けない)。plaza compose
+// (KnowledgeHubNode.createThread → POST /plaza/posts)も同様に自動付与。
+// これで市場/知の広場/研究の3ドメインは「作成→(scope絞り込み時)一覧に出る」
+// が実際に機能する(tests/header-scope-producer.test.ts で実証)。
+//
+// 正直な限界(誇張ゼロ): (a) lineage_id は market/plaza/research のスキーマに
+// フィールドが無いため producer 対象外——これら3ドメインは species のみ絞れ、
+// lineage では絞れない。(b) home(届いた出来事・home-routes.ts)は list ではなく
+// ダッシュボード集計エンドポイントのため今回の「全 list エンドポイント」配線の
+// 対象外(structure-canon §1 が home tiles も切替と言うが、集計値の scope 切替は
+// 別波で要検討・申し送り)。
+//
+// 原理的に対象外(誇張ゼロ・A1#4の正直表示): placement/device(物理什器スキーマに
+// 種フィールドが無い)・taxon-species/taxon-morph(ヘッダーの選択肢そのものを供給する
+// 分類カタログ自体・自己参照になるため対象外)。observation capture の生一覧
+// エンドポイントは現状 API に存在しない(per-capture 詳細取得のみ)ため対象なし。
 export type HeaderScope = { species: string; lineageId: string };
 export const DEFAULT_HEADER_SCOPE: HeaderScope = { species: "", lineageId: "" };
 export const HeaderScopeCtx = createContext<HeaderScope>(DEFAULT_HEADER_SCOPE);
@@ -121,6 +153,16 @@ function headerScopeQuery(scope: HeaderScope): string {
   if (scope.lineageId) params.set("lineage_id", scope.lineageId);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
+}
+
+// headerScopeQuery を「既にクエリ文字列を持つ path」にも安全に足すための第2
+// スライス用ヘルパー(KnowledgeHubNode の `${path}?q=...` 等と衝突しない)。
+// path が "?" を含まなければ headerScopeQuery と同じ "?a=b" を、含んでいれば
+// "&a=b" を足す。scope が空なら path をそのまま返す(既存呼び出しとバイト同一)。
+function appendHeaderScope(path: string, scope: HeaderScope): string {
+  const q = headerScopeQuery(scope);
+  if (!q) return path;
+  return path.includes("?") ? `${path}&${q.slice(1)}` : `${path}${q}`;
 }
 
 // Resolve a node's display string: prefer the i18n catalog value for `keyVal`,
@@ -417,12 +459,17 @@ function toOptions(raw: unknown): Opt[] {
 }
 
 // Fetch node.props.source_path (GET) on mount, store the response at data[id].
+// HDR-1第2スライス(A1#4): props.header_scoped:true な画面定義ノードだけ、現在の
+// ヘッダー観測対象を追加クエリとして付ける(明示オプトインで対象外の55画面の
+// 大半は挙動不変 — market-trade.json の listings-grid 等が使う)。
 function useSource(node: ScreenNode) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
+  const headerScope = useContext(HeaderScopeCtx);
   const execute = useContext(ExecuteCtx);
   const { setNodeData } = useContext(DataSinkCtx);
-  const path = p.source_path ? interpolate(String(p.source_path), scope) : "";
+  const rawPath = p.source_path ? interpolate(String(p.source_path), scope) : "";
+  const path = rawPath && p.header_scoped ? appendHeaderScope(rawPath, headerScope) : rawPath;
   useEffect(() => {
     if (!path) return;
     let alive = true;
@@ -856,6 +903,7 @@ function FieldNode({ node }: { node: ScreenNode }) {
 function FormNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const scope = useContext(ScopeCtx);
+  const headerScope = useContext(HeaderScopeCtx);
   const run = useRunAction(node.id);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(p.error ? String(p.error) : null);
@@ -930,16 +978,43 @@ function FormNode({ node }: { node: ScreenNode }) {
         }
         if (Object.keys(patch).length) writeWorkflowContext(patch);
       }
+      // HDR-1第2スライス(A1#4): props.header_scoped:true なフォーム(例: research-search
+      // の POST /research/search)だけ、送信先パスへヘッダー観測対象クエリを足す
+      // (useSource/BoardThreadsNode と同じオプトイン規約)。navigate kind には
+      // path が無いので api kind のみ書き換える。
+      const action =
+        p.header_scoped && node.action.kind === "api"
+          ? { ...node.action, path: appendHeaderScope(node.action.path, headerScope) }
+          : node.action;
+      // HDR-1第2bスライス(slice2b・批評家blocking是正): props.header_scoped_producer:true
+      // な create フォーム(market-trade create-listing-form・data-descriptor
+      // descriptor-form)は、ヘッダー観測対象(headerScope.species)を送信 body へ
+      // 自動付与する(SW-1の設計意図="選択から付与・ユーザー再入力なし")。空 scope
+      // (すべて)は何も付けない(species_id 無し=従来通り。API 側 schema は
+      // minLength:1 のため空文字は送らない)。フォーム自身が既に species_id を
+      // 持つ場合は上書きしない(将来 field 化された場合の保険)。
+      if (p.header_scoped_producer && headerScope.species && body.species_id === undefined) {
+        body.species_id = headerScope.species;
+      }
       setPending(true);
       try {
-        await run(node.action, body, file);
+        await run(action, body, file);
       } catch (err) {
         setFormError(errorText(err));
       } finally {
         setPending(false);
       }
     },
-    [node.action, run, p.static, scope],
+    [
+      node.action,
+      run,
+      p.static,
+      p.header_scoped,
+      p.header_scoped_producer,
+      scope,
+      headerScope.species,
+      headerScope.lineageId,
+    ],
   );
 
   return (
@@ -2616,6 +2691,7 @@ type PlacementRow = { placement_id: string; label: string };
 function BatchRosterNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
+  const headerScope = useContext(HeaderScopeCtx);
   const [individuals, setIndividuals] = useState<IndividualRow[]>([]);
   const [clutches, setClutches] = useState<ClutchRow[]>([]);
   const [placements, setPlacements] = useState<PlacementRow[]>([]);
@@ -2624,13 +2700,19 @@ function BatchRosterNode() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // HDR-1第2スライス(A1#4): SearchNavigatorNode(obs-search)と同型 — /individuals・
+      // /clutches の両方をヘッダー観測対象で絞る(/placements は物理什器なので対象外)。
       const [ind, cl, pl] = await Promise.all([
-        execute({ kind: "api", method: "GET", path: "/api/v1/individuals" }) as Promise<
-          { individuals?: IndividualRow[] } | undefined
-        >,
-        execute({ kind: "api", method: "GET", path: "/api/v1/clutches" }) as Promise<
-          { clutches?: ClutchRow[] } | undefined
-        >,
+        execute({
+          kind: "api",
+          method: "GET",
+          path: appendHeaderScope("/api/v1/individuals", headerScope),
+        }) as Promise<{ individuals?: IndividualRow[] } | undefined>,
+        execute({
+          kind: "api",
+          method: "GET",
+          path: appendHeaderScope("/api/v1/clutches", headerScope),
+        }) as Promise<{ clutches?: ClutchRow[] } | undefined>,
         execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
           { placements?: PlacementRow[] } | undefined
         >,
@@ -2644,8 +2726,9 @@ function BatchRosterNode() {
     return () => {
       alive = false;
     };
+    // headerScope の primitives のみを deps にする(SearchNavigatorNode と同じ規約)。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [headerScope.species, headerScope.lineageId]);
 
   const placementLabel = useCallback(
     (id: string | null | undefined) => placements.find((p) => p.placement_id === id)?.label ?? "",
@@ -6438,7 +6521,13 @@ function boardLabel(kind: string): string {
 function BoardThreadsNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const execute = useContext(ExecuteCtx);
-  const path = String(p.source_path ?? "/api/v1/plaza/channels/knowledge-board/threads");
+  const headerScope = useContext(HeaderScopeCtx);
+  // HDR-1第2スライス(A1#4): GET /plaza/channels/:channel/threads は root投稿の
+  // species_id をスレ代表値として絞る(SW-1)。
+  const path = appendHeaderScope(
+    String(p.source_path ?? "/api/v1/plaza/channels/knowledge-board/threads"),
+    headerScope,
+  );
   const [view, setView] = useState<KnwBoardThreadsView | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [activeBoard, setActiveBoard] = useState<string>("all");
@@ -6596,6 +6685,7 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
+  const headerScope = useContext(HeaderScopeCtx);
   const path = String(p.source_path ?? "/api/v1/plaza/search");
   const [tab, setTab] = useState<KnwHubTab>("komatta");
   const [q, setQ] = useState("");
@@ -6616,7 +6706,15 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
     }
     let alive = true;
     const timer = setTimeout(() => {
-      Promise.resolve(execute({ kind: "api", method: "GET", path: `${path}?q=${encodeURIComponent(query)}` }))
+      // HDR-1第2スライス(A1#4): GET /plaza/search をヘッダー観測対象で絞る
+      // (appendHeaderScope が既存の ?q= と衝突しない & 連結を行う)。
+      Promise.resolve(
+        execute({
+          kind: "api",
+          method: "GET",
+          path: appendHeaderScope(`${path}?q=${encodeURIComponent(query)}`, headerScope),
+        }),
+      )
         .then((v) => {
           if (alive) setMatches(((v as KnwHubSearchView | undefined)?.matches ?? []).slice(0, 3));
         })
@@ -6631,7 +6729,7 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
       alive = false;
       clearTimeout(timer);
     };
-  }, [q, path, execute]);
+  }, [q, path, execute, headerScope.species, headerScope.lineageId]);
 
   // section2 dup-confirm — 同じ 200ms デバウンス+同じ GET /plaza/search を、
   // compose のタイトル入力に対してだけ再利用する(section1 の検索ボックスとは
@@ -6645,7 +6743,13 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
     }
     let alive = true;
     const timer = setTimeout(() => {
-      Promise.resolve(execute({ kind: "api", method: "GET", path: `${path}?q=${encodeURIComponent(query)}` }))
+      Promise.resolve(
+        execute({
+          kind: "api",
+          method: "GET",
+          path: appendHeaderScope(`${path}?q=${encodeURIComponent(query)}`, headerScope),
+        }),
+      )
         .then((v) => {
           if (alive) setTopMatch(((v as KnwHubSearchView | undefined)?.matches ?? [])[0] ?? null);
         })
@@ -6657,7 +6761,7 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
       alive = false;
       clearTimeout(timer);
     };
-  }, [title, composeOpen, path, execute]);
+  }, [title, composeOpen, path, execute, headerScope.species, headerScope.lineageId]);
 
   const similarity = topMatch ? titleSimilarity(title, topMatch.topic) : 0;
   const dupMatch = topMatch && similarity >= KNW_DUP_THRESHOLD ? topMatch : null;
@@ -6667,16 +6771,18 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
     if (!topic || creating) return;
     setCreating(true);
     try {
-      const res = await execute(
-        { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
-        { channel: KNW_COMPOSE_CHANNEL, board_kind: KNW_COMPOSE_BOARD_KIND, topic, body: topic },
-      );
+      // HDR-1第2bスライス(slice2b・批評家blocking是正): ヘッダー観測対象(chrome由来
+      // のproducer・C9管轄)を新規スレの species_id へ自動付与(SW-1の設計意図="選択
+      // から付与・ユーザー再入力なし")。空scope(すべて)は何も付けない。
+      const body: Record<string, unknown> = { channel: KNW_COMPOSE_CHANNEL, board_kind: KNW_COMPOSE_BOARD_KIND, topic, body: topic };
+      if (headerScope.species) body.species_id = headerScope.species;
+      const res = await execute({ kind: "api", method: "POST", path: "/api/v1/plaza/posts" }, body);
       const threadId = (res as { thread_id?: string } | undefined)?.thread_id;
       if (threadId) navigate("knowledge-thread", { thread_id: threadId });
     } finally {
       setCreating(false);
     }
-  }, [execute, navigate, title, creating]);
+  }, [execute, navigate, title, creating, headerScope.species]);
 
   return (
     <div className="knw-hub">

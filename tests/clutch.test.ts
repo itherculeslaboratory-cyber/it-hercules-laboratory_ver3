@@ -72,6 +72,23 @@ describe("clutch create + current_count projection", () => {
     expect(list.clutches).toHaveLength(2);
   });
 
+  // HDR-1(c9-structure-canon.md §1c・A1#4): ?species= は個体一覧(listIndividualsFor)
+  // と同じ完全一致(大小無視)フィルタ・既存 ?lineage_id= と並存。
+  it("?species= は完全一致(大小無視)で絞る・省略時は本人の全件", async () => {
+    const { env } = ctx();
+    const herc = await createClutch(env, { species: "Dynastes hercules" });
+    await createClutch(env, { species: "Chalcosoma caucasus" });
+    await createClutch(env); // species 省略
+
+    const scoped = (await (await get("/api/v1/clutches?species=dynastes%20hercules", env)).json()) as {
+      clutches: { clutch_id: string }[];
+    };
+    expect(scoped.clutches.map((c) => c.clutch_id)).toEqual([herc]);
+
+    const all = (await (await get("/api/v1/clutches", env)).json()) as { clutches: unknown[] };
+    expect(all.clutches).toHaveLength(3);
+  });
+
   it("recount resets the basis; subsequent attrition subtracts from the NEW basis only", async () => {
     const { env } = ctx();
     const id = await createClutch(env, { initial_count: 100 });
