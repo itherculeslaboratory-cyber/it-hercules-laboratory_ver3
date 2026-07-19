@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>話し合いの場 — IHL</title>
+<style>
+  /* R141(2026-07-19・○採用): 承認済み完成予想図(mkt-dispute-forecast)のCSS視覚系を
+     そのまま採用。配線に必要な差分(ribbon除去・動的挿入)のみ。投票は二層(無料=実装/
+     権能=これから)。使い方3手順・新しく相談の2入口・判例は静的教育コンテンツ。 */
+  :root{
+    --bg:#f7f8f6; --card:#ffffff; --text:#1f2620; --muted:#6b756c;
+    --primary:#2f7d4f; --primary-bg:#eaf5ee; --secondary:#c9772e; --secondary-bg:#fbf0e4;
+    --blue:#3a6ea5; --blue-bg:#eaf1f8; --border:#e6e9e4;
+    --shadow-sm:0 1px 2px rgba(20,25,20,0.06); --shadow-lg:0 4px 16px rgba(20,25,20,0.08);
+    --caution-bg:#f5f1e6; --caution-text:#8a6d2f; --danger:#b5462f; --danger-bg:#f8ece8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14171a; --card:#1c2024; --text:#e8ece8; --muted:#9aa39a;
+      --primary:#49a672; --primary-bg:#183024; --secondary:#e0975a; --secondary-bg:#33261a;
+      --blue:#6a9bd1; --blue-bg:#182634; --border:#2b3138;
+      --shadow-sm:0 1px 2px rgba(0,0,0,0.3); --shadow-lg:0 4px 20px rgba(0,0,0,0.4);
+      --caution-bg:#2c2717; --caution-text:#d8bd7a; --danger:#e08a6f; --danger-bg:#2e1c17;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased;}
+  .ribbon{background:#4a3f1a;color:#f5e9c4;text-align:center;font-size:12.5px;padding:6px 10px;letter-spacing:.02em;}
+  .globalbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 16px;background:var(--card);border-bottom:1px solid var(--border);font-size:13px;}
+  .gb-logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .gb-logo::before{content:"🪲";margin-right:5px;}
+  .gb-scope{display:flex;align-items:center;gap:6px;background:var(--primary-bg);color:var(--primary);border:1px solid var(--primary);border-radius:999px;padding:5px 12px;font-weight:700;white-space:nowrap;}
+  .gb-scope .car{font-size:10px;opacity:.8;}
+  .gb-zones{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;}
+  .gb-zone{color:var(--muted);padding:5px 10px;border-radius:8px;font-weight:600;white-space:nowrap;}
+  .gb-zone.active{color:var(--text);background:var(--bg);}
+  .gb-icons{display:flex;gap:8px;align-items:center;}
+  .gb-bell{position:relative;font-size:16px;}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px 20px 60px;}
+  @media (max-width:600px){.wrap{padding:14px 12px 40px;} .gb-zones{width:100%;order:5;margin-left:0;justify-content:space-between;}}
+
+  header.top{padding:6px 0 8px;}
+  .wordmark{font-size:22px;font-weight:800;letter-spacing:.02em;}
+  .wordmark::before{content:"💬";margin-right:6px;}
+  .lead{color:var(--muted);font-size:14.5px;margin:6px 0 8px;}
+  .how{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 24px;}
+  .how-step{flex:1;min-width:210px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--muted);}
+  .how-step b{color:var(--text);display:block;font-size:13.5px;margin-bottom:2px;}
+  .how-step .n{color:var(--primary);font-weight:800;margin-right:5px;}
+
+  section.block{margin-bottom:28px;}
+  .section-head{margin-bottom:12px;}
+  .section-title{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px;margin:0 0 4px;}
+  .section-caption{color:var(--muted);font-size:13px;margin:0;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow-sm),var(--shadow-lg);}
+
+  /* 相談一覧 */
+  .talk-row{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid var(--border);}
+  .talk-row:last-child{border-bottom:none;}
+  .talk-row.sel{background:var(--primary-bg);border-radius:10px;margin:0 -8px;padding-left:12px;padding-right:12px;}
+  .talk-ico{width:46px;height:46px;min-width:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;}
+  .talk-ico.market{background:linear-gradient(135deg,#c9772e,#e0975a);}
+  .talk-ico.board{background:linear-gradient(135deg,#3a6ea5,#6a9bd1);}
+  .talk-ico.bugfix{background:linear-gradient(135deg,#6b756c,#9aa39a);}
+  .talk-main{flex:1;min-width:0;}
+  .talk-title{font-weight:700;font-size:14.5px;margin-bottom:3px;}
+  .talk-sub{color:var(--muted);font-size:12.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .cat-pill{font-size:11px;font-weight:800;border-radius:6px;padding:1px 7px;}
+  .cat-pill.market{background:var(--secondary-bg);color:var(--secondary);}
+  .cat-pill.board{background:var(--blue-bg);color:var(--blue);}
+  .cat-pill.bugfix{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+  .st-pill{font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 10px;}
+  .st-pill.open{background:var(--secondary-bg);color:var(--secondary);}
+  .st-pill.vote{background:var(--blue-bg);color:var(--blue);}
+  .st-pill.resolved{background:var(--primary-bg);color:var(--primary);}
+  .talk-when{text-align:right;font-size:11.5px;color:var(--muted);min-width:72px;}
+
+  /* 相談ルーム */
+  .room-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;}
+  .room-title{font-size:16px;font-weight:800;}
+  .subject{background:var(--blue-bg);border:1px solid var(--blue);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--blue);margin:10px 0 16px;}
+  .subject b{color:var(--text);}
+  .thread{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;}
+  .msg{display:flex;gap:10px;}
+  .msg .av{width:32px;height:32px;min-width:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;background:var(--muted);}
+  .msg.me{flex-direction:row-reverse;}
+  .msg.me .av{background:var(--primary);}
+  .bubble{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:9px 13px;font-size:13px;max-width:76%;}
+  .msg.me .bubble{background:var(--primary-bg);border-color:var(--primary);}
+  .bubble .who{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:2px;}
+  .bubble .lang{font-size:10px;color:var(--muted);margin-left:6px;font-weight:600;}
+  .composer{display:flex;gap:8px;align-items:center;}
+  .composer .inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:10px 14px;font-size:13px;color:var(--muted);}
+  .btn{border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:700;border:1px solid transparent;cursor:default;}
+  .btn.primary{background:var(--primary);color:#fff;}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn.blue{background:var(--blue);color:#fff;}
+  .btn.sm{padding:6px 13px;font-size:12.5px;}
+
+  /* 決着の2通り */
+  .resolve-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;}
+  @media (max-width:720px){.resolve-two{grid-template-columns:1fr;}}
+  .resolve-card{border:1.5px solid var(--border);border-radius:12px;padding:16px;background:var(--bg);}
+  .resolve-card.agree{border-color:var(--primary);}
+  .resolve-card.vote{border-color:var(--blue);}
+  .resolve-card h4{margin:0 0 6px;font-size:14px;display:flex;gap:6px;align-items:center;}
+  .resolve-card p{margin:0 0 10px;font-size:12.5px;color:var(--muted);}
+  .vote-tally{display:flex;gap:8px;align-items:center;margin:8px 0;}
+  .vote-bar{flex:1;height:10px;border-radius:999px;background:var(--border);overflow:hidden;display:flex;}
+  .vote-bar .s{background:var(--secondary);}
+  .vote-bar .b{background:var(--blue);}
+  .vote-nums{font-size:11.5px;color:var(--muted);}
+
+  .start-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:720px){.start-two{grid-template-columns:1fr;}}
+  .start-card{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--card);}
+  .start-card h4{margin:0 0 6px;font-size:14.5px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+  .start-card p{margin:0 0 10px;font-size:12.5px;color:var(--muted);}
+  .mo-tag{font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 7px;}
+  .mo-tag.live{background:var(--primary);color:#fff;}
+  .mo-tag.partial{background:var(--caution-bg);color:var(--caution-text);}
+  .honest{background:var(--caution-bg);border:1px dashed var(--border);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--caution-text);margin-top:10px;}
+
+  .precedent{display:flex;gap:11px;align-items:flex-start;background:var(--primary-bg);border:1px solid var(--primary);border-radius:12px;padding:14px;}
+  .precedent .p-ico{font-size:20px;}
+  .precedent .p-t{font-weight:700;font-size:13.5px;color:var(--primary);}
+  .precedent .p-d{font-size:12px;color:var(--muted);}
+
+  .prov{margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .prov summary{cursor:default;padding:12px 16px;font-weight:800;font-size:13px;background:var(--card);list-style:none;}
+  .prov table{width:100%;border-collapse:collapse;font-size:12px;}
+  .prov td{padding:8px 16px;border-top:1px solid var(--border);vertical-align:top;}
+  .prov td.f{color:var(--muted);white-space:nowrap;}
+  .prov code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--blue);}
+  footer.foot{text-align:center;color:var(--muted);font-size:12.5px;padding:18px 10px 4px;border-top:1px solid var(--border);margin-top:14px;}
+</style>
+</head>
+<body>
+
+<div class="globalbar">
+  <div class="gb-logo">IHL</div>
+  <div class="gb-scope"><span>観測対象</span><span class="car">▼</span> すべて</div>
+  <nav class="gb-zones">
+    <span class="gb-zone">観測</span><span class="gb-zone">個体</span>
+    <span class="gb-zone">市場</span><span class="gb-zone">知の広場</span>
+  </nav>
+  <div class="gb-icons"><span class="gb-bell">🔔</span><span>👤</span></div>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="wordmark">話し合いの場</div>
+    <p class="lead">取引でもめたとき、当事者2人で話して解決する場所です。アプリへの不満・改善要望もここから出せます。</p>
+  </header>
+  <div class="how">
+    <div class="how-step"><b><span class="n">1</span>2人で話す</b>当事者だけの部屋で経緯を出し合う（第三者は入れません）。</div>
+    <div class="how-step"><b><span class="n">2a</span>合意して決着</b>折り合えたら決着。内容は<b>判例</b>として残り、みんなの参考になります。</div>
+    <div class="how-step"><b><span class="n">2b</span>みんなで決める</b>折り合わなければ公開して<b>プラチナ投票</b>。多数で決着します。</div>
+  </div>
+
+  <!-- 1. 私の相談 -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">📋 私の相談</h2>
+      <p class="section-caption">進行中・決着済みの相談。取引のもめごと／掲示板の議論／アプリ改善要望が並びます。</p>
+    </div>
+    <div class="card">
+      <div id="talk-list"><div style="text-align:center;color:var(--muted);padding:30px;">読み込み中…</div></div>
+    </div>
+  </section>
+
+  <!-- 2. 相談ルーム（選択した相談・当事者2人だけ） -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">💬 相談ルーム（当事者2人だけ）</h2>
+      <p class="section-caption">経緯を出し合う。第三者は入れません。原文の言語はそのまま（翻訳しません）。折り合わなければ公開してみんなで決める。</p>
+    </div>
+    <div id="room"></div>
+  </section>
+
+  <!-- 4. 新しく相談を始める(2つの入口) -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">➕ 新しく相談を始める</h2>
+      <p class="section-caption">入口は2つ。取引のもめごとと、アプリへの不満・改善要望。</p>
+    </div>
+    <div class="start-two">
+      <div class="start-card">
+        <h4>🪲 取引のもめごと <span class="mo-tag live">今つかえます</span></h4>
+        <p>死着・性別違い・系統違いなど。<b>「取引中」画面の「話し合いの場をひらく」</b>から開くと、相手と対象の取引が自動で入ります。</p>
+        <div class="honest">重大な相違でも<b>自動では相談になりません</b>。おかしいと思ったら受け取りを確定せず、自分で「相談する」を押してください（＝あなたが主導権を持つ）。</div>
+      </div>
+      <div class="start-card">
+        <h4>🛠 アプリへの不満・改善要望 <span class="mo-tag partial">受け皿あり・本格版これから</span></h4>
+        <p>「ここが使いにくい」「こう直してほしい」を運営に相談として出せます（黙って握りつぶしません）。</p>
+        <div class="honest">機能単位・ページ単位で開発者と議論し、<b>何を採用し何をなぜ不採用にしたかの経緯まで残す本格版（GitHub連携）</b>は採用決定（R127・F-2）・これから。今は相談として受け付けます。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 判例 -->
+  <section class="block">
+    <div class="section-head"><h2 class="section-title">📚 決着は判例として残る</h2></div>
+    <div class="card">
+      <div class="precedent">
+        <div class="p-ico">📖</div>
+        <div>
+          <div class="p-t">性別相違：発送前スペックと相違した場合の扱い</div>
+          <div class="p-d">決着した相談は「判例」になり、同じもめごとが起きたときにみんなが参照できます（要約・文化ガイド付き・LLMで作らず当事者が書く）。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- provenance -->
+  <section class="block">
+    <details class="prov" open>
+      <summary>🔎 表示値の出所（実装済みの投影・捏造なし。※自動導線と本格改善提案は「これから」明示）</summary>
+      <table>
+        <tr><td class="f">相談の状態・参加者・経緯</td><td><code>projectDispute()</code> → status(open/resolved/force_closed)・category(market/board/bugfix)・participants{opener,respondent}・messages・subject_ref・expired（gov-routes.ts:183）</td></tr>
+        <tr><td class="f">相談を開く / 発言</td><td><code>POST /gov/disputes</code>（category+respondent_id必須・:152）／<code>POST /gov/disputes/{id}/messages</code>（当事者2人限定・第三者403・:231）</td></tr>
+        <tr><td class="f">合意して決着 → 判例</td><td><code>POST /gov/disputes/{id}/close</code>（title/summary必須・LLM生成しない）→ <code>appendPrecedent()</code>（:285/:258）</td></tr>
+        <tr><td class="f">みんなで決める（公開）</td><td><code>POST /gov/disputes/{id}/publicize</code>（opener_role=seller/buyer宣言・:328）</td></tr>
+        <tr><td class="f">プラチナ投票の集計</td><td><code>projectDisputeVoteTally()</code> → seller_votes・buyer_votes・window_closed・winner（締切前はnull=未確定・:367）</td></tr>
+        <tr><td class="f">重大相違→相談の自動導線</td><td><b>未実装（設計意図のみ）</b>。receive遷移に自動分岐は無い（market-settlement.ts）→ 絵でも「自動では回らない・自分で開く」と正直表示</td></tr>
+        <tr><td class="f">アプリ改善の本格版（機能単位議論・採用経緯・GitHub連携）</td><td><b>これから</b>（採用決定 F-2 ○ R127）。今は category=bugfix の相談として受付。KNW改善掲示板とは別系統（統合はC9/round-18）</td></tr>
+      </table>
+    </details>
+  </section>
+
+  <footer class="foot">
+    round-16で0点だった「紛争相談室」の作り直し。用語をやさしく（相談／話し合いの場）・入口を明快に（取引もめごと／アプリ改善）・決着は判例として残す。自動導線と本格改善提案は「これから」と正直表示。
+  </footer>
+</div>
+<script type="module" src="./hanashiai.js"></script>
+</body>
+</html>

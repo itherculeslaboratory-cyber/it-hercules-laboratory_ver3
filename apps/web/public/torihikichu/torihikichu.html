@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>取引中 — IHL</title>
+<style>
+  /* R121(2026-07-19・100点採用): 承認済み完成予想図(mkt-torihikichu-forecast)の
+     視覚システム(:root変数・ダークブロック・レイアウト/密度/配色)をそのまま採用。
+     配線に必要な差分のみ(操作要素の cursor:default→pointer・.deal-row.sel/.empty/.loading
+     の追加・予想図専用の .ribbon/.prov 除去)で、それ以外は不変。テーマは prefers-color-scheme。 */
+  :root{
+    --bg:#f7f8f6;
+    --card:#ffffff;
+    --text:#1f2620;
+    --muted:#6b756c;
+    --primary:#2f7d4f;
+    --primary-bg:#eaf5ee;
+    --secondary:#c9772e;
+    --secondary-bg:#fbf0e4;
+    --blue:#3a6ea5;
+    --blue-bg:#eaf1f8;
+    --border:#e6e9e4;
+    --shadow-sm:0 1px 2px rgba(20,25,20,0.06);
+    --shadow-lg:0 4px 16px rgba(20,25,20,0.08);
+    --caution-bg:#f5f1e6;
+    --caution-text:#8a6d2f;
+    --danger:#b5462f;
+    --danger-bg:#f8ece8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14171a;
+      --card:#1c2024;
+      --text:#e8ece8;
+      --muted:#9aa39a;
+      --primary:#49a672;
+      --primary-bg:#183024;
+      --secondary:#e0975a;
+      --secondary-bg:#33261a;
+      --blue:#6a9bd1;
+      --blue-bg:#182634;
+      --border:#2b3138;
+      --shadow-sm:0 1px 2px rgba(0,0,0,0.3);
+      --shadow-lg:0 4px 20px rgba(0,0,0,0.4);
+      --caution-bg:#2c2717;
+      --caution-text:#d8bd7a;
+      --danger:#e08a6f;
+      --danger-bg:#2e1c17;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* global chrome (IA正本v2 §2・R115承認) */
+  .globalbar{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:9px 16px;background:var(--card);border-bottom:1px solid var(--border);font-size:13px;
+  }
+  .gb-logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .gb-logo::before{content:"🪲";margin-right:5px;}
+  .gb-scope{
+    display:flex;align-items:center;gap:6px;
+    background:var(--primary-bg);color:var(--primary);border:1px solid var(--primary);
+    border-radius:999px;padding:5px 12px;font-weight:700;white-space:nowrap;
+  }
+  .gb-scope .car{font-size:10px;opacity:.8;}
+  .gb-zones{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;}
+  .gb-zone{color:var(--muted);padding:5px 10px;border-radius:8px;font-weight:600;white-space:nowrap;}
+  .gb-zone.active{color:var(--text);background:var(--bg);}
+  .gb-icons{display:flex;gap:8px;align-items:center;}
+  .gb-bell{position:relative;font-size:16px;}
+  .gb-bell .dot{
+    position:absolute;top:-3px;right:-4px;background:var(--danger);color:#fff;
+    font-size:9px;font-weight:800;border-radius:999px;padding:0 4px;line-height:14px;
+  }
+
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 20px 60px;}
+  @media (max-width:600px){
+    .wrap{padding:14px 12px 40px;}
+    .gb-zones{width:100%;order:5;margin-left:0;justify-content:space-between;}
+  }
+
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;padding:6px 0 8px;
+  }
+  .wordmark{font-size:22px;font-weight:800;letter-spacing:.02em;}
+  .wordmark::before{content:"🤝";margin-right:6px;}
+  .tabs{
+    display:flex;gap:8px;background:var(--card);padding:5px;border-radius:999px;
+    border:1px solid var(--border);box-shadow:var(--shadow-sm);
+  }
+  .tab{padding:8px 16px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap;text-decoration:none;}
+  .tab.active{background:var(--primary);color:#fff;}
+  .tab .cnt{background:var(--secondary);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:0 6px;margin-left:5px;}
+  .tab.active .cnt{background:rgba(255,255,255,.28);}
+  .lead{color:var(--muted);font-size:14.5px;margin:4px 0 8px;}
+  .scope-note{
+    color:var(--caution-text);background:var(--caution-bg);border:1px dashed var(--border);
+    border-radius:10px;font-size:12.5px;padding:8px 12px;margin:0 0 26px;
+  }
+
+  section.block{margin-bottom:28px;}
+  .section-head{margin-bottom:12px;}
+  .section-title{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px;margin:0 0 4px;}
+  .section-caption{color:var(--muted);font-size:13px;margin:0;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow-sm),var(--shadow-lg);}
+
+  /* 1. list */
+  .deal-row{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .deal-row:last-child{border-bottom:none;}
+  .deal-row.sel{background:var(--primary-bg);border-radius:10px;margin:0 -8px;padding-left:12px;padding-right:12px;}
+  .deal-thumb{
+    width:52px;height:52px;min-width:52px;border-radius:11px;
+    background:linear-gradient(135deg,#3a6ea5,#6a9bd1);
+    display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;
+  }
+  .deal-thumb.sell{background:linear-gradient(135deg,#2f7d4f,#49a672);}
+  .deal-main{flex:1;min-width:0;}
+  .deal-title{font-weight:700;font-size:14.5px;margin-bottom:3px;}
+  .deal-sub{color:var(--muted);font-size:12.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .role-pill{font-size:11px;font-weight:800;border-radius:6px;padding:1px 7px;}
+  .role-pill.buy{background:var(--blue-bg);color:var(--blue);}
+  .role-pill.sell{background:var(--primary-bg);color:var(--primary);}
+  .state-pill{
+    font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 10px;
+    background:var(--bg);border:1px solid var(--border);color:var(--muted);
+  }
+  .turn{text-align:right;min-width:96px;}
+  .turn .who{font-size:12.5px;font-weight:800;}
+  .turn .who.you{color:var(--secondary);}
+  .turn .who.them{color:var(--muted);}
+  .turn .act{font-size:11.5px;color:var(--muted);}
+  .flag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;}
+  .flag.warn{background:var(--caution-bg);color:var(--caution-text);}
+  .flag.hot{background:var(--danger-bg);color:var(--danger);}
+
+  .empty{
+    text-align:center;color:var(--muted);padding:36px 20px;font-size:14px;
+  }
+  .empty .e-ico{font-size:34px;display:block;margin-bottom:10px;}
+  .empty a{color:var(--primary);font-weight:700;text-decoration:none;}
+
+  /* 2. stepper (detail) */
+  .detail-head{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+  .detail-head .dh-title{font-size:16px;font-weight:800;}
+  .ctx-chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 18px;}
+  .chip{font-size:12px;font-weight:700;background:var(--primary-bg);color:var(--primary);border-radius:999px;padding:4px 11px;border:1px solid var(--border);}
+  .stepper{display:flex;flex-direction:column;gap:0;}
+  .step{display:flex;gap:14px;position:relative;padding-bottom:20px;}
+  .step:last-child{padding-bottom:0;}
+  .step-col{display:flex;flex-direction:column;align-items:center;width:26px;}
+  .step-dot{
+    width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:800;flex-shrink:0;background:var(--card);border:2px solid var(--border);color:var(--muted);
+  }
+  .step.done .step-dot{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .step.now .step-dot{background:var(--secondary);border-color:var(--secondary);color:#fff;box-shadow:0 0 0 4px var(--secondary-bg);}
+  .step-line{flex:1;width:2px;background:var(--border);margin-top:2px;}
+  .step.done .step-line{background:var(--primary);}
+  .step-body{padding-top:2px;flex:1;}
+  .step-name{font-weight:700;font-size:14px;}
+  .step.now .step-name{color:var(--secondary);}
+  .step-meta{color:var(--muted);font-size:12.5px;}
+  .step-now-card{margin-top:8px;background:var(--secondary-bg);border:1px solid var(--secondary);border-radius:10px;padding:10px 14px;font-size:13px;}
+  .step-now-card .snc-do{font-weight:800;color:var(--secondary);margin-bottom:2px;}
+
+  /* 3. payment dual method */
+  .method-toggle{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .method{flex:1;min-width:220px;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--bg);}
+  .method.sel{border-color:var(--primary);background:var(--primary-bg);}
+  .method .m-head{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin-bottom:4px;}
+  .method .m-tag{font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 7px;}
+  .m-tag.default{background:var(--primary);color:#fff;}
+  .m-tag.opt{background:var(--blue-bg);color:var(--blue);}
+  .m-tag.soon{background:var(--caution-bg);color:var(--caution-text);}
+  .method .m-body{font-size:12.5px;color:var(--muted);}
+  .kv{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  .kv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;}
+  .kv-row .k{color:var(--muted);font-size:12px;}
+  .kv-row .v{font-weight:700;}
+  .copycode{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1px 8px;font-weight:700;}
+  .mini-tap{font-size:11px;color:var(--blue);font-weight:700;cursor:pointer;}
+  .selfdeclare{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted);}
+  .btn{border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:700;border:1px solid transparent;cursor:pointer;}
+  .btn.primary{background:var(--primary);color:#fff;}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn.sm{padding:6px 13px;font-size:12.5px;}
+
+  /* 4. shipping */
+  .relay{display:flex;gap:12px;align-items:flex-start;background:var(--blue-bg);border:1px solid var(--blue);border-radius:12px;padding:14px 16px;}
+  .relay .r-ico{font-size:22px;}
+  .relay .r-body{font-size:13px;}
+  .relay .r-url{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--blue);word-break:break-all;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 8px;display:inline-block;margin-top:4px;}
+
+  /* 5. dispute / cancel */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:720px){.two-col{grid-template-columns:1fr;}}
+  .mini-card{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--bg);}
+  .mini-card h4{margin:0 0 6px;font-size:14px;display:flex;gap:6px;align-items:center;}
+  .mini-card p{margin:0 0 10px;font-size:12.5px;color:var(--muted);}
+  .cancel-state{font-size:12px;font-weight:700;border-radius:8px;padding:6px 10px;margin-bottom:10px;background:var(--caution-bg);color:var(--caution-text);border:1px dashed var(--border);}
+  .caution-item{background:var(--caution-bg);border:1px dashed var(--border);border-radius:12px;padding:12px 16px;color:var(--caution-text);font-size:13px;margin-top:14px;}
+  .caution-item .ci-tag{font-weight:700;margin-right:4px;}
+
+  footer.foot{text-align:center;color:var(--muted);font-size:12.5px;padding:18px 10px 4px;border-top:1px solid var(--border);margin-top:14px;}
+  .loading{text-align:center;color:var(--muted);padding:40px;font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- 0. global chrome — IA正本v2 §2(R115承認)。取引中は当事者スコープ=観測対象で絞らない例外画面 -->
+<div class="globalbar">
+  <div class="gb-logo">IHL</div>
+  <div class="gb-scope"><span>観測対象</span><span class="car">▼</span> <span id="gb-scope-name">—</span></div>
+  <nav class="gb-zones">
+    <span class="gb-zone">観測</span>
+    <span class="gb-zone">個体</span>
+    <span class="gb-zone active">市場</span>
+    <span class="gb-zone">知の広場</span>
+  </nav>
+  <div class="gb-icons">
+    <span class="gb-bell">🔔</span>
+    <span>👤</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="top headbar">
+    <div class="wordmark">取引中</div>
+    <nav class="tabs">
+      <a class="tab" href="/s/market-trade">買う</a>
+      <a class="tab" href="/s/market-trade">出品</a>
+      <span class="tab active">取引中<span class="cnt" id="deal-count">0</span></span>
+    </nav>
+  </header>
+  <p class="lead">進行中の取引が今どの段階か・次に<b>あなた</b>がやることを、1画面で。</p>
+  <p class="scope-note">📄 ここは<b>あなたが当事者の取引だけ</b>を表示します(観測対象の絞り込みは効きません)。ホームの「取引中 N件」バッジと同じ数字です。</p>
+
+  <!-- 1. 一覧 -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">📋 進行中の取引</h2>
+      <p class="section-caption">「あなたの番」か「相手待ち」かを各行の右で即判断。急ぎ(残り時間)は色で出る。</p>
+    </div>
+    <div class="card">
+      <div id="deal-list"><div class="loading">読み込み中…</div></div>
+    </div>
+  </section>
+
+  <!-- 2〜5. 詳細(選択した取引) -->
+  <div id="detail"></div>
+
+  <footer class="foot">
+    この画面は「取引中」の当事者スコープ表示です — 「買う」「出品」は別タブ。カード払い(PAY.JP)は準備中(実利用開始は人間ゲート)。
+  </footer>
+
+</div>
+
+<script type="module" src="./torihikichu.js"></script>
+</body>
+</html>
