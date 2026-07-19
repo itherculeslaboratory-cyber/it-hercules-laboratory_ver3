@@ -4,7 +4,7 @@
 "repo_path","sha256_short","board_thread_id"
 "01-requirements/README.md","bc18b9fd99",""
 "01-requirements/retracted.md","e99bd99236",""
-"01-requirements/srs.md","34fa19c02c",""
+"01-requirements/srs.md","aef49c532c",""
 "02-design/adr/adr-v3-emb-01-embedding-dimension.md","78bdadd05e",""
 "02-design/adr/adr-v3-krm-18-legacy-economy-kernel-reconcile.md","242cb238f8",""
 "02-design/adr/adr-v3-layer-01-truth-projection.md","aaa7c64811",""
