@@ -278,3 +278,9 @@ D:\claude\systems\ihl-ver3 で起動して。
 7. **E2E環境debt**: 全spec 3000/8787ハードコード=並行E2E不可+next devが長時間走査でクラッシュ。state隔離/CI分割を検討。
 8. **wave-img**(画像解析・b35af45系)=本統合波の対象外(別タスク・R140)。
 9. **c9-integrate worktree/branch**=統合完了後クリーンアップ対象。
+
+### 追加統合(HQ単発代行・2026-07-19)
+- **wave-obs-r4**(ad3a84b: c611960+ad3a84b)を**main = `66c9ed6`**へff統合・push済。R192=○75+是正完了。内容=OBS-R4 個体QR→紐づけハブ(追観測/棚/繁殖)+追観測(POST /observation/captures・/solid-observation/commit)/クラッチ親(POST /clutches)の所有者ガード新設(projectCurrentOwner・fail-closed 403 NOT_OWNER・exploitテスト付き)+R192コントラスト是正(トークン差し替え)。
+- 方式=前回同一(隔離worktree c9-obs-r4→merge --no-ff→ゲート緑→ff→push)。衝突ゼロ。reconcile: renderer.tsx=ClutchIntakeNode限定(params.parent_id先読み・グローバルナビ無改変)/qr-resume.json純加算(占有パス文言不変)/csv再生成。
+- ゲート実測: lint21緑/web tsc clean/**vitest 1806緑**(contract=obs-r4-authz-exploit +8)/影響E2E緑(obs-r4-qr-link[新]・observation walkthrough[qr-resume追加ハブ無回帰]・obs-qr-resume-empty/multi=clean全緑)。
+- DISPATCH-c9ロック節は無改変(単発代行・以後の統合権限はC9のまま)。統合報告カードのhq_feedbackに1行追記。
