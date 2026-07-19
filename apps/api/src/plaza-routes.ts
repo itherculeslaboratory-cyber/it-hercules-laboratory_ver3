@@ -1020,9 +1020,11 @@ export function reduceSpeciesBook(
   };
 }
 
-// projectSpeciesBook — store配線。species_id はまだ plaza-post スキーマに未追加
-// (C9後日拡張)のため、現状は投稿側に付いていれば拾う薄い読み取り(ヒット0=空の本は
-// 正常系)。
+// projectSpeciesBook — store配線。species_id は SW-1 で plaza-post スキーマへ
+// 追加済み(schemas/events/plaza-post.schema.json)。付与された投稿だけがこの本に
+// 載る(未付与の投稿は素通し=ヒット0=空の本は正常系)。投稿フォーム側がこの
+// フィールドを自動で添える配線はまだ無い(wave1 KNW「種族の本」の申し送り —
+// renderer.tsx SpeciesBookNode の footer 参照)。
 export async function projectSpeciesBook(s: TruthStore, speciesId: string): Promise<SpeciesBook> {
   const allPosts = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf);
   const posts = allPosts.filter((d) => (d as { species_id?: unknown }).species_id === speciesId);
