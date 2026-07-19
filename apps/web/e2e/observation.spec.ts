@@ -33,13 +33,16 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await expect(page.getByRole("button", { name: "開発トークンでログイン" })).toBeVisible();
   await shot(page, "01-login");
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
   await shot(page, "02-home");
 
   // 2. home → obs-entry 直行(V3-UIX-02 3クリック導線・K4)。domain は obs-entry が
-  //    自前収集するため domain-select 画面はガイド用の並行導線(リンク存在のみ確認)。
-  await expect(page.getByRole("link", { name: "ドメインから選んで始める" })).toBeVisible();
-  await page.getByRole("button", { name: "観測を始める" }).click();
+  //    自前収集する。home v2(承認済みmockup c9-home-forecast-v2.html・R112
+  //    90点)は「主な行き先」4カードのうち観測カードそのものがクリック対象
+  //    (旧ガイド選択リンク "ドメインから選んで始める" は home v2 の IA 再設計で
+  //    撤去 — nav-reachability.test.ts のコメント参照)。カードは <a href> なので
+  //    role は button でなく link。
+  await page.getByRole("link", { name: "観測を始める" }).click();
   await expect(page.getByRole("heading", { name: "観測を記録する" })).toBeVisible();
   await shot(page, "03-obs-entry-direct");
   // Gate on hydration before submitting: a click before the client bundle

@@ -2,8 +2,8 @@
   "screen_id": "home",
   "route": "/",
   "title": "ホーム",
-  "layout": "wide",
-  "notes": "V3-UIX-25(司令塔=今日の状態kpi+次の一手today_lines)/26(文明ミニマップ非PII集計)/27(today_linesは最大3行・deep link)。既存の観測開始1クリック(start-observe)・FeatureNode入口(open-*/chip-*)・設定とテーマ(open-theme/open-ui-templates/open-settings)は tests/nav-reachability.test.ts の click-budget契約とe2e(observation.spec.ts)のラベル契約のため id/label/href を変更していない — 追加のみ。統合オーナー差し戻し(幅使い切り・10秒把握密度・design-home-round.md是正の続き): 「今日の状態」4タイル(todaystats/kpi-near/kpi-inbox/kpi-karma)は表示順・id・label・データバインドを変えずchrome最小のcard `todaystats-group` でchildren化し、そのcard配下だけをCSS gridで横並び(≥1024px 4列/中間2×2/〜480px積み・globals.css `.civ-card:has(> .civ-kpi-tile)`)。加えてこのhome画面のみ `layout:\"wide\"` を宣言し、app-shell配下(header/page/footer)のmax-widthをデスクトップで拡張(globals.css `.civ-app-shell[data-layout=\"wide\"]`)——全画面共有の `.civ-page` グローバル値は無変更(他画面は従来どおり720px)。civstatsの3タイルは今回も無変更(設計書「④以降無変更」維持)。",
+  "layout": "standard",
+  "notes": "ホーム完成予想図v2(承認済みmockup D:\\claude\\00-hq\\dashboard\\mockups\\c9-home-forecast-v2.html・R112 90点採用)の実物採用+実データ配線。KNW wave1(knowledge-hub.json)と同じ in-scope トリック — 単一の list ノード(variant=home-dashboard)へ一本化し、HomeDashboardNode(apps/web/src/renderer/renderer.tsx)が mockup の markup/CSS を逐語描画しつつ実データを流し込む。旧・多ノードJSON構成(kpi-tile×7・table×2・button/link多数)は撤去 — 個々のnode id/label_key はもう存在しないが、同等のナビ導線(観測を始める→obs-entry/知の広場→knowledge-hub/マーケット→market-trade/観測対象を特定する→obs-navigator/記録画面を作る→ui-templates/テーマ→theme-gallery/設定→settings+サブチップ(device/costs/ai-profile-settings/language-select/profile)/話し合いの場→dispute)はHomeDashboardNode内のhrefとして残り、下記transitions[]がnav-reachability.test.ts+check-navigation.mjsの契約を保つ。旧'ドメインから選んで始める'(→obs-domain-select)は新IAで撤去(obs-entryがdomainを自前収集・観測対象の特定はobs-navigatorが引き継ぐ)——navigation.jsonのhome→obs-domain-selectエッジ自体は維持(消していない)がscreendef transitionからは外した。nav-reachability.test.tsのobs-domain-select===1アサーションもこの設計変更に合わせて更新済み(削除ではなくコメントで理由記載)。信頼度平均タイルはR135-a裁定により実装せず(round-18 V3-UIX-84)。ctx-line(観測対象タグ)と primary-grid の pc-badge(サンプル件数)は対応する実データAPIが無いため省略(誇張ゼロ)。",
   "nodes": [
     {
       "id": "shell",
@@ -13,157 +13,10 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text_key": "home.title.text", "text": "観測ホーム", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text_key": "home.lead.text", "text": "今日の状態と次の一手だけをここに置いています。", "muted": true } },
-            { "id": "here-title", "type": "heading", "props": { "text_key": "home.here-title.text", "text": "今日の状態", "level": 2 } },
             {
-              "id": "todaystats-group",
-              "type": "card",
-              "children": [
-                {
-                  "id": "todaystats",
-                  "type": "kpi-tile",
-                  "props": { "source_path": "/api/v1/home/summary", "label_key": "home.kpi-overdue.label", "label": "超過", "value": "{{data.todaystats.overdue.length}}", "fallback": "0" }
-                },
-                {
-                  "id": "kpi-near",
-                  "type": "kpi-tile",
-                  "props": { "label_key": "home.kpi-near.label", "label": "近接", "value": "{{data.todaystats.near.length}}", "fallback": "0" }
-                },
-                {
-                  "id": "kpi-inbox",
-                  "type": "kpi-tile",
-                  "props": { "label_key": "home.kpi-inbox.label", "label": "届いた出来事", "value": "{{data.todaystats.judicial_inbox.length}}", "fallback": "0" }
-                },
-                {
-                  "id": "kpi-karma",
-                  "type": "kpi-tile",
-                  "props": { "source_path": "/api/v1/me/ledger", "label_key": "home.kpi-karma.label", "label": "貢献度", "value": "{{data.kpi-karma.karma_value}}", "fallback": "0" }
-                }
-              ]
-            },
-            { "id": "platinum", "type": "text", "props": { "text_key": "home.platinum.text", "text": "プラチナコイン: {{data.kpi-karma.platinum_coins}}", "muted": true } },
-            { "id": "today-title", "type": "heading", "props": { "text_key": "home.today-title.text", "text": "次の一手", "level": 2 } },
-            {
-              "id": "today",
-              "type": "table",
-              "props": {
-                "bind_items": "data.todaystats.today_lines",
-                "empty_text": "今日観測が必要な個体はありません",
-                "columns": [
-                  { "key": "individual_id", "label_key": "home.today.col-individual.label", "label": "個体" },
-                  { "key": "days", "label_key": "home.today.col-days.label", "label": "日数" },
-                  { "key": "deep_link", "cell": "link", "href_tpl": "{{deep_link}}", "link_label": "記録する" }
-                ]
-              }
-            },
-            { "id": "inbox-title", "type": "heading", "props": { "text_key": "home.inbox-title.text", "text": "届いた出来事", "level": 2 } },
-            {
-              "id": "inbox-table",
-              "type": "table",
-              "props": {
-                "bind_items": "data.todaystats.judicial_inbox",
-                "empty_text": "新しく届いた話し合いはありません",
-                "columns": [
-                  { "key": "vote_deadline", "cell": "date", "label_key": "home.inbox-table.col-deadline.label", "label": "締切" },
-                  { "key": "dispute_id", "cell": "link", "label": "", "href_tpl": "/s/dispute?dispute_id={{dispute_id}}", "link_label": "話し合いを見る" }
-                ]
-              }
-            },
-            { "id": "civ-title", "type": "heading", "props": { "text_key": "home.civ-title.text", "text": "文明の状態", "level": 2 } },
-            { "id": "civ-lead", "type": "text", "props": { "text_key": "home.civ-lead.text", "text": "誰の値かは出ません(全体の非PII集計のみ)。", "muted": true } },
-            {
-              "id": "civstats",
-              "type": "kpi-tile",
-              "props": { "source_path": "/api/v1/home/civ-minimap", "label_key": "home.civ-pace.label", "label": "直近7日の観測件数", "value": "{{data.civstats.observation_pace_7d}}", "fallback": "0" }
-            },
-            {
-              "id": "civ-trust",
-              "type": "kpi-tile",
-              "props": { "label_key": "home.civ-trust.label", "label": "信頼度平均", "value": "{{data.civstats.trust_avg}}", "fallback": "50" }
-            },
-            {
-              "id": "civ-growth",
-              "type": "kpi-tile",
-              "props": { "label_key": "home.civ-growth.label", "label": "テンプレ文化の版数", "value": "{{data.civstats.template_growth}}", "fallback": "0" }
-            },
-            {
-              "id": "start-observe",
-              "type": "button",
-              "props": { "label_key": "home.start-observe.label", "label": "観測を始める", "variant": "primary" },
-              "action": { "kind": "navigate", "to": "obs-entry" }
-            },
-            {
-              "id": "guide-select",
-              "type": "link",
-              "props": { "label_key": "home.guide-select.label", "label": "ドメインから選んで始める", "href": "/s/obs-domain-select" }
-            },
-            { "id": "feature-nav-title", "type": "heading", "props": { "text_key": "home.feature-nav-title.text", "text": "各機能へ", "level": 2 } },
-            {
-              "id": "open-individual",
-              "type": "button",
-              "props": { "label_key": "home.open-individual.label", "label": "個体を開く", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "obs-search" }
-            },
-            {
-              "id": "open-individual-finder",
-              "type": "link",
-              "props": { "label_key": "home.open-individual-finder.label", "label": "理想の個体を探す", "href": "/finder/finder.html" }
-            },
-            {
-              "id": "open-match",
-              "type": "button",
-              "props": { "label_key": "home.open-match.label", "label": "マッチングを見る", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "match" }
-            },
-            {
-              "id": "open-species",
-              "type": "button",
-              "props": { "label_key": "home.open-species.label", "label": "種を管理する", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "species" }
-            },
-            {
-              "id": "open-device",
-              "type": "button",
-              "props": { "label_key": "home.open-device.label", "label": "機器を管理する", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "device" }
-            },
-            {
-              "id": "open-knowledge",
-              "type": "button",
-              "props": { "label_key": "home.open-knowledge.label", "label": "知の広場を開く", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "knowledge-hub" }
-            },
-            { "id": "feature-title", "type": "heading", "props": { "text_key": "home.feature-title.text", "text": "設定とテーマ", "level": 2 } },
-            {
-              "id": "open-theme",
-              "type": "link",
-              "props": { "label_key": "home.open-theme.label", "label": "テーマを選ぶ", "href": "/s/theme-gallery" }
-            },
-            {
-              "id": "open-ui-templates",
-              "type": "link",
-              "props": { "label_key": "home.open-ui-templates.label", "label": "UI テンプレートを選ぶ", "href": "/s/ui-templates" }
-            },
-            {
-              "id": "open-settings",
-              "type": "link",
-              "props": { "label_key": "home.open-settings.label", "label": "設定を開く", "href": "/s/settings" }
-            },
-            {
-              "id": "chip-status",
-              "type": "link",
-              "props": { "label_key": "home.chip-status.label", "label": "ステータス", "href": "/s/economy-status", "variant": "chip" }
-            },
-            {
-              "id": "chip-market",
-              "type": "link",
-              "props": { "label_key": "home.chip-market.label", "label": "取引", "href": "/s/market-trade", "variant": "chip" }
-            },
-            {
-              "id": "chip-costs",
-              "type": "link",
-              "props": { "label_key": "home.chip-costs.label", "label": "運営コスト", "href": "/s/costs", "variant": "chip" }
+              "id": "dashboard",
+              "type": "list",
+              "props": { "variant": "home-dashboard" }
             }
           ]
         }
@@ -171,12 +24,18 @@
     }
   ],
   "transitions": [
-    { "from": "start-observe", "to_screen_id": "obs-entry", "label": "観測入力へ(V3-UIX-02 3クリック導線・domain は obs-entry が自前収集)" },
-    { "from": "guide-select", "to_screen_id": "obs-domain-select", "label": "ガイド付きドメイン選択へ" },
-    { "from": "open-individual", "to_screen_id": "obs-search", "label": "個体一覧(検索)へ・カードタップで個体詳細へ" },
-    { "from": "open-match", "to_screen_id": "match", "label": "マッチングへ" },
-    { "from": "open-species", "to_screen_id": "species", "label": "種の管理へ" },
-    { "from": "open-device", "to_screen_id": "device", "label": "機器の管理へ" },
-    { "from": "open-knowledge", "to_screen_id": "knowledge-hub", "label": "知の広場へ" }
+    { "from": "dashboard", "to_screen_id": "obs-entry", "label": "観測を始める(主な行き先)" },
+    { "from": "dashboard", "to_screen_id": "knowledge-hub", "label": "知の広場へ(主な行き先)" },
+    { "from": "dashboard", "to_screen_id": "market-trade", "label": "マーケットへ(主な行き先)" },
+    { "from": "dashboard", "to_screen_id": "obs-navigator", "label": "観測対象を特定するへ(名前で探す/はい・いいえで絞る/分類からたどるの3枚とも)" },
+    { "from": "dashboard", "to_screen_id": "ui-templates", "label": "記録画面を作るへ(作る・整える)" },
+    { "from": "dashboard", "to_screen_id": "theme-gallery", "label": "テーマ(色を変える)へ(記録画面を作る内サブチップ)" },
+    { "from": "dashboard", "to_screen_id": "settings", "label": "設定へ(作る・整える)" },
+    { "from": "dashboard", "to_screen_id": "device", "label": "センサー機器へ(設定サブチップ)" },
+    { "from": "dashboard", "to_screen_id": "costs", "label": "かかった費用へ(設定サブチップ)" },
+    { "from": "dashboard", "to_screen_id": "ai-profile-settings", "label": "AIの設定へ(設定サブチップ)" },
+    { "from": "dashboard", "to_screen_id": "language-select", "label": "言語・国へ(設定サブチップ)" },
+    { "from": "dashboard", "to_screen_id": "profile", "label": "プロフィールへ(設定サブチップ)" },
+    { "from": "dashboard", "to_screen_id": "dispute", "label": "話し合いの場へ(作る・整える)" }
   ]
 }

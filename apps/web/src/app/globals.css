@@ -1990,3 +1990,536 @@ a.civ-thumb-card:focus-visible {
   width: 100%;
   justify-content: flex-start;
 }
+
+/* =============================================================================
+ * home 完成予想図v2(承認済みmockup D:\claude\00-hq\dashboard\mockups\
+ * c9-home-forecast-v2.html・R112 90点採用・caseB7/KNW hub と同じ verbatim
+ * パターン)。以下は mockup.html の <style> ブロックを「値を一切変えず」
+ * ".home-dashboard " を祖先に付けて再配置したもの(選択子以外は一字一句その
+ * まま)。ribbon(「完成予想図です」バナー)・theme-toggle(アプリ本体の
+ * data-theme システム/AppShellNode の ThemeToggleButton に置き換え)・
+ * ctx-line(観測対象タグ・対応APIなし)・footer(承認メタ文言)・pc-badge
+ * (対応する実データAPIが無い4カード分のサンプル件数)は不採用(タスク報告に
+ * 記載)。CSS custom properties は mockup の :root ではなく .home-dashboard に
+ * 載せる(アプリ全体の :root と衝突させない)。data-theme トグルはアプリ側の
+ * 仕組み(tokens.generated.css と同じ :root[data-theme] hard override 規約)に
+ * 追従させるため、mockup にはない :root[data-theme] ブロックを追加している。
+ * ========================================================================== */
+.home-dashboard {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --purple: #7a5aa8;
+  --purple-bg: #f0ebf7;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+}
+@media (prefers-color-scheme: dark) {
+  .home-dashboard {
+    --bg: #14171a;
+    --card: #1c2024;
+    --text: #e8ece8;
+    --muted: #9aa39a;
+    --primary: #49a672;
+    --primary-bg: #183024;
+    --secondary: #e0975a;
+    --secondary-bg: #33261a;
+    --blue: #6a9bd1;
+    --blue-bg: #182634;
+    --purple: #a98fd0;
+    --purple-bg: #241d33;
+    --border: #2b3138;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --caution-bg: #2c2717;
+    --caution-text: #d8bd7a;
+  }
+}
+/* アプリの手動テーマ切替(lib/theme.ts が :root[data-theme] を刻印)にも追従
+ * させる hard override — mockup 自体にはこのブロックは存在しない(上の注記)。 */
+:root[data-theme="dark"] .home-dashboard {
+  --bg: #14171a;
+  --card: #1c2024;
+  --text: #e8ece8;
+  --muted: #9aa39a;
+  --primary: #49a672;
+  --primary-bg: #183024;
+  --secondary: #e0975a;
+  --secondary-bg: #33261a;
+  --blue: #6a9bd1;
+  --blue-bg: #182634;
+  --purple: #a98fd0;
+  --purple-bg: #241d33;
+  --border: #2b3138;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --caution-bg: #2c2717;
+  --caution-text: #d8bd7a;
+}
+:root[data-theme="light"] .home-dashboard {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --purple: #7a5aa8;
+  --purple-bg: #f0ebf7;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+}
+
+.home-dashboard .wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 22px 64px;
+  color: var(--text);
+}
+@media (max-width: 600px) {
+  .home-dashboard .wrap {
+    padding: 14px 12px 40px;
+  }
+}
+
+.home-dashboard header.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 6px 0 6px;
+}
+.home-dashboard .wordmark {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.home-dashboard .wordmark::before {
+  content: "🏠";
+  margin-right: 6px;
+}
+.home-dashboard .lead {
+  color: var(--muted);
+  font-size: 14.5px;
+  margin: 2px 0 10px;
+}
+
+.home-dashboard section.block {
+  margin-bottom: 30px;
+}
+.home-dashboard .section-head {
+  margin-bottom: 12px;
+}
+.home-dashboard .section-title {
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+.home-dashboard .section-caption {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.home-dashboard .card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+}
+.home-dashboard .source-note {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+/* 1. 今日の状態: stat tiles */
+.home-dashboard .stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .home-dashboard .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.home-dashboard .stat-tile {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+}
+.home-dashboard .stat-tile .st-icon {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.home-dashboard .stat-tile .st-num {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.home-dashboard .stat-tile .st-label {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-weight: 600;
+}
+.home-dashboard .stat-tile.warn .st-num {
+  color: var(--secondary);
+}
+.home-dashboard .stat-tile.info .st-num {
+  color: var(--blue);
+}
+.home-dashboard .stat-tile.good .st-num {
+  color: var(--primary);
+}
+.home-dashboard .stat-tile .st-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* 2. 主な行き先: 4 primary flows (equal weight) */
+.home-dashboard .primary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .home-dashboard .primary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .home-dashboard .primary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .primary-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 20px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+  overflow: hidden;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+.home-dashboard .primary-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--accent, var(--primary));
+}
+.home-dashboard .primary-card .pc-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+  background: var(--accent-bg, var(--primary-bg));
+  margin-bottom: 12px;
+}
+.home-dashboard .primary-card .pc-title {
+  font-size: 16.5px;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+.home-dashboard .primary-card .pc-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  flex: 1;
+}
+.home-dashboard .primary-card.obs {
+  --accent: var(--primary);
+  --accent-bg: var(--primary-bg);
+}
+.home-dashboard .primary-card.ind {
+  --accent: var(--blue);
+  --accent-bg: var(--blue-bg);
+}
+.home-dashboard .primary-card.knw {
+  --accent: var(--secondary);
+  --accent-bg: var(--secondary-bg);
+}
+.home-dashboard .primary-card.mkt {
+  --accent: var(--purple);
+  --accent-bg: var(--purple-bg);
+}
+
+/* 3. 次の一手 */
+.home-dashboard .today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.home-dashboard .today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.home-dashboard .today-row:last-child {
+  border-bottom: none;
+}
+.home-dashboard .today-id {
+  font-weight: 700;
+  font-size: 14px;
+}
+.home-dashboard .day-badge {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 11px;
+  margin-top: 5px;
+}
+.home-dashboard .day-badge.overdue {
+  background: var(--secondary-bg);
+  color: var(--secondary);
+}
+.home-dashboard .day-badge.near {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.home-dashboard .link-btn {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--primary-bg);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  white-space: nowrap;
+}
+.home-dashboard .link-btn.secondary {
+  background: var(--secondary-bg);
+  color: var(--secondary);
+  border: 1px solid var(--secondary);
+}
+
+/* 4. 届いた出来事 */
+.home-dashboard .inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.home-dashboard .inbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.home-dashboard .inbox-row:last-child {
+  border-bottom: none;
+}
+.home-dashboard .inbox-deadline {
+  font-size: 13.5px;
+}
+.home-dashboard .inbox-deadline .dl-label {
+  color: var(--muted);
+  font-size: 11.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* 5. 文明の状態 — 信頼度平均タイル非実装(R135-a)につき2列 */
+.home-dashboard .civ-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .home-dashboard .civ-row {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .civ-tile {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.home-dashboard .civ-tile .ct-num {
+  font-size: 21px;
+  font-weight: 800;
+}
+.home-dashboard .civ-tile .ct-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.home-dashboard .civ-privacy-note {
+  color: var(--muted);
+  font-size: 11.5px;
+  margin-top: 12px;
+}
+
+/* 6. 観測対象を特定する: tool group */
+.home-dashboard .tool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .home-dashboard .tool-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .tool-card {
+  display: flex;
+  gap: 13px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px 16px;
+}
+.home-dashboard .tool-card .tl-icon {
+  font-size: 20px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.home-dashboard .tool-card .tl-name {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+.home-dashboard .tool-card .tl-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+.home-dashboard .tool-card .tl-opt {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--caution-text);
+  background: var(--caution-bg);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+/* 7. 作る・整える: secondary grouped */
+.home-dashboard .secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .home-dashboard .secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .sec-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.home-dashboard .sec-card .sc-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 6px;
+}
+.home-dashboard .sec-card .sc-icon {
+  font-size: 20px;
+}
+.home-dashboard .sec-card .sc-title {
+  font-size: 15px;
+  font-weight: 800;
+}
+.home-dashboard .sec-card .sc-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.home-dashboard .sec-card .sc-sub {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.home-dashboard .sec-card .sub-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.home-dashboard .sec-card.builder {
+  border: 1.5px solid var(--purple);
+}
+.home-dashboard .sec-card.builder .sc-title {
+  color: var(--purple);
+}
+.home-dashboard .core-tag {
+  display: inline-block;
+  background: var(--purple-bg);
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: 6px;
+}
+
+/* --- functional-only additions: the mockup's primary-card/tool-card/sec-card
+ * head/sub-chip/link-btn were static demo markup (non-interactive div/span).
+ * HomeDashboardNode wires them to real <a> elements — these rules only reset
+ * the browser's default anchor chrome so the adopted look is unchanged; no
+ * spacing/color/radius value above was touched. */
+.home-dashboard a.primary-card,
+.home-dashboard a.tool-card,
+.home-dashboard .sc-head-link,
+.home-dashboard a.sub-chip,
+.home-dashboard a.link-btn {
+  color: inherit;
+  text-decoration: none;
+}
+.home-dashboard .sc-head-link {
+  display: block;
+}

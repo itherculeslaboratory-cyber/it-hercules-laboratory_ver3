@@ -23,7 +23,7 @@ const WEB = "http://127.0.0.1:3000";
 async function devLogin(page: Page): Promise<void> {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 // A 2nd real actor's browser context, authenticated via the SAME magic-link

@@ -1367,7 +1367,13 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
   });
 });
 
-describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)", () => {
+// home v2(承認済みmockup c9-home-forecast-v2.html・R112 90点採用)以降:
+// HomeDashboardNode(list variant="home-dashboard")の verbatim 採用に伴い旧
+// kpi-tile/table 構成のテストを書き直し。信頼度平均タイルは R135-a裁定
+// (round-18 V3-UIX-84)「合成指標『信頼度』禁止」で丸ごと非実装のため
+// trust_avg のアサーションは撤去。observation_pace_7d/template_growth は
+// mockup 準拠で「NN件」表記、貢献度は正値のとき「+N」表記になる。
+describe("home screen-def — home v2 dashboard (V3-UIX-25/26/27・home完成予想図v2)", () => {
   it("shows overdue/near/karma kpis, a deep-linked today_lines row, and non-PII civ stats", async () => {
     const onAction = vi.fn(async (action: Action) => {
       if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
@@ -1380,6 +1386,7 @@ describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25
           today_lines: [
             { individual_id: "ind-1", days: -5, overdue: true, deep_link: "/s/obs-register-entry?id=ind-1" },
           ],
+          judicial_inbox: [],
         };
       }
       if (action.path === "/api/v1/home/civ-minimap") {
@@ -1389,13 +1396,14 @@ describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25
     });
     render(<Renderer def={loadScreenDef("home")} onAction={onAction} />);
 
-    await waitFor(() => expect(screen.getByText("12")).toBeInTheDocument()); // カルマ kpi
+    await waitFor(() => expect(screen.getByText("+12")).toBeInTheDocument()); // カルマ kpi(正値は+表記)
     expect(screen.getByText("1")).toBeInTheDocument(); // 超過 kpi (overdue.length)
     expect(screen.getByText("2")).toBeInTheDocument(); // 近接 kpi (near.length)
-    expect(screen.getByText("42")).toBeInTheDocument(); // observation_pace_7d
-    expect(screen.getByText("61.5")).toBeInTheDocument(); // trust_avg
-    expect(screen.getByText("7")).toBeInTheDocument(); // template_growth
+    expect(screen.getByText("42件")).toBeInTheDocument(); // observation_pace_7d
+    expect(screen.queryByText("61.5")).not.toBeInTheDocument(); // 信頼度平均は非実装(R135-a)
+    expect(screen.getByText("7件")).toBeInTheDocument(); // template_growth
     expect(screen.getByText("ind-1")).toBeInTheDocument(); // today_lines row
+    expect(screen.getByText("5日遅れ")).toBeInTheDocument(); // days=-5・overdue:true
     expect(screen.getByRole("link", { name: "記録する" })).toHaveAttribute(
       "href",
       "/s/obs-register-entry?id=ind-1",
@@ -1409,8 +1417,9 @@ describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25
     });
     render(<Renderer def={loadScreenDef("home")} onAction={onAction} />);
     await waitFor(() => expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument());
-    // fallback values from home.json (V3-UIX-26 「API失敗時は近似フォールバック表示」)
-    expect(screen.getByText("50")).toBeInTheDocument(); // civ-trust fallback
-    expect(screen.getAllByText("0").length).toBeGreaterThan(0); // karma/overdue/near/pace/growth fallbacks
+    // karma/overdue/near/届いた出来事 は素の "0"、pace/growth は mockup 準拠の
+    // 「0件」表記。信頼度平均フォールバックは非実装(R135-a)につき撤去。
+    expect(screen.getAllByText("0").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("0件").length).toBe(2); // civ pace + growth fallbacks
   });
 });

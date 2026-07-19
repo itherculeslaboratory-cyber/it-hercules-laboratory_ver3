@@ -36,7 +36,7 @@ async function devLogin(page: Page) {
   // devLogin self-navigates to home post-login (renderer navigate()) — wait for
   // that to actually land before the caller issues its OWN goto, otherwise the
   // two in-flight navigations race and Playwright aborts one (net::ERR_ABORTED).
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test.describe("c8 full sweep (2 widths)", () => {

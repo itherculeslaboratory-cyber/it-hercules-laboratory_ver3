@@ -22,7 +22,7 @@ const shot = (page: Page, name: string) => page.screenshot({ path: resolve(SHOTS
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test("multi-occupant shelf QR → この棚の個体を選ぶ → 追観測へ → obs-register-entry", async ({ page }) => {

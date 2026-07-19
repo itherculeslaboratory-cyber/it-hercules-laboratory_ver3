@@ -30,7 +30,7 @@ const isResourceLoadError = (text: string) => /Failed to load resource/i.test(te
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test.describe("screen sweep", () => {

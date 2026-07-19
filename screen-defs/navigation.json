@@ -149,6 +149,26 @@
       "label": "取引へ"
     },
     {
+      "from": "home",
+      "to": "obs-navigator",
+      "label": "観測対象を特定するへ(home完成予想図v2)"
+    },
+    {
+      "from": "home",
+      "to": "ai-profile-settings",
+      "label": "AIの設定へ(home完成予想図v2・設定サブチップ)"
+    },
+    {
+      "from": "home",
+      "to": "language-select",
+      "label": "言語・国へ(home完成予想図v2・設定サブチップ)"
+    },
+    {
+      "from": "home",
+      "to": "dispute",
+      "label": "話し合いの場へ(home完成予想図v2)"
+    },
+    {
       "from": "obs-domain-select",
       "to": "obs-entry",
       "label": "ドメイン選択後に観測入力へ"

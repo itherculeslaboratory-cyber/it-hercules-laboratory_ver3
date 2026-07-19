@@ -19,7 +19,7 @@ const SHOTS = resolve(REPO_ROOT, "docs", "planning", "c8", "screens");
 async function devLogin(page: Page): Promise<void> {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 // market-trade-lifecycle.spec.ts と同型(2nd real actor via magic-link verify)。
