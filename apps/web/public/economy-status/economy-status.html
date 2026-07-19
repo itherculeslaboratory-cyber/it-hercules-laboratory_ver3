@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>経済ステータス — IHL</title>
+<style>
+  /* R148(2026-07-19・○採用): 承認済み完成予想図v2(mkt-economy-status-forecast-v2)の
+     視覚システムをそのまま採用。配線に必要な差分(ribbon除去・本人データの動的挿入)のみ。
+     3層モデル・10%貢献度ボーナス・全体経済の正直表示は静的教育コンテンツ(本人データでない)。 */
+  :root{
+    --bg:#f7f8f6; --card:#ffffff; --text:#1f2620; --muted:#6b756c;
+    --primary:#2f7d4f; --primary-bg:#eaf5ee; --secondary:#c9772e; --secondary-bg:#fbf0e4;
+    --blue:#3a6ea5; --blue-bg:#eaf1f8; --border:#e6e9e4;
+    --shadow-sm:0 1px 2px rgba(20,25,20,0.06); --shadow-lg:0 4px 16px rgba(20,25,20,0.08);
+    --caution-bg:#f5f1e6; --caution-text:#8a6d2f; --danger:#b5462f; --danger-bg:#f8ece8;
+    --plat:#7d6bb0; --plat-bg:#efeaf7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14171a; --card:#1c2024; --text:#e8ece8; --muted:#9aa39a;
+      --primary:#49a672; --primary-bg:#183024; --secondary:#e0975a; --secondary-bg:#33261a;
+      --blue:#6a9bd1; --blue-bg:#182634; --border:#2b3138;
+      --shadow-sm:0 1px 2px rgba(0,0,0,0.3); --shadow-lg:0 4px 20px rgba(0,0,0,0.4);
+      --caution-bg:#2c2717; --caution-text:#d8bd7a; --danger:#e08a6f; --danger-bg:#2e1c17;
+      --plat:#a99bd6; --plat-bg:#241f31;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased;}
+  .ribbon{background:#4a3f1a;color:#f5e9c4;text-align:center;font-size:12.5px;padding:6px 10px;letter-spacing:.02em;}
+  .globalbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 16px;background:var(--card);border-bottom:1px solid var(--border);font-size:13px;}
+  .gb-logo{font-weight:800;font-size:16px;white-space:nowrap;}
+  .gb-logo::before{content:"🪲";margin-right:5px;}
+  .gb-scope{display:flex;align-items:center;gap:6px;background:var(--primary-bg);color:var(--primary);border:1px solid var(--primary);border-radius:999px;padding:5px 12px;font-weight:700;white-space:nowrap;}
+  .gb-scope .car{font-size:10px;opacity:.8;}
+  .gb-zones{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;}
+  .gb-zone{color:var(--muted);padding:5px 10px;border-radius:8px;font-weight:600;white-space:nowrap;}
+  .gb-zone.active{color:var(--text);background:var(--bg);}
+  .gb-icons{display:flex;gap:8px;align-items:center;}
+  .gb-bell{position:relative;font-size:16px;}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px 20px 60px;}
+  @media (max-width:600px){.wrap{padding:14px 12px 40px;} .gb-zones{width:100%;order:5;margin-left:0;justify-content:space-between;}}
+
+  header.top{padding:6px 0 8px;}
+  .wordmark{font-size:22px;font-weight:800;letter-spacing:.02em;}
+  .wordmark::before{content:"📊";margin-right:6px;}
+  .lead{color:var(--muted);font-size:14.5px;margin:6px 0 8px;}
+  .scope-note{color:var(--caution-text);background:var(--caution-bg);border:1px dashed var(--border);border-radius:10px;font-size:12.5px;padding:8px 12px;margin:0 0 26px;}
+
+  section.block{margin-bottom:28px;}
+  .section-head{margin-bottom:12px;}
+  .section-title{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px;margin:0 0 4px;}
+  .section-caption{color:var(--muted);font-size:13px;margin:0;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow-sm),var(--shadow-lg);}
+
+  /* 経済のしくみ 3層 */
+  .layers{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media (max-width:760px){.layers{grid-template-columns:1fr;}}
+  .layer{border:1.5px solid var(--border);border-radius:12px;padding:16px;background:var(--bg);position:relative;}
+  .layer.live{border-color:var(--primary);background:var(--primary-bg);}
+  .layer .l-rate{font-size:26px;font-weight:800;}
+  .layer.live .l-rate{color:var(--primary);}
+  .layer .l-name{font-weight:800;font-size:14px;margin:2px 0 4px;}
+  .layer .l-desc{font-size:12px;color:var(--muted);}
+  .l-tag{position:absolute;top:12px;right:12px;font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 7px;}
+  .l-tag.on{background:var(--primary);color:#fff;}
+  .l-tag.soon{background:var(--caution-bg);color:var(--caution-text);}
+  .honest{background:var(--caution-bg);border:1px dashed var(--border);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--caution-text);margin-top:14px;}
+  .honest b{color:var(--caution-text);}
+
+  /* my economy tiles */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:600px){.tiles{grid-template-columns:1fr;}}
+  .tile{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--card);}
+  .tile .t-k{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+  .tile .t-v{font-size:24px;font-weight:800;}
+  .tile .t-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .tile.plat .t-v{color:var(--plat);}
+  .two-line{display:flex;gap:16px;flex-wrap:wrap;}
+  .two-line .tl{flex:1;min-width:120px;}
+  .two-line .tl .k{font-size:11.5px;color:var(--muted);}
+  .two-line .tl .v{font-size:20px;font-weight:800;}
+
+  /* contribution axes */
+  .axis{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--border);}
+  .axis:last-child{border-bottom:none;}
+  .axis-ico{width:40px;height:40px;min-width:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;}
+  .axis-ico.research{background:linear-gradient(135deg,#3a6ea5,#6a9bd1);}
+  .axis-ico.capital{background:linear-gradient(135deg,#2f7d4f,#49a672);}
+  .axis-ico.development{background:linear-gradient(135deg,#c9772e,#e0975a);}
+  .axis-main{flex:1;min-width:0;}
+  .axis-name{font-weight:700;font-size:14px;}
+  .axis-title{font-size:11.5px;color:var(--primary);font-weight:700;}
+  .axis-bar{height:8px;border-radius:999px;background:var(--border);overflow:hidden;margin-top:5px;}
+  .axis-bar .fill{height:100%;background:var(--primary);}
+  .axis-num{text-align:right;font-size:12px;color:var(--muted);min-width:96px;}
+  .axis-num .mint{font-weight:800;color:var(--plat);}
+
+  /* community pulse */
+  .pulse{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media (max-width:600px){.pulse{grid-template-columns:1fr;}}
+  .pulse-tile{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--bg);text-align:center;}
+  .pulse-tile .p-v{font-size:22px;font-weight:800;color:var(--blue);}
+  .pulse-tile .p-k{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+  .history{display:flex;flex-direction:column;gap:0;}
+  .hist-row{display:flex;justify-content:space-between;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:12.5px;}
+  .hist-row:last-child{border-bottom:none;}
+  .hist-row .h-kind{font-weight:700;}
+  .hist-row .h-at{color:var(--muted);}
+
+  .costbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;}
+  .costbar .c-v{font-weight:800;font-size:18px;color:var(--secondary);}
+  .costbar .c-k{color:var(--muted);font-size:12px;}
+
+  .prov{margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .prov summary{cursor:default;padding:12px 16px;font-weight:800;font-size:13px;background:var(--card);list-style:none;}
+  .prov table{width:100%;border-collapse:collapse;font-size:12px;}
+  .prov td{padding:8px 16px;border-top:1px solid var(--border);vertical-align:top;}
+  .prov td.f{color:var(--muted);white-space:nowrap;}
+  .prov code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--blue);}
+  footer.foot{text-align:center;color:var(--muted);font-size:12.5px;padding:18px 10px 4px;border-top:1px solid var(--border);margin-top:14px;}
+</style>
+</head>
+<body>
+
+<div class="globalbar">
+  <div class="gb-logo">IHL</div>
+  <div class="gb-scope"><span>観測対象</span><span class="car">▼</span> すべて</div>
+  <nav class="gb-zones">
+    <span class="gb-zone">観測</span><span class="gb-zone">個体</span>
+    <span class="gb-zone active">市場</span><span class="gb-zone">知の広場</span>
+  </nav>
+  <div class="gb-icons"><span class="gb-bell">🔔</span><span>👤</span></div>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="wordmark">経済ステータス</div>
+    <p class="lead">IHLのお金と貢献がどう回っているか。手数料の使い道を隠さず、あなたの立ち位置と一緒に見せます。</p>
+  </header>
+  <p class="scope-note">📄 ここは<b>あなたのアカウント全体</b>の経済状態です（観測対象＝どの種を見ているかでは絞られません）。金額はIHLが預かりません（非エスクロー）。</p>
+
+  <!-- 1. お金の手数料(2つ) — R142訂正: 5%維持費 + 3%商用利用料 -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">💴 お金の手数料（2つ）</h2>
+      <p class="section-caption">利益を得たら払う2つ。今かかるのはシステム維持費だけ。商用利用料はこれから。</p>
+    </div>
+    <div class="card">
+      <div class="layers" style="grid-template-columns:1fr 1fr;">
+        <div class="layer live">
+          <span class="l-tag on">計上中</span>
+          <div class="l-rate">5%</div>
+          <div class="l-name">システム維持費</div>
+          <div class="l-desc">利益を得たら5%。<b>サーバー代・ドメイン代・開発費</b>に使われます。取引成立ごとに義務台帳へ自動計上（ゆる請求＝強制徴収はしない・round-15で8%→5%に引き下げ）。</div>
+        </div>
+        <div class="layer">
+          <span class="l-tag soon">これから</span>
+          <div class="l-rate">3%</div>
+          <div class="l-name">商用利用料</div>
+          <div class="l-desc">IHLの<b>データ・信頼性で商売する／マークを使う</b>なら、売上の3%。登録データ（販売数）で捕捉。強制執行はせず<b>性善説＋自然淘汰</b>（誤魔化してもバレるし、自然に淘汰される＝それも良いデータ）。</div>
+        </div>
+      </div>
+      <div class="honest">
+        <b>正直に：</b>今この瞬間に実際に計上しているのは<b>システム維持費5%だけ</b>です。商用利用料3%は<b>方針が決まっているだけ</b>で、まだ集めていません（商用フラグ・販売数の捕捉・徴収の配線はこれから）。非商用（OSS）取引は手数料ゼロ。
+      </div>
+    </div>
+  </section>
+
+  <!-- 1b. 貢献度の分配ボーナス(10%) — R142訂正: 金銭でない・追加発行・上流へ -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">🌱 貢献度の分配ボーナス（お金じゃない・10%）</h2>
+      <p class="section-caption">これは<b>手数料ではありません</b>。完全に別の、貢献度を分け合う仕組み。</p>
+    </div>
+    <div class="card">
+      <div class="layers" style="grid-template-columns:1fr;">
+        <div class="layer live" style="border-color:var(--plat);background:var(--plat-bg);">
+          <span class="l-tag on" style="background:var(--plat);">稼働中（近似）</span>
+          <div class="l-rate" style="color:var(--plat);">+10%</div>
+          <div class="l-name">元（フォーク／利用の源）へ貢献度を分配</div>
+          <div class="l-desc">あなたが貢献度を得たとき、その<b>元になった作者</b>にも貢献度の10%が回ります。大事なのは、<b>あなたの100%から引くのではなく、10%を新しく作り出して</b>渡すボーナスだということ（＝損しない）。</div>
+        </div>
+      </div>
+      <div class="honest">
+        <b>正直に：</b>月次で、fork／投票の貢献の<b>直接の元（上流1つ）</b>へ、貢献度の10%を還元プラチナとして追加発行しています（<code>krmForkVoteRebate</code>・KRM-11＝稼働中）。ただし今は<b>直接の元1つだけ</b>への還元で、あなたの言う「<b>三世代前まで</b>」の多段分配はまだ近似です（別台帳が無いための明示的な簡略化・多段化はこれから）。
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. あなたのカルマ -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">🎖 あなたのカルマ（二層）</h2>
+      <p class="section-caption">「信頼」と「回数」の二層。信頼はやり取りの質、回数は活動量。アカウント全体の値です。</p>
+    </div>
+    <div class="card">
+      <div class="tiles">
+        <div class="tile">
+          <div class="t-k">🛡 信頼カルマ（value層）</div>
+          <div class="t-v" id="karma-value">…</div>
+          <div class="t-sub">良い取引・貢献で上がり、トラブルで下がる（下がり方はフィボナッチ）。</div>
+        </div>
+        <div class="tile">
+          <div class="t-k">🔁 回数カルマ（count層）</div>
+          <div class="t-v" id="karma-count">…</div>
+          <div class="t-sub">成立・評価・貢献の回数。活動の積み重ね。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 貢献度3軸 -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">🌱 あなたの貢献度（3軸）</h2>
+      <p class="section-caption">研究・資本・開発の3軸。閾値を超えるとプラチナコインが発行（mint）され、称号が付きます。</p>
+    </div>
+    <div class="card">
+      <div id="axes"><div class="axis"><div class="axis-main" style="color:var(--muted);">読み込み中…</div></div></div>
+    </div>
+  </section>
+
+  <!-- 4. プラチナ / PT -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">🪙 プラチナコイン / PT影響力</h2>
+      <p class="section-caption">どちらも<b>お金では買えません</b>（V3-MKT-38）。貢献や投票で得る、別々の残高です。</p>
+    </div>
+    <div class="card">
+      <div class="tiles">
+        <div class="tile plat">
+          <div class="t-k">🪙 プラチナコイン</div>
+          <div class="t-v" id="platinum-coins">…</div>
+          <div class="t-sub">貢献の閾値超え・上流還元で発行。もめごとの投票などに使う。</div>
+        </div>
+        <div class="tile plat">
+          <div class="t-k">✨ PT影響力残高</div>
+          <div class="t-v" id="pt-balance">…</div>
+          <div class="t-sub">別通貨。恩赦・自治などで使う影響力。<b>本人のみ表示</b>（非公開）。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 全体経済の集計は無い(正直・合成スコアは出さない=生事実のみ R135) -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">🌍 全体経済（みんなの合計）</h2>
+      <p class="section-caption">全体の非個人集計。出せるのは生の事実だけ。合成した「信頼度」のような指標は出しません。</p>
+    </div>
+    <div class="card">
+      <div class="honest">
+        <b>正直に：</b>全体の<b>取引総額・徴収総額・プラチナ流通量</b>などを集計するしくみは<b>まだありません</b>（今あるのは一人ひとりの実データの投影だけ）。数字が用意できるまで、ここは埋めません（それらしい合成値を置きません＝生事実のみ）。全体経済の集計はこれから。
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. 運営コストの透明性 -->
+  <section class="block">
+    <div class="section-head">
+      <h2 class="section-title">🧾 運営コストの透明性</h2>
+      <p class="section-caption">かかっている運営コストは開示します。収益・銀行残高は個人事業主のプライバシーとして出しません。</p>
+    </div>
+    <div class="card">
+      <div class="costbar">
+        <span><span class="c-k">今月のVPS</span> <span class="c-v" id="cost-vps">…</span></span>
+        <span><span class="c-k">R2ストレージ</span> <span class="c-v" id="cost-r2">…</span></span>
+        <span class="section-caption">システム維持費5%はこの運営維持に充てられます。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- provenance -->
+  <section class="block">
+    <details class="prov" open>
+      <summary>🔎 表示値の出所（本人スコープの実投影・捏造なし。※全体集計と3%/10%徴収は「これから」明示）</summary>
+      <table>
+        <tr><td class="f">レート定数</td><td><code>FEE_MAINTENANCE_TAX_RATE=0.05（維持費）/ FEE_COMMERCIAL_RATE=0.03（商用）/ UPSTREAM_PERCENT=0.1（貢献度分配）</code>（economy-constants.ts）</td></tr>
+        <tr><td class="f">5%システム維持費</td><td><code>settleFeeObligation()</code> が取引成立ごとに義務台帳へ計上（market-routes.ts:537・ゆる請求）＝<b>実配線・計上中</b></td></tr>
+        <tr><td class="f">3%商用利用料</td><td><b>これから</b>：<code>FEE_COMMERCIAL_RATE</code> は dead な <code>computeFees()</code>（market-settlement.ts:354・本番呼出元ゼロ）のみ。商用フラグ・販売数捕捉・徴収配線は未実装</td></tr>
+        <tr><td class="f">10%貢献度分配ボーナス</td><td><b>稼働中（近似）</b>：<code>krmForkVoteRebate()</code>（batch.ts:178・KRM-11月次cron）が fork/vote 貢献の<b>直接の上流</b>（source_ref）へ delta×10% を還元プラチナで追加発行。※<b>三世代前までの多段は近似（1hop）＝これから</b>。金銭の <code>FEE_FORK_REVENUE_RATE</code> 版（computeFees）は未使用</td></tr>
+        <tr><td class="f">カルマ二層</td><td><code>projectLedger()</code> → karma_value・karma_count（GET /me/ledger・ledger-routes.ts）</td></tr>
+        <tr><td class="f">貢献度3軸・mint・称号</td><td><code>projectContribution()</code> → axis_list[{axis,score,minted,next_threshold,title}]（GET /me/contribution・contribution.ts）。※titleは真偽（閾値達成の有無）＝絵の称号名やスコア数値は仮</td></tr>
+        <tr><td class="f">プラチナ / PT</td><td>platinum_coins（<code>ihl.economy.coin_event.v1</code>・貢献/投票で発行）／ PT balance（<code>projectPt</code>・別通貨・本人のみ）。金銭購入路なし＝V3-MKT-38</td></tr>
+        <tr><td class="f">運営コスト</td><td>GET /costs（VPS手動値＋R2使用量・config/running-costs.json・costs-routes.ts:88。収益/銀行残高は非表示）</td></tr>
+        <tr><td class="f">全体経済の集計</td><td><b>これから</b>：全体の取引/徴収総額を集計するエンドポイントは未実装。個人スコープの投影のみ実装済み。合成した「信頼度」等の指標は出さない（生事実のみ）</td></tr>
+      </table>
+    </details>
+  </section>
+
+  <footer class="foot">
+    経済ステータス＝アカウント全体の経済状態の正直開示。お金の手数料＝5%システム維持費（計上中）＋3%商用利用料（これから）。10%は<b>お金でなく貢献度の分配ボーナス</b>（元へ追加発行・稼働中/多段はこれから）。全体集計は「これから」。金銭でプラチナ/PTは買えません。
+  </footer>
+</div>
+<script type="module" src="./economy-status.js"></script>
+</body>
+</html>
