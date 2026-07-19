@@ -575,6 +575,21 @@ export interface PromotionResult {
   stance_total: number;
 }
 
+// classifyPromotion — 4カウント→PromotionStatus の純算術判定(閾値は plaza-constants.ts
+// 単一正本)。projectPromotionStatus と reduceSpeciesBook(章単位の合算カウント)の両方が
+// この1関数を通す(root-cause reuse・判定式の二重実装を避ける)。
+export function classifyPromotion(counts: {
+  cite_count: number;
+  retry_reproduced: number;
+  retry_not_reproduced: number;
+  stance_total: number;
+}): PromotionStatus {
+  const verified = counts.cite_count >= PLZ_VERIFIED_CITE_MIN && counts.retry_reproduced >= PLZ_VERIFIED_RETRY_MIN;
+  const refuted = counts.retry_not_reproduced >= PLZ_REFUTED_RETRY_MIN;
+  const unresolved = !verified && !refuted && counts.stance_total >= PLZ_UNRESOLVED_STANCE_MIN;
+  return refuted ? "refuted" : verified ? "verified" : unresolved ? "unresolved" : "open";
+}
+
 export async function projectPromotionStatus(s: TruthStore, threadId: string): Promise<PromotionResult> {
   const posts = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf).filter((d) => d.thread_id === threadId);
   const citeSet = new Set<string>();
@@ -591,11 +606,8 @@ export async function projectPromotionStatus(s: TruthStore, threadId: string): P
   const consensus = await projectConsensus(s, statementIds);
   const stanceTotal = consensus.reduce((sum, row) => sum + row.agree + row.disagree + row.pass, 0);
 
-  const verified = citeSet.size >= PLZ_VERIFIED_CITE_MIN && reproduced >= PLZ_VERIFIED_RETRY_MIN;
-  const refuted = notReproduced >= PLZ_REFUTED_RETRY_MIN;
-  const unresolved = !verified && !refuted && stanceTotal >= PLZ_UNRESOLVED_STANCE_MIN;
-  const status: PromotionStatus = refuted ? "refuted" : verified ? "verified" : unresolved ? "unresolved" : "open";
-  return { status, cite_count: citeSet.size, retry_reproduced: reproduced, retry_not_reproduced: notReproduced, stance_total: stanceTotal };
+  const counts = { cite_count: citeSet.size, retry_reproduced: reproduced, retry_not_reproduced: notReproduced, stance_total: stanceTotal };
+  return { status: classifyPromotion(counts), ...counts };
 }
 
 // GET /plaza/threads/:thread_id/consensus — スレ内 post_id を statement_ids として収集し
@@ -878,4 +890,159 @@ export async function projectSummary(s: TruthStore, threadId: string) {
 // GET /plaza/threads/:thread_id/summary — 4層要約投影。
 plazaRoutes.get("/plaza/threads/:thread_id/summary", async (c) => {
   return c.json(await projectSummary(store(c), c.req.param("thread_id")));
+});
+
+// ── 種族の本(wave1 KNW・R133・decision-cards-plain-language 準拠)──────────────
+// 1 species_id = 1 冊。投稿を species_id × topic(=章)で束ね、章ごとに昇格状態
+// (classifyPromotion 再利用)と「今わかっていること」を出す。board_kind には
+// 依存しない(4分類は章の集約キーではない)。block_index(要約4層)は横展開しない
+// (読み取りは都度算出のみ)。AI 不使用・決定論のみ。
+export interface SpeciesBookPostInput {
+  post_id: string;
+  thread_id: string;
+  topic: string;
+  body: string;
+  created_at: string; // RFC3339
+  observation_cite_count: number; // この投稿の cite_refs のうち type==="observation" の重複無し件数
+}
+export interface SpeciesBookHistoryEntry {
+  diff: string;
+  at: string;
+}
+export interface SpeciesBookChapter {
+  topic: string;
+  thread_count: number;
+  post_count: number;
+  latest_at: string;
+  status: PromotionStatus;
+  cite_count: number;
+  retry_reproduced: number;
+  retry_not_reproduced: number;
+  stance_total: number;
+  answer: string;
+  answer_verified: boolean;
+  history: SpeciesBookHistoryEntry[];
+}
+export interface SpeciesBook {
+  species_id: string;
+  species_name: string;
+  chapter_count: number;
+  thread_count: number;
+  verified_count: number;
+  chapters: SpeciesBookChapter[];
+}
+
+// reduceSpeciesBook — 純関数(store非依存・rankThreadSearch/dedupVotes/reduceForkRank と
+// 同型)。章の集約キーは species_id×topic のみ(呼び手が posts を既に絞り込んでいる前提)。
+export function reduceSpeciesBook(
+  speciesId: string,
+  speciesName: string,
+  posts: SpeciesBookPostInput[],
+  promotionByThread: Record<string, { cite_count: number; retry_reproduced: number; retry_not_reproduced: number; stance_total: number }>,
+  historyByThread: Record<string, SpeciesBookHistoryEntry[]>,
+): SpeciesBook {
+  const byTopic = new Map<string, SpeciesBookPostInput[]>();
+  for (const p of posts) {
+    (byTopic.get(p.topic) ?? byTopic.set(p.topic, []).get(p.topic)!).push(p);
+  }
+
+  const chapters: SpeciesBookChapter[] = [...byTopic.entries()].map(([topic, topicPosts]) => {
+    const threadIds = [...new Set(topicPosts.map((p) => p.thread_id))];
+
+    const counts = { cite_count: 0, retry_reproduced: 0, retry_not_reproduced: 0, stance_total: 0 };
+    for (const tid of threadIds) {
+      const c = promotionByThread[tid];
+      if (!c) continue;
+      counts.cite_count += c.cite_count;
+      counts.retry_reproduced += c.retry_reproduced;
+      counts.retry_not_reproduced += c.retry_not_reproduced;
+      counts.stance_total += c.stance_total;
+    }
+    const status = classifyPromotion(counts);
+
+    // answer: observation_cite_count 最大の投稿の body(同数は created_at 新しい方→
+    // post_id 昇順で決定論的に一意化)。全て0件でも投稿があれば最新投稿の body。
+    const best = [...topicPosts].sort((a, b) => {
+      if (b.observation_cite_count !== a.observation_cite_count) return b.observation_cite_count - a.observation_cite_count;
+      if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1;
+      return a.post_id < b.post_id ? -1 : 1;
+    })[0];
+
+    const history = threadIds
+      .flatMap((tid) => historyByThread[tid] ?? [])
+      .sort((a, b) => (a.at !== b.at ? (a.at < b.at ? -1 : 1) : a.diff < b.diff ? -1 : a.diff > b.diff ? 1 : 0));
+
+    let latestAt = "";
+    for (const p of topicPosts) if (p.created_at > latestAt) latestAt = p.created_at;
+
+    return {
+      topic,
+      thread_count: threadIds.length,
+      post_count: topicPosts.length,
+      latest_at: latestAt,
+      status,
+      ...counts,
+      answer: best ? best.body : "",
+      answer_verified: status === "verified",
+      history,
+    };
+  });
+
+  chapters.sort((a, b) => (b.post_count !== a.post_count ? b.post_count - a.post_count : a.topic < b.topic ? -1 : a.topic > b.topic ? 1 : 0));
+
+  return {
+    species_id: speciesId,
+    species_name: speciesName,
+    chapter_count: chapters.length,
+    thread_count: new Set(posts.map((p) => p.thread_id)).size,
+    verified_count: chapters.filter((ch) => ch.status === "verified").length,
+    chapters,
+  };
+}
+
+// projectSpeciesBook — store配線。species_id はまだ plaza-post スキーマに未追加
+// (C9後日拡張)のため、現状は投稿側に付いていれば拾う薄い読み取り(ヒット0=空の本は
+// 正常系)。
+export async function projectSpeciesBook(s: TruthStore, speciesId: string): Promise<SpeciesBook> {
+  const allPosts = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf);
+  const posts = allPosts.filter((d) => (d as { species_id?: unknown }).species_id === speciesId);
+
+  const bookPosts: SpeciesBookPostInput[] = posts.map((p) => {
+    const citeSet = new Set<string>();
+    for (const ref of (p.cite_refs as CiteRef[] | undefined) ?? []) {
+      if (ref.type === "observation") citeSet.add(ref.id);
+    }
+    return {
+      post_id: str(p.post_id),
+      thread_id: str(p.thread_id),
+      topic: str(p.topic),
+      body: str(p.body),
+      created_at: str(p.created_at),
+      observation_cite_count: citeSet.size,
+    };
+  });
+
+  const threadIds = [...new Set(bookPosts.map((p) => p.thread_id))];
+  const promotionByThread: Record<string, { cite_count: number; retry_reproduced: number; retry_not_reproduced: number; stance_total: number }> = {};
+  const historyByThread: Record<string, SpeciesBookHistoryEntry[]> = {};
+  await Promise.all(
+    threadIds.map(async (tid) => {
+      const [promo, summary] = await Promise.all([projectPromotionStatus(s, tid), projectSummary(s, tid)]);
+      promotionByThread[tid] = promo;
+      historyByThread[tid] = summary.diff_history.map((h) => ({ diff: h.diff, at: h.at }));
+    }),
+  );
+
+  // ponytail: 種マスタは taxon-routes.ts に専用 route はあるが再利用可能な export された
+  // 投影関数が無いため、同じ put-if-absent キー規約で直接1件読む(無ければ speciesId を
+  // そのまま name に落とす=過剰実装を避ける)。
+  const master = await s.readEvent(`truth/ihl.taxon.species.v1/${speciesId}.json`);
+  const speciesName = master ? str(dataOf(master).name) || speciesId : speciesId;
+
+  return reduceSpeciesBook(speciesId, speciesName, bookPosts, promotionByThread, historyByThread);
+}
+
+// GET /plaza/species/:species_id/book — 種族の本(読み取り専用投影・Truth追記なし)。
+plazaRoutes.get("/plaza/species/:species_id/book", async (c) => {
+  return c.json(await projectSpeciesBook(store(c), c.req.param("species_id")));
 });
