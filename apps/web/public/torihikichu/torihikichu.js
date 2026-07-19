@@ -171,7 +171,7 @@ function disputeHtml(d) {
       <h4>💬 もめごとを相談</h4>
       <p>死着・性別違い・系統違いなど重大な相違を見つけたら、受け取りを確定せず<b>話し合いの場</b>へ相談してください。アプリへの不満・改善要望もここから出せます。</p>
       <div class="cancel-state" style="background:var(--danger-bg);color:var(--danger);">重大相違を見つけたら → 話し合いの場へ相談</div>
-      <a class="btn ghost sm" href="/s/dispute">話し合いの場をひらく</a>
+      <a class="btn ghost sm" href="/hanashiai/hanashiai.html">話し合いの場をひらく</a>
     </div>
   </div>`;
 }

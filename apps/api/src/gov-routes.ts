@@ -504,6 +504,60 @@ govRoutes.post("/gov/disputes/:dispute_id/vote-resolve", async (c) => {
   return c.json({ dispute_id: disputeId, resolved: true, ...tally }, 201);
 });
 
+// projectMyDisputes(s, actorId) — 本人が当事者(opener/respondent)の相談を全 status で返す
+// (「私の相談」画面用)。projectJudicialInboxPreview(open限定・limit5・ホーム司法inbox用)と
+// 同型の全走査+グルーピングだが、決着済みも含め全件返し相手(counterparty)を添える。都度再計算。
+export async function projectMyDisputes(s: TruthStore, actorId: string) {
+  const all = (await s.listEvents(`truth/${DISPUTE_TYPE}/`)).map(dataOf);
+  const byDispute = new Map<string, Record<string, unknown>[]>();
+  for (const e of all) {
+    const id = str(e.dispute_id);
+    if (!id) continue;
+    const arr = byDispute.get(id) ?? [];
+    arr.push(e);
+    byDispute.set(id, arr);
+  }
+  const items: Record<string, unknown>[] = [];
+  for (const [disputeId, events] of byDispute) {
+    const sorted = events.slice().sort((a, b) => (str(a.created_at) < str(b.created_at) ? -1 : 1));
+    const open = sorted.find((e) => e.action === "open");
+    if (!open) continue;
+    const opener = str(open.actor_id);
+    const respondent = str(open.respondent_id);
+    if (actorId !== opener && actorId !== respondent) continue;
+    const close = sorted.find((e) => e.action === "close");
+    const publicize = sorted.find((e) => e.action === "publicize");
+    const status = close ? (close.resolution === "force_closed" ? "force_closed" : "resolved") : "open";
+    const voteDeadline = publicize
+      ? new Date(Date.parse(str(publicize.created_at)) + GOV_DISPUTE_VOTE_WINDOW_MS).toISOString()
+      : null;
+    items.push({
+      dispute_id: disputeId,
+      category: str(open.category),
+      status,
+      role: actorId === opener ? "opener" : "respondent",
+      counterparty: actorId === opener ? respondent : opener,
+      public: !!publicize,
+      vote_deadline: voteDeadline,
+      opened_at: str(open.created_at),
+    });
+  }
+  // 公開(投票中)を上位、次に開始の新しい順。
+  items.sort((a, b) => {
+    if (a.public && !b.public) return -1;
+    if (!a.public && b.public) return 1;
+    return str(a.opened_at) < str(b.opened_at) ? 1 : -1;
+  });
+  return items;
+}
+
+// GET /gov/disputes/mine — 本人が当事者の相談一覧(全status)。:dispute_id より前に登録して
+// "mine" が id として捕捉されないようにする。
+govRoutes.get("/gov/disputes/mine", async (c) => {
+  const disputes = await projectMyDisputes(store(c), c.get("actorId"));
+  return c.json({ disputes });
+});
+
 // GET /gov/disputes/:dispute_id — 紛争状態投影(404 or view)。
 govRoutes.get("/gov/disputes/:dispute_id", async (c) => {
   const view = await projectDispute(store(c), c.req.param("dispute_id"));

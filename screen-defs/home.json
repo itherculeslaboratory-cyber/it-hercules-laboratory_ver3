@@ -126,6 +126,11 @@
               "props": { "label_key": "home.open-economy.label", "label": "経済ステータスを見る", "href": "/economy-status/economy-status.html" }
             },
             {
+              "id": "open-hanashiai",
+              "type": "link",
+              "props": { "label_key": "home.open-hanashiai.label", "label": "話し合いの場を見る", "href": "/hanashiai/hanashiai.html" }
+            },
+            {
               "id": "open-match",
               "type": "button",
               "props": { "label_key": "home.open-match.label", "label": "マッチングを見る", "variant": "secondary" },
