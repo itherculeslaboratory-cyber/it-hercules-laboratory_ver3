@@ -192,8 +192,11 @@ D:\claude\systems\ihl-ver3 で起動して。
 ### 着弾カード処理済
 - knw-to-c9-shared-layout(SL-1/SL-2=○R132)・obs-r1-nav-edge(NAV-OBS-QR-1=○R132)=**先行統合作業で全ifYes実行済み**(NAVエッジ=OBS統合e97aa96に在・SL-2=ScreenBoardsFooter除去0/devIndicators:false・SL-1=.civ-page 1160px)。SL-1のlist/table系さらなる全幅化はヘッダーセレクタ実装スライスで扱う。
 
+### home v2=完了・push済(`842a71d`・独立検証全緑+reviewer PASS)
+- HomeDashboardNode(KnowledgeHubNode同型・mockup逐語+実データ配線fetch3本)・home.json単一list化・globals.css .home-dashboard・15 e2e spec heading更新・両テーマ両幅スクショ4枚。**信頼度タイル除外(R135-a)**。誇張ゼロ除外2点(観測対象タグ=ヘッダーセレクタ未実装/pc-badge=API無)。ナビ契約保持(obs-domain-selectはIA v2でscreendef transition外し・navigation.jsonエッジ保持)。**実機判定カード=`c9-home-v2-live-2026-07-19`投函(ready)**。
+- reviewer advisory(次スライス): pc-badge後日配線/copyハードコード=i18n未対応(KNW前例と同じ)/obs-search等の二次画面がhome直リンク喪失=到達性1回監査推奨。
+
 ### 進行中/申し送り(次スレッド)
-1. **home v2本実装**(R112・90点承認済): worker配線中(dedicated HomeDashboardNode+mockup逐語+実データ配線・**信頼度タイル除外=R135-a**・ナビ契約保持)。gate後にpush予定。**未完なら**: mockup=`00-hq/dashboard/mockups/c9-home-forecast-v2.html`・型=KnowledgeHubNode・データ源=home/summary+me/ledger+home/civ-minimap(trust_avg除外)。
 2. **usecase-driven-design.md 追いつき改稿**(R126): worker実行中(冒頭に追いつき注記=structure-canon v2が現IA正本・C7以降裁定リスト)。
 3. **ヘッダー観測対象セレクタ実装**(HDR裁定後): 複数スライス。決定可能スライス=ヘッダーUI+preferences永続(pref-set.schema.json frozen外に scope_species/scope_lineage_id追加)+3ドメイン配線(/individuals?species=&lineage_id=は既存・finder.js/SearchNavigator/obs-searchのクライアント側チップをサーバ側フィルタへ繋ぎ直す)。市場/広場/研究はスキーマ設計裁定(HDR-1回答)後。
 4. **SW-2**(ihl.plaza.species-wiki.v1=種族の本要約キャッシュ・plaza-summary同型+stale判定): KNWの用途実装(章束ねread・記憶ボタン)と併せて起票。SW-1(species_id)は完了。
@@ -201,6 +204,10 @@ D:\claude\systems\ihl-ver3 で起動して。
 6. **known minor掃引**: 欠測個体減光/HERAKLES単一種族表記/#mockbadge旧id/多種族チップ棚重なり+`.civ-pedigree-*`6クラス。
 7. **E2E設計債(申し送り)**: finder-pro等がローカルTruth(`apps/api/.wrangler/state`・8.7MB蓄積)汚染でフル走査時flake(**単独/clean実行では緑=merge非起因を実証済**)。全specがポート3000/8787ハードコード=並行E2E不可。state定期リセット or 隔離ストア化を検討。
 
+### round-18 addenda(本セッションで着弾・処理済)
+- **R141(6-c)**=投票二層(V3-GOV-36新規=無料+プラチナコイン権能投票)。**R142(6-d)**=経済3層是正(V3-MKT-36/V3-KRM-11: 5%維持費/3%商用利用料/10%は金銭でなくfork系譜三世代への貢献度追加発行ボーナス)。**R144(6-e)**=観測対象三層定義(structure-canon §1c+V3-OBS-43にスコープ明記・他は既存充足)。**R149(SB-1○)**=secondbrain棄却(V3-WIK-17/28 hold→棄却)。**総数758・確定661・確定(修正)92・棄却5**(第1波361/第2波238/実験枠21/対象外138)。
+
 ### 現在地
-- main = **`d3283cb`**(全push済・lint22緑・E2E 178/178緑[clean]・pytest49/web225/tests1488)。
-- 外出モードMonitor稼働(review-queue+DISPATCH-c9監視)。残ユーザー判定待ち=home v2実機/HDR-1/HDR-2/SB-1/mkt予約等。
+- main = **`842a71d`**(全push済・lint22緑・E2E 178/178緑[clean]+home E2E 3/3・pytest49/web225/tests1488)。本セッション14コミット(structure-canon v2/KNW wave1統合/round-18+4addenda/SW-1/鮮度是正/usecase追いつき/home v2)。
+- 外出モードMonitor稼働(review-queue+DISPATCH-c9監視)。**回答済でifYes実行完了**: home v2(R112)/header-selector-scope(R144)/secondbrain(R149)。**残ユーザー判定待ち**: home v2実機(`c9-home-v2-live`=ready)/mkt予約等。
+- **次の最大タスク=ヘッダー観測対象セレクタ実装**(HDR-1○解禁・3ドメイン先行・A1#4全listまで完了報告しない・pref-set scope追加+finder/obs-searchのクライアント側チップをサーバ側フィルタへ)。
