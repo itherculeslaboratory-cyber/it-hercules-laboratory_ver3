@@ -234,3 +234,47 @@ D:\claude\systems\ihl-ver3 で起動して。
 > **統合ラン申し送り(2026-07-19セッション末・23コミット到達点から)**: このmkt+4ゾーン=**5ブランチ統合波**は各々KNW wave1規模のmerge+reconcile。特にwave-mktは4独立HTMLページのnav-reconcile(home v2への入口配置・hanashiai/dispute関係)が架構判断を要し、FORKはpackage.json依存reconcile、MEはrebase要。全て○済・ブランチ上で安全なので、**fresh sessionで1本ずつ確実に**(型=KNW wave1実績: merge--no-ff→衝突精査→共有物reconcile→lint/tsc/tests→clean Truth E2E全緑→push)。共有物(renderer/AppShellNode/HeaderScopeCtx/home.json/navigation.json/globals.css/schemas)整合を毎回確認。
 
 **統合の型(KNW wave1実績)**: merge --no-ff → 衝突精査(生成物=再生成・共有物=共有オーナー判断でreconcile) → lint/tsc/tests → **clean Truth E2E全緑**(finder-proのTruth/WebGL環境flakeは既知・diff非起因) → push。共有物(renderer/AppShellNode/HeaderScopeCtx/schemas/home.json/navigation.json)の整合を必ず確認。
+
+## §11 5+1統合波 完了(2026-07-19・C9統合オーナー fresh統合セッション)
+
+> HQ号砲(DISPATCH 19:15/19:50ロック)で発進した統合専任freshセッションが mkt+4ゾーン+fork-ab を統合ゲート緑でmainへ取り込み完了。**main = `84f6dba`(push済 6fae23d..84f6dba)**。統合報告カード=`00-hq\review-queue\c9-integration-report-2026-07-19.json`。
+
+### 統合方式
+隔離worktree `.claude/worktrees/c9-integrate`(branch c9-integrate=main起点)で1本ずつ `git merge --no-ff` → 衝突解消 → lint/tsc/vitest/(E2E) → 各コミット。全緑後にmainへ **fast-forward**(main直書き換えゼロ・force pushゼロ・mergeのみ)。
+
+### 統合結果(全ユーザー○済・c9-integrate上のmerge commit)
+| ブランチ | tip | merge commit | カード○ |
+|---|---|---|---|
+| wave-mkt | 21b3b56 | b62d204 | R137/143/154/156 |
+| wave-entry-impl | 3bb3dfc | 7698d48 | R167(IMPL-1○/IMPL-2×) |
+| wave-me-impl | 91c8155 | 73f9371 | R170(60) |
+| wave-fork-impl | 87d0190 | 7327569 | R168(75) |
+| wave-ind-impl | 3ff7f97 | 3c755e2 | R169(90) |
+| wave-fork-ab | a56ca75 | ba511cf | R179(75) |
+| (E2E是正) finder-pro追随 | — | 84f6dba | — |
+
+### ゲート実測(統合後・main=84f6dba)
+- lint=22ゲート全緑(各merge後)・web tsc clean・**vitest 1798緑**(api18+contract1528+web252)・**pytest 49緑1skip**。
+- **E2E: 全spec health時緑**。第1回フル走査=177/180(実赤1=finder-pro・是正済/既知flake2=obs-register-batch・obs-search=clean単独緑で二重実証)。統合影響spec(finder-pro/fork-ab-shots/individual-detail/observation)=clean単独で全緑再確認。※フル走査は next dev サーバが8分超で稀にクラッシュ(ERR_CONNECTION_REFUSED連鎖・環境debt)=コード非起因。
+
+### reconcile判断(記録)
+1. **home.json(mkt衝突)**: home v2(R157承認)維持=take ours。mktの4リンクnode追記は旧home構造宛=不採用。4ページ(取引中/予約/経済/話し合い)はpublic自己完結chromeでURL直到達可。**home v2への入口配置は本質的架構判断=申し送り**。
+2. **hanashiai.html(新) vs /s/dispute(renderer)**: 両側共存(KNW wave1前例・dispute.json/renderer無改変)。
+3. **file-board-registry.csv**: 各merge後codegen再生成。**globals.css .ind-zone(+987)**: 受入(スコープ限定・回帰なし)。**package.json/lock(Puck)**: npm installで整合。
+4. **ME ヘッダー導線**: /s/profile→/me/me.html(renderer AppShellNode)+renderer.test.ts追随。/s/profileはhome v2 transition経由で到達性維持。
+
+### E2E是正(test-only・app挙動不変)
+- observation.spec 成長曲線: walkthroughのcanonical weight観測1点のみ(obs-entryは日本語ラベルitemを保存しweight_g投影に乗らない=canonical weight記録は追観測/obs-register-entryのみ)→追観測を1回足しweight2点化。
+- observation.spec ログイン見出し「IHL にログイン」→「IHL に入る」(entry login.json改稿の横断影響)。
+- finder-pro.spec individual-detail着地=「個体の詳細」→「この子の「今」と「物語」」+ .id-name(IND IndDetailNode追随)。
+
+### 申し送り(次スライス)
+1. **mkt4画面のhome入口配置**: home v2逐語markup(HomeDashboardNode)への追記=要ユーザー相談。現状URL直到達。
+2. **obs-entry item正規化(潜在・IND非起因)**: obs-entryが日本語ラベル値を保存しweight_g/length_mm投影に乗らない不整合=別ラウンド設計裁定。
+3. **Puck THIRD-PARTY(MIT)表記確定**=出荷前(人間ゲート寄り)。@measured/puck deprecate→将来@puckeditor/core移行検討可。
+4. **ENTRY-IMPL-2=×**: J-B強制入口不採用確定→round-18でチュートリアル要件と突合。
+5. **ME 60点「たぶん」**: 統合報告カードの実機URL(/me/me.html)で実機確認回収。
+6. **fork付帯質問R168**(機能コンポーネント網羅性)=fork-capabilityカードで回答予定。
+7. **E2E環境debt**: 全spec 3000/8787ハードコード=並行E2E不可+next devが長時間走査でクラッシュ。state隔離/CI分割を検討。
+8. **wave-img**(画像解析・b35af45系)=本統合波の対象外(別タスク・R140)。
+9. **c9-integrate worktree/branch**=統合完了後クリーンアップ対象。
