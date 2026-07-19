@@ -105,15 +105,14 @@ describe("OBS-17 DeviceBinding/Occupancy auto-derivation at commit", () => {
     expect(body.results[0].device_bindings![0].device_id).toBe(deviceId);
   });
 
-  // Regression for the ownership bypass this file's persona R75 fix closes:
-  // a capture-commit with devices[] used to auto-link ANY subject_ref onto the
-  // device's placement (occupancy) with no ownership check — actor B could
-  // capture-observe actor A's individual through a device B controls and
-  // silently claim A's individual onto B's shelf. deriveDeviceBindingsForCapture
-  // now only derives the occupancy when the caller owns the individual
-  // (source-routes.ts ~L494-521); non-owner captures still succeed (observing
-  // is legal) but must write ZERO occupancy events.
-  it("OWNERSHIP BYPASS (persona R75): non-owner capture with devices[] derives NO occupancy for someone else's individual", async () => {
+  // Ownership bypass — persona R75 closed the occupancy side-channel; OBS-R4
+  // (2026-07-19 critic-found, HQ ruling) now closes the capture itself. R75 let
+  // a non-owner capture-commit SUCCEED (202) but derived no occupancy; R4
+  // supersedes that "observing a non-owned individual stays legal" stance: a
+  // capture onto someone else's individual is fail-closed 403 NOT_OWNER
+  // (writeCaptureFromCommitBody), so NOTHING is written — no capture, no
+  // binding, no occupancy. This is strictly stronger than R75's guarantee.
+  it("OWNERSHIP BYPASS (persona R75 → OBS-R4): non-owner capture with devices[] is 403 NOT_OWNER — no capture, no occupancy for someone else's individual", async () => {
     const { env, bucket } = ctx();
     const a = await authOf("owner-a-r75");
     const b = await authOf("owner-b-r75");
@@ -125,25 +124,25 @@ describe("OBS-17 DeviceBinding/Occupancy auto-derivation at commit", () => {
     // Device D has a placement_ref (shelf S) — registered by B, who controls it.
     const deviceId = await registerDevice(env, "placement/shelf-r75", b);
 
-    // X has no open occupancy yet — the pre-fix code would have opened one here.
+    // B (non-owner) tries to capture A's individual through B's device — R4
+    // rejects the write outright.
     const res = await post(
       "/api/v1/solid-observation/commit",
       { domain: "biology", subject_ref: "individual/ind-r75-x", devices: [deviceId] },
       env,
       b,
     );
-    expect(res.status).toBe(202); // observing a non-owned individual stays legal
-    const body = (await res.json()) as {
-      device_bindings: { device_id: string; binding_id: string | null; occupancy_id: string | null; occupancy_opened: boolean }[];
-    };
-    expect(body.device_bindings[0].occupancy_id).toBeNull();
-    expect(body.device_bindings[0].occupancy_opened).toBe(false);
-    // binding itself (device usage, not subject ownership) is unaffected.
-    expect(body.device_bindings[0].binding_id).toBeTruthy();
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "NOT_OWNER" });
 
-    // Ground truth: zero OCCUPANCY_TYPE events exist for individual/ind-r75-x —
-    // B did not link A's individual to B's shelf.
-    const occEvents = (await new TruthStore(bucket).listEvents("truth/ihl.src.occupancy.v1/"))
+    // Ground truth: zero capture AND zero occupancy events for individual/ind-r75-x —
+    // B could neither observe nor link A's individual.
+    const store = new TruthStore(bucket);
+    const capEvents = (await store.listEvents("truth/ihl.obs.capture.v1/"))
+      .map((e) => e.data as Record<string, unknown>)
+      .filter((d) => d.subject_ref === "individual/ind-r75-x");
+    expect(capEvents).toHaveLength(0);
+    const occEvents = (await store.listEvents("truth/ihl.src.occupancy.v1/"))
       .map((e) => e.data as Record<string, unknown>)
       .filter((d) => d.subject_ref === "individual/ind-r75-x");
     expect(occEvents).toHaveLength(0);

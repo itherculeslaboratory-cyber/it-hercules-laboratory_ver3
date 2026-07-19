@@ -3,7 +3,7 @@
   "route": "/qr/resume",
   "title": "観測を再開する",
   "layout": "standard",
-  "notes": "wave1-obs R1(QR→観測の最短導線): /qr/{token} の3解決(個体QR/棚QR占有/棚QR空)を画面側で分岐(observation-routes.ts GET /qr/:token)。空の棚(entry_mode=qr_placement_empty・individual_id:null)は『個体が見つかりました』と偽らず新規個体登録へ導く(旧: resumeボタンがid=nullで追観測へ死路になっていた・OBS目的宣言『最少クリックで記録』の綻び)。分岐はrenderer props.when(eq/not_eq・NodeView先頭で全ノード評価)のみで表現し、schemas/・renderer.tsx・共有物は無改変。占有パスの文言(個体が見つかりました/個体 ID:/この個体で観測を続ける)は既存E2E(observation.spec §7-8)の資産のため不変で維持。wave1-obs R2(persona R75・棚は複数個体を同時に保持できる): projectOccupantAt が最初の1件だけ返し多頭棚を無言で1個体に潰していた欠陥を是正(source-routes.ts projectOccupantsAt)。entry_mode=qr_placement_multi(2+在棚)は新規分岐で個体を選ばせる(GET /individuals一覧と同じ行データ=individual-routes.ts summarizeIndividualRow/projectIndividualSummary を再利用・二重実装しない)。R3でQRスキャン→紐付け側を追加予定。",
+  "notes": "wave1-obs R1(QR→観測の最短導線): /qr/{token} の3解決(個体QR/棚QR占有/棚QR空)を画面側で分岐(observation-routes.ts GET /qr/:token)。空の棚(entry_mode=qr_placement_empty・individual_id:null)は『個体が見つかりました』と偽らず新規個体登録へ導く(旧: resumeボタンがid=nullで追観測へ死路になっていた・OBS目的宣言『最少クリックで記録』の綻び)。分岐はrenderer props.when(eq/not_eq・NodeView先頭で全ノード評価)のみで表現し、schemas/・renderer.tsx・共有物は無改変。占有パスの文言(個体が見つかりました/個体 ID:/この個体で観測を続ける)は既存E2E(observation.spec §7-8)の資産のため不変で維持。wave1-obs R2(persona R75・棚は複数個体を同時に保持できる): projectOccupantAt が最初の1件だけ返し多頭棚を無言で1個体に潰していた欠陥を是正(source-routes.ts projectOccupantsAt)。entry_mode=qr_placement_multi(2+在棚)は新規分岐で個体を選ばせる(GET /individuals一覧と同じ行データ=individual-routes.ts summarizeIndividualRow/projectIndividualSummary を再利用・二重実装しない)。R3でQRスキャン→紐付け側を追加予定。wave1-obs R4(OBS-R4・個体を特定した後の紐づけハブ): 占有(個体特定)パスに『この個体に紐づける』3導線を純加算 — ①追観測=既存 resume ボタン(この個体で観測を続ける→obs-register-entry・E2E資産のため文言不変)②棚=obs-register-batch へのリンク(既存 move/occupancy 導線)③繁殖=obs-register-clutch?parent_id=<individual_id> へ navigate し、スキャンした個体を親候補として自動セット(ClutchIntakeNode が params.parent_id を先読み)。ハブは全て when(not_eq individual_id \"\")で占有パス限定・navigation.json 無改変(既存 batch リンクと同じ node 表現)。所有権整合(R4新設ガード): 追観測=POST /observation/captures と /solid-observation/commit・繁殖=POST /clutches の親個体所有権を projectCurrentOwner で fail-closed 403 NOT_OWNER 化(他人の個体は特定/閲覧のみ・記録追加不可=承認予想図の正直split どおり)。schemas/renderer.tsx グローバルナビは無改変。",
   "nodes": [
     {
       "id": "shell",
@@ -58,7 +58,6 @@
               "props": {
                 "text_key": "qr-resume.lead.text",
                 "text": "この個体の文脈で、前回値を引き継いで観測を続けます。",
-                "muted": true,
                 "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
               }
             },
@@ -68,7 +67,6 @@
               "props": {
                 "text_key": "qr-resume.lead-empty.text",
                 "text": "この棚にはまだ個体がいません。この棚で新規個体を登録できます。",
-                "muted": true,
                 "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
               }
             },
@@ -78,7 +76,6 @@
               "props": {
                 "text_key": "qr-resume.lead-multi.text",
                 "text": "この棚には複数の個体がいます。観測する個体を選んでください。",
-                "muted": true,
                 "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_multi"] }
               }
             },
@@ -102,7 +99,6 @@
                   "props": {
                     "text_key": "qr-resume.prefill-species.text",
                     "text": "前回の種の候補: {{data.resolve.prefill.species_candidate}}",
-                    "muted": true,
                     "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
                   }
                 },
@@ -112,7 +108,6 @@
                   "props": {
                     "text_key": "qr-resume.placement-id.text",
                     "text": "棚 ID: {{data.resolve.placement_id}}",
-                    "muted": true,
                     "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
                   }
                 }
@@ -175,6 +170,16 @@
               }
             },
             {
+              "id": "hub-title",
+              "type": "heading",
+              "props": {
+                "text_key": "qr-resume.hub-title.text",
+                "text": "この個体に紐づける",
+                "level": 3,
+                "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+              }
+            },
+            {
               "id": "resume",
               "type": "button",
               "props": {
@@ -184,6 +189,27 @@
                 "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
               },
               "action": { "kind": "navigate", "to": "obs-register-entry?id={{data.resolve.individual_id}}" }
+            },
+            {
+              "id": "hub-shelf",
+              "type": "link",
+              "props": {
+                "label_key": "qr-resume.hub-shelf.label",
+                "label": "棚に置く・移す →",
+                "href": "/s/obs-register-batch",
+                "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+              }
+            },
+            {
+              "id": "hub-clutch",
+              "type": "button",
+              "props": {
+                "label_key": "qr-resume.hub-clutch.label",
+                "label": "繁殖(クラッチ)に親として記録 →",
+                "variant": "secondary",
+                "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
+              },
+              "action": { "kind": "navigate", "to": "obs-register-clutch?parent_id={{data.resolve.individual_id}}" }
             },
             {
               "id": "resume-new",
