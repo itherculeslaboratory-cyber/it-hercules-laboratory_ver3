@@ -3,6 +3,7 @@
   "route": "/onboarding/country",
   "title": "国を選ぶ",
   "layout": "standard",
+  "notes": "ENTRY実装(entry-forecast.html R145○)。国(country)は round-16 裁定の任意の内部属性で、settings-routes.ts PREF_FIELDS の country として実在。PATCH /me/preferences で保存する(誇張ゼロ=実配線)。必須ゲートは表示名+言語の2点のみ(account.ts projectOnboardingStatus)で、国は任意。最初の使い先は同じ国どうしのスコープ判定(V3-GOV-35)。",
   "nodes": [
     {
       "id": "shell",
@@ -12,36 +13,41 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "お住まいの国を選んでください", "level": 1 } },
+            { "id": "title", "type": "heading", "props": { "text": "お住まいの国を選ぶ", "level": 1 } },
+            { "id": "optional-badge", "type": "badge", "props": { "text": "任意", "tone": "info" } },
+            { "id": "lead", "type": "text", "props": { "text": "国は任意です(必須は表示名と言語だけ)。同じ国どうしのやり取りの判定などに使います。", "muted": true } },
             {
-              "id": "country",
-              "type": "field",
-              "props": {
-                "variant": "select",
-                "name": "country",
-                "label": "国",
-                "placeholder": "国を選択",
-                "options": [
-                  { "value": "JP", "label": "日本" },
-                  { "value": "US", "label": "アメリカ合衆国" },
-                  { "value": "GB", "label": "イギリス" },
-                  { "value": "DE", "label": "ドイツ" },
-                  { "value": "FR", "label": "フランス" }
-                ]
-              }
+              "id": "country-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "PATCH", "path": "/api/v1/me/preferences", "body_from": "country-form" },
+              "children": [
+                {
+                  "id": "country",
+                  "type": "field",
+                  "props": {
+                    "variant": "select",
+                    "name": "country",
+                    "label": "国",
+                    "placeholder": "国を選ぶ(あとで変更できます)",
+                    "options": [
+                      { "value": "JP", "label": "日本" },
+                      { "value": "US", "label": "アメリカ合衆国" },
+                      { "value": "GB", "label": "イギリス" },
+                      { "value": "DE", "label": "ドイツ" },
+                      { "value": "FR", "label": "フランス" }
+                    ]
+                  }
+                },
+                { "id": "continue", "type": "button", "props": { "label": "続ける", "variant": "primary", "type": "submit" } }
+              ]
             },
-            {
-              "id": "continue",
-              "type": "button",
-              "props": { "label": "続ける", "variant": "primary" },
-              "action": { "kind": "navigate", "to": "language-select" }
-            }
+            { "id": "note", "type": "text", "props": { "text": "国は公開・非公開を選べます(プロフィールの公開のきまりで設定)。", "muted": true } }
           ]
         }
       ]
     }
   ],
   "transitions": [
-    { "from": "continue", "to_screen_id": "language-select", "label": "国選択後" }
+    { "from": "country-form", "to_screen_id": "language-select", "label": "国を保存して言語選択へ" }
   ]
 }

@@ -32,7 +32,8 @@
                 },
                 { "id": "save", "type": "button", "props": { "label_key": "setup-profile.save.label", "label": "はじめる", "variant": "primary", "type": "submit" } }
               ]
-            }
+            },
+            { "id": "note", "type": "text", "props": { "text_key": "setup-profile.note.text", "text": "この2つが揃うと初期設定が完了し、ホームへ進めます。表示名は他の人に見える名前で(一意ではありません)、いつでも変更できます。国やテーマ、タイムゾーンはあとで設定から。", "muted": true } }
           ]
         }
       ]

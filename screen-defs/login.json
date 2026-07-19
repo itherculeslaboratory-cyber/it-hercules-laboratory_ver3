@@ -3,7 +3,7 @@
   "route": "/login",
   "title": "ログイン",
   "layout": "standard",
-  "notes": "V3-AUT-46(round-16 OQ-ONB-03): magic-link と同一OTPの数字コードで検証する code-form を /login にも常設する(送信成功画面 login-sent.json と同じフォーム=「届かない全経路の受け皿」文言と整合)。一次認証は magic-link 一本のまま(V3-AUT-01 と非衝突)。",
+  "notes": "ENTRY実装(entry-forecast.html R145○70点=逐語採用+実データ配線)。ログイン前は app-shell が最小chrome(ブランド+ログイン/新規登録リンク+テーマ切替のみ・ゾーンナビ非表示)を描くので、ログイン後の共有バーは header-preview カードで案内する(IA v2・structure-canon §2)。一次認証=magic-link 一本(V3-AUT-01)+同一OTPの数字コード(V3-AUT-46・verify-code 実装済み auth-routes.ts)=『届かない全経路の受け皿』。dev-login は DEV_TOKEN 設定時=dev のみ(本番は404)。card数=3(header-preview+arc2)で screendef-structure GATE(max3)ちょうど。J-B(最初の観測対象を選ぶ)は採否未確定のため step-rail に載せない(実装カードで別裁定)。",
   "nodes": [
     {
       "id": "shell",
@@ -13,8 +13,48 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text_key": "login.title.text", "text": "IHL にログイン", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text_key": "login.lead.text", "text": "メールアドレスにログインリンクを送ります。", "muted": true } },
+            { "id": "title", "type": "heading", "props": { "text_key": "login.title.text", "text": "IHL に入る", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text_key": "login.lead.text", "text": "初めての人も、戻ってきた人も迷わず入れます。パスワードは作りません(メールのリンクか数字コードだけ)。", "muted": true } },
+            {
+              "id": "header-preview",
+              "type": "card",
+              "props": {
+                "icon": "🧭",
+                "title_key": "login.hp.title", "title": "ログインすると、上部に共有バーが出ます",
+                "meta_key": "login.hp.body", "meta": "観測対象の切り替えと、観測・個体・市場・知の広場の各メニュー、通知、マイページが画面上部に並びます。"
+              }
+            },
+            {
+              "id": "arc-in",
+              "type": "card",
+              "props": {
+                "icon": "🔑",
+                "title_key": "login.arc-in.title", "title": "迷わず入る",
+                "meta_key": "login.arc-in.body", "meta": "メールにリンクを送るだけ。リンクを開けない時は、届いた数字コードでも入れます。"
+              }
+            },
+            {
+              "id": "arc-start",
+              "type": "card",
+              "props": {
+                "icon": "🌱",
+                "title_key": "login.arc-start.title", "title": "自分の場を整える",
+                "meta_key": "login.arc-start.body", "meta": "最初に表示名と言語を決め、規約に同意します(必須はこの2つだけ)。"
+              }
+            },
+            {
+              "id": "steps",
+              "type": "stepper",
+              "props": {
+                "current": "login",
+                "steps": [
+                  { "id": "login", "label_key": "login.step.login", "label": "ログイン" },
+                  { "id": "profile", "label_key": "login.step.profile", "label": "表示名と言語" },
+                  { "id": "locale", "label_key": "login.step.locale", "label": "国・言語(任意)" },
+                  { "id": "terms", "label_key": "login.step.terms", "label": "規約に同意" }
+                ]
+              }
+            },
             {
               "id": "magic-form",
               "type": "form",
@@ -28,7 +68,7 @@
             {
               "id": "code-lead",
               "type": "text",
-              "props": { "text_key": "login.code-lead.text", "text": "リンクを開けない場合は、届いた数字コードでもログインできます。", "muted": true }
+              "props": { "text_key": "login.code-lead.text", "text": "または、届いた数字コードで入る(リンクを開けない場合)。", "muted": true }
             },
             {
               "id": "code-form",
