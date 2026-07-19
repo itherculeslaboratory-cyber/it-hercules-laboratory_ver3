@@ -111,6 +111,11 @@
               "props": { "label_key": "home.open-individual-finder.label", "label": "理想の個体を探す", "href": "/finder/finder.html" }
             },
             {
+              "id": "open-torihikichu",
+              "type": "link",
+              "props": { "label_key": "home.open-torihikichu.label", "label": "取引中の取引を見る", "href": "/torihikichu/torihikichu.html" }
+            },
+            {
               "id": "open-match",
               "type": "button",
               "props": { "label_key": "home.open-match.label", "label": "マッチングを見る", "variant": "secondary" },

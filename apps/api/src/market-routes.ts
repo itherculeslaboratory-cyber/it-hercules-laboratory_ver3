@@ -23,6 +23,15 @@ import {
   type MarketState,
   type TxnEvent,
 } from "./market-settlement";
+import {
+  IN_PROGRESS_STATES,
+  roleOf,
+  stateLabel,
+  turnOf,
+  actionKindOf,
+  stepper,
+  flagsOf,
+} from "./market-transactions-view";
 import { projectPreferences } from "./settings-routes";
 import { isBlockedPair } from "./market-block-routes";
 import { projectSellerModeration, projectListingModeration } from "./market-flag-routes";
@@ -198,6 +207,77 @@ marketRoutes.get("/market/listings", async (c) => {
     }
   }
   return c.json({ listings });
+});
+
+// GET /market/transactions/mine — 観測者が当事者の「取引中」一覧(round-16裁定②=取引中は
+// 独立画面・当事者スコープ=観測対象で絞らない例外画面)。全 listing を prefix-scan して
+// reduceMarket し、in-progress(matched〜rated)かつ観測者が売り手/買い手のものだけを返す。
+// 誰の番か(turn)・今どの段階か(stepper)・急ぎ色フラグ(実タイムスタンプ+経済定数)を
+// market-transactions-view.ts の純関数で派生付与する(実データ配線は当ビューモデル1本に集約)。
+// ponytail: O(listings × txns) 全走査=既存 /market/listings と同型の MVP 投影(index は別波)。
+// read-only: /state と違い自己修復(settleNoPayCancel 等)の書込は発行しない(一覧表示で副作用
+// を出さない)。フラグは read-time 算出で「まもなく自動キャンセル」等を予告するだけ。
+marketRoutes.get("/market/transactions/mine", async (c) => {
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const now = new Date();
+  // 取引の実体は txn イベント側にある(出品 envelope は title/写真だけ持つ)。txn を1度だけ
+  // 全走査して listing_id ごとに畳む(loadTxns を listing 数だけ呼ぶと O(listings×txns) の
+  // 再走査になるため、ここは単走査+グルーピングにする)。
+  const allTxns = (await s.listEvents(`truth/${TXN_TYPE}/`)).map(dataOf) as unknown as TxnEvent[];
+  const byListing = new Map<string, TxnEvent[]>();
+  for (const e of allTxns) {
+    const arr = byListing.get(e.listing_id);
+    if (arr) arr.push(e);
+    else byListing.set(e.listing_id, [e]);
+  }
+  const firstAt = (events: TxnEvent[], kind: MarketKind): string | undefined =>
+    events.filter((e) => e.kind === kind).map((e) => e.created_at).sort()[0];
+
+  const transactions: Record<string, unknown>[] = [];
+  for (const [listingId, events] of byListing) {
+    const cur = reduceMarket(listingId, events);
+    if (!IN_PROGRESS_STATES.has(cur.state)) continue;
+    const role = roleOf(cur, actorId);
+    if (!role) continue; // 当事者(売り手/買い手)でない取引は出さない
+
+    const payment = projectPayment(events);
+    const matchedAt = firstAt(events, "match");
+    const shippedAt = firstAt(events, "ship");
+    const buyerId = role === "buy" ? actorId : cur.matched_with;
+    const matchAmount = events.filter((e) => e.kind === "match").map((e) => e.amount).find((a) => typeof a === "number");
+    const { turn, action } = turnOf(cur.state, role, payment);
+    // 出品 envelope(title/写真)は存在すれば読む(予約 fulfillment 等 envelope 無しの
+    // 取引もあるため必須にしない)。
+    const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+    const listing = listingEv ? dataOf(listingEv) : {};
+    const photos = await loadListingPhotos(s, listingId);
+
+    transactions.push({
+      listing_id: listingId,
+      title: typeof listing.title === "string" ? listing.title : undefined,
+      cover_photo_id: photos[0]?.photo_id,
+      role,
+      state: cur.state,
+      state_label: stateLabel(cur.state, payment),
+      counterparty: role === "sell" ? cur.matched_with : cur.seller_id,
+      amount: matchAmount ?? (typeof listing.price === "number" ? listing.price : undefined),
+      turn,
+      turn_action: action,
+      action_kind: actionKindOf(cur.state, role, payment), // 「あなたの番」で押せる遷移(相手待ちは null)
+      flags: flagsOf({ state: cur.state, role, payment, matchedAt, shippedAt, now }),
+      stepper: stepper(cur.state, payment),
+      payment,
+      shipping_link: projectShippingLink(events),
+      cancel_request: projectCancelRequest(events),
+      settlement: projectSettlement(events, now),
+      grace_cancel_window_open: isGraceCancelWindowOpen(events, now),
+      no_pay_cancel_due: isNoPayCancelDue(events, now),
+      // 振込名義に添えるコード(CL-11・買い手の識別子)。買い手本人にも売り手にも同じ値を返す。
+      transfer_code: buyerId ? await deriveTransferCode(buyerId) : undefined,
+    });
+  }
+  return c.json({ transactions });
 });
 
 // GET /market/listings/{listing_id} — 詳細投影(404 or { listing, moderation, photos })。
