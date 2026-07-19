@@ -1,7 +1,14 @@
 // finder.js — R52(caseB7実物採用)。原型(caseB7/finder.html)のTabulator一覧+
 // フィルタ+プリセット+行選択+「宇宙で見る」の"操作の形"はそのまま、データだけを
 // 架空乱数生成→実API(同一オリジン・cookie認証)へ配線し直す(CREED①②③④⑤)。
-import { computeGenerations, percentileThreshold, speciesColor, requireSession } from "./lib/finder-data.js";
+import {
+  computeGenerations,
+  percentileThreshold,
+  speciesColor,
+  requireSession,
+  fetchHeaderScope,
+  withScopeParams,
+} from "./lib/finder-data.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -10,9 +17,16 @@ function fmtDate(iso) {
 }
 
 async function loadRows() {
+  // HDR-1(c9-structure-canon.md §1/R112/R115): ヘッダー観測対象セレクタの選択
+  // (species/lineage_id)をサーバ側フィルタとして両エンドポイントへ付ける
+  // (individual-routes.ts の既存 ?species=/?lineage_id= 完全一致フィルタに配線
+  // するだけ・実装済みロジックの再利用)。未選択(空スコープ)は全件のまま。
+  const scope = await fetchHeaderScope();
   const [indRes, linksRes] = await Promise.all([
-    fetch("/api/v1/individuals?sort=latest_length_mm&order=desc", { credentials: "include" }),
-    fetch("/api/v1/individuals/pedigree-links", { credentials: "include" }),
+    fetch(`/api/v1/individuals?${withScopeParams(scope, { sort: "latest_length_mm", order: "desc" })}`, {
+      credentials: "include",
+    }),
+    fetch(`/api/v1/individuals/pedigree-links?${withScopeParams(scope)}`, { credentials: "include" }),
   ]);
   const individuals = (await indRes.json()).individuals ?? [];
   const links = (await linksRes.json()).links ?? [];

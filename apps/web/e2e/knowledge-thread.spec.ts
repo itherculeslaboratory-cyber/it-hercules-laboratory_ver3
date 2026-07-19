@@ -15,7 +15,7 @@ const WEB = "http://127.0.0.1:3000";
 async function devLogin(page: Page): Promise<void> {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test("knowledge thread chat: seeded posts render as bubbles (own vs others) -> send a new message -> appears after refetch", async ({ page }) => {

@@ -6,6 +6,7 @@ import { Renderer, interpolate } from "./renderer";
 import { ApiError } from "@/lib/error-messages";
 import type { Action, ScreenDef } from "./types";
 import { allScreenDefs, loadScreenDef } from "@/lib/screendefs";
+import { saveBatchDraft, saveBatchResults, clearBatch } from "./batch-draft";
 // GATE logic under test (color discipline). Imported for the negative case.
 import { scanColors } from "../../../../scripts/check-ui-tokens.mjs";
 
@@ -511,6 +512,27 @@ describe("Renderer — API error copy (V3-UIX-03)", () => {
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(needle);
     expect(alert.textContent ?? "").not.toMatch(/api\s*\d/i);
+  });
+});
+
+describe("BatchDoneNode — per-item failure copy never leaks the raw backend code (V3-UIX-01)", () => {
+  afterEach(() => clearBatch());
+
+  it("maps a failed row's raw error code (e.g. OBSERVATION_FROZEN) to calm Japanese, not the raw code", async () => {
+    saveBatchDraft({
+      items: [{}],
+      rows: [{ key: "r1", group: "measure", label: "個体A", itemIndex: 0 }],
+      scheduleTargets: [],
+    });
+    saveBatchResults({ results: [{ ok: false, error: "OBSERVATION_FROZEN" }] });
+
+    render(
+      <Renderer def={screenDef([{ id: "d", type: "batch-done" }])} onAction={vi.fn()} />,
+    );
+
+    const row = await screen.findByText(/保存できませんでした/);
+    expect(row.textContent).toContain("この観測は現在変更できません。");
+    expect(row.textContent).not.toContain("OBSERVATION_FROZEN");
   });
 });
 
@@ -1291,7 +1313,7 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     };
   }
 
-  it("logged out: shows brand + login/register links only (no dead links to protected footer/nav)", async () => {
+  it("logged out: shows brand + login/register links only (no dead links to protected nav)", async () => {
     const onAction = vi.fn(async () => ({ authenticated: false }));
     render(<Renderer def={shellDef()} onAction={onAction} />);
     expect(screen.getByRole("link", { name: "IHL" })).toHaveAttribute("href", "/");
@@ -1301,12 +1323,28 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     });
     expect(screen.queryByRole("button", { name: "ログアウト" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "設定" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "投票・Fork" })).not.toBeInTheDocument();
     // the screen's own content still renders under the chrome
     expect(screen.getByRole("heading", { name: "本文" })).toBeInTheDocument();
   });
 
-  it("logged in: shows primary nav + logout button + footer, and logout calls the API", async () => {
+  // STRIP-1(2026-07-19・knw-to-c9-strip-chrome): shared footer(愚痴・改善/
+  // 投票・Fork/Builder)撤去済み — 以下は撤去の恒久回帰ガード。
+  it("STRIP-1: never renders the retired shared footer links, logged in or out", async () => {
+    const onAction = vi.fn(async (action: Action) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
+      return undefined;
+    });
+    render(<Renderer def={shellDef()} onAction={onAction} />);
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/s/settings");
+    });
+    expect(screen.queryByRole("link", { name: "愚痴・改善" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "投票・Fork" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Builder" })).not.toBeInTheDocument();
+    expect(document.querySelector(".civ-chrome-footer")).toBeNull();
+  });
+
+  it("logged in: shows primary nav + logout button, and logout calls the API", async () => {
     const onAction = vi.fn(async (action: Action) => {
       if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
       return undefined;
@@ -1316,8 +1354,6 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
       expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/s/settings");
     });
     expect(screen.getByRole("link", { name: "マイページ" })).toHaveAttribute("href", "/s/profile");
-    expect(screen.getByRole("link", { name: "投票・Fork" })).toHaveAttribute("href", "/s/template-market");
-    expect(screen.getByRole("link", { name: "Builder" })).toHaveAttribute("href", "/s/ui-templates");
     expect(screen.queryByRole("link", { name: "ログイン" })).not.toBeInTheDocument();
 
     // logout redirects via a raw browser navigation afterwards (jsdom logs a
@@ -1329,9 +1365,57 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     });
     expect(onAction).toHaveBeenCalledWith({ kind: "api", method: "POST", path: "/api/v1/auth/logout" });
   });
+
+  // HDR-1(c9-structure-canon.md §1/§1c・R112/R115)ヘッダー観測対象セレクタ。
+  // 閉じている間は<dialog>の中身(h2.civ-heading含む)をDOMに一切出さないこと
+  // が必須契約 — 出したままだと screen-sweep.spec.ts(e2e)の
+  // `.civ-heading,.section-title,.thread-title`.first() が閉じた隠しh2を
+  // 拾って全55画面が「見出しなし」誤検知で落ちる(実際に踏んだ回帰・本テストは
+  // その恒久ガード)。
+  it("HDR-1: scope selector chip renders, opens with no leaked hidden heading, saves lineage via PATCH, and closes", async () => {
+    const onAction = vi.fn(async (action: Action, body?: unknown) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
+      if (action.path === "/api/v1/me/preferences" && action.method === "GET") {
+        return { scope_species: "", scope_lineage_id: "" };
+      }
+      if (action.path === "/api/v1/observation/targets/search") return { mode: "tree", children: [] };
+      if (action.path === "/api/v1/me/preferences" && action.method === "PATCH") {
+        return { scope_species: "", scope_lineage_id: (body as { scope_lineage_id?: string })?.scope_lineage_id ?? "" };
+      }
+      return undefined;
+    });
+    render(<Renderer def={shellDef()} onAction={onAction} />);
+
+    const chip = await screen.findByRole("button", { name: "観測対象: すべて" });
+    // 閉じている間は中身が一切DOMに無い(screen-sweepの .first() を汚さない)。
+    expect(screen.queryByText("観測対象を選ぶ")).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(chip);
+    });
+    expect(screen.getByText("観測対象を選ぶ")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("系統(血統ブランド)"), { target: { value: "王シリーズ" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "この系統にする" }));
+    });
+    expect(onAction).toHaveBeenCalledWith(
+      { kind: "api", method: "PATCH", path: "/api/v1/me/preferences" },
+      { scope_lineage_id: "王シリーズ" },
+    );
+    // 保存後は自動で閉じ、隠しh2も再びDOMから消える。チップは新しい選択を表示。
+    await waitFor(() => expect(screen.queryByText("観測対象を選ぶ")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "観測対象: 王シリーズ" })).toBeInTheDocument();
+  });
 });
 
-describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)", () => {
+// home v2(承認済みmockup c9-home-forecast-v2.html・R112 90点採用)以降:
+// HomeDashboardNode(list variant="home-dashboard")の verbatim 採用に伴い旧
+// kpi-tile/table 構成のテストを書き直し。信頼度平均タイルは R135-a裁定
+// (round-18 V3-UIX-84)「合成指標『信頼度』禁止」で丸ごと非実装のため
+// trust_avg のアサーションは撤去。observation_pace_7d/template_growth は
+// mockup 準拠で「NN件」表記、貢献度は正値のとき「+N」表記になる。
+describe("home screen-def — home v2 dashboard (V3-UIX-25/26/27・home完成予想図v2)", () => {
   it("shows overdue/near/karma kpis, a deep-linked today_lines row, and non-PII civ stats", async () => {
     const onAction = vi.fn(async (action: Action) => {
       if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
@@ -1344,6 +1428,7 @@ describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25
           today_lines: [
             { individual_id: "ind-1", days: -5, overdue: true, deep_link: "/s/obs-register-entry?id=ind-1" },
           ],
+          judicial_inbox: [],
         };
       }
       if (action.path === "/api/v1/home/civ-minimap") {
@@ -1353,13 +1438,14 @@ describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25
     });
     render(<Renderer def={loadScreenDef("home")} onAction={onAction} />);
 
-    await waitFor(() => expect(screen.getByText("12")).toBeInTheDocument()); // カルマ kpi
+    await waitFor(() => expect(screen.getByText("+12")).toBeInTheDocument()); // カルマ kpi(正値は+表記)
     expect(screen.getByText("1")).toBeInTheDocument(); // 超過 kpi (overdue.length)
     expect(screen.getByText("2")).toBeInTheDocument(); // 近接 kpi (near.length)
-    expect(screen.getByText("42")).toBeInTheDocument(); // observation_pace_7d
-    expect(screen.getByText("61.5")).toBeInTheDocument(); // trust_avg
-    expect(screen.getByText("7")).toBeInTheDocument(); // template_growth
+    expect(screen.getByText("42件")).toBeInTheDocument(); // observation_pace_7d
+    expect(screen.queryByText("61.5")).not.toBeInTheDocument(); // 信頼度平均は非実装(R135-a)
+    expect(screen.getByText("7件")).toBeInTheDocument(); // template_growth
     expect(screen.getByText("ind-1")).toBeInTheDocument(); // today_lines row
+    expect(screen.getByText("5日遅れ")).toBeInTheDocument(); // days=-5・overdue:true
     expect(screen.getByRole("link", { name: "記録する" })).toHaveAttribute(
       "href",
       "/s/obs-register-entry?id=ind-1",
@@ -1373,8 +1459,9 @@ describe("home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25
     });
     render(<Renderer def={loadScreenDef("home")} onAction={onAction} />);
     await waitFor(() => expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument());
-    // fallback values from home.json (V3-UIX-26 「API失敗時は近似フォールバック表示」)
-    expect(screen.getByText("50")).toBeInTheDocument(); // civ-trust fallback
-    expect(screen.getAllByText("0").length).toBeGreaterThan(0); // karma/overdue/near/pace/growth fallbacks
+    // karma/overdue/near/届いた出来事 は素の "0"、pace/growth は mockup 準拠の
+    // 「0件」表記。信頼度平均フォールバックは非実装(R135-a)につき撤去。
+    expect(screen.getAllByText("0").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("0件").length).toBe(2); // civ pace + growth fallbacks
   });
 });

@@ -30,7 +30,7 @@ const isResourceLoadError = (text: string) => /Failed to load resource/i.test(te
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test.describe("screen sweep", () => {
@@ -68,9 +68,11 @@ test.describe("screen sweep", () => {
       expect(pageErrors, `${id}: uncaught exceptions: ${pageErrors.join(" | ")}`).toEqual([]);
       expect(consoleErrors, `${id}: console errors: ${consoleErrors.join(" | ")}`).toEqual([]);
 
-      // (a) not blank: every screen def carries a heading node — it must render
-      //     and be visible. A blank/notFound page has none.
-      const heading = page.locator(".civ-heading").first();
+      // (a) not blank: every screen def carries a visible heading — it must render.
+      //     A blank/notFound page has none. KNW wave1 の verbatim-mockup 採用ノード
+      //     (knowledge-hub/thread) は .civ-heading でなく mockup 由来の .section-title /
+      //     .thread-title で見出しを描画するため、それらも「見出しあり=非空」として許容する。
+      const heading = page.locator(".civ-heading, .section-title, .thread-title").first();
       await expect(heading, `${id}: no visible heading (blank page)`).toBeVisible();
     });
   }

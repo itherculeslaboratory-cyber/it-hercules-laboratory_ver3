@@ -23,7 +23,7 @@ const shot = (page: Page, name: string, fullPage = true) =>
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 // 1x1 透明 PNG(最小の実 JPEG/PNG バイト列) — サムネ生成(jSquash)が実際に

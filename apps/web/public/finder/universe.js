@@ -3,14 +3,27 @@
 // データだけを架空乱数生成→実API(同一オリジン・cookie認証)へ配線し直す
 // (CREED①②③④⑤)。座標は実測値の順位ベース(x=体長rank・y=体重rank・z=世代)、
 // 血統は GET /individuals/pedigree-links から都度計算する(誇張ゼロ)。
-import { computeGenerations, computeLineage, buildRankCoords, nearestByCoord, speciesColor, requireSession } from "./lib/finder-data.js";
+import {
+  computeGenerations,
+  computeLineage,
+  buildRankCoords,
+  nearestByCoord,
+  speciesColor,
+  requireSession,
+  fetchHeaderScope,
+  withScopeParams,
+} from "./lib/finder-data.js";
 
 const $ = (s) => document.querySelector(s);
 
 async function loadData() {
+  // HDR-1(c9-structure-canon.md §1/R112/R115): finder.js と同じヘッダー観測
+  // 対象スコープをサーバ側フィルタとして付ける(個体ファインダー=一覧⇔宇宙は
+  // 同一機能の2モード・structure-canon §3新設「個体ファインダー(一覧⇔宇宙)」)。
+  const scope = await fetchHeaderScope();
   const [indRes, linksRes] = await Promise.all([
-    fetch("/api/v1/individuals", { credentials: "include" }),
-    fetch("/api/v1/individuals/pedigree-links", { credentials: "include" }),
+    fetch(`/api/v1/individuals?${withScopeParams(scope)}`, { credentials: "include" }),
+    fetch(`/api/v1/individuals/pedigree-links?${withScopeParams(scope)}`, { credentials: "include" }),
   ]);
   const individuals = (await indRes.json()).individuals ?? [];
   const links = (await linksRes.json()).links ?? [];

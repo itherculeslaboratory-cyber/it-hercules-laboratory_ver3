@@ -93,6 +93,24 @@ describe("MKT-27 lowRatingFlag 低評価フィルタ", () => {
   });
 });
 
+// T-71 GAP⑤/SEC-A5(取引当事者検証): rating を投げるには DEV_ACTOR がその listing の
+// 当事者(seller_id or matched_with)である必要がある。DEV_ACTOR を売り手・"seller" を
+// matched_with(相手方)として match まで進める(POST /market/listings/:id/transition
+// 経由・market-offer.test.ts と同型)。
+async function seedMatchedListing(bucket: FakeR2Bucket, listingId: string): Promise<void> {
+  const env = makeEnv(bucket);
+  await app.request(
+    `/api/v1/market/listings/${listingId}/transition`,
+    { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ kind: "list_fixed" }) },
+    env,
+  );
+  await app.request(
+    `/api/v1/market/listings/${listingId}/transition`,
+    { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ kind: "match", counterparty: "seller" }) },
+    env,
+  );
+}
+
 describe("POST /api/v1/market/ratings", () => {
   it("認証なしは 401", async () => {
     const res = await app.request("/api/v1/market/ratings", { method: "POST" }, makeEnv());
@@ -110,6 +128,7 @@ describe("POST /api/v1/market/ratings", () => {
 
   it("grade=bad + reason は 201・rater_id はセッション principal", async () => {
     const bucket = new FakeR2Bucket();
+    await seedMatchedListing(bucket, "L1");
     const res = await app.request(
       "/api/v1/market/ratings",
       { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ listing_id: "L1", ratee_id: "seller", grade: "bad", reason: "破損" }) },
@@ -119,15 +138,19 @@ describe("POST /api/v1/market/ratings", () => {
     const r = await projectRating(new TruthStore(bucket), "seller");
     expect(r.bad).toBe(1);
     // rater_id はセッション actor(body に rater は無い)= DEV_ACTOR
-    const ev = [...bucket.objects.values()][0];
-    expect(JSON.parse(ev.body as string).data.rater_id).toBe(DEV_ACTOR);
+    const ratingEv = [...bucket.objects.values()]
+      .map((o) => JSON.parse(o.body as string))
+      .find((e) => e.type === "ihl.mkt.rating.v1");
+    expect(ratingEv.data.rater_id).toBe(DEV_ACTOR);
   });
 
   it("good は 201", async () => {
+    const bucket = new FakeR2Bucket();
+    await seedMatchedListing(bucket, "L2");
     const res = await app.request(
       "/api/v1/market/ratings",
       { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ listing_id: "L2", ratee_id: "seller", grade: "good" }) },
-      makeEnv(),
+      makeEnv(bucket),
     );
     expect(res.status).toBe(201);
   });

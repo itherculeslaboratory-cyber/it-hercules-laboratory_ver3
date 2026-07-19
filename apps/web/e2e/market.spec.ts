@@ -25,7 +25,7 @@ const MARKET_DEF = resolve(SPEC_DIR, "..", "..", "..", "screen-defs", "market-tr
 async function devLogin(page: Page): Promise<void> {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 // same-origin authenticated fetch (browser cookie jar). credentials:"include"

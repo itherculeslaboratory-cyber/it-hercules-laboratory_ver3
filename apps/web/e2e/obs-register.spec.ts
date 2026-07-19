@@ -16,7 +16,7 @@ const shot = (page: Page, name: string) =>
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test("観測登録スライス1: F1(検索)→F2(Δ)→F5→F6(Δ+次の目安)→F1(候補チップ)", async ({ page }) => {

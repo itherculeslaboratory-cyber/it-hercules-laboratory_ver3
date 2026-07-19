@@ -263,7 +263,9 @@ marketRoutes.get("/market/listings/:listing_id/photo/:photo_id", async (c) => {
 // ── 取引状態機械(MKT-01/02/03/06/29)────────────────────────────────────
 // ponytail: 取引型を prefix scan + listing フィルタ = O(n) 全走査(既存 listing 投影
 // と同型・投影 index は別波)。非エスクロー=資金は一切預らない(MKT-01)。
-async function loadTxns(c: { env: Bindings }, listingId: string): Promise<TxnEvent[]> {
+// export: market-rating-routes.ts(T-71 GAP⑤/SEC-A5)が取引当事者検証に再利用する
+// (reduceMarket と同じ trust boundary・当ファイル外への複製を避ける)。
+export async function loadTxns(c: { env: Bindings }, listingId: string): Promise<TxnEvent[]> {
   const all = (await store(c).listEvents(`truth/${TXN_TYPE}/`)).map(dataOf) as unknown as TxnEvent[];
   return all.filter((d) => d.listing_id === listingId);
 }

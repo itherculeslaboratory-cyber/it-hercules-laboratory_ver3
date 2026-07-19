@@ -183,6 +183,8 @@ plazaRoutes.post("/plaza/posts", async (c) => {
   if (body?.body !== undefined) data.body = body.body;
   if (typeof body?.reply_to === "string") data.reply_to = body.reply_to;
   if (typeof body?.correction_of === "string") data.correction_of = body.correction_of;
+  if (typeof body?.context_individual_id === "string") data.context_individual_id = body.context_individual_id;
+  if (typeof body?.species_id === "string") data.species_id = body.species_id;
   if (Array.isArray(body?.mentions)) data.mentions = body.mentions;
   if (Array.isArray(body?.tags)) data.tags = body.tags;
   const refs = mergeCiteRefs(body?.cite_refs, parseCiteTokens(str(body?.body)));
@@ -762,9 +764,27 @@ export function dedupVotes(events: Record<string, unknown>[]): Record<string, un
   return [...latest.values()];
 }
 
+// (actor_id, target_id, signal) 単位で最新 signal_id(ULID・生成順単調)のみ採用 —
+// dedupVotes(上記)と同型のパターン(T-71 GRAY①/SEC-A6): gov.vote/テンプレ投票は
+// 1 actor 1 票へ畳んでいるのに signal(like/use/retain)系だけ連投を畳んでおらず、
+// 単一 actor の連投でランキング(GOV-23 OS昇格)を吊り上げられた。
+function dedupSignals(events: Record<string, unknown>[]): Record<string, unknown>[] {
+  const latest = new Map<string, Record<string, unknown>>();
+  for (const e of events) {
+    const d = dataOf(e);
+    const prov = (e.provenance ?? {}) as Record<string, unknown>;
+    const actor = typeof prov.actor_id === "string" ? prov.actor_id : str(d.actor_id);
+    const key = `${actor}\u0000${str(d.target_id)}\u0000${str(d.signal)}`;
+    const prev = latest.get(key);
+    if (!prev || str(d.signal_id) > str(prev.signal_id)) latest.set(key, d);
+  }
+  return [...latest.values()];
+}
+
 // projectRanking — signal(like/use/retain)+ gov.vote approve + fork 数を RANKING_WEIGHTS で
 // 加重合算し降順(利用率→ランキング・GOV-23 自然淘汰)。targetType 指定時は signal/fork を絞る。
-// vote は dedupVotes で 1 actor 1 票に畳んでから加重(単一 actor の連投で score を水増し不能)。
+// signal/vote とも dedup で 1 actor 1 信号/1 票に畳んでから加重(単一 actor の連投で
+// score を水増し不能・T-71 GRAY①/SEC-A6)。
 export async function projectRanking(s: TruthStore, targetType?: string) {
   type Row = { target_id: string; target_type: string; score: number; breakdown: Record<string, number> };
   const rows = new Map<string, Row>();
@@ -777,7 +797,7 @@ export async function projectRanking(s: TruthStore, targetType?: string) {
     return r;
   };
 
-  let signals = (await s.listEvents(`truth/${SIGNAL_TYPE}/`)).map(dataOf);
+  let signals = dedupSignals(await s.listEvents(`truth/${SIGNAL_TYPE}/`));
   if (targetType) signals = signals.filter((sg) => sg.target_type === targetType);
   for (const sg of signals) {
     const kind = str(sg.signal) as keyof typeof RANKING_WEIGHTS;

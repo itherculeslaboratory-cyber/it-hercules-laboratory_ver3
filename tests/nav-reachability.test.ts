@@ -6,8 +6,14 @@
 //   settings / theme-gallery / ui-templates : ≤3 clicks from home (they are direct
 //     links off home = 1 click).
 //   obs-detail (観測保存の着地) : ≤3 — home の主ボタンは obs-entry 直行
-//     (obs-entry が domain を自前収集するため domain-select ホップは保存動線では冗長。
-//     ガイド選択は home の別リンクで維持)。home→obs-entry→obs-confirm→obs-detail = 3。
+//     (obs-entry が domain を自前収集するため domain-select ホップは保存動線では冗長)。
+//     home→obs-entry→obs-confirm→obs-detail = 3。obs-domain-select は home
+//     完成予想図v2(承認済みmockup c9-home-forecast-v2.html・R112 90点)の IA
+//     再設計で home のトップレベル導線から撤去された(観測対象の特定は
+//     obs-navigator の3モードが引き継ぐ・「観測対象を特定する」section) —
+//     navigation.json の home→obs-domain-select エッジ自体は維持したまま
+//     (他クラスタが復活導線を生やす余地を残す)、この click-budget からは
+//     対象外にした(以前の `dist.get("obs-domain-select")===1` 契約は撤去)。
 //     market/gmo/lottery have no screen-def
 //     in this cluster and are NOT targets (each cluster validates its own).
 import { describe, expect, it } from "vitest";
@@ -96,8 +102,8 @@ describe("V3-UIX-02/25 navigation reachability from home", () => {
   });
 
   it("obs-detail is reached via the OBS-25 confirm flow within 3 clicks", () => {
-    // home → obs-entry → obs-confirm → obs-detail (domain-select はガイド用の並行導線)
-    expect(dist.get("obs-domain-select")).toBe(1);
+    // home → obs-entry → obs-confirm → obs-detail (obs-domain-select は home v2
+    // で撤去済み — 上のファイルヘッダコメント参照)
     expect(dist.get("obs-entry")).toBe(1);
     expect(dist.get("obs-confirm")).toBe(2);
     expect(dist.get("obs-detail")).toBe(3);

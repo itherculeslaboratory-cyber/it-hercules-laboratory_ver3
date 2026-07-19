@@ -177,3 +177,26 @@ export async function requireSession() {
   }
   return true;
 }
+
+/** HDR-1(c9-structure-canon.md §1/§1c/R112/R115)ヘッダー観測対象セレクタ:
+ *  GET /me/preferences の scope_species/scope_lineage_id を読んで返す(両方
+ *  未選択="すべて"はどちらも"")。取得失敗(未認証/ネットワーク)は空スコープ
+ *  (全件表示)にフォールバックする — 静的publicページがヘッダー選好を読めなく
+ *  ても、finder自体の閲覧は壊さない。 */
+export async function fetchHeaderScope() {
+  const res = await fetch("/api/v1/me/preferences", { credentials: "include" }).catch(() => null);
+  const body = res ? await res.json().catch(() => null) : null;
+  return {
+    species: typeof body?.scope_species === "string" ? body.scope_species : "",
+    lineageId: typeof body?.scope_lineage_id === "string" ? body.scope_lineage_id : "",
+  };
+}
+
+/** scope({species,lineageId})を individual-routes.ts の ?species=/?lineage_id=
+ *  クエリへ足した URLSearchParams を作る(未選択の軸は付けない=フィルタなし)。 */
+export function withScopeParams(scope, extra = {}) {
+  const params = new URLSearchParams(extra);
+  if (scope.species) params.set("species", scope.species);
+  if (scope.lineageId) params.set("lineage_id", scope.lineageId);
+  return params;
+}

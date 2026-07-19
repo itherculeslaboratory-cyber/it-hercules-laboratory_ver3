@@ -1251,4 +1251,36 @@ describe("T-66 GET /individuals/pedigree-links(宇宙面用・全個体血統エ
     const res = await get("/api/v1/individuals/pedigree-links", env);
     expect((await res.json()) as { links: unknown[] }).toEqual({ links: [] });
   });
+
+  // HDR-1(c9-structure-canon.md §1c/R112/R115)ヘッダー観測対象セレクタ配線:
+  // ?species=/?lineage_id= は listIndividualsFor と同じ完全一致フィルタを両端
+  // (child/parent)に適用する — 対象母集団外の個体が絡むリンクは消える。
+  it("?species=はlistIndividualsForと同じ完全一致(大小無視)でエッジを絞る", async () => {
+    const { env } = ctx();
+    const sire = await createInd(env, { local_label_text: "sp-sire", species: "Dynastes hercules" });
+    const dam = await createInd(env, { local_label_text: "sp-dam", species: "Dynastes hercules" });
+    const child = await createInd(env, { local_label_text: "sp-child", species: "Other species" });
+    await post(`/api/v1/individuals/${child}/parents`, { parent_id: sire, parent_role: "sire" }, env);
+    await post(`/api/v1/individuals/${child}/parents`, { parent_id: dam, parent_role: "dam" }, env);
+
+    // child(別種)がフィルタ対象から外れるので、child が絡む2エッジとも消える。
+    const filtered = await get("/api/v1/individuals/pedigree-links?species=dynastes%20hercules", env);
+    expect((await filtered.json()) as { links: unknown[] }).toEqual({ links: [] });
+
+    const unfiltered = await get("/api/v1/individuals/pedigree-links", env);
+    expect(((await unfiltered.json()) as { links: unknown[] }).links).toHaveLength(2);
+  });
+
+  it("?lineage_id=は完全一致でエッジを絞る(V3-IND-34と同一値域)", async () => {
+    const { env } = ctx();
+    const sire = await createInd(env, { local_label_text: "ln-sire", lineage_id: "王シリーズ" });
+    const child = await createInd(env, { local_label_text: "ln-child", lineage_id: "王シリーズ" });
+    const outsider = await createInd(env, { local_label_text: "ln-outsider", lineage_id: "玉シリーズ" });
+    await post(`/api/v1/individuals/${child}/parents`, { parent_id: sire, parent_role: "sire" }, env);
+    await post(`/api/v1/individuals/${outsider}/parents`, { parent_id: sire, parent_role: "sire" }, env);
+
+    const res = await get(`/api/v1/individuals/pedigree-links?lineage_id=${encodeURIComponent("王シリーズ")}`, env);
+    const body = (await res.json()) as { links: { child_id: string; parent_id: string; parent_role: string }[] };
+    expect(body.links).toEqual([{ child_id: child, parent_id: sire, parent_role: "sire" }]);
+  });
 });

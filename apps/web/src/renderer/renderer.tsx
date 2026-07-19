@@ -32,21 +32,6 @@ import {
   type DraftRow,
   type ScheduleTarget,
 } from "./batch-draft";
-import {
-  applyFinderSort,
-  nextFinderSort,
-  percentileThreshold,
-  type FinderSort,
-  type FinderSortKey,
-} from "./individual-finder-utils";
-import {
-  buildUniverseCoords,
-  computeGenerations,
-  computeLineage,
-  nearestByCoord,
-  speciesColorVar,
-  type PedigreeLink,
-} from "./universe-utils";
 import type { Action, ScreenDef, ScreenNode, Transition } from "./types";
 
 /* -------------------------------------------------------------------------- *
@@ -105,6 +90,38 @@ export const MessagesCtx = createContext<ResolveMessage>(() => undefined);
 // I18-06: viewer locale for the on-device UGC translate affordance. authored
 // language is ja, so that is the default when i18n has not set one.
 export const LocaleCtx = createContext<string>("ja");
+// design-home-round.md 是正(統合オーナー追加指示・SL-1「.civ-page max-width:720px
+// は幅の広い画面で使い切れない」診断・STRIP-1で720px自体を全ゾーン1160pxへ
+// 統一済み): def.layout(schema既存の任意string)をAppShellNodeへ届け、その画面の
+// .civ-app-shellへdata-layoutとして出すだけの最小フック。全幅化がグローバル
+// 既定になったため、globals.css側の"wide"専用CSSは不要化して削除済み——この
+// Ctx/data-layout配線自体は他消費者が現れた場合に備えて残置(無害)。
+export const LayoutCtx = createContext<string>("standard");
+
+// HDR-1(c9-structure-canon.md §1/§1c・R112/R115採用)「観測対象」グローバル
+// 文脈スイッチ。AppShellNode がヘッダーセレクタで確定した選択(層1=学術分類の
+// 種・層2=血統ブランドタグ)を保持し、全画面の子ノードへ配る。空文字="すべて"
+// (未選択・フィルタなし)。第1スライス(HDR-1○実装方針)は種族/系統フィールドが
+// 実在する個体ドメインの消費者(SearchNavigatorNode 等)のみがこれを読む —
+// 市場/知の広場/研究はスキーマにこの2フィールドが無いため対象外(申し送り)。
+// 未配線=次スライス(A1#4正直台帳): clutches(GET /clutches・lineage_idは既存/species要追加)/
+// observation-capture一覧/BatchRosterNode(renderer.tsx obs-register-batchの /individuals fetch)。
+// これらは種族narrowingが原理的に効くが本スライスでは未配線=「配線済」と偽らない。
+export type HeaderScope = { species: string; lineageId: string };
+export const DEFAULT_HEADER_SCOPE: HeaderScope = { species: "", lineageId: "" };
+export const HeaderScopeCtx = createContext<HeaderScope>(DEFAULT_HEADER_SCOPE);
+
+// individual-routes.ts の既存 ?species=(大小無視完全一致)/?lineage_id=(完全
+// 一致)クエリへ HeaderScope をそのまま流し込む共通ビルダー(未選択の軸は
+// 付けない="" 全体を表す)。空スコープは "" を返す(既存の無引数呼び出しと
+// バイト同一になる=デフォルト挙動を壊さない)。
+function headerScopeQuery(scope: HeaderScope): string {
+  const params = new URLSearchParams();
+  if (scope.species) params.set("species", scope.species);
+  if (scope.lineageId) params.set("lineage_id", scope.lineageId);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
 
 // Resolve a node's display string: prefer the i18n catalog value for `keyVal`,
 // else the literal, else `fallback`. Empty catalog hits fall through to literal.
@@ -968,6 +985,11 @@ function ListNode({ node }: { node: ScreenNode }) {
   // props.variant で分岐する(schema node type enum は C9 スコープ外)。
   if (p.variant === "knowledge-thread-chat") {
     return <KnowledgeThreadChatNode node={node} />;
+  }
+  // home 完成予想図v2(承認済みmockup c9-home-forecast-v2.html・R112 90点)の
+  // verbatim 採用: 同じ in-scope トリック(list + props.variant)。
+  if (p.variant === "home-dashboard") {
+    return <HomeDashboardNode node={node} />;
   }
   useSource(node);
   const scope = useContext(ScopeCtx);
@@ -2672,7 +2694,6 @@ function BatchRosterNode() {
   const [promoteOpen, setPromoteOpen] = useState<Record<string, boolean>>({});
   const [promoteCount, setPromoteCount] = useState<Record<string, string>>({});
   const [promoted, setPromoted] = useState<Record<string, { count: number; deathCount: number }>>({});
-  const [promotePending, setPromotePending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const filteredIndividuals = individuals.filter((i) => {
@@ -2698,26 +2719,18 @@ function BatchRosterNode() {
     setReconcileOpen((o) => ({ ...o, [clutchId]: false }));
   };
 
-  const confirmPromote = async (clutchId: string, current: number) => {
+  // 昇格(個体ID発行)は他の一括操作(move等)と同じく、ここではローカルに
+  // ステージするだけ — 実際の個体発行は確認画面の「一括保存」まで遅延する
+  // (F4 での即時POSTは不可逆な個体ID発行がユーザー確認前に走ってしまうため廃止)。
+  const confirmPromote = (clutchId: string, current: number) => {
     const k = Number(promoteCount[clutchId]);
     if (!Number.isInteger(k) || k <= 0 || k > current) {
       setError("昇格する数を確認してください");
       return;
     }
-    setPromotePending(clutchId);
     setError(null);
-    try {
-      await execute(
-        { kind: "api", method: "POST", path: `/api/v1/clutches/${clutchId}/promote` },
-        { count: k, death_count: 0, at: new Date().toISOString() },
-      );
-      setPromoted((p) => ({ ...p, [clutchId]: { count: k, deathCount: 0 } }));
-      setPromoteOpen((o) => ({ ...o, [clutchId]: false }));
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setPromotePending(null);
-    }
+    setPromoted((p) => ({ ...p, [clutchId]: { count: k, deathCount: 0 } }));
+    setPromoteOpen((o) => ({ ...o, [clutchId]: false }));
   };
 
   const confirm = () => {
@@ -2809,12 +2822,14 @@ function BatchRosterNode() {
 
     for (const [clutchId, pr] of Object.entries(promoted)) {
       const cl = clutches.find((c) => c.clutch_id === clutchId);
+      const idx = items.length;
+      items.push({ kind: "promote", clutch_id: clutchId, count: pr.count, death_count: pr.deathCount, at: now });
       rows.push({
         key: `promote-${clutchId}`,
         group: "clutch-promote",
         label: cl ? `クラッチ ${cl.harvested_at ?? ""}` : "クラッチ",
         valueText: `${pr.count}体を昇格`,
-        alreadyCommitted: true,
+        itemIndex: idx,
       });
     }
 
@@ -3122,7 +3137,6 @@ function BatchRosterNode() {
                       className={cn("civ-interactive", "civ-button")}
                       data-variant="primary"
                       data-compact
-                      aria-busy={promotePending === cl.clutch_id || undefined}
                       onClick={() => confirmPromote(cl.clutch_id, effectiveCurrent)}
                     >
                       昇格する
@@ -3433,14 +3447,14 @@ function BatchDoneNode() {
     <div className="civ-form">
       <ul className="civ-list">
         {draft.rows.map((r) => {
-          const result = !r.alreadyCommitted && r.itemIndex != null ? results.results[r.itemIndex] : undefined;
+          const result = r.itemIndex != null ? results.results[r.itemIndex] : undefined;
           const failed = result != null && result.ok === false;
           return (
             <li key={r.key}>
               <article className="civ-card">
                 {failed ? (
                   <p className="civ-text">
-                    {r.label}: 保存できませんでした({(result as { ok: false; error: string }).error})
+                    {r.label}: 保存できませんでした({mapError((result as { ok: false; error: string }).error)})
                   </p>
                 ) : (
                   <div className="civ-card-badges">
@@ -3654,7 +3668,17 @@ function primaryMeasure(row: SearchRow): { text: string; unit: string } | null {
 // フィールドはユーザー編集可のプレフィルなので、確定は commit 側で改めて起きる)。
 type TargetCandidate = { qid: string; scientific_name: string };
 
-function TargetNavigatorNode() {
+// HDR-1(c9-structure-canon.md §1b/§1c・R112/R115)ヘッダー観測対象セレクタ:
+// obs-navigator画面の既定(確定→obs-entryへnavigate)と、ヘッダーの既定
+// (確定→アプリ全体スコープの選好保存)は同じUI部品(target-navigator)を使う
+// が別概念(§1b名称衝突注記)。onConfirm を渡すと確定アクションが丸ごと
+// 差し替わる(navigate は一切呼ばれない) — obs-navigator画面側の呼び出しは
+// props無しのまま(挙動無変更)。confirmLabel は文言の書き分け用
+// (「今この対象を見ています」= ヘッダー / 「この記録の対象種を選ぶ」= 画面)。
+function TargetNavigatorNode({
+  onConfirm,
+  confirmLabel,
+}: { onConfirm?: (candidate: TargetCandidate) => void; confirmLabel?: string } = {}) {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
 
@@ -3739,8 +3763,12 @@ function TargetNavigatorNode() {
 
   const continueTo = useCallback(() => {
     if (!chosen) return;
+    if (onConfirm) {
+      onConfirm(chosen);
+      return;
+    }
     navigate("obs-entry", { species_candidate: chosen.scientific_name });
-  }, [chosen, navigate]);
+  }, [chosen, navigate, onConfirm]);
 
   return (
     <div className="civ-target-navigator">
@@ -3852,7 +3880,7 @@ function TargetNavigatorNode() {
 
       {chosen && (
         <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="primary" onClick={continueTo}>
-          この対象で観測を続ける
+          {confirmLabel ?? "この対象で観測を続ける"}
         </button>
       )}
     </div>
@@ -3862,6 +3890,7 @@ function TargetNavigatorNode() {
 function SearchNavigatorNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
+  const headerScope = useContext(HeaderScopeCtx);
 
   const [individuals, setIndividuals] = useState<SearchRow[]>([]);
   const [placements, setPlacements] = useState<PlacementRow[]>([]);
@@ -3886,8 +3915,14 @@ function SearchNavigatorNode() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // HDR-1(c9-structure-canon.md §1/R112/R115): ヘッダー観測対象セレクタの
+      // 選択をサーバ側フィルタとして付ける(individual-routes.ts の既存
+      // ?species=/?lineage_id= に配線するだけ)。画面内の種/ステージ/棚チップ
+      // (filters state)はこの母集団に対する二次的な絞り込みのまま(A1#4:
+      // localStorage 内だけで完結する旧・画面内ファセットではなくサーバ母集団
+      // 自体がヘッダー選択に従う)。
       const [ind, pl] = await Promise.all([
-        execute({ kind: "api", method: "GET", path: "/api/v1/individuals" }) as Promise<
+        execute({ kind: "api", method: "GET", path: `/api/v1/individuals${headerScopeQuery(headerScope)}` }) as Promise<
           { individuals?: SearchRow[] } | undefined
         >,
         execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
@@ -3914,8 +3949,11 @@ function SearchNavigatorNode() {
     return () => {
       alive = false;
     };
+    // headerScope の primitives のみを deps にする(オブジェクト参照ではなく
+    // 値で比較 — AppShellNode 側の再レンダーで参照が変わっても値が同じなら
+    // 再フェッチしない)。ヘッダーで選択を変えたら個体母集団を取り直す。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [headerScope.species, headerScope.lineageId]);
 
   // 直近条件の永続化(初回ロード後のみ — 復元直後の再書き込みで壊さない)。
   useEffect(() => {
@@ -5468,1143 +5506,6 @@ function IndividualProfileNode() {
   );
 }
 
-// =============================================================================
-// T-63 波1(design-individual-finder.md §2.3/§4) — 個体ファインダー(一覧+絞り込み
-// +個体詳細パネル+血統)。GET /individuals を1回取得しクライアント側でフィルタ/
-// 決定論sort/分位点プリセットを組み立てる(search-navigator と同じ縮退)。行選択
-// ごとに GET /individuals/{id}/pedigree(先祖・多世代)+ /profile(子・1世代)を
-// 取得して血統ツリーを描く。専用ノード1個(individual-finder-utils.ts の純関数を
-// 呼ぶだけ・新規npm依存なし)。
-// =============================================================================
-
-type FinderRow = {
-  individual_id: string;
-  label: string;
-  species: string | null;
-  stage: string | null;
-  life_status: string | null;
-  latest_length_mm: number | null;
-  latest_weight_g: number | null;
-  capture_count: number;
-  last_capture_at: string | null;
-  next_observation_at: string | null;
-  thumbnail_path: string | null;
-  lineage_id: string | null; // V3-IND-34系統タグ(T-66宇宙面ホバーカードで表示)
-};
-
-const FINDER_STATUS_LABELS: Record<string, string> = {
-  alive: "生存中",
-  pupa: "蛹",
-  larva: "幼虫",
-  dead: "死亡",
-  specimen: "標本",
-};
-
-const FINDER_COLUMNS: { key: FinderSortKey; label: string }[] = [
-  { key: "latest_length_mm", label: "体長" },
-  { key: "latest_weight_g", label: "体重" },
-  { key: "capture_count", label: "観測回数" },
-  { key: "last_capture_at", label: "最終観測" },
-  { key: "next_observation_at", label: "次の予定" },
-];
-
-function finderCellText(row: FinderRow, key: FinderSortKey): string {
-  switch (key) {
-    case "latest_length_mm":
-      return row.latest_length_mm != null ? `${row.latest_length_mm}mm` : "—";
-    case "latest_weight_g":
-      return row.latest_weight_g != null ? `${row.latest_weight_g}g` : "—";
-    case "capture_count":
-      return `${row.capture_count}回`;
-    case "last_capture_at":
-      return row.last_capture_at ? formatDateJa(row.last_capture_at) : "—";
-    case "next_observation_at":
-      return row.next_observation_at ? formatDateJa(row.next_observation_at) : "—";
-  }
-}
-
-// 「実データの分位点を都度計算」プリセット(design-individual-finder.md §2.3) —
-// ハードコード閾値は使わない。体長/体重の2つのみ(胸角mm等は後続波・§5)。
-type FinderPreset = "length_top10" | "weight_top10";
-const FINDER_PRESETS: { id: FinderPreset; key: "latest_length_mm" | "latest_weight_g"; label: string }[] = [
-  { id: "length_top10", key: "latest_length_mm", label: "体長 上位10%" },
-  { id: "weight_top10", key: "latest_weight_g", label: "体重 上位10%" },
-];
-
-function toFinderRow(raw: Record<string, unknown>): FinderRow {
-  return {
-    individual_id: String(raw.individual_id ?? ""),
-    label: safeLabel(String(raw.label ?? raw.individual_id ?? ""), (raw.species as string | null) ?? null),
-    species: (raw.species as string | null) ?? null,
-    stage: (raw.stage as string | null) ?? null,
-    life_status: (raw.life_status as string | null) ?? null,
-    latest_length_mm: typeof raw.latest_length_mm === "number" ? raw.latest_length_mm : null,
-    latest_weight_g: typeof raw.latest_weight_g === "number" ? raw.latest_weight_g : null,
-    capture_count: typeof raw.capture_count === "number" ? raw.capture_count : 0,
-    last_capture_at: (raw.last_capture_at as string | null) ?? null,
-    next_observation_at: (raw.next_observation_at as string | null) ?? null,
-    thumbnail_path: (raw.thumbnail_path as string | null) ?? null,
-    lineage_id: (raw.lineage_id as string | null) ?? null,
-  };
-}
-
-// 血統chip(先祖=info/青系・子孫=success/緑系)。既存 Badge の tone トークンを
-// そのままボタンへ適用(新規色なし・V3-UIX-04)。
-function PedigreeChip({
-  label,
-  tone,
-  onClick,
-}: {
-  label: string;
-  tone: "info" | "success";
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={cn("civ-interactive", "civ-badge", "civ-pedigree-chip")}
-      data-tone={tone}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
-// 先祖ツリー(buildPedigree の再帰構造をそのまま辿る・多世代)。pedigree API は
-// individual_id のみ返す(名前は持たない)ため、既に取得済みの一覧(byId)で
-// ラベル解決し、載っていない個体(自分以外の所有者の血統元)は shortActorId と
-// 同じ短縮表示にフォールバックする(でっち上げの名前は作らない)。
-function PedigreeAncestors({
-  node,
-  byId,
-  onJump,
-}: {
-  node: PedNode;
-  byId: Map<string, string>;
-  onJump: (id: string) => void;
-}) {
-  if (node.parents.length === 0) return null;
-  return (
-    <ul className="civ-pedigree-branch">
-      {node.parents.map((p) => (
-        <li key={`${p.parent_role ?? "parent"}-${p.individual_id}`} className="civ-pedigree-node">
-          {p.known ? (
-            <PedigreeChip
-              label={`${p.parent_role === "sire" ? "♂" : p.parent_role === "dam" ? "♀" : "●"} ${byId.get(p.individual_id) ?? shortActorId(p.individual_id)}`}
-              tone="info"
-              onClick={() => onJump(p.individual_id)}
-            />
-          ) : (
-            <span className="civ-badge" data-tone="neutral">
-              不明の個体
-            </span>
-          )}
-          {p.circular && (
-            <p className="civ-text" data-muted="true">
-              ここで血統の輪が閉じています(同じ個体に戻る系統)。
-            </p>
-          )}
-          {p.truncated && (
-            <p className="civ-text" data-muted="true">
-              この先の世代は表示の上限に達しています。
-            </p>
-          )}
-          <PedigreeAncestors node={p} byId={byId} onJump={onJump} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// 選択個体の詳細パネル: 写真枠(実データがある時だけ)・名前/種/ステージ・形質
-// プロファイル(実測値のみ)・「詳細画面を開く」・血統(先祖=buildPedigree多世代
-// +子=profile.children 1世代・矢印+上下配置+色で親→子の向きを示す)。
-function FinderDetailPanel({
-  row,
-  byId,
-  onJump,
-}: {
-  row: FinderRow;
-  byId: Map<string, string>;
-  onJump: (id: string) => void;
-}) {
-  const execute = useContext(ExecuteCtx);
-  const navigate = useContext(NavigateCtx);
-  const [pedigree, setPedigree] = useState<PedNode | null>(null);
-  const [children, setChildren] = useState<ProfileParentRef[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    setLoaded(false);
-    (async () => {
-      try {
-        const [ped, prof] = await Promise.all([
-          execute({ kind: "api", method: "GET", path: `/api/v1/individuals/${row.individual_id}/pedigree` }) as Promise<PedNode>,
-          execute({ kind: "api", method: "GET", path: `/api/v1/individuals/${row.individual_id}/profile` }) as Promise<IndividualProfile>,
-        ]);
-        if (!alive) return;
-        setPedigree(ped ?? null);
-        setChildren(prof?.children ?? []);
-      } catch {
-        if (alive) {
-          setPedigree(null);
-          setChildren([]);
-        }
-      } finally {
-        if (alive) setLoaded(true);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [row.individual_id]);
-
-  return (
-    <section className="civ-card civ-finder-detail">
-      <div className="civ-card-head">
-        {row.thumbnail_path && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="civ-profile-thumb" src={row.thumbnail_path} alt="" />
-        )}
-        <h3 className="civ-card-title">{row.label}</h3>
-      </div>
-      {(row.species || row.stage || row.life_status) && (
-        <div className="civ-card-badges">
-          {row.species && <Badge text={row.species} tone="neutral" />}
-          {row.stage && <Badge text={STAGE_LABELS_JA[row.stage] ?? row.stage} tone="neutral" />}
-          {row.life_status && <Badge text={FINDER_STATUS_LABELS[row.life_status] ?? row.life_status} tone="neutral" />}
-        </div>
-      )}
-
-      <h4 className="civ-card-title">形質プロファイル</h4>
-      <ul className="civ-list">
-        <li className="civ-text">体長 {row.latest_length_mm != null ? `${row.latest_length_mm}mm` : "記録なし"}</li>
-        <li className="civ-text">体重 {row.latest_weight_g != null ? `${row.latest_weight_g}g` : "記録なし"}</li>
-        <li className="civ-text">観測回数 {row.capture_count}回</li>
-        <li className="civ-text">
-          直近記録日 {row.last_capture_at ? formatDateJa(row.last_capture_at) : "記録なし"}
-        </li>
-      </ul>
-
-      <div className="civ-chip-row">
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-button")}
-          data-variant="primary"
-          onClick={() => navigate("individual-detail", { id: row.individual_id })}
-        >
-          詳細画面を開く
-        </button>
-        {/* T-66(design-individual-finder.md §1.1・宇宙面への1クリック遷移)。行選択
-         * 時のみこのパネルごと出るため「選択時のみ有効」を自然に満たす。 */}
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-button")}
-          data-variant="secondary"
-          onClick={() => navigate("individual-universe", { focus: row.individual_id })}
-        >
-          ★ 宇宙で見る
-        </button>
-      </div>
-
-      <h4 className="civ-card-title">血統</h4>
-      {!loaded ? (
-        <p className="civ-text" data-muted="true">
-          読み込み中…
-        </p>
-      ) : (
-        <div className="civ-pedigree">
-          <p className="civ-label">先祖</p>
-          {pedigree && pedigree.parents.length > 0 ? (
-            <PedigreeAncestors node={pedigree} byId={byId} onJump={onJump} />
-          ) : (
-            <p className="civ-text" data-muted="true">
-              先祖の記録はありません(単体登録)。
-            </p>
-          )}
-          <div className="civ-pedigree-arrow" aria-hidden="true">
-            ↓
-          </div>
-          <div className="civ-pedigree-center">
-            <Badge text={`${row.label}(選択中)`} tone="neutral" />
-          </div>
-          <div className="civ-pedigree-arrow" aria-hidden="true">
-            ↓
-          </div>
-          <p className="civ-label">子</p>
-          {children.length > 0 ? (
-            <div className="civ-chip-row">
-              {children.map((c) => (
-                <PedigreeChip key={c.individual_id} label={c.label} tone="success" onClick={() => onJump(c.individual_id)} />
-              ))}
-            </div>
-          ) : (
-            <p className="civ-text" data-muted="true">
-              子の記録はまだありません。
-            </p>
-          )}
-        </div>
-      )}
-
-      <p className="civ-text" data-muted="true">
-        個体ID: {row.individual_id}
-      </p>
-    </section>
-  );
-}
-
-function IndividualFinderNode() {
-  const execute = useContext(ExecuteCtx);
-  const navigate = useContext(NavigateCtx);
-
-  const [rows, setRows] = useState<FinderRow[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  const [q, setQ] = useState("");
-  const [species, setSpecies] = useState<string | null>(null);
-  const [stage, setStage] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [preset, setPreset] = useState<FinderPreset | null>(null);
-  const [sort, setSort] = useState<FinderSort>({ key: "last_capture_at", dir: "desc" });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const res = (await execute({ kind: "api", method: "GET", path: "/api/v1/individuals" })) as
-        | { individuals?: Record<string, unknown>[] }
-        | undefined;
-      if (!alive) return;
-      setRows((res?.individuals ?? []).map(toFinderRow));
-      setLoaded(true);
-    })();
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const byId = useMemo(() => new Map(rows.map((r) => [r.individual_id, r.label])), [rows]);
-  const speciesValues = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.species).filter((v): v is string => !!v))).sort(),
-    [rows],
-  );
-  const stageValues = useMemo(() => Array.from(new Set(rows.map((r) => r.stage).filter((v): v is string => !!v))), [rows]);
-  const statusValues = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.life_status).filter((v): v is string => !!v))),
-    [rows],
-  );
-
-  const qNorm = q.trim().toLowerCase();
-  const baseFiltered = useMemo(
-    () =>
-      rows.filter((r) => {
-        if (qNorm && !r.label.toLowerCase().includes(qNorm)) return false;
-        if (species != null && r.species !== species) return false;
-        if (stage != null && r.stage !== stage) return false;
-        if (status != null && r.life_status !== status) return false;
-        return true;
-      }),
-    [rows, qNorm, species, stage, status],
-  );
-
-  // 分位点は「今見ている絞り込み後」の実データから都度計算する(species/q/
-  // ステージ/状態フィルタの後・プリセット自身より前)。母集団全体(累積Truth
-  // 全件)ではなく現在の絞り込み対象で「上位10%」を出すほうが実用的で、種
-  // フィルタと組み合わせれば母集団を確定できる決定論にもなる。
-  const presetDef = preset ? FINDER_PRESETS.find((p) => p.id === preset)! : null;
-  const presetThreshold = useMemo(() => {
-    if (!presetDef) return null;
-    return percentileThreshold(baseFiltered.map((r) => r[presetDef.key]), 90);
-  }, [presetDef, baseFiltered]);
-
-  const filtered = useMemo(() => {
-    if (!presetDef || presetThreshold == null) return baseFiltered;
-    return baseFiltered.filter((r) => {
-      const v = r[presetDef.key];
-      return v != null && v >= presetThreshold;
-    });
-  }, [baseFiltered, presetDef, presetThreshold]);
-
-  const sorted = useMemo(() => applyFinderSort(filtered, sort), [filtered, sort]);
-
-  const togglePreset = (id: FinderPreset) => {
-    setPreset((cur) => (cur === id ? null : id));
-    if (preset !== id) {
-      const def = FINDER_PRESETS.find((p) => p.id === id)!;
-      setSort({ key: def.key, dir: "desc" });
-    }
-  };
-
-  const selected = rows.find((r) => r.individual_id === selectedId) ?? null;
-
-  if (!loaded) {
-    return (
-      <p className="civ-text" data-muted="true">
-        読み込み中…
-      </p>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <div className="civ-form">
-        <p className="civ-empty">まだ個体がいません。観測を記録すると、ここに理想の個体を探す一覧ができます。</p>
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-button")}
-          data-variant="primary"
-          onClick={() => navigate("obs-entry")}
-        >
-          観測を始める
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="civ-form civ-finder">
-      <div className="civ-chip-row">
-        <input
-          className="civ-input"
-          placeholder="個体名で検索"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label="個体名で検索"
-        />
-      </div>
-      {speciesValues.length > 0 && (
-        <div className="civ-chip-row">
-          {speciesValues.map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
-              data-active={species === v || undefined}
-              onClick={() => setSpecies((cur) => (cur === v ? null : v))}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="civ-roster-filters">
-        <select
-          className="civ-input"
-          value={stage ?? ""}
-          onChange={(e) => setStage(e.target.value || null)}
-          aria-label="ステージで絞り込み"
-        >
-          <option value="">ステージ: すべて</option>
-          {stageValues.map((v) => (
-            <option key={v} value={v}>
-              {STAGE_LABELS_JA[v] ?? v}
-            </option>
-          ))}
-        </select>
-        <select
-          className="civ-input"
-          value={status ?? ""}
-          onChange={(e) => setStatus(e.target.value || null)}
-          aria-label="状態で絞り込み"
-        >
-          <option value="">状態: すべて</option>
-          {statusValues.map((v) => (
-            <option key={v} value={v}>
-              {FINDER_STATUS_LABELS[v] ?? v}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="civ-chip-row">
-        {FINDER_PRESETS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
-            data-active={preset === p.id || undefined}
-            onClick={() => togglePreset(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-      <p className="civ-text">{sorted.length}個体</p>
-
-      <div className="civ-finder-layout">
-        <div className="civ-finder-table-col">
-          {sorted.length === 0 ? (
-            <p className="civ-empty">この条件に当てはまる個体はいません。</p>
-          ) : (
-            <div className="civ-table-scroll">
-              <table className="civ-table">
-                <thead>
-                  <tr>
-                    <th>個体</th>
-                    {FINDER_COLUMNS.map((c) => (
-                      <th key={c.key}>
-                        <button
-                          type="button"
-                          className={cn("civ-interactive", "civ-finder-sort-th")}
-                          onClick={() => setSort((s) => nextFinderSort(s, c.key))}
-                        >
-                          {c.label}
-                          {sort.key === c.key ? (sort.dir === "desc" ? " ▾" : " ▴") : ""}
-                        </button>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((r) => (
-                    <tr key={r.individual_id} className="civ-finder-row" data-selected={r.individual_id === selectedId || undefined}>
-                      <td data-label="個体">
-                        <button
-                          type="button"
-                          className={cn("civ-interactive", "civ-finder-row-btn")}
-                          aria-label={`${r.label} を選択`}
-                          onClick={() => setSelectedId(r.individual_id)}
-                        >
-                          {r.thumbnail_path && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img className="civ-search-thumb" src={r.thumbnail_path} alt="" />
-                          )}
-                          {r.label}
-                        </button>
-                        {r.species && (
-                          <span className="civ-text" data-muted="true">
-                            {" "}
-                            {r.species}
-                          </span>
-                        )}
-                      </td>
-                      {FINDER_COLUMNS.map((c) => (
-                        <td key={c.key} data-label={c.label}>
-                          {finderCellText(r, c.key)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        <div className="civ-finder-detail-col">
-          {selected ? (
-            <FinderDetailPanel key={selected.individual_id} row={selected} byId={byId} onJump={setSelectedId} />
-          ) : (
-            <p className="civ-text" data-muted="true">
-              個体を選ぶと、ここに詳細と血統が出ます。
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// T-66(design-individual-finder.md §1.2/§3/§5波2-3・V3-UIX-83後続波) — 個体宇宙面
-// (全個体星空・実測形質軸の順位ベース配置・血統フロー)。3d-force-graph(MIT)を client-only
-// dynamic import で使う(SSR不可・WebGL前提・useEffect 内でのみ import する)。座標
-// は fx/fy/fz 固定(力学シミュ不要・決定論)= 体長mm(x)・体重g(y)・世代(z・
-// pedigree-links から都度計算、無ければ0=中央)。誇張ゼロ: embedding/cosine類似は
-// 一切使わない(universe-utils.ts に切り出した純関数のみ)。右カラム個体詳細パネル
-// は individual-finder の FinderDetailPanel をそのまま再利用する(design doc §5
-// 「レンダラ統合」の指示通り・二重実装しない)。
-// =============================================================================
-
-type UniverseRow = FinderRow & { generation: number | null };
-
-const UNIVERSE_SPREAD = 250;
-const UNIVERSE_LABEL_DIST = 340; // カメラ-個体間距離がこれ未満なら名前ラベルを出す
-const UNIVERSE_IMAGE_DIST = 130; // さらに近い場合、写真がある個体だけ丸→画像カード
-
-const idOf = (x: unknown): string => (x && typeof x === "object" ? String((x as { id: unknown }).id) : String(x));
-
-// テーマトークン(CSS変数)を実色へ解決する。3d-force-graph/three.js は CSS変数を
-// 直接受け付けないため描画のたびに getComputedStyle で引く — 色の意味は
-// var(--civ-*) 側に一元化されたまま(生hexはソースへ書かない・check-ui-tokens GATE
-// はビルド時の静的走査なので実行時に解決した文字列はそもそも対象外)。フォール
-// バックは CSS 名前色のみ(生hex禁止)。
-function resolveToken(varName: string, fallback: string): string {
-  if (typeof document === "undefined") return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  return v || fallback;
-}
-
-// 血統発光(選択時のみ・R45): 先祖=info(青系)・子孫=primary(Badgeのsuccessトーンと
-// 同値・緑系)・選択中=caution(オレンジ系)・無関係=text-muted(減光)。種族色(未選択
-// 時)と排他に切り替わるため universe-utils.SPECIES_COLOR_VARS と同じ4トークンを
-// 別の意味で再利用する(新規トークンを増やさない)。
-function lineageColorVar(kind: "self" | "ancestor" | "descendant" | "unrelated"): string {
-  if (kind === "self") return "--civ-caution";
-  if (kind === "ancestor") return "--civ-info";
-  if (kind === "descendant") return "--civ-primary";
-  return "--civ-text-muted";
-}
-
-function IndividualUniverseNode() {
-  const execute = useContext(ExecuteCtx);
-  const navigate = useContext(NavigateCtx);
-  const scope = useContext(ScopeCtx);
-
-  const [rows, setRows] = useState<UniverseRow[]>([]);
-  const [links, setLinks] = useState<PedigreeLink[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [speciesFilter, setSpeciesFilter] = useState<string | null>(null);
-  const [scopeIds, setScopeIds] = useState<Set<string> | null>(null);
-  const [banner, setBanner] = useState<string | null>(null);
-  const [webglOk, setWebglOk] = useState(true);
-
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 3d-force-graph は client-only dynamic import のため静的型を持ち込まない。
-  const graphRef = useRef<any>(null);
-  const labelRefs = useRef(new Map<string, HTMLDivElement>());
-  const imgRefs = useRef(new Map<string, HTMLDivElement>());
-  const glowRef = useRef<HTMLDivElement | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const stateRef = useRef({
-    selectedId: null as string | null,
-    ancestors: new Set<string>(),
-    descendants: new Set<string>(),
-    edgeKeys: new Set<string>(),
-    speciesFilter: null as string | null,
-    scopeIds: null as Set<string> | null,
-  });
-
-  const focusId = typeof scope.params.focus === "string" && scope.params.focus ? scope.params.focus : null;
-  const focusedRef = useRef(false);
-
-  // データ取得: GET /individuals(全件・都度再計算)+ GET /individuals/pedigree-links
-  // (血統エッジ・T-66新設)。世代はクライアント側で computeGenerations する
-  // (Truthに常駐フィールドは無い・不変条項①)。
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const [indRes, linkRes] = await Promise.all([
-        execute({ kind: "api", method: "GET", path: "/api/v1/individuals" }) as Promise<
-          { individuals?: Record<string, unknown>[] } | undefined
-        >,
-        execute({ kind: "api", method: "GET", path: "/api/v1/individuals/pedigree-links" }) as Promise<
-          { links?: PedigreeLink[] } | undefined
-        >,
-      ]);
-      if (!alive) return;
-      const base = (indRes?.individuals ?? []).map(toFinderRow);
-      const gotLinks = linkRes?.links ?? [];
-      const gen = computeGenerations(base.map((r) => r.individual_id), gotLinks);
-      setRows(base.map((r) => ({ ...r, generation: gen.get(r.individual_id) ?? null })));
-      setLinks(gotLinks);
-      setLoaded(true);
-    })();
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const byId = useMemo(() => new Map(rows.map((r) => [r.individual_id, r.label])), [rows]);
-  const rowById = useMemo(() => new Map(rows.map((r) => [r.individual_id, r])), [rows]);
-  const speciesValues = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.species).filter((v): v is string => !!v))).sort(),
-    [rows],
-  );
-  const coords = useMemo(
-    () =>
-      buildUniverseCoords(
-        rows.map((r) => ({
-          individual_id: r.individual_id,
-          length_mm: r.latest_length_mm,
-          weight_g: r.latest_weight_g,
-          generation: r.generation,
-        })),
-        UNIVERSE_SPREAD,
-      ),
-    [rows],
-  );
-  const coordById = useMemo(() => new Map(coords.map((c) => [c.individual_id, c])), [coords]);
-  const lineage = useMemo(() => (selectedId ? computeLineage(selectedId, links) : null), [selectedId, links]);
-  const selectedRow = selectedId ? (rowById.get(selectedId) ?? null) : null;
-
-  // 判定用アクセサ(stateRef経由・useCallback([])で参照安定=3d-force-graphの
-  // アクセサ関数へ構築時に一度だけ渡してよい。実データはstateRef.currentへ
-  // 「選択/フィルタが変わるたび」書き戻し、下のrefresh effectで再評価させる
-  // (caseB7 refresh() と同じ手筋)。
-  const isRowVisible = useCallback((r: UniverseRow) => {
-    const st = stateRef.current;
-    if (st.speciesFilter && r.species !== st.speciesFilter) return false;
-    if (st.scopeIds && !st.scopeIds.has(r.individual_id)) return false;
-    return true;
-  }, []);
-  // nodeOpacity は three-forcegraph 側の型が定数(number)専用でノード単位の
-  // アクセサ関数を受け付けない(nodeColor/nodeVal と違う)。「欠測軸=中央値配置」
-  // の減光は色そのものを無関係トーン(muted)に落とすことで表現する(選択中の
-  // 血統色分けはこれより優先=情報の重要度が高い)。
-  const colorForId = useCallback((id: string, species: string | null, estimated: boolean) => {
-    const st = stateRef.current;
-    if (st.selectedId) {
-      if (id === st.selectedId) return resolveToken(lineageColorVar("self"), "orange");
-      if (st.ancestors.has(id)) return resolveToken(lineageColorVar("ancestor"), "steelblue");
-      if (st.descendants.has(id)) return resolveToken(lineageColorVar("descendant"), "seagreen");
-      return resolveToken(lineageColorVar("unrelated"), "gray");
-    }
-    if (estimated) return resolveToken(lineageColorVar("unrelated"), "gray");
-    return resolveToken(speciesColorVar(species ?? ""), "gray");
-  }, []);
-  const linkClassFor = useCallback((s: string, t: string): "anc" | "desc" | null => {
-    const st = stateRef.current;
-    if (!st.selectedId || !st.edgeKeys.has(`${s}->${t}`)) return null;
-    return t === st.selectedId || st.ancestors.has(t) ? "anc" : "desc";
-  }, []);
-
-  const selectNode = useCallback((id: string) => {
-    setSelectedId(id);
-    setScopeIds(null); // 血統選択は近傍スコープと排他(caseB7と同じ)
-    setBanner(null);
-  }, []);
-
-  // stateRef 同期 + 3d-force-graph へ再評価を促す(kapsuleのアクセサは値を
-  // set し直すことで再描画がかかる・caseB7 refresh() と同じトリック)。
-  useEffect(() => {
-    stateRef.current = {
-      selectedId,
-      ancestors: lineage?.ancestors ?? new Set(),
-      descendants: lineage?.descendants ?? new Set(),
-      edgeKeys: lineage?.edgeKeys ?? new Set(),
-      speciesFilter,
-      scopeIds,
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const g = graphRef.current as any;
-    if (!g) return;
-    g.nodeColor(g.nodeColor())
-      .nodeVal(g.nodeVal())
-      .nodeOpacity(g.nodeOpacity())
-      .nodeVisibility(g.nodeVisibility())
-      .linkVisibility(g.linkVisibility())
-      .linkColor(g.linkColor())
-      .linkWidth(g.linkWidth())
-      .linkDirectionalParticles(g.linkDirectionalParticles())
-      .linkDirectionalParticleColor(g.linkDirectionalParticleColor());
-  }, [selectedId, lineage, speciesFilter, scopeIds]);
-
-  const frameOn = useCallback((ids: string[]) => {
-    const g = graphRef.current;
-    if (!g || ids.length === 0) return;
-    let cx = 0,
-      cy = 0,
-      cz = 0,
-      n = 0;
-    for (const id of ids) {
-      const c = coordById.get(id);
-      if (!c) continue;
-      cx += c.x;
-      cy += c.y;
-      cz += c.z;
-      n++;
-    }
-    if (n === 0) return;
-    cx /= n;
-    cy /= n;
-    cz /= n;
-    let maxd = 1;
-    for (const id of ids) {
-      const c = coordById.get(id);
-      if (!c) continue;
-      maxd = Math.max(maxd, Math.hypot(c.x - cx, c.y - cy, c.z - cz));
-    }
-    const dist = Math.max(80, maxd * 3 + 80);
-    g.cameraPosition({ x: cx, y: cy + 30, z: cz + dist }, { x: cx, y: cy, z: cz }, 900);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coordById]);
-
-  const scopeSimilar = useCallback(() => {
-    if (!selectedId) return;
-    const near = nearestByCoord(selectedId, coords, 12);
-    const next = new Set([selectedId, ...near]);
-    setScopeIds(next);
-    frameOn([...next]);
-  }, [selectedId, coords, frameOn]);
-
-  const resetAll = useCallback(() => {
-    setSelectedId(null);
-    setSpeciesFilter(null);
-    setScopeIds(null);
-    setBanner(null);
-    const g = graphRef.current;
-    if (g) g.cameraPosition({ x: 0, y: UNIVERSE_SPREAD * 0.6, z: UNIVERSE_SPREAD * 3.3 }, { x: 0, y: 0, z: 0 }, 900);
-  }, []);
-
-  const toggleSpecies = useCallback((sp: string | null) => {
-    setSpeciesFilter((cur) => (cur === sp ? null : sp));
-    setScopeIds(null);
-    // ponytail: 種フィルタでのカメラ再フレーミングは省略(座標は常に ±spread に
-    // 収まるため既定カメラのままでも全体が視界に入る)。必要になったら frameOn を呼ぶ。
-  }, []);
-
-  // 3D グラフ本体の構築(client-only dynamic import)+ 近接ラベル/画像カード/
-  // 選択発光のオーバーレイ更新ループ。rows/links が揃ってから一度だけ実行する。
-  useEffect(() => {
-    if (!loaded || rows.length === 0 || !containerRef.current) return;
-    let alive = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let graph: any = null;
-
-    (async () => {
-      try {
-        const mod = await import("3d-force-graph");
-        if (!alive || !containerRef.current) return;
-        const ForceGraph3D = mod.default;
-
-        const nodes = rows.map((r) => {
-          const c = coordById.get(r.individual_id)!;
-          return { id: r.individual_id, fx: c.x, fy: c.y, fz: c.z, __row: r, __estimated: c.estimated };
-        });
-        const graphLinks = links
-          .filter((l) => rowById.has(l.child_id) && rowById.has(l.parent_id))
-          .map((l) => ({ source: l.parent_id, target: l.child_id }));
-
-        graph = new ForceGraph3D(containerRef.current)
-          .backgroundColor(resolveToken("--civ-bg", "white"))
-          .graphData({ nodes, links: graphLinks })
-          .nodeId("id")
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .nodeLabel((n: any) => {
-            const r: UniverseRow = n.__row;
-            const genText = r.generation != null ? `世代 G${r.generation}` : "世代不明";
-            const lineageText = r.lineage_id ? ` ・系統 ${r.lineage_id}` : "";
-            const bg = resolveToken("--civ-surface", "white");
-            const bd = resolveToken("--civ-border", "gray");
-            const tx = resolveToken("--civ-text", "black");
-            const muted = resolveToken("--civ-text-muted", "gray");
-            return `<div style="font-family:inherit;background:${bg};border:1px solid ${bd};border-radius:8px;padding:8px 10px;color:${tx};min-width:170px">
-                <div style="font-weight:800">${r.label}</div>
-                <div style="font-size:12px;margin-top:3px;color:${muted}">${r.species ?? "種未設定"} ・ ${genText}${lineageText}</div>
-              </div>`;
-          })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .nodeVal((n: any) => (n.id === stateRef.current.selectedId ? 2.2 : 1.2))
-          .nodeResolution(8)
-          .nodeOpacity(0.92)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .nodeColor((n: any) => colorForId(n.id, n.__row.species, n.__estimated))
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .nodeVisibility((n: any) => isRowVisible(n.__row))
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .linkVisibility((l: any) => {
-            const rs = rowById.get(idOf(l.source));
-            const rt = rowById.get(idOf(l.target));
-            return !!rs && !!rt && isRowVisible(rs) && isRowVisible(rt);
-          })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .linkColor((l: any) => {
-            const cls = linkClassFor(idOf(l.source), idOf(l.target));
-            if (cls === "anc") return resolveToken(lineageColorVar("ancestor"), "steelblue");
-            if (cls === "desc") return resolveToken(lineageColorVar("descendant"), "seagreen");
-            return resolveToken("--civ-border", "lightgray");
-          })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .linkWidth((l: any) => (linkClassFor(idOf(l.source), idOf(l.target)) ? 1.6 : 0.4))
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .linkDirectionalParticles((l: any) => (linkClassFor(idOf(l.source), idOf(l.target)) ? 3 : 0))
-          .linkDirectionalParticleSpeed(0.006)
-          .linkDirectionalParticleWidth(2.2)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .linkDirectionalParticleColor((l: any) => {
-            const cls = linkClassFor(idOf(l.source), idOf(l.target));
-            return cls === "anc"
-              ? resolveToken(lineageColorVar("ancestor"), "steelblue")
-              : resolveToken(lineageColorVar("descendant"), "seagreen");
-          })
-          .enableNodeDrag(false)
-          .showNavInfo(false)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .onNodeClick((n: any) => selectNode(n.id));
-
-        graphRef.current = graph;
-        // three-render-objects(3d-force-graphの内部依存)はwidth/heightの既定値が
-        // window.innerWidth/innerHeightで、コンテナに自動追従しない(T-66自己QA
-        // 発覚: containerRef実サイズに合わせず全ビューポート解像度で描画するため、
-        // overflow:hiddenの70vh枠に切り取られて星々が隅に圧縮されて見える)。
-        // コンテナの実サイズへ明示的に合わせ、リサイズにも追従させる。
-        const applySize = () => {
-          const el = containerRef.current;
-          if (!el || !graphRef.current) return;
-          const w = el.clientWidth;
-          const h = el.clientHeight;
-          if (w > 0 && h > 0) graphRef.current.width(w).height(h);
-        };
-        applySize();
-        const resizeObserver = new ResizeObserver(applySize);
-        resizeObserver.observe(containerRef.current);
-        resizeObserverRef.current = resizeObserver;
-        graph.cameraPosition({ x: 0, y: UNIVERSE_SPREAD * 0.6, z: UNIVERSE_SPREAD * 3.3 });
-        setWebglOk(true);
-
-        // ?focus=個体ID 受信で自動フォーカス+バナー(design doc §1.2)。一覧に
-        // 実在する個体の時だけ(でっち上げない)・二重実行防止に focusedRef を使う。
-        if (focusId && !focusedRef.current && rowById.has(focusId)) {
-          focusedRef.current = true;
-          selectNode(focusId);
-          const c = coordById.get(focusId);
-          if (c) graph.cameraPosition({ x: c.x, y: c.y + 18, z: c.z + 90 }, { x: c.x, y: c.y, z: c.z }, 900);
-          setBanner(`個体ファインダーからフォーカス中: ${rowById.get(focusId)!.label}`);
-        }
-
-        // 近接ラベル/画像カード(実写真がある個体のみ)+ 選択発光の毎フレーム更新
-        // (呼吸アニメ自体はCSS animationが担当・ここは位置だけ動かす)。
-        const loop = () => {
-          const g = graphRef.current;
-          if (!g) return;
-          const camPos = g.camera().position;
-          for (const r of rows) {
-            const c = coordById.get(r.individual_id);
-            const labelEl = labelRefs.current.get(r.individual_id);
-            const imgEl = imgRefs.current.get(r.individual_id);
-            if (!c || !labelEl || !imgEl) continue;
-            if (!isRowVisible(r)) {
-              labelEl.style.display = "none";
-              imgEl.style.display = "none";
-              continue;
-            }
-            const d = Math.hypot(c.x - camPos.x, c.y - camPos.y, c.z - camPos.z);
-            if (d < UNIVERSE_IMAGE_DIST && r.thumbnail_path) {
-              const p = g.graph2ScreenCoords(c.x, c.y, c.z);
-              imgEl.style.left = `${p.x}px`;
-              imgEl.style.top = `${p.y}px`;
-              imgEl.style.display = "flex";
-              labelEl.style.display = "none";
-            } else if (d < UNIVERSE_LABEL_DIST) {
-              const p = g.graph2ScreenCoords(c.x, c.y, c.z);
-              labelEl.style.left = `${p.x}px`;
-              labelEl.style.top = `${p.y}px`;
-              labelEl.style.display = "block";
-              imgEl.style.display = "none";
-            } else {
-              labelEl.style.display = "none";
-              imgEl.style.display = "none";
-            }
-          }
-          const glowEl = glowRef.current;
-          if (glowEl) {
-            const sel = stateRef.current.selectedId;
-            const selRow = sel ? rowById.get(sel) : null;
-            const c = sel ? coordById.get(sel) : null;
-            if (sel && selRow && c && isRowVisible(selRow)) {
-              const p = g.graph2ScreenCoords(c.x, c.y, c.z);
-              glowEl.style.left = `${p.x}px`;
-              glowEl.style.top = `${p.y}px`;
-              glowEl.style.display = "block";
-              glowEl.style.background = `radial-gradient(circle, ${resolveToken(lineageColorVar("self"), "orange")} 0%, transparent 68%)`;
-            } else {
-              glowEl.style.display = "none";
-            }
-          }
-          rafRef.current = requestAnimationFrame(loop);
-        };
-        rafRef.current = requestAnimationFrame(loop);
-      } catch {
-        // WebGL非対応/初期化失敗。ページ全体を巻き込まず、この1ノードだけ
-        // フォールバック表示に切り替える(検証されないものは納品されない=
-        // クラッシュではなく正直な代替表示)。
-        setWebglOk(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      resizeObserverRef.current?.disconnect();
-      resizeObserverRef.current = null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      try {
-        (graph as any)?._destructor?.();
-      } catch {
-        /* best-effort cleanup */
-      }
-      graphRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, rows.length]);
-
-  if (!loaded) {
-    return (
-      <p className="civ-text" data-muted="true">
-        読み込み中…
-      </p>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <div className="civ-form">
-        <p className="civ-empty">まだ個体がいません。観測を記録すると、ここに個体の宇宙ができます。</p>
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-button")}
-          data-variant="primary"
-          onClick={() => navigate("obs-entry")}
-        >
-          観測を始める
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="civ-form civ-universe-shell">
-      <p className="civ-text" data-muted="true">
-        配置は実測値(体の大きさ・世代)の順位で並べたものです。姿の似ている判定(画像の類似)は使っていません。
-      </p>
-      <div className="civ-chip-row">
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
-          data-active={speciesFilter === null || undefined}
-          onClick={() => toggleSpecies(null)}
-        >
-          全種族
-        </button>
-        {speciesValues.map((sp) => (
-          <button
-            key={sp}
-            type="button"
-            className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
-            data-active={speciesFilter === sp || undefined}
-            onClick={() => toggleSpecies(sp)}
-          >
-            {sp}
-          </button>
-        ))}
-      </div>
-
-      <div className="civ-universe">
-        <div ref={containerRef} className="civ-universe-canvas" />
-        {!webglOk && (
-          <p className="civ-universe-fallback civ-text">
-            この端末では3D宇宙を表示できません。個体はファインダーの一覧から選べます。
-          </p>
-        )}
-        {banner && (
-          <div className="civ-universe-banner" data-tone="caution">
-            {banner}
-          </div>
-        )}
-
-        <div className="civ-universe-overlay">
-          {rows.map((r) => (
-            <div
-              key={r.individual_id}
-              ref={(el) => {
-                if (el) labelRefs.current.set(r.individual_id, el);
-                else labelRefs.current.delete(r.individual_id);
-              }}
-              className="civ-universe-label"
-              style={{ display: "none" }}
-              onClick={() => selectNode(r.individual_id)}
-            >
-              {r.label}
-            </div>
-          ))}
-          {rows
-            .filter((r) => r.thumbnail_path)
-            .map((r) => (
-              <div
-                key={r.individual_id}
-                ref={(el) => {
-                  if (el) imgRefs.current.set(r.individual_id, el);
-                  else imgRefs.current.delete(r.individual_id);
-                }}
-                className="civ-universe-imgcard"
-                style={{ display: "none" }}
-                onClick={() => selectNode(r.individual_id)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={r.thumbnail_path ?? undefined} alt="" />
-                <span className="civ-universe-imgcard-label">{r.label}</span>
-              </div>
-            ))}
-          <div ref={glowRef} className="civ-universe-glow" style={{ display: "none" }} aria-hidden="true" />
-        </div>
-
-        <div className="civ-universe-topleft">
-          <p className="civ-text">
-            {rows.length}個体 ・ 血統のつながり {links.length}本
-          </p>
-          <div className="civ-universe-legend">
-            <p className="civ-label">種族</p>
-            {speciesValues.map((sp) => (
-              <div key={sp} className="civ-universe-legend-row">
-                <span className="civ-universe-dot" style={{ background: `var(${speciesColorVar(sp)})` }} />
-                <span className="civ-text">{sp}</span>
-              </div>
-            ))}
-            {selectedId && (
-              <div className="civ-universe-legend-mode">
-                <p className="civ-label">血統フロー(選択中のみ)</p>
-                <div className="civ-universe-legend-row">
-                  <span className="civ-universe-dot" style={{ background: "var(--civ-info)" }} />
-                  <span className="civ-text">先祖</span>
-                </div>
-                <div className="civ-universe-legend-row">
-                  <span className="civ-universe-dot" style={{ background: "var(--civ-caution)" }} />
-                  <span className="civ-text">選択中</span>
-                </div>
-                <div className="civ-universe-legend-row">
-                  <span className="civ-universe-dot" style={{ background: "var(--civ-primary)" }} />
-                  <span className="civ-text">子孫</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="civ-universe-rightcol">
-          {selectedRow ? (
-            <FinderDetailPanel key={selectedRow.individual_id} row={selectedRow} byId={byId} onJump={selectNode} />
-          ) : (
-            <p className="civ-text" data-muted="true">
-              星(個体)を選ぶと、ここに詳細と血統が出ます。
-            </p>
-          )}
-        </div>
-
-        <div className="civ-universe-controls">
-          <p className="civ-universe-status civ-text" data-muted="true">
-            {selectedRow
-              ? scopeIds
-                ? `${selectedRow.label} に近い ${Math.max(scopeIds.size - 1, 0)}体を表示中`
-                : `選択中: ${selectedRow.label}${lineage ? ` — 先祖${lineage.ancestors.size}・子孫${lineage.descendants.size}` : ""}`
-              : "星(個体)をクリックすると血統ラインが発光し、右に個体詳細が開きます。"}
-          </p>
-          <button
-            type="button"
-            className={cn("civ-interactive", "civ-button")}
-            data-variant="primary"
-            disabled={!selectedId}
-            onClick={scopeSimilar}
-          >
-            ★ この個体に近い
-          </button>
-          <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="secondary" onClick={resetAll}>
-            全体表示に戻す
-          </button>
-        </div>
-      </div>
-
-      <p className="civ-text" data-muted="true">
-        写真は登録済みの個体だけ、近づくと表示します。未登録の個体は名前だけ表示します。
-      </p>
-    </div>
-  );
-}
 
 // V3-AIP-101 c8 knowledge-thread — per-post avatar/handle/body/cite/action row
 // (Path B dedicated node: catalog c8-ui-asset-catalog.md 【最優先2】 — the
@@ -7040,11 +5941,211 @@ function ChromeAuthLinks({
   );
 }
 
+// design-home-round.md §③: theme.js (public/assets/theme.js) auto-injects a
+// #hqThemeToggle.hdtoggle button as the last child of the first ".headbar" it
+// finds — that pattern works on the static caseB7 HTML pages, but on this
+// React app it races the framework's hydration: theme.js's DOMContentLoaded
+// listener frequently fires before/while React hydrates the header, and a
+// DOM node appearing inside a React-managed subtree that React didn't render
+// itself trips a hard "Hydration failed" error in `next dev` (verified via
+// e2e — 55/175 screen-sweep failures). theme.js's own contract already
+// documents the escape hatch: `injectToggleButton()` no-ops immediately if an
+// element with id="hqThemeToggle" already exists. So this renders that same
+// button as ordinary React output (present identically in the SSR HTML and
+// the client's first render — no diff, no race) and replicates the ~10 lines
+// of toggle behaviour theme.js itself uses. theme.js is unmodified; its
+// auto-injection simply never fires on this app because the id is already
+// taken care of.
+//
+// suppressHydrationWarning on the button: theme.js's own top-level
+// `applyTheme(currentTheme())` call (the same synchronous, pre-hydration call
+// that sets <html data-theme>) ALSO does `document.getElementById(
+// 'hqThemeToggle').setAttribute('aria-pressed', ...)` if the button already
+// exists — which, once this button is SSR-rendered, it does. So aria-pressed
+// gets the same "real value written before React hydrates" treatment as
+// data-theme (verified via e2e: SSR always renders aria-pressed=false since
+// useState starts null, but theme.js overwrites it to the real value
+// pre-hydration — an intentional attribute mismatch, not a bug, same pattern
+// the <html> tag already carries).
+function ThemeToggleButton() {
+  const [theme, setTheme] = useState<string | null>(null);
+  useEffect(() => {
+    setTheme(document.documentElement.getAttribute("data-theme"));
+  }, []);
+  const onClick = useCallback(() => {
+    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    try {
+      localStorage.setItem("hqTheme", next);
+    } catch {
+      // file:// or blocked storage — same tolerance as theme.js.
+    }
+    document.documentElement.setAttribute("data-theme", next);
+    setTheme(next);
+  }, []);
+  return (
+    <button
+      type="button"
+      id="hqThemeToggle"
+      className="hdtoggle"
+      title="ライト/ダーク切替"
+      aria-label="ライト/ダーク切替"
+      aria-pressed={theme === "light"}
+      suppressHydrationWarning
+      onClick={onClick}
+    >
+      🌓
+    </button>
+  );
+}
+
+// HDR-1(c9-structure-canon.md §1/§1b/§1c・R112/R115採用)ヘッダー常駐「観測対象」
+// セレクタ。ロゴ隣に現在の選択(層1=種・層2=血統ブランド)をチップ表示し、開く
+// と target-navigator(既存の3モード=名前で探す/はい・いいえ/分類からたどる)
+// を「確定=preferences保存」に差し替えて流用する(TargetNavigatorNodeの
+// onConfirm差し替え・obs-navigator画面側は無変更)。血統ブランド(層2)は
+// taxonomy検索の対象外の自由タグ(V3-IND-34)なので別枠のテキスト入力。
+// ネイティブ<dialog>(showModal)を使う(rung4: モーダルライブラリを増やさない)。
+function HeaderScopeSelector({
+  scope,
+  onSaved,
+}: {
+  scope: HeaderScope;
+  onSaved: (next: HeaderScope) => void;
+}) {
+  const execute = useContext(ExecuteCtx);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [lineageDraft, setLineageDraft] = useState(scope.lineageId);
+  const [saving, setSaving] = useState(false);
+  // screen-sweep.spec.ts(e2e)の "最初の.civ-heading" 契約(全55画面共通)を
+  // 壊さないための必須ガード: <dialog>は閉じていてもDOM上に残る(UAが
+  // display:noneにするだけ)ため、中身を無条件に描画すると隠れたh2.civ-heading
+  // がDOM順で本文の見出しより先に来て `.first()` を奪う。ドロワーが開いている
+  // 間だけ中身を描画する(TargetNavigatorNodeの初回taxonomy fetchも未使用時に
+  // 走らせない副次効果あり=不変条項①)。
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const onNativeClose = () => setIsOpen(false);
+    el.addEventListener("close", onNativeClose);
+    return () => el.removeEventListener("close", onNativeClose);
+  }, []);
+
+  // showModal/close は jsdom(単体テスト環境)に実装が無いため feature-detect
+  // し、無い環境では素の open 属性トグルへ退化させる(トップレイヤー/背景幕/
+  // フォーカストラップは失うが、コンテンツ自体は非モーダル<dialog>として
+  // 引き続き可視・操作可能 — 実ブラウザは常にshowModal/closeを持つので通常
+  // 経路は変わらない)。close() は isOpen を直接falseにする(ESCキー等ネイティブ
+  // 経路は上のuseEffectの'close'イベント購読が担当・二重にfalseを立てても無害)。
+  const open = useCallback(() => {
+    setLineageDraft(scope.lineageId);
+    setIsOpen(true);
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.showModal === "function") el.showModal();
+    else el.setAttribute("open", "");
+  }, [scope.lineageId]);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.close === "function") el.close();
+    else el.removeAttribute("open");
+  }, []);
+
+  const patchScope = useCallback(
+    async (partial: Partial<HeaderScope>) => {
+      setSaving(true);
+      try {
+        const body: Record<string, string> = {};
+        if (partial.species !== undefined) body.scope_species = partial.species;
+        if (partial.lineageId !== undefined) body.scope_lineage_id = partial.lineageId;
+        await execute({ kind: "api", method: "PATCH", path: "/api/v1/me/preferences" }, body);
+        onSaved({ ...scope, ...partial });
+        close();
+      } finally {
+        setSaving(false);
+      }
+    },
+    [execute, scope, onSaved, close],
+  );
+
+  const chipText =
+    scope.species && scope.lineageId
+      ? `${scope.species} / ${scope.lineageId}`
+      : scope.species || scope.lineageId || "すべて";
+
+  return (
+    <div className="civ-scope-selector">
+      <button
+        type="button"
+        className={cn("civ-interactive", "civ-button")}
+        data-variant="secondary"
+        aria-haspopup="dialog"
+        onClick={open}
+      >
+        観測対象: {chipText}
+      </button>
+      <dialog ref={dialogRef} className="civ-scope-dialog" aria-label="観測対象を選ぶ">
+        {isOpen && (
+          <div className="civ-scope-dialog-body">
+            <h2 className="civ-heading">観測対象を選ぶ</h2>
+            <p className="civ-text" data-muted="true">
+              今この対象を見ています。選ぶと、個体一覧・個体ファインダー・検索がこの対象だけに絞られます(市場・知の広場・研究は次のスライスまで対象外)。
+            </p>
+            {(scope.species || scope.lineageId) && (
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="ghost"
+                disabled={saving}
+                onClick={() => void patchScope({ species: "", lineageId: "" })}
+              >
+                すべてに戻す
+              </button>
+            )}
+            <TargetNavigatorNode
+              confirmLabel="この対象を観測対象にする"
+              onConfirm={(c) => void patchScope({ species: c.scientific_name })}
+            />
+            <div className="civ-field">
+              <label className="civ-text" htmlFor="civ-scope-lineage">
+                系統(血統ブランド)
+              </label>
+              <input
+                id="civ-scope-lineage"
+                className="civ-input"
+                value={lineageDraft}
+                onChange={(e) => setLineageDraft(e.target.value)}
+                placeholder="例: 王シリーズ"
+              />
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="primary"
+                disabled={saving || !lineageDraft.trim()}
+                onClick={() => void patchScope({ lineageId: lineageDraft.trim() })}
+              >
+                この系統にする
+              </button>
+            </div>
+            <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="ghost" onClick={close}>
+              閉じる
+            </button>
+          </div>
+        )}
+      </dialog>
+    </div>
+  );
+}
+
 function AppShellNode({ node }: { node: ScreenNode }) {
   const execute = useContext(ExecuteCtx);
+  const layout = useContext(LayoutCtx);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [scope, setScope] = useState<HeaderScope>(DEFAULT_HEADER_SCOPE);
 
   useEffect(() => {
     let alive = true;
@@ -7066,6 +6167,29 @@ function AppShellNode({ node }: { node: ScreenNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // HDR-1: 選好投影(scope_species/scope_lineage_id)をログイン確定後に1度だけ
+  // 取得する(未ログイン中は/me/preferencesが本人スコープを持たないため待つ)。
+  useEffect(() => {
+    if (!authLoaded || !authenticated) return;
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/me/preferences" }))
+      .then((r) => {
+        if (!alive) return;
+        const body = r as { scope_species?: unknown; scope_lineage_id?: unknown } | undefined;
+        setScope({
+          species: typeof body?.scope_species === "string" ? body.scope_species : "",
+          lineageId: typeof body?.scope_lineage_id === "string" ? body.scope_lineage_id : "",
+        });
+      })
+      .catch(() => {
+        if (alive) setScope(DEFAULT_HEADER_SCOPE);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoaded, authenticated]);
+
   const onLogout = useCallback(async () => {
     setLoggingOut(true);
     try {
@@ -7080,11 +6204,17 @@ function AppShellNode({ node }: { node: ScreenNode }) {
   }, [execute]);
 
   return (
-    <div className="civ-app-shell">
-      <header className="civ-chrome-header">
+    <div className="civ-app-shell" data-layout={layout !== "standard" ? layout : undefined}>
+      {/* design-home-round.md §③: "headbar" is the class theme.js's own contract
+          names for its slim header bar (theme.js:9) — kept as the documented
+          marker even though ThemeToggleButton below (not theme.js's injector)
+          is what actually renders the button here, see that component's
+          comment for why. */}
+      <header className="civ-chrome-header headbar">
         <a className="civ-brand" href="/">
           IHL
         </a>
+        {authLoaded && authenticated && <HeaderScopeSelector scope={scope} onSaved={setScope} />}
         {authLoaded && authenticated && (
           <nav className="civ-chrome-nav" aria-label="主要ナビゲーション">
             <a className="civ-link civ-chrome-link" href="/s/obs-search">
@@ -7104,21 +6234,11 @@ function AppShellNode({ node }: { node: ScreenNode }) {
         <div className="civ-chrome-auth">
           <ChromeAuthLinks authenticated={authLoaded && authenticated} loggingOut={loggingOut} onLogout={onLogout} />
         </div>
+        <ThemeToggleButton />
       </header>
-      <Children nodes={node.children} />
-      {authLoaded && authenticated && (
-        <footer className="civ-chrome-footer">
-          <a className="civ-link civ-chrome-link" href="/s/knowledge-board">
-            愚痴・改善
-          </a>
-          <a className="civ-link civ-chrome-link" href="/s/template-market">
-            投票・Fork
-          </a>
-          <a className="civ-link civ-chrome-link" href="/s/ui-templates">
-            Builder
-          </a>
-        </footer>
-      )}
+      <HeaderScopeCtx.Provider value={scope}>
+        <Children nodes={node.children} />
+      </HeaderScopeCtx.Provider>
     </div>
   );
 }
@@ -7266,10 +6386,6 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <ThreadPostsNode node={node} />;
     case "target-navigator":
       return <TargetNavigatorNode />;
-    case "individual-finder":
-      return <IndividualFinderNode />;
-    case "individual-universe":
-      return <IndividualUniverseNode />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (
@@ -7283,151 +6399,16 @@ export function NodeView({ node }: { node: ScreenNode }) {
   }
 }
 
-// V3-BBS-03: 「全ファイル・全コンポーネント・全画面テンプレート」に説明/愚痴/改善の
-// 3板を必須付与する要求文の「全画面」側を、50 本の screen-def JSON を個別編集する
-// 代わりに Renderer 本体へ 1 回だけ差し込むことで機械的に満たす(per-file 手編集は
-// 増える screen-def ごとに漏れる・ここが唯一の差し込み点なら漏れようがない)。
-// channel = `screen-${screen_id}` に固定し、plaza-routes.ts の既存 3 板グルーピング
-// (projectChannelThreads・plaza-constants.ts BOARD_KINDS)をそのまま再利用する
-// (新 Truth 型なし・新 route なし)。コンポーネント編集/入れ替え/Fork一覧ポップアップ/
-// IDE 導線は要求文の別の柱で、identity/Fork lineage UI の設計待ち(progress.json note
-// に継続明記・捏造しない)。
+// 板 kind → 日本語ラベルの共有ルックアップ(guide=説明 / complaint=愚痴 / improvement=改善)。
+// 旧 V3-BBS-03 の全画面フッター板(ScreenBoardsFooter)は STRIP-1(R95・共有chrome剥がし)で
+// 撤去済み。この辞書だけは KNW wave1 の BoardThreadsNode/boardLabel が板ラベル表示に再利用する
+// ため残す(新規辞書を作らない=同じ3板の訳を二重定義しない)。板分類の3分類軸への移行は F-2
+// (round-18)で schema 側を改訂する。
 const FILE_BOARD_KINDS = [
   { kind: "guide", label: "説明" },
   { kind: "complaint", label: "愚痴" },
   { kind: "improvement", label: "改善" },
 ] as const;
-type FileBoardKind = (typeof FILE_BOARD_KINDS)[number]["kind"];
-
-interface FileBoardThread { thread_id: string; topic: string; board_kind: string; post_count: number }
-interface FileBoardsView { channel: string; threads: FileBoardThread[]; boards: Record<string, FileBoardThread[]> }
-
-function ScreenBoardsFooter({ screenId }: { screenId: string }) {
-  const execute = useContext(ExecuteCtx);
-  const channel = `screen-${screenId}`;
-  // ponytail: collapsed by default (same trigger convention as the `disclosure`
-  // node — V3-AIP-101 fix#5/#6) instead of auto-fetching on every screen mount.
-  // Firing a GET unconditionally on mount made this footer an invisible side
-  // effect that inflated onAction call-count assertions across ~100 unrelated
-  // renderer tests (form-submit-count checks, mock.calls[0] ordering) that
-  // were written before this footer existed. Gating the fetch behind an
-  // explicit tap keeps every existing screen's zero-interaction render at
-  // zero extra API calls, which is also the honest UX default (nobody wants
-  // a board panel auto-loading under every screen they open).
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<FileBoardsView | null>(null);
-  const [kind, setKind] = useState<FileBoardKind>("complaint");
-  const [topic, setTopic] = useState("");
-  const [body, setBody] = useState("");
-  const [pending, setPending] = useState(false);
-
-  const reload = useCallback(async () => {
-    try {
-      const v = await execute({ kind: "api", method: "GET", path: `/api/v1/plaza/channels/${channel}/threads` });
-      setView((v ?? null) as FileBoardsView | null);
-    } catch {
-      setView(null);
-    }
-  }, [execute, channel]);
-
-  useEffect(() => {
-    if (!open) return;
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, open]);
-
-  const submit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!topic.trim() || !body.trim() || pending) return;
-      setPending(true);
-      try {
-        await execute(
-          { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
-          { channel, board_kind: kind, topic: topic.trim(), body: body.trim() },
-        );
-        setTopic("");
-        setBody("");
-        await reload();
-      } finally {
-        setPending(false);
-      }
-    },
-    [execute, channel, kind, topic, body, pending, reload],
-  );
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className={cn("civ-interactive", "civ-button")}
-        data-variant="secondary"
-        onClick={() => setOpen(true)}
-      >
-        このページの掲示板を開く(説明・愚痴・改善)
-      </button>
-    );
-  }
-
-  const boards = view?.boards ?? {};
-  return (
-    <section className="civ-card" aria-label="このページの掲示板(説明/愚痴/改善)">
-      <h2 className="civ-heading" data-level="2">
-        このページの掲示板
-      </h2>
-      {FILE_BOARD_KINDS.map(({ kind: k, label }) => {
-        const threads = boards[k] ?? [];
-        return (
-          <div key={k}>
-            <span className="civ-badge">
-              {label}（{threads.length}）
-            </span>
-            {threads.length === 0 ? (
-              <p className="civ-empty">まだ投稿がありません。</p>
-            ) : (
-              <ul className="civ-list">
-                {threads.map((t) => (
-                  <li key={t.thread_id}>
-                    <a className="civ-link" href={`/s/knowledge-thread?thread_id=${t.thread_id}`}>
-                      {t.topic}（{t.post_count}）
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
-      <form className="civ-form" onSubmit={(e) => void submit(e)}>
-        <div className="civ-field">
-          <label htmlFor={`${screenId}-board-kind`}>板</label>
-          <select
-            id={`${screenId}-board-kind`}
-            value={kind}
-            onChange={(e) => setKind(e.target.value as FileBoardKind)}
-          >
-            {FILE_BOARD_KINDS.map(({ kind: k, label }) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="civ-field">
-          <label htmlFor={`${screenId}-board-topic`}>話題</label>
-          <input id={`${screenId}-board-topic`} value={topic} onChange={(e) => setTopic(e.target.value)} />
-        </div>
-        <div className="civ-field">
-          <label htmlFor={`${screenId}-board-body`}>本文</label>
-          <textarea id={`${screenId}-board-body`} value={body} onChange={(e) => setBody(e.target.value)} />
-        </div>
-        <button type="submit" className={cn("civ-interactive", "civ-button")} data-variant="primary" disabled={pending}>
-          投稿する
-        </button>
-      </form>
-    </section>
-  );
-}
 
 // c9 wave1 KNW Slice1(公式掲示板を探せる板にする): board-threads 専用ノード —
 // 旧実装(汎用 list の item_text: "{{topic}}（{{board_kind}} / {{post_count}}）"
@@ -7435,7 +6416,7 @@ function ScreenBoardsFooter({ screenId }: { screenId: string }) {
 // English board_kind・区切り無しの件数・デッドリンクの3点がバグだった。
 // ThreadPostsNode(6719行)と同じ自前 fetch/reload パターン(useSource は使わ
 // ない — 板フィルタはこのノードだけのローカル state で、他ノードと共有する
-// 必要が無い)。板ラベルは ScreenBoardsFooter が既に持つ FILE_BOARD_KINDS を
+// 必要が無い)。板ラベルは共有の FILE_BOARD_KINDS(直上に定義)を
 // そのまま再利用(新規辞書を作らない — 同じ3板の日本語訳をここで再定義する
 // 理由が無い)。
 interface KnwBoardThread {
@@ -7854,6 +6835,372 @@ function KnowledgeHubNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// home 完成予想図v2(承認済みmockup D:\claude\00-hq\dashboard\mockups\
+// c9-home-forecast-v2.html・R112 90点採用)の verbatim 採用: list
+// variant="home-dashboard" 専用ノード(KnowledgeHubNode と同じ in-scope トリック
+// — schema node type enum は本タスクのスコープ外なので新種を起こさない)。
+// mockup の markup/className を一字一句採用し(globals.css の `.home-dashboard `
+// スコープCSS参照)、home-routes.ts/ledger-routes.ts の既存 GET 3本
+// (/home/summary・/me/ledger・/home/civ-minimap)を KnowledgeHubNode と同じ
+// 自前 useEffect+execute パターンで叩いて実データを流し込む。
+//
+// mockup から意図的に省いたもの(誇張ゼロ=実データの裏付けがない要素は出さない
+// — KnowledgeThreadChatNode の ctx-chips 省略と同じ判断):
+//  - ribbon(「完成予想図です」バナー)・footer の承認メタ文言・末尾の inline
+//    テーマ切替 <script> — mockup限定の chrome。テーマはアプリ本体の
+//    data-theme システム(AppShellNode の ThemeToggleButton・全画面共通)に乗る。
+//  - ctx-line(「あなたの観測対象: …」種名タグ) — 対応する取得APIがない
+//    (このタスクの実データ配線リストに含まれない)。
+//  - primary-grid 4カードの pc-badge(「今日5件の予定」等) — 主な行き先は
+//    "静的ナビ"として指示されており、4カードのうち今日の状態から正確に
+//    導出できるのは observe だけで残り3枚(個体数/新着スレ/取引中)に対応する
+//    APIが無い。不揃いな実装(1枚だけ実数字・3枚は無し)を避け、4枚とも
+//    バッジ無しの静的カードに統一。
+//  - 文明の状態タイル「信頼度の平均」 — R135-a裁定(round-18 V3-UIX-84)
+//    「合成指標『信頼度』禁止・生の事実のみ」により丸ごと省略、残り2タイルの
+//    grid を repeat(2,1fr) に変更(空欄を作らない)。
+interface HomeScheduleLine {
+  individual_id: string;
+  days: number;
+  overdue: boolean;
+  deep_link: string;
+}
+interface HomeJudicialInboxItem {
+  dispute_id: string;
+  category: string;
+  vote_deadline: string | null;
+}
+interface HomeSummary {
+  overdue: unknown[];
+  near: unknown[];
+  today_lines: HomeScheduleLine[];
+  judicial_inbox: HomeJudicialInboxItem[];
+}
+interface HomeLedgerView {
+  karma_value: number;
+  platinum_coins: number;
+}
+interface HomeCivMinimapView {
+  observation_pace_7d: number;
+  template_growth: number;
+}
+
+// 次の一手の日数バッジ文言(overdue=マイナス方向・near=0以上)。mockup の実例は
+// 「3日遅れ」「明日」「2日後」— days===0(今日中)は mockup に例が無いが
+// home-routes.ts の実データ上あり得るため素朴に「今日」で埋める(捏造ではなく
+// 既存の日数フィールドをそのまま文言化しただけ)。
+function dueDayBadge(line: HomeScheduleLine): string {
+  if (line.overdue) return `${Math.abs(line.days)}日遅れ`;
+  if (line.days === 0) return "今日";
+  if (line.days === 1) return "明日";
+  return `${line.days}日後`;
+}
+
+function HomeDashboardNode({ node }: { node: ScreenNode }) {
+  const execute = useContext(ExecuteCtx);
+  const [summary, setSummary] = useState<HomeSummary | null>(null);
+  const [ledger, setLedger] = useState<HomeLedgerView | null>(null);
+  const [civ, setCiv] = useState<HomeCivMinimapView | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/home/summary" }))
+      .then((v) => {
+        if (alive) setSummary((v as HomeSummary | undefined) ?? null);
+      })
+      .catch(() => {
+        if (alive) setSummary(null);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/me/ledger" }))
+      .then((v) => {
+        if (alive) setLedger((v as HomeLedgerView | undefined) ?? null);
+      })
+      .catch(() => {
+        if (alive) setLedger(null);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/home/civ-minimap" }))
+      .then((v) => {
+        if (alive) setCiv((v as HomeCivMinimapView | undefined) ?? null);
+      })
+      .catch(() => {
+        if (alive) setCiv(null);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const overdueCount = summary?.overdue.length ?? 0;
+  const nearCount = summary?.near.length ?? 0;
+  const inboxCount = summary?.judicial_inbox.length ?? 0;
+  const karma = ledger?.karma_value ?? 0;
+  const karmaText = karma > 0 ? `+${karma}` : String(karma);
+  const platinum = ledger?.platinum_coins ?? 0;
+  const todayLines = summary?.today_lines ?? [];
+  const inboxItems = summary?.judicial_inbox ?? [];
+  const pace = civ?.observation_pace_7d ?? 0;
+  const growth = civ?.template_growth ?? 0;
+
+  return (
+    <div className="home-dashboard" data-node-id={node.id}>
+      <div className="wrap">
+        <header className="top">
+          <h1 className="wordmark">ホーム</h1>
+        </header>
+        <p className="lead">今日やることと、届いた出来事を10秒で把握して、次の場所へ飛ぶ司令塔。</p>
+
+        {/* 1. 今日の状態 — mockup section1 (verbatim markup, real data wired) */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">📊 今日の状態</h2>
+            <p className="section-caption">開いてまず見る数字。ここだけで今日やるべきことがあるか分かる。</p>
+          </div>
+          <div className="stat-row">
+            <div className="stat-tile warn">
+              <div className="st-icon">⏰</div>
+              <div className="st-num">{overdueCount}</div>
+              <div className="st-label">観測が遅れている</div>
+            </div>
+            <div className="stat-tile info">
+              <div className="st-icon">🔔</div>
+              <div className="st-num">{nearCount}</div>
+              <div className="st-label">もうすぐ観測日</div>
+            </div>
+            <div className="stat-tile info">
+              <div className="st-icon">✉️</div>
+              <div className="st-num">{inboxCount}</div>
+              <div className="st-label">届いた出来事</div>
+            </div>
+            <div className="stat-tile good">
+              <div className="st-icon">🌟</div>
+              <div className="st-num">{karmaText}</div>
+              <div className="st-label">貢献度</div>
+              <div className="st-sub">プラチナコイン {platinum}枚</div>
+            </div>
+          </div>
+          <p className="source-note">これらの数字は自動でその日の最新に更新されます。</p>
+        </section>
+
+        {/* 2. 主な行き先(4主要動線・同列primary) — 静的ナビ */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">🧭 主な行き先</h2>
+            <p className="section-caption">毎日いちばん使う4つの入口。ここから各エリアへ飛ぶ。</p>
+          </div>
+          <div className="primary-grid">
+            <a className="primary-card obs" href="/s/obs-entry">
+              <div className="pc-icon">🔭</div>
+              <div className="pc-title">観測を始める</div>
+              <div className="pc-desc">目の前の個体の変化を記録する。すべての記録の出発点。</div>
+            </a>
+            <a className="primary-card ind" href="/finder/finder.html">
+              <div className="pc-icon">🐛</div>
+              <div className="pc-title">個体を探す</div>
+              <div className="pc-desc">飼っている個体を一覧・血統・成長でたどる。理想の個体を見つける。</div>
+            </a>
+            <a className="primary-card knw" href="/s/knowledge-hub">
+              <div className="pc-icon">💬</div>
+              <div className="pc-title">知の広場</div>
+              <div className="pc-desc">みんなの記録から答えを探し、困りごとを相談する。</div>
+            </a>
+            <a className="primary-card mkt" href="/s/market-trade">
+              <div className="pc-icon">🛒</div>
+              <div className="pc-title">マーケット</div>
+              <div className="pc-desc">安心して買う・出す。進行中の取引を見失わない。</div>
+            </a>
+          </div>
+        </section>
+
+        {/* 3. 次の一手 — mockup section3 (verbatim markup, real data wired) */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">🔭 次の一手</h2>
+            <p className="section-caption">観測が必要な個体を最大3件だけ。多く出しすぎない。</p>
+          </div>
+          <div className="card">
+            {todayLines.length === 0 ? (
+              <p className="civ-empty">今日観測が必要な個体はありません</p>
+            ) : (
+              <div className="today-list">
+                {todayLines.map((line) => (
+                  <div className="today-row" key={line.individual_id}>
+                    <div>
+                      <div className="today-id">{line.individual_id}</div>
+                      <span className={cn("day-badge", line.overdue ? "overdue" : "near")}>
+                        {dueDayBadge(line)}
+                      </span>
+                    </div>
+                    <a className="link-btn" href={line.deep_link}>
+                      記録する
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="source-note">観測が必要な個体を最大3件だけ表示します(個体IDで並びます)。</p>
+          </div>
+        </section>
+
+        {/* 4. 届いた出来事 — mockup section4 (verbatim markup, real data wired) */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">✉️ 届いた出来事</h2>
+            <p className="section-caption">新しい話し合いを最大5件だけ。締切があるものから並ぶ。</p>
+          </div>
+          <div className="card">
+            {inboxItems.length === 0 ? (
+              <p className="civ-empty">新しく届いた話し合いはありません</p>
+            ) : (
+              <div className="inbox-list">
+                {inboxItems.map((item) => (
+                  <div className="inbox-row" key={item.dispute_id}>
+                    <div className="inbox-deadline">
+                      <span className="dl-label">締切</span>
+                      {item.vote_deadline
+                        ? `${formatDateJa(item.vote_deadline)} まで ・ ${item.category}`
+                        : `未定 ・ ${item.category}`}
+                    </div>
+                    <a className="link-btn secondary" href={`/s/dispute?dispute_id=${item.dispute_id}`}>
+                      話し合いを見る
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="source-note">新しく届いた話し合いを最大5件、締切が近い順に表示します。</p>
+          </div>
+        </section>
+
+        {/* 5. 文明の状態 — 信頼度タイルは丸ごと省略(R135-a)。残り2タイルを
+            grid 2列で描画(空欄を作らない)。 */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">🌍 文明の状態</h2>
+            <p className="section-caption">みんなの活動の集計。誰の値かは出ません。</p>
+          </div>
+          <div className="card">
+            <div className="civ-row">
+              <div className="civ-tile">
+                <div className="ct-num">{pace}件</div>
+                <div className="ct-label">直近7日の観測件数</div>
+              </div>
+              <div className="civ-tile">
+                <div className="ct-num">{growth}件</div>
+                <div className="ct-label">共有されたテンプレの数</div>
+              </div>
+            </div>
+            <p className="civ-privacy-note">個人が特定できる値は含まれません(非PII集計)。</p>
+          </div>
+        </section>
+
+        {/* 6. 作る・整える(二次項目をグルーピング) — 旧6番「観測対象を特定する」
+            (obs-navigator の3モード・3枚のtool-card)はR157「ヘッダーにあるのに
+            ホーム内にあるのはおかしい」でホームから撤去し、HeaderScopeSelector
+            (AppShellNode・ロゴ隣)へ一本化した(c9-structure-canon.md §1・§1c)。
+            obs-navigator画面自体は撤去していない(obs-entry「対象を特定する」
+            リンクから引き続き到達可能・home.jsonのtransitions[]からは除去)。 */}
+        <section className="block">
+          <div className="section-head">
+            <h2 className="section-title">🛠 作る・整える</h2>
+            <p className="section-caption">毎日は使わないけれど大事なもの。3つにまとめました。</p>
+          </div>
+          <div className="secondary-grid">
+            <div className="sec-card builder">
+              <a className="sc-head-link" href="/s/ui-templates">
+                <div className="sc-head">
+                  <span className="sc-icon">🧩</span>
+                  <span className="sc-title">
+                    記録画面を作る<span className="core-tag">中核・残します</span>
+                  </span>
+                </div>
+                <p className="sc-desc">
+                  飼っている生きものに合わせて、自分専用の記録画面を作る・人の作った画面を真似る。どんな観測対象にも対応するための中心機能です。
+                </p>
+              </a>
+              <div className="sc-sub">
+                <a className="sub-chip" href="/s/ui-templates">
+                  かんたんに作る
+                </a>
+                <a className="sub-chip" href="/s/ui-templates">
+                  細かく作り込む
+                </a>
+                <a className="sub-chip" href="/s/ui-templates">
+                  人の画面を真似る
+                </a>
+                <a className="sub-chip" href="/s/theme-gallery">
+                  🎨 色を変える(テーマ)
+                </a>
+              </div>
+            </div>
+
+            <div className="sec-card">
+              <a className="sc-head-link" href="/s/settings">
+                <div className="sc-head">
+                  <span className="sc-icon">⚙️</span>
+                  <span className="sc-title">設定</span>
+                </div>
+                <p className="sc-desc">アプリの調整はここにまとめました。ばらばらに置きません。</p>
+              </a>
+              <div className="sc-sub">
+                <a className="sub-chip" href="/s/device">
+                  📡 センサー機器
+                </a>
+                <a className="sub-chip" href="/s/costs">
+                  💰 かかった費用
+                </a>
+                <a className="sub-chip" href="/s/ai-profile-settings">
+                  🤖 AIの設定
+                </a>
+                <a className="sub-chip" href="/s/language-select">
+                  🌐 言語・国
+                </a>
+                <a className="sub-chip" href="/s/profile">
+                  👤 プロフィール
+                </a>
+              </div>
+            </div>
+
+            <div className="sec-card">
+              <a className="sc-head-link" href="/s/dispute">
+                <div className="sc-head">
+                  <span className="sc-icon">🤝</span>
+                  <span className="sc-title">話し合いの場</span>
+                </div>
+                <p className="sc-desc">取引などのもめごとを当事者で解決する場所。アプリへの不満・こう直してほしいという要望もここから出せます。</p>
+              </a>
+              <div className="sc-sub">
+                <a className="sub-chip" href="/s/dispute">
+                  相手と話し合う
+                </a>
+                <a className="sub-chip" href="/s/dispute">
+                  改善してほしいことを送る
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 // T-71 KNW wave1(スレッド=みんなのグループチャット — 承認モックアップ section3
 // の verbatim 採用・R94「既存を捨てる」): 旧 ThreadPostsNode(投稿ごとの賛否
 // Agree/Disagree/Pass ボタン + Polis型合意可視化テーブル + テキストエリア返信
@@ -7996,7 +7343,10 @@ function KnowledgeThreadChatNode({ node }: { node: ScreenNode }) {
     }
   }, [draft, view, sending, execute, threadId, reload]);
 
-  const title = !loaded ? "読み込み中…" : (view?.topic ?? "");
+  // view 未取得(thread_id 未指定 or フェッチ失敗)でも見出しは常に非空にする
+  // — 空だと .thread-title が視覚的に潰れ、画面が「空白」に見える(screen-sweep が
+  //   「見出しなし=空白ページ」として検出)。空スレ状態でも topic の器を見せる。
+  const title = !loaded ? "読み込み中…" : (view?.topic || "スレッド");
 
   return (
     <div className="knw-thread">
@@ -8134,20 +7484,21 @@ export function Renderer({
   return (
     <MessagesCtx.Provider value={resolvedMessage}>
       <LocaleCtx.Provider value={viewerLocale ?? "ja"}>
-        <ExecuteCtx.Provider value={execute}>
-          <ScopeCtx.Provider value={scope}>
-            <TransitionsCtx.Provider value={def.transitions ?? []}>
-              <NavigateCtx.Provider value={navigate}>
-                <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
-                  {def.nodes.map((n) => (
-                    <NodeView key={n.id} node={n} />
-                  ))}
-                  <ScreenBoardsFooter screenId={def.screen_id} />
-                </DataSinkCtx.Provider>
-              </NavigateCtx.Provider>
-            </TransitionsCtx.Provider>
-          </ScopeCtx.Provider>
-        </ExecuteCtx.Provider>
+        <LayoutCtx.Provider value={def.layout ?? "standard"}>
+          <ExecuteCtx.Provider value={execute}>
+            <ScopeCtx.Provider value={scope}>
+              <TransitionsCtx.Provider value={def.transitions ?? []}>
+                <NavigateCtx.Provider value={navigate}>
+                  <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
+                    {def.nodes.map((n) => (
+                      <NodeView key={n.id} node={n} />
+                    ))}
+                  </DataSinkCtx.Provider>
+                </NavigateCtx.Provider>
+              </TransitionsCtx.Provider>
+            </ScopeCtx.Provider>
+          </ExecuteCtx.Provider>
+        </LayoutCtx.Provider>
       </LocaleCtx.Provider>
     </MessagesCtx.Provider>
   );

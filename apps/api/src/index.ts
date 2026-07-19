@@ -531,9 +531,35 @@ app.route("/api/v1", aiRoutes);
 // board_kind=improvement)を再利用 — 既存「改善の板」画面に無改造で表示される。
 app.route("/api/v1", aiDigestRoutes);
 
+// T-71 恒久硬化(R91 承認・修正層裁定 = 自己サービス型 allowlist・参照:
+// docs/planning/c9/design-events-allowlist.md)。POST /events は薄い汎用 Truth-append
+// エンドポイントで、実ドメインの書込みは全て typed route(在庫/重複/ロール/所有者
+// スコープ等の業務ルール込み)を経由する設計になっている。ここに一致しない type は
+// putEvent 呼び出し前に fail-closed で 403 — typed route を持つ型を騙って業務ルール
+// を丸ごと迂回できてしまう穴(T-71)を塞ぐ。ポジティブリスト・完全一致(正規化なし=
+// envelope 検証の anchored パターンマッチ前提を崩さない)。
+const SELF_SERVICE_EVENT_TYPES = new Set<string>([
+  // design-k4(route-matrix 57 行凍結): UI テンプレへの like/platinum 投票は新 route
+  // を作らずここへ投げる設計。typed route は無い。actor_id は下でセッションから
+  // 強制上書き、投影(projectTemplateVotes)は (actor,target,kind) 去重で冪等。
+  "ihl.ui.vote.v1",
+  // design-k8 §1.4: 意図台帳(appendIntent)は「route ではない純書込ヘルパ」の設計
+  // 意図で、ネットワーク経路は既存 POST /events を再利用(K8 は新 route 0 本)。
+  "ihl.process.intent.v1",
+  // vitest ハーネス専用のダミー型(tests/helpers.ts makeEnvelope 既定値)。対応する
+  // schemas/events/*.schema.json も typed route も存在しない = 本番では発生し得ない。
+  // 汎用メカニズム(認可境界/insert-only/actor_id stamping)を POST /events 越しに
+  // 検証する既存 TC(cl-01/cl-02/auth.test.ts)がこれに依存する。
+  "ihl.test.sample.v1",
+]);
+
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);
   const actorId = c.get("actorId");
+  const eventType = body && typeof body === "object" ? (body as { type?: unknown }).type : undefined;
+  if (typeof eventType !== "string" || !SELF_SERVICE_EVENT_TYPES.has(eventType)) {
+    return c.json({ error: "USE_TYPED_ROUTE", type: eventType }, 403);
+  }
   if (body && typeof body === "object" && typeof (body as { provenance?: unknown }).provenance === "object" && (body as { provenance?: unknown }).provenance) {
     (body as { provenance: Record<string, unknown> }).provenance.actor_id = actorId;
   }

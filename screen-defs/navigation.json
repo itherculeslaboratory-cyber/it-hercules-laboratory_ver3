@@ -25,8 +25,6 @@
     "obs-search",
     "obs-freetext",
     "individual-detail",
-    "individual-finder",
-    "individual-universe",
     "cross",
     "bio-card",
     "match",
@@ -117,31 +115,6 @@
     },
     {
       "from": "home",
-      "to": "individual-finder",
-      "label": "理想の個体を探すへ"
-    },
-    {
-      "from": "individual-finder",
-      "to": "individual-detail",
-      "label": "詳細画面を開く"
-    },
-    {
-      "from": "individual-finder",
-      "to": "obs-entry",
-      "label": "個体0件時の案内: 観測を始める"
-    },
-    {
-      "from": "individual-finder",
-      "to": "individual-universe",
-      "label": "★ 宇宙で見る"
-    },
-    {
-      "from": "individual-universe",
-      "to": "individual-detail",
-      "label": "詳細画面を開く"
-    },
-    {
-      "from": "home",
       "to": "match",
       "label": "マッチングへ"
     },
@@ -174,6 +147,26 @@
       "from": "home",
       "to": "market-trade",
       "label": "取引へ"
+    },
+    {
+      "from": "home",
+      "to": "obs-navigator",
+      "label": "観測対象を特定するへ(home完成予想図v2)"
+    },
+    {
+      "from": "home",
+      "to": "ai-profile-settings",
+      "label": "AIの設定へ(home完成予想図v2・設定サブチップ)"
+    },
+    {
+      "from": "home",
+      "to": "language-select",
+      "label": "言語・国へ(home完成予想図v2・設定サブチップ)"
+    },
+    {
+      "from": "home",
+      "to": "dispute",
+      "label": "話し合いの場へ(home完成予想図v2)"
     },
     {
       "from": "obs-domain-select",
@@ -244,6 +237,11 @@
       "from": "qr-resume",
       "to": "obs-register-entry",
       "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)"
+    },
+    {
+      "from": "qr-resume",
+      "to": "obs-register-new",
+      "label": "空の棚から新規個体登録へ"
     },
     {
       "from": "economy-status",

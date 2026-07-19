@@ -25,7 +25,7 @@ const STATUS_DEF = resolve(SPEC_DIR, "..", "..", "..", "screen-defs", "economy-s
 async function devLogin(page: Page): Promise<void> {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test("economy status: dev-login then balance reads back through the real worker", async ({ page }) => {

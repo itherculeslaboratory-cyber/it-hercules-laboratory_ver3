@@ -8,12 +8,12 @@
 // in observation-routes.ts / ledger-routes.ts and cannot be imported — same
 // precedent as projectLedger's inline helpers · 批評家#3).
 import { Hono, type Context } from "hono";
-import { TruthStore, ulid, cosineSimilarity } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES, STAGE_TO_NEXT_TRANSITION } from "./observation-constants";
 import { appendContribution } from "./contribution";
 import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
-import { projectOpenBindings } from "./source-routes";
+import { projectOpenBindings, projectCurrentOwner } from "./source-routes";
 import { computeNextObservationAt } from "./home-routes";
 import { aggregateTags } from "./tag-routes";
 import { loadVector, EMBEDDING_DIM } from "./observation-routes";
@@ -882,13 +882,22 @@ export async function createIndividualMaster(
 
 // Shared blood-link logic (IND-01/12), reused by clutch promote to inherit
 // sire_id/dam_id (コピペ二重化しない). Same key/conflict semantics as the route.
+// Ownership guard (fail-closed, T-71 GAP①): only the CHILD's current owner
+// (source-routes.ts projectCurrentOwner — transfer-aware, same trust boundary
+// as POST /occupancy) may append a blood link for it. clutch promote's calls
+// pass a freshly-minted individualId it just created (owner===actorId there
+// by construction), so this is a no-op guard on that path and the real gate
+// on the direct route below.
 export async function linkParent(
+  bucket: R2BucketLite,
   s: TruthStore,
   actorId: string,
   childId: string,
   parentId: string,
   role: string,
-): Promise<Awaited<ReturnType<TruthStore["putEventAt"]>>> {
+): Promise<Awaited<ReturnType<TruthStore["putEventAt"]>> | { status: "forbidden" }> {
+  const owner = await projectCurrentOwner(bucket, childId);
+  if (owner !== actorId) return { status: "forbidden" };
   const data: Record<string, unknown> = {
     child_id: childId,
     parent_id: parentId,
@@ -927,6 +936,46 @@ function representativeMeasurement(data: Record<string, unknown>): string | null
   const ms = Array.isArray(data.measurements) ? (data.measurements as Record<string, unknown>[]) : [];
   const pick = ms.find((m) => m.item === "weight" && typeof m.value === "number") ?? ms.find((m) => typeof m.value === "number");
   return pick ? `${pick.value}${pick.unit ?? ""}` : null;
+}
+
+// Shared label/species/last_capture_at/last_measurement_summary derivation —
+// the exact fallback formulas GET /individuals rows use. Extracted (unchanged
+// behavior) so the multi-occupant shelf-QR branch (OBS wave1 R2・
+// projectIndividualSummary below) reuses ONE projection instead of a
+// re-derived variant (source-routes projectOccupantsAt callers).
+function summarizeIndividualRow(
+  id: string,
+  master: Record<string, unknown> | null,
+  name: string | null,
+  caps: { data: Record<string, unknown>; time: string }[],
+): { label: string; species: string | null; last_capture_at: string | null; last_measurement_summary: string | null } {
+  const rawLabel = typeof master?.local_label_text === "string" ? master.local_label_text : "";
+  const rawSpecies = typeof master?.species === "string" ? master.species : "";
+  const sorted = caps.slice().sort((a, b) => String(a.data.capture_id ?? "").localeCompare(String(b.data.capture_id ?? "")));
+  const latest = sorted[sorted.length - 1];
+  return {
+    label: rawLabel || name || id,
+    species: rawSpecies || null,
+    last_capture_at: latest ? latest.time || null : null,
+    last_measurement_summary: latest ? representativeMeasurement(latest.data) : null,
+  };
+}
+
+/** Per-id fetch + summarizeIndividualRow — for a single individual outside the
+ * bulk GET /individuals scan (small occupant counts on a multi-occupant shelf,
+ * OBS wave1 R2 V3-OBS-2x qr_placement_multi). Same fields, same fallback rules. */
+export async function projectIndividualSummary(
+  s: TruthStore,
+  id: string,
+): Promise<{ individual_id: string; label: string; species: string | null; last_capture_at: string | null; last_measurement_summary: string | null }> {
+  const masterEv = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
+  const master = masterEv ? dataOf(masterEv) : null;
+  const name = await projectName(s, id);
+  const ref = `individual/${id}`;
+  const caps = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
+    .filter((e) => dataOf(e).subject_ref === ref)
+    .map((e) => ({ data: dataOf(e), time: String(e.time ?? "") }));
+  return { individual_id: id, ...summarizeIndividualRow(id, master, name, caps) };
 }
 
 // V3-IND-14 一覧フィルタ軸「状態(生体/蛹/幼虫/死亡/標本)」の5値判定。優先度:
@@ -1110,13 +1159,14 @@ async function listIndividualsFor(
         break;
       }
     }
+    const row = summarizeIndividualRow(id, m, name, caps);
     individuals.push({
       individual_id: id,
-      label: label || name || id,
+      label: row.label,
       name,
-      species: species || null,
-      last_capture_at: latest ? latest.time || null : null,
-      last_measurement_summary: latest ? representativeMeasurement(latest.data) : null,
+      species: row.species,
+      last_capture_at: row.last_capture_at,
+      last_measurement_summary: row.last_measurement_summary,
       stage,
       placement_id: latestPlacement ? (latestPlacement.placement_id as string) : null,
       last_care_at: latest ? latest.time || null : null,
@@ -1178,13 +1228,22 @@ individualRoutes.get("/individuals/lineage-check", async (c) => {
 // スコープに絞る(他者の血統情報は返さない)。cross_parent Truth を都度全件scan
 // (常駐indexなし・不変条項①)。NOTE: `/individuals/:id` より前に登録
 // (lineage-check と同じ static-vs-param 順序の理由)。
+// HDR-1(c9-structure-canon.md §1c/R112/R115)ヘッダー観測対象セレクタ配線:
+// ?species=/?lineage_id= は listIndividualsFor と同じフィルタ規約(species は
+// 大小無視の完全一致・lineage_id は完全一致)を ownIds の絞り込みに横展開する
+// (エッジ自身に種/系統フィールドは無いので、両端が対象母集団に入っている
+// リンクだけを返す=個体一覧側フィルタと同じ母集団に揃える)。
 individualRoutes.get("/individuals/pedigree-links", async (c) => {
   const actorId = c.get("actorId");
+  const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
+  const lineageFilter = c.req.query("lineage_id") ?? "";
   const s = store(c);
   const ownIds = new Set(
     (await s.listEvents(`truth/${MASTER_TYPE}/`))
       .map(dataOf)
       .filter((m) => m.actor_id === actorId)
+      .filter((m) => !speciesFilter || (typeof m.species === "string" && m.species.toLowerCase() === speciesFilter))
+      .filter((m) => !lineageFilter || m.lineage_id === lineageFilter)
       .map((m) => String(m.individual_id ?? "")),
   );
   const links = (await s.listEvents(`truth/${CROSS_TYPE}/`))
@@ -1220,7 +1279,8 @@ individualRoutes.post("/individuals/:id/parents", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
   const role = body.parent_role;
-  const res = await linkParent(store(c), actorId, childId, String(body.parent_id), String(role));
+  const res = await linkParent(c.env.TRUTH, store(c), actorId, childId, String(body.parent_id), String(role));
+  if (res.status === "forbidden") return c.json({ error: "NOT_OWNER" }, 403);
   if (res.status === "invalid") return c.json({ error: "INVALID_PARENT", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_PARENT", key: res.key }, 409);
   return c.json({ child_id: childId, parent_role: role }, 201);
@@ -1255,8 +1315,12 @@ individualRoutes.get("/individuals/:id/cross", async (c) => {
 // (back-dating a historical name); default now.
 individualRoutes.post("/individuals/:id/name", async (c) => {
   const id = c.req.param("id");
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
+  // Ownership guard (fail-closed, T-71 GAP①) — same trust boundary as
+  // POST /occupancy (source-routes.ts:265): transfer-aware current owner only.
+  const owner = await projectCurrentOwner(c.env.TRUTH, id);
+  if (owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const data: Record<string, unknown> = {
     individual_id: id,
     name: body.name,
@@ -1423,6 +1487,9 @@ individualRoutes.get("/individuals/:id/authenticity", async (c) => {
 // 専用route——血統/真正性の疑義は GET .../authenticity の doubts[] に集約表示
 // される。append-only: action="withdrawn" は元の raised レコードを消さず、同じ
 // doubt_id で新規追記する(不変条項③)。
+// Raiser guard (fail-closed, T-71 GAP②/SEC-A2): action="withdrawn" is limited to
+// the actor who raised the doubt_id being withdrawn — a third party knowing the
+// doubt_id must not be able to make someone else's doubt appear withdrawn.
 individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
   const id = c.req.param("id");
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -1430,6 +1497,20 @@ individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
   const action = body.action === "withdrawn" ? "withdrawn" : "raised";
   if (action === "raised" && (typeof body.reason !== "string" || !body.reason.trim())) {
     return c.json({ error: "REASON_REQUIRED" }, 400);
+  }
+  const s = store(c);
+  if (action === "withdrawn") {
+    // Oldest raised row = the original raiser (doubt_id is client-chosen on
+    // raise, so an attacker can re-raise the SAME doubt_id after the victim —
+    // taking "latest raised" as raiser lets the attacker's own withdrawn pass.
+    // created_at is server-stamped monotonic nowIso(), so raisedRows[0] after
+    // this explicit ascending sort is always the true first raiser).
+    const raisedRows = (await s.listEvents(`truth/${LINEAGE_DOUBT_TYPE}/${id}-`))
+      .map(dataOf)
+      .filter((d) => d.individual_id === id && d.doubt_id === body.doubt_id && d.action === "raised")
+      .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+    const raiser = raisedRows[0]?.actor_id;
+    if (raiser !== actorId) return c.json({ error: "FORBIDDEN", details: ["raiser only"] }, 403);
   }
   const doubtId = typeof body.doubt_id === "string" && body.doubt_id ? body.doubt_id : ulid();
   const data: Record<string, unknown> = {
@@ -1441,7 +1522,7 @@ individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
   };
   if (typeof body.reason === "string" && body.reason.trim()) data.reason = body.reason;
   if (typeof body.listing_id === "string" && body.listing_id) data.listing_id = body.listing_id;
-  const res = await store(c).putEventAt(
+  const res = await s.putEventAt(
     `truth/${LINEAGE_DOUBT_TYPE}/${id}-${ulid()}.json`,
     envelope(LINEAGE_DOUBT_TYPE, SCHEMA.lineageDoubt, actorId, data),
   );
@@ -1452,12 +1533,18 @@ individualRoutes.post("/individuals/:id/lineage-doubt", async (c) => {
 
 // Shared life-event append (IND-12/13), reused by batch-commit kind:"life-event"
 // (コピペ二重化しない — F4 行メニュー/一括どちらも同じ append 経路)。
+// Ownership guard (fail-closed, T-71 GAP①): same projectCurrentOwner trust
+// boundary as POST /occupancy — covers BOTH entry points (direct route below
+// and batch-commit-routes.ts kind:"life-event") since both funnel through here.
 export async function writeLifeEvent(
+  bucket: R2BucketLite,
   s: TruthStore,
   actorId: string,
   individualId: string,
   body: Record<string, unknown>,
 ): Promise<{ ok: true; individual_id: string; kind: unknown } | { ok: false; error: string; details?: string[] }> {
+  const owner = await projectCurrentOwner(bucket, individualId);
+  if (owner !== actorId) return { ok: false, error: "NOT_OWNER" };
   const data: Record<string, unknown> = {
     individual_id: individualId,
     kind: body.kind,
@@ -1480,8 +1567,11 @@ individualRoutes.post("/individuals/:id/life-events", async (c) => {
   const id = c.req.param("id");
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
-  const r = await writeLifeEvent(store(c), actorId, id, body);
-  if (!r.ok) return c.json({ error: r.error, details: r.details }, r.error === "DUPLICATE_LIFE_EVENT" ? 409 : 400);
+  const r = await writeLifeEvent(c.env.TRUTH, store(c), actorId, id, body);
+  if (!r.ok) {
+    const status = r.error === "NOT_OWNER" ? 403 : r.error === "DUPLICATE_LIFE_EVENT" ? 409 : 400;
+    return c.json({ error: r.error, details: r.details }, status);
+  }
   return c.json({ individual_id: r.individual_id, kind: r.kind }, 201);
 });
 
@@ -1496,6 +1586,10 @@ individualRoutes.post("/individuals/:id/schedule/generate", async (c) => {
   const id = c.req.param("id");
   const s = store(c);
   const actorId = c.get("actorId");
+  // Ownership guard (fail-closed, T-71 GAP①) — same trust boundary as
+  // POST /occupancy (source-routes.ts:265): transfer-aware current owner only.
+  const owner = await projectCurrentOwner(c.env.TRUTH, id);
+  if (owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
   const life = (await s.listEvents(`truth/${LIFE_TYPE}/${id}-`))
     .map(dataOf)
     .filter((d) => d.individual_id === id)

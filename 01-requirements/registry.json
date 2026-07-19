@@ -3341,7 +3341,7 @@
  },
  {
   "id": "V3-OBS-43",
-  "statement": "観測を文明OSの中心Input(全機能の一次データ/機能の中心)と位置づけ、固体標本・環境・デジタル記録を観測セッションとして残しR2文明史へINSERTする。全KernelをObservation(入力)→Transform(処理)→Insight/Generate(出力)構造とし、生体から無機物まで欲しいデータの形に変換して収納する。観測データは仮説生成・空白検出・引用ネットワークの基盤となる。",
+  "statement": "観測を文明OSの中心Input(全機能の一次データ/機能の中心)と位置づけ、固体標本・環境・デジタル記録を観測セッションとして残しR2文明史へINSERTする。全KernelをObservation(入力)→Transform(処理)→Insight/Generate(出力)構造とし、生体から無機物まで欲しいデータの形に変換して収納する。観測データは仮説生成・空白検出・引用ネットワークの基盤となる。  【R144・観測対象の三層定義・round-18】観測対象は昆虫に限らず全生物・無機物を含む汎用スコープ。観測対象モデルは三層: ①学術分類(種→亜種粒度・例Dynastes hercules hercules=V3-OBS-03/V3-OBS-62で亜種確定必須) ②血統=育種ブランド(王/玉/彩シリーズ型のlineage_id自由タグ=V3-IND-34) ③実の親子エッジ(sire/dam=V3-IND-01・血統ブランド管理に必要だがヘッダー絞りには不使用)。ヘッダーの観測対象グローバル文脈スイッチは①species+②lineage_idで絞る(structure-canon v2 §1c)。",
   "category": "観測",
   "kind": "機能要件",
   "scores": {
@@ -3417,6 +3417,12 @@
     "evidence": "「観測データの最終 Schema（実装レベル）」3/31",
     "trust": "中",
     "date": "2026-03-31"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "R144(2026-07-19): 観測対象=①学術分類(亜種粒度・全生物/無機物) ②血統=育種ブランド ③実親エッジ。DHHは育種ライン(天皇の血筋みたいなもん)",
+    "date": "2026-07-19",
+    "trust": "high"
    }
   ],
   "superseded": null,
@@ -6920,7 +6926,7 @@
  },
  {
   "id": "V3-KRM-11",
-  "statement": "applyContributionDeltaで子ノードにΔを反映後、依存グラフの祖先へupstreamPercent(既定10%)を重み配分で分配し(祖先が無ければ子に残す)、contributionPerPlatinum(既定100)到達ごとにissueCoin1枚・端数繰越する。フォーク収益/投票プラチナの10%はフォーク作成者だけでなくその部品(低レイヤー)を作った全員へ月集計で還元する。貢献度10000で称号を付与し閾値はGUIで変更可能とする。",
+  "statement": "applyContributionDeltaで子ノードにΔを反映後、依存グラフの祖先へupstreamPercent(既定10%)を重み配分で分配し(祖先が無ければ子に残す)、contributionPerPlatinum(既定100)到達ごとにissueCoin1枚・端数繰越する。フォーク収益/投票プラチナの10%はフォーク作成者だけでなくその部品(低レイヤー)を作った全員へ月集計で還元する。貢献度10000で称号を付与し閾値はGUIで変更可能とする。  【R142・経済3層の正セマンティクス・round-18】upstreamPercent(10%)の祖先分配は『受領者(子)から減算する分配』ではなく『追加発行するボーナス(子のΔは減らさない)』であり、対象はfork系譜の三世代前までに限定する(R142・受領者非減算・三世代)。",
   "category": "カルマ/貢献度",
   "kind": "機能要件",
   "scores": {
@@ -7020,7 +7026,7 @@
   "ds": 4,
   "score_v2": 64,
   "tier_v2": "A",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第1波",
   "wave_why": "desireテーマ「自然淘汰経済」既定=第1波(§2/§5)",
   "hold": false
@@ -7133,7 +7139,7 @@
  },
  {
   "id": "V3-MKT-36",
-  "statement": "経済層を3層構造とする: (1)IT.Hercules.Laboratoryマーク商用利用時に売上3%を文明OSへ拠出(QRコードで生産者の顔が見える証明、観測に売値・売れた個数を必須)、(2)マーケット取引成立時の売上5%(システム維持費)積立(旧8%から引き下げ、母数=成約額)、(3)フォーク先ユーザーに付与される貢献度(karma/contribution)の約10%を、使用部品の作者・処理開発者・元テンプレートの作者へ分配する(金銭の還元ではない)。良いものを作った人が得をし、コピーしてパクられてもそのほうが得になるインセンティブ構造とする。OSS(非商用)は経済圏外の公共財として還元不要・自由とする。",
+  "statement": "経済層を3層構造とする: (1)IT.Hercules.Laboratoryマーク商用利用時に売上3%を文明OSへ拠出(QRコードで生産者の顔が見える証明、観測に売値・売れた個数を必須)、(2)マーケット取引成立時の売上5%(システム維持費)積立(旧8%から引き下げ、母数=成約額)、(3)フォーク先ユーザーに付与される貢献度(karma/contribution)の約10%を、使用部品の作者・処理開発者・元テンプレートの作者へ分配する(金銭の還元ではない)。良いものを作った人が得をし、コピーしてパクられてもそのほうが得になるインセンティブ構造とする。OSS(非商用)は経済圏外の公共財として還元不要・自由とする。  【R142・経済3層の正セマンティクス・round-18】3層の正意味を確定: ①5%=システム維持費(利益を得たら徴収・サーバー/ドメイン/開発費) ②3%=商用利用料(IHLのデータ・信頼性・マークを使って商売する場合の売上3%・登録データで捕捉・性善説+自然淘汰の思想) ③10%『原作者還元』は金銭でなく完全に別の貢献度システム=fork系譜(三世代前まで)へ貢献度の10%を追加発行するボーナスであり受領者から減算しない。registry/設計書の『文明拠出』『原作者還元(金銭)』表記は金銭還元と読ませない(貢献度=非金銭)。",
   "category": "マーケット/経済",
   "kind": "機能要件",
   "scores": {
@@ -8285,8 +8291,7 @@
   "tier_v2": "A",
   "req_status": "確定",
   "wave": "第1波",
-  "wave_why": "desireテーマ「記憶OS/wiki統合」既定=第1波(§2/§5)",
-  "hold": false
+  "wave_why": "desireテーマ「記憶OS/wiki統合」既定=第1波(§2/§5)"
  },
  {
   "id": "V3-BBS-03",
@@ -9893,7 +9898,7 @@
  },
  {
   "id": "V3-UIX-76",
-  "statement": "万人共通の最適UIは存在しない(色弱・欠損・デバイス差・時代変化)前提で、誰が編集しても壊れない全コンポーネント化と評価・カルマによる自然淘汰でUIが進化する仕組みを置き、ユーザーごとに自分のUIを持ちfork・共有・リアルタイム伝播(JSON塊のやり取りだけでリロードせずUIが変わる)できるようにする。UI生成の基本プロンプト自体もfork対象で成長する。",
+  "statement": "万人共通の最適UIは存在しない(色弱・欠損・デバイス差・時代変化)前提で、誰が編集しても壊れない全コンポーネント化と評価・カルマによる自然淘汰でUIが進化する仕組みを置き、ユーザーごとに自分のUIを持ちfork・共有・リアルタイム伝播(JSON塊のやり取りだけでリロードせずUIが変わる)できるようにする。UI生成の基本プロンプト自体もfork対象で成長する。【R127/F-4】T-22クローズ: 本要件のライト/ヘビーUI方式(明示テンプレ切替+fork+投票文化)をユーザーが正式承認。※T-22項目5(Docker連携のUI/非UI責務分離)のみ回答文書不在=後日別カード。",
   "category": "UI/UX",
   "kind": "思想",
   "scores": {
@@ -9945,11 +9950,17 @@
     "evidence": "公式バッジ専用ブロック不要 表現はユーザーが自由に文化として進化",
     "trust": "中",
     "date": "2026-03-14"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "F-4○: T-22(ライト/ヘビーUI切替=明示テンプレ切替+fork+投票文化)をユーザーが正式承認",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
   "superseded": null,
   "conflict": null,
-  "ambiguity": "Builder(UIを自然淘汰で進化させる仕組み)がver3にどこまで実装対象として残るか未確定(文明OS由来の可能性)",
+  "ambiguity": null,
   "group": "g07-UIUX",
   "v1_score": 14,
   "v1_tier": "A",
@@ -18778,7 +18789,7 @@
  },
  {
   "id": "V3-OBS-13",
-  "statement": "甲虫色彩計測標準規格BPCMS v1.0を凍結制定する。ただし観測の生画像は無補正で保存し(OBS-23と両立)、BPCMSは画像内の色基準(グレーカード)からの補正Lab値を『派生値レイヤー』として後処理で算出するものと明記する。撮影チャンバー等の物理治具の製作発注はR1により人間ゲート、CIE76→CIEDE2000の切替タイミングは別途確定する。",
+  "statement": "甲虫色彩計測標準規格BPCMS v1.0を凍結制定する。ただし観測の生画像は無補正で保存し(OBS-23と両立)、BPCMSは画像内の色基準(グレーカード)からの補正Lab値を『派生値レイヤー』として後処理で算出するものと明記する。撮影チャンバー等の物理治具の製作発注はR1により人間ゲート、CIE76→CIEDE2000の切替タイミングは別途確定する。【R127/F-5】生画像は絶対に無補正で保存(不変条項扱い=『大事です』)。補正済みLab値は派生値レイヤーとしてのみ算出し生画像に触れない、で確定。",
   "category": "観測",
   "kind": "非機能要件",
   "scores": {
@@ -18848,10 +18859,16 @@
     "evidence": "conv399 2026-03-30T11:40 'パイプライン順固定・CIE76・D2・quality_score ... v1.1の解析は上書きせず別レコード・再解析ログ'",
     "trust": "中",
     "date": "2026-03-30"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "F-5○:「写真は色補正しない。そのままの事実が欲しい」/comment_F-5「大事です。」",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
   "superseded": null,
-  "conflict": "BPCMSはグレーカードで色補正した値を導出する規格だが、OBS-23の「観測写真は色補正せず事実を残す」方針と緊張関係(195/340も整合を要注記)。生値保存+補正は派生値という別レイヤーで両立するか未裁定",
+  "conflict": "BPCMSはグレーカードで色補正した値を導出する規格だが、OBS-23の「観測写真は色補正せず事実を残す」方針と緊張関係(195/340も整合を要注記)。生値保存+補正は派生値という別レイヤーで両立するか未裁定  →【R127/F-5】ユーザー裁定○=二層で両立と確定(生画像は絶対に無補正で保存・補正Lab値は派生値レイヤーとしてのみ算出し生画像に触れない)。『大事です』により生画像無補正は不変条項扱い。矛盾は解消。",
   "ambiguity": "スマホ運用前提とUSBカメラ移行の両立、実運用でどこまで遵守強制するか、CIE76(v1)とCIEDE2000(v2)切替タイミングが未定",
   "group": "g02-観測個体",
   "v1_score": 10,
@@ -19021,7 +19038,7 @@
    }
   ],
   "superseded": null,
-  "conflict": "保存画像は色補正しない(事実重視)が、BPCMS(OBS-13)/撮影チャンバー(OBS-12)は色補正パイプラインで補正Lab値を導出する。生値保存と補正派生値を別レイヤーで両立できるか未裁定",
+  "conflict": "保存画像は色補正しない(事実重視)が、BPCMS(OBS-13)/撮影チャンバー(OBS-12)は色補正パイプラインで補正Lab値を導出する。生値保存と補正派生値を別レイヤーで両立できるか未裁定  →【R127/F-5】ユーザー裁定○=二層で両立と確定(生画像は絶対に無補正で保存・補正Lab値は派生値レイヤーとしてのみ算出し生画像に触れない)。『大事です』により生画像無補正は不変条項扱い。矛盾は解消。",
   "ambiguity": null,
   "group": "g02-観測個体",
   "v1_score": 15,
@@ -20299,6 +20316,12 @@
     "evidence": "ボツ文章/愚痴日記を食わせ整形保存 記事/論文のタネ SoulProfile",
     "trust": "中",
     "date": "2026-03-23"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "【SB-1○・R149(2026-07-19)】ユーザー『会話履歴・secondbrain=サブ脳はこのシステムに入る?なんか変ですよね?』(R135)により棄却。飼育観測プラットフォームIHLの正式要件から外す(必要なら将来別プロダクトへ切り出し)。関連実装(GET /research/chat-index・POST /research/ai-sessions・記憶ボタン/SoulProfile/Cursorセッション閲覧)は着手しない。ME画面から除去確定。",
+    "date": "2026-07-19",
+    "trust": "high"
    }
   ],
   "superseded": null,
@@ -20310,10 +20333,10 @@
   "ds": 3,
   "score_v2": 36,
   "tier_v2": "A",
-  "req_status": "確定",
-  "wave": "第1波",
+  "req_status": "棄却",
+  "wave": "対象外",
   "wave_why": "desireテーマ「全自動運用/改善ループ」既定=第1波(§2/§5)",
-  "hold": false
+  "ruling_note": "ユーザー裁定 2026-07-19(SB-1○・R149・カードc9-secondbrain-attribution): 会話履歴/AIセッション=サブ脳のIHL帰属を棄却(req_status=棄却・wave=対象外)。撤回理由=R135『会話履歴・secondbrainはこのシステムに入る?変ですよね?』。関連実装(research chat-index/ai-sessions・記憶ボタン/SoulProfile)着手せず。V3-WIK-16(記事/論文CMS)は対象外=正当機能として存置。"
  },
  {
   "id": "V3-AUT-11",
@@ -24995,7 +25018,7 @@
  },
  {
   "id": "V3-UIX-59",
-  "statement": "各画面にpage_info要約パネル(目的/哲学/AI要約/使い方/FAQ/改善履歴/動画)と、説明(manual)・愚痴(complaint)・編集(builder)の3導線を統一配置する。complaint動的遷移・自動要約/RAG統合は残すが、テンプレ構造と要約閾値(旧100投稿)はIHL現行UIに合わせ再設計し閾値は調整可能とする。",
+  "statement": "各画面にpage_info要約パネル(目的/哲学/AI要約/使い方/FAQ/改善履歴/動画)と、説明(manual)・愚痴(complaint)・編集(builder)の3導線を統一配置する。complaint動的遷移・自動要約/RAG統合は残すが、テンプレ構造と要約閾値(旧100投稿)はIHL現行UIに合わせ再設計し閾値は調整可能とする。 【R136/S1】具体化(F-2・第1波前倒し): 全画面に『この画面について話す』導線を置き、現在画面のscreen_idをchannelとして自動刻印した状態で知の広場の愚痴(complaint)/改善(improvement)板へ投稿できる(channelを利用者に手入力させない)。plaza側のchannel/board_kindは実装済み・導線追加のみ。",
   "category": "UI/UX",
   "kind": "機能要件",
   "scores": {
@@ -25053,6 +25076,12 @@
     "evidence": "各画面に使い方動画自動ルーティング(未紐づけは非表示)",
     "trust": "中",
     "date": "2026-03-24"
+   },
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「このページの検索システム自体が使いづらいよね?…みたいな、話もできる場」",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
   "superseded": null,
@@ -25074,8 +25103,8 @@
    ]
   },
   "original_statement": "各画面にpage_info要約パネル(目的・哲学・AI要約・使い方・FAQ・改善履歴・使い方動画)を統一構造で持ち、ヘッダーにmanual(説明)・complaint(愚痴)・builder(編集)の3リンクを固定配置する。complaintスレッドは押された画面によって遷移先を動的に切り替え、100投稿ごとに自動要約・タグ付け・RAG統合する。苦情処理(/complaint)とヘルプ体系(/help/all-features・first-launch・karma等)を持つ。",
-  "wave": "第2波",
-  "wave_why": "tier_v2=B→第2波(desire台帳未掲載)",
+  "wave": "第1波",
+  "wave_why": "tier_v2=B→第2波(desire台帳未掲載)。R136/S1: plaza側channel/board_kind実装済みのため第1波へ前倒し(round-18・DRAFT-f2-requirements S1)。",
   "hold": false
  },
  {
@@ -29610,6 +29639,12 @@
     "evidence": "オファー画面(2026-03-19)「観測データ→梱包サイズ推定→送料計算が自然にできる」",
     "trust": "中",
     "date": "2026-03-19"
+   },
+   {
+    "src_file": "beta/copilot-p102.json",
+    "evidence": "出典を copilot-p102.json 2026-05-02 へ是正(旧引用は無関係)",
+    "trust": "中",
+    "date": "2026-05-02"
    }
   ],
   "superseded": null,
@@ -30112,7 +30147,7 @@
  },
  {
   "id": "V3-BBS-26",
-  "statement": "GitHub掲示板柱は自前掲示板UIを作り込まず、GitHub Discussions(Q&A/Ideas/Show and tell)・Issues(バグ・機能要求)・giscus(MIT採用/utterances不採用)などネイティブ機能を最大活用しリンクアウト方式(iframe埋め込みなし)で実装する。コンポーネント単位のBOARD.mdからDiscussionsカテゴリへリンクしCONTRIBUTING.mdでPR提出先(component/libs/apps)を明確化する。GitHub改善提案掲示板の内容をAIが要約するバッチを構築する。コンポーネント/フォーク単位の議論スレUIは/improve/forks系譜UIとは別導線として将来ADRで役割分担を決める。",
+  "statement": "GitHub掲示板柱は自前掲示板UIを作り込まず、GitHub Discussions(Q&A/Ideas/Show and tell)・Issues(バグ・機能要求)・giscus(MIT採用/utterances不採用)などネイティブ機能を最大活用しリンクアウト方式(iframe埋め込みなし)で実装する。コンポーネント単位のBOARD.mdからDiscussionsカテゴリへリンクしCONTRIBUTING.mdでPR提出先(component/libs/apps)を明確化する。GitHub改善提案掲示板の内容をAIが要約するバッチを構築する。コンポーネント/フォーク単位の議論スレUIは/improve/forks系譜UIとは別導線として将来ADRで役割分担を決める。 【R136/S5・B処置】不採用化: ユーザーがF-2で『Githubに遷移するというより、GithubのAPIで、Githubの機能を活用したい』と明示否定したため、本要件(リンクアウト方式)はV3-BBS-38(S5・GitHub API取込方式)に置換され不採用。design-c5.md:1103「link-out」・screen-defs/knowledge-github.json(external:true)の設計もC9が改訂する。",
   "category": "掲示板/コミュニティ",
   "kind": "機能要件",
   "scores": {
@@ -30171,9 +30206,15 @@
     "evidence": "コンポーネント掲示板 forks系譜UIと別導線 ADR未確定",
     "trust": "高",
     "date": "2026-06-07"
+   },
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「Github に遷移するというより、 Github のAPIで、 Githubの機能を活用したい」",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
-  "superseded": null,
+  "superseded": "V3-BBS-38(S5)がGitHub API取込方式で置換。リンクアウト方式(iframe埋込なし・Discussions/Issues/giscusへの外部遷移)は不採用(R136・round-18)。",
   "conflict": null,
   "ambiguity": "ver3で実際にGitHub Discussions/Issues運用が採用されたか要確認。製品名『コンポーネント掲示板』oral≠REQ-018 file-boardでUI責務未確定",
   "group": "g03-知識",
@@ -30182,7 +30223,7 @@
   "ds": 3,
   "score_v2": 18,
   "tier_v2": "B",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第2波",
   "wave_why": "tier_v2=B→第2波(desire台帳未掲載)",
   "hold": false
@@ -31269,7 +31310,7 @@
  },
  {
   "id": "V3-UIX-40",
-  "statement": "自然言語検索+ファセット/オートコンプリート(種名/場所/個体ID/タグの即候補、タップ式複数選択フィルタ)で3秒で目的に辿り着き、『全部でなく本当に必要なものだけ』を返す。色検索(スポイト/px指定)で黄金ヘラクレス探し等を容易にし、ユーザーが検索条件を自作できるようにする。全エンティティ横断のグローバル検索も提供する。",
+  "statement": "自然言語検索+ファセット/オートコンプリート(種名/場所/個体ID/タグの即候補、タップ式複数選択フィルタ)で3秒で目的に辿り着き、『全部でなく本当に必要なものだけ』を返す。色検索(スポイト/px指定)で黄金ヘラクレス探し等を容易にし、ユーザーが検索条件を自作できるようにする。全エンティティ横断のグローバル検索も提供する。【R127/F-1】観測対象(種族絞り込み)は検索条件の一つではなく、言語選択と同格の永続グローバル文脈スイッチである。選択すると全画面が当該観測対象に絞られ(99%のデータを隠す入口構造)、選択はユーザーごとに永続する。",
   "category": "UI/UX",
   "kind": "機能要件",
   "scores": {
@@ -31319,6 +31360,12 @@
     "evidence": "F16 全ノード全文検索",
     "trust": "中",
     "date": "2026-03-22"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "F-1○: 言語選択の次のレベルの絞り込み・DHHだけ選んだら99%は見ることない",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
   "superseded": null,
@@ -31330,7 +31377,7 @@
   "ds": 3,
   "score_v2": 18,
   "tier_v2": "B",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "adjudication": {
    "conclusion": "承認",
    "reason": "自然言語+ファセット+オートコンプリート+色検索(スポイト)+グローバル検索は透明性/検索テーマと整合し、色検索は黄金ヘラクレス探索という観測ドメイン要求に直結。2026年実装容易。",
@@ -34467,7 +34514,7 @@
  },
  {
   "id": "V3-UIX-51",
-  "statement": "分類・対象の絞り込みUIはWikidataの階層構造(生物→昆虫→カブトムシ→ヘラクレス→DHH等)をそのまま辿る『アーキネーター式』絞り込みとし、階層を辿った瞬間に次階層候補を先読み込み(プリフェッチ)して無限スクロールと同じ体感を出しつつAPIコストを抑え、実データ存在対象のみ表示する。",
+  "statement": "分類・対象の絞り込みUIはWikidataの階層構造(生物→昆虫→カブトムシ→ヘラクレス→DHH等)をそのまま辿る『アーキネーター式』絞り込みとし、階層を辿った瞬間に次階層候補を先読み込み(プリフェッチ)して無限スクロールと同じ体感を出しつつAPIコストを抑え、実データ存在対象のみ表示する。【R127/F-1】観測対象(種族絞り込み)は検索条件の一つではなく、言語選択と同格の永続グローバル文脈スイッチである。選択すると全画面が当該観測対象に絞られ(99%のデータを隠す入口構造)、選択はユーザーごとに永続する。",
   "category": "UI/UX",
   "kind": "機能要件",
   "scores": {
@@ -34507,6 +34554,12 @@
     "evidence": "アーキネーター式絞り込み Wikidata階層 内部データ不要",
     "trust": "中",
     "date": "2026-07-08"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "F-1○: 言語選択の次のレベルの絞り込み・DHHだけ選んだら99%は見ることない",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
   "superseded": null,
@@ -34518,7 +34571,7 @@
   "ds": 2,
   "score_v2": 16,
   "tier_v2": "B",
-  "req_status": "確定",
+  "req_status": "確定(修正)",
   "wave": "第2波",
   "wave_why": "tier_v2=B→第2波(desire台帳未掲載)",
   "hold": false
@@ -36107,7 +36160,7 @@
  },
  {
   "id": "V3-BBS-16",
-  "statement": "開発掲示板はOS/システムのフォルダ構造・ファイル構成と同じ階層・同粒度で用意し、掲示板のカテゴリ構造をOSの機能構成と一致させて同じ粒度で議論できるようにする(レイヤー分類ボード B=柔軟設計/P=ファイル連携/V=リリース運用フェーズ)。",
+  "statement": "開発掲示板はOS/システムのフォルダ構造・ファイル構成と同じ階層・同粒度で用意し、掲示板のカテゴリ構造をOSの機能構成と一致させて同じ粒度で議論できるようにする(レイヤー分類ボード B=柔軟設計/P=ファイル連携/V=リリース運用フェーズ)。 【R136/S2】具体化(F-2・第1波前倒し): 開発掲示板の議論単位は、ページ(screen_id)に加えてコード機能単位(APIルートファイル/モジュール等の実在粒度)でもchannelを持てる。機能単位の一覧は機械可読索引(file-board-registry拡張)で管理する。索引整備は第1波、全機能スレの網羅は第2波。",
   "category": "掲示板/コミュニティ",
   "kind": "機能要件",
   "scores": {
@@ -36159,6 +36212,12 @@
     "evidence": "1意図=1掲示板スレ集約 シングルスレッド原則",
     "trust": "中",
     "date": "2026-03-25"
+   },
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「機能単位で、修正できるように、作っています。その機能単位やページ単位で、話し合いができて」",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
   "superseded": null,
@@ -36170,9 +36229,9 @@
   "ds": 3,
   "score_v2": 12,
   "tier_v2": "B",
-  "req_status": "確定",
-  "wave": "第2波",
-  "wave_why": "tier_v2=B→第2波(desire台帳未掲載)",
+  "req_status": "確定(修正)",
+  "wave": "第1波",
+  "wave_why": "tier_v2=B→第2波(desire台帳未掲載)。R136/S2: 索引整備(file-board-registry拡張)は第1波へ前倒し、全機能スレ網羅は第2波のまま(round-18・DRAFT-f2-requirements S2)。",
   "hold": false
  },
  {
@@ -54169,6 +54228,12 @@
     "evidence": "OKF/SPEC karpathy gist等 外部知識共有フォーマット検討",
     "trust": "低",
     "date": null
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "【SB-1○・R149(2026-07-19)】ユーザー『会話履歴・secondbrain=サブ脳はこのシステムに入る?なんか変ですよね?』(R135)により棄却。飼育観測プラットフォームIHLの正式要件から外す(必要なら将来別プロダクトへ切り出し)。関連実装(GET /research/chat-index・POST /research/ai-sessions・記憶ボタン/SoulProfile/Cursorセッション閲覧)は着手しない。ME画面から除去確定。",
+    "date": "2026-07-19",
+    "trust": "high"
    }
   ],
   "superseded": null,
@@ -54180,7 +54245,7 @@
   "ds": 1,
   "score_v2": 2,
   "tier_v2": "C",
-  "req_status": "確定",
+  "req_status": "棄却",
   "adjudication": {
    "conclusion": "承認",
    "reason": "AIセッション全閲覧のサブ脳化は記憶OS(75ソース最頻出・非撤回)の背骨。karpathy gist/OKF参考もver2で採用済み思想。Cursor実体4.1GB SQLiteはingest対象として第1波コア。",
@@ -54190,9 +54255,9 @@
     "R4"
    ]
   },
-  "wave": "第1波",
+  "wave": "対象外",
   "wave_why": "tier_v2=C/status_in_ver2=部分→第1波(desire台帳未掲載・実装実績/高tier)",
-  "hold": false
+  "ruling_note": "ユーザー裁定 2026-07-19(SB-1○・R149・カードc9-secondbrain-attribution): 会話履歴/AIセッション=サブ脳のIHL帰属を棄却(req_status=棄却・wave=対象外)。撤回理由=R135『会話履歴・secondbrainはこのシステムに入る?変ですよね?』。関連実装(research chat-index/ai-sessions・記憶ボタン/SoulProfile)着手せず。V3-WIK-16(記事/論文CMS)は対象外=正当機能として存置。"
  },
  {
   "id": "V3-WIK-29",
@@ -54753,9 +54818,15 @@
     "evidence": "第8回裁定①「採用です。」(Zulip型topic第一級化+Polis型合意/対立投影を C5 設計に採用確定・R3)",
     "trust": "高",
     "date": "2026-07-10"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "task5(A2#3): Polis型全投稿賛否UIはR80/R101で実装置換済み",
+    "trust": "高",
+    "date": "2026-07-19"
    }
   ],
-  "superseded": null,
+  "superseded": "Polis型全投稿賛否UIはR80/R101で実装置換済み(3度の作り直しを経て重複防止検索+チャット化+タイトル確認方式へ。現行は知の広場KNW wave1)。",
   "conflict": null,
   "ambiguity": "具体機構(Zulip型topic/Polis型投影)は研究推奨案(research/plaza-papers-gaps-2026-07-10.md)であり、採否は C5 冒頭でユーザー裁定 → 2026-07-10 第8回裁定: 2機構(Zulip型topic第一級化・Polis型合意/対立投影)の採用を確定。"
  },
@@ -56361,5 +56432,449 @@
   "wave": "第1波",
   "wave_why": "R45最高評価+design-individual-finder.md波0(b)前提ゲート充足(要件正式採番)。MVP(一覧・絞り込み+詳細+血統)は既存APIのみで成立し第1波残務に含められる規模。宇宙/embedding等の重い部分は第2波以降(design-individual-finder.md §5)。",
   "hold": false
+ },
+ {
+  "id": "V3-AIP-105",
+  "statement": "file-board-registry の board_thread_id 列を実運用化する。スレは初回投稿時に遅延生成し(事前一括250スレ生成はしない)、生成時に registry へ追記する。正本ファイル・画面とスレの対応が常に機械可読で辿れる。",
+  "category": "AI運用/開発プロセス",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "設計書と実装のドリフト防止・追跡性は10年運用の中核"
+   },
+   "ui": {
+    "v": 2,
+    "why": "開発者向け"
+   },
+   "dep": {
+    "v": 2,
+    "why": "file-board-registry/intent台帳の既存資産に依存"
+   },
+   "diff": {
+    "v": 2,
+    "why": "既存スクリプト/connectorの拡張で中程度"
+   }
+  },
+  "philosophy": [
+   "Truth-append-only"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「その機能単位やページ単位で、話し合いができて」「経緯がすぐに分かる」",
+    "trust": "高",
+    "date": "2026-07-19"
+   },
+   {
+    "src_file": "00-hq/kits/improve/DRAFT-f2-requirements-2026-07-19.md",
+    "evidence": "S3 正本ファイル↔スレ1:1紐付けの実運用化(遅延生成)",
+    "trust": "高",
+    "date": "2026-07-19"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g09-AIプロセス",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 5,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "csv+sha256生成は実装済み(scripts/gen-file-board-registry.mjs)。残りは生成時の追記配線のみ(DRAFT-f2-requirements S3)。",
+  "hold": false
+ },
+ {
+  "id": "V3-AIP-106",
+  "statement": "実装コードを変更するPRは、対応する設計書§の同時更新、または理由付きの「設計影響なし」宣言を必須とし、CIで機械検査する(check-req-freeze.mjsと同型のゲート)。設計書の鮮度はfile-board-registryのsha256ドリフト検知で監視する。",
+  "category": "AI運用/開発プロセス",
+  "kind": "非機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "設計書と実装のドリフト防止・追跡性は10年運用の中核"
+   },
+   "ui": {
+    "v": 2,
+    "why": "開発者向け"
+   },
+   "dep": {
+    "v": 2,
+    "why": "file-board-registry/intent台帳の既存資産に依存"
+   },
+   "diff": {
+    "v": 2,
+    "why": "既存スクリプト/connectorの拡張で中程度"
+   }
+  },
+  "philosophy": [
+   "AI運用/開発プロセス"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「なぜこう修正されたのか?設計書と、実装があっていない。…一番の悩みです」「設計書の同期も必要ですからね!」",
+    "trust": "高",
+    "date": "2026-07-19"
+   },
+   {
+    "src_file": "00-hq/kits/improve/DRAFT-f2-requirements-2026-07-19.md",
+    "evidence": "S6 設計書ドリフトのCI継続検知",
+    "trust": "高",
+    "date": "2026-07-19"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g09-AIプロセス",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 5,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "同型ゲートの実装前例あり(scripts/check-req-freeze.mjs)。V3-AIP-87(実装→仕様書逆生成・第2波)とは別物で前倒し対象(DRAFT-f2-requirements S6)。",
+  "hold": false
+ },
+ {
+  "id": "V3-AIP-107",
+  "statement": "リリースごとにgit tag+リリースノート(GitHub Releases)を発行する。IHL内の『バージョン履歴』画面からReleases API経由で過去版一覧・2版間の差分(変更ファイル・比較)・再現手順(タグ+lockfileからのビルド)を参照できる。過去版マーカーは削除しない(対象=コード・設計書の版。文明データ側の永続はTruth append-only〈V3-FND-01〉が別途担保)。",
+  "category": "AI運用/開発プロセス",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "設計書と実装のドリフト防止・追跡性は10年運用の中核"
+   },
+   "ui": {
+    "v": 2,
+    "why": "開発者向け"
+   },
+   "dep": {
+    "v": 2,
+    "why": "file-board-registry/intent台帳の既存資産に依存"
+   },
+   "diff": {
+    "v": 2,
+    "why": "既存スクリプト/connectorの拡張で中程度"
+   }
+  },
+  "philosophy": [
+   "Truth-append-only"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「過去バージョンももちろん残っている必要があります。差分だけでもいいですが、失われず、再現ができる必要があります。これは、私のシステムの一貫した設計思想ですね」",
+    "trust": "高",
+    "date": "2026-07-19"
+   },
+   {
+    "src_file": "00-hq/kits/improve/DRAFT-f2-requirements-2026-07-19.md",
+    "evidence": "S7 バージョンマーカー運用(タグ+リリース履歴画面)",
+    "trust": "高",
+    "date": "2026-07-19"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g09-AIプロセス",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 5,
+  "score_v2": 24,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "タグ+ノート運用の開始は第1波、バージョン履歴画面はS5のread系APIと同じ土台で第1波末〜第2波(DRAFT-f2-requirements S7)。",
+  "hold": false
+ },
+ {
+  "id": "V3-BBS-37",
+  "statement": "任意の画面/機能/正本ファイルから、関連する議論スレ・intentチェーン(intent→spec→commit→post)・ADR・採用/不採用理由(rejected_alternatives)を時系列で一覧できる読み取り専用ビューを提供する。将来の開発者が『なぜこうなったか』を1画面で追える。",
+  "category": "掲示板/コミュニティ",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "『将来の開発者が泣いて喜ぶ』決定経緯追跡はGitHub活用開発運用コストの核"
+   },
+   "ui": {
+    "v": 3,
+    "why": "コントリビューター/開発者に効く"
+   },
+   "dep": {
+    "v": 2,
+    "why": "plaza/intent台帳/GitHub connectorと連携"
+   },
+   "diff": {
+    "v": 2,
+    "why": "既存資産の拡張配線"
+   }
+  },
+  "philosophy": [
+   "Truth-append-only"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「どこでどのような経緯で話し合われて、何を採用し、何をどういう理由で採用しなかったのか?経緯がすぐに分かる。ようにしたい。将来の開発者が泣いて喜ぶようにしたい」",
+    "trust": "高",
+    "date": "2026-07-19"
+   },
+   {
+    "src_file": "00-hq/kits/improve/DRAFT-f2-requirements-2026-07-19.md",
+    "evidence": "S4 決定経緯ビュー(泣いて喜ぶ画面)",
+    "trust": "高",
+    "date": "2026-07-19"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g03-知識",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 5,
+  "score_v2": 18,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "データ側コア(projectIntentChain, intent.ts:64-81)実装済み。CiteRef(plaza-routes.ts:75-122)にtype=adr/intentを足す拡張で参照可能(DRAFT-f2-requirements S4)。",
+  "hold": false
+ },
+ {
+  "id": "V3-BBS-38",
+  "statement": "GitHub統合は画面遷移(外部リンク)ではなくAPI連携を原則とする。知の広場柱3(GitHub掲示板)はGitHub API(Issues/PR/commits/Releases)の読み取り+IHL内表示に置換する。書き込み系(Issue起票等)は第2波とし、書き込み用トークンの投入は人間ゲート。",
+  "category": "掲示板/コミュニティ",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "『将来の開発者が泣いて喜ぶ』決定経緯追跡はGitHub活用開発運用コストの核"
+   },
+   "ui": {
+    "v": 3,
+    "why": "コントリビューター/開発者に効く"
+   },
+   "dep": {
+    "v": 2,
+    "why": "plaza/intent台帳/GitHub connectorと連携"
+   },
+   "diff": {
+    "v": 2,
+    "why": "既存資産の拡張配線"
+   }
+  },
+  "philosophy": [
+   "フォーク文化"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "00-hq/feedback/incoming/fidelity-rulings-2026-07-19.json",
+    "evidence": "comments.F-2「Github に遷移するというより、 Github のAPIで、 Githubの機能を活用したい」",
+    "trust": "高",
+    "date": "2026-07-19"
+   },
+   {
+    "src_file": "00-hq/kits/improve/DRAFT-f2-requirements-2026-07-19.md",
+    "evidence": "S5 GitHub統合の原則転換(遷移→API取込)",
+    "trust": "高",
+    "date": "2026-07-19"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": "GitHub APIレート制限・障害時表示の詳細設計はC9/実装レーンが行う(DRAFT-f2-requirements §6)。",
+  "group": "g03-知識",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 5,
+  "score_v2": 18,
+  "tier_v2": "B",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "read系は既存connector拡張(github-issues-connector.ts/ai-digest-routes.ts=V3-AIP-67)で第1波、write系(Issue起票等)は第2波(DRAFT-f2-requirements S5)。V3-BBS-26(リンクアウト方式)を置換・supersede。",
+  "hold": false
+ },
+ {
+  "id": "V3-MKT-66",
+  "statement": "予約マーケットにおいて、単価固定・ラブレター形式・貢献度優先の3パターンを、並列の選択肢としてユーザーに提供する統合要件。既存個別ID(単価固定モード等)を束ね、予約フローの選択画面で3モードを横並びに選べるようにする。",
+  "category": "マーケット/経済",
+  "kind": "機能要件",
+  "scores": {
+   "bv": {
+    "v": 4,
+    "why": "予約の選択肢構造は出品者の意思表現の幅を広げる"
+   },
+   "ui": {
+    "v": 4,
+    "why": "予約フローを使う出品者/購入者双方"
+   },
+   "dep": {
+    "v": 3,
+    "why": "既存の単価固定モード・オファー/ラブレター機構に接続"
+   },
+   "diff": {
+    "v": 3,
+    "why": "3モード横並びのUI統合"
+   }
+  },
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "部分",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "F-3○:「そうやって、3パターンほど、マーケットは用意したい」",
+    "trust": "高",
+    "date": "2026-07-19"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g04-経済",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 36,
+  "tier_v2": "A",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "予約UI予想図の後続・実装は単価モードのみ既存(F-3)。",
+  "hold": false
+ },
+ {
+  "id": "V3-UIX-84",
+  "statement": "プロフィール等の画面に、カルマ・貢献度・取引評価を合成した派生スコア(例:『信頼度』メーター)を表示しない。表示するのは生の事実(カルマ値・貢献度・取引評価)のみとし、合成指標を作らないことを全ゾーン共通の設計原則とする。",
+  "category": "UI/UX",
+  "kind": "思想",
+  "scores": {
+   "bv": {
+    "v": 5,
+    "why": "誇張ゼロ/正直表示の根本原則。全ゾーンのプロフィール表示に及ぶ"
+   },
+   "ui": {
+    "v": 3,
+    "why": "全ユーザーが目にするプロフィール表示"
+   },
+   "dep": {
+    "v": 4,
+    "why": "カルマ/貢献度/取引評価を表示する全画面が従う制約"
+   },
+   "diff": {
+    "v": 4,
+    "why": "既存の合成指標的な表示を洗い出し除去する横断作業"
+   }
+  },
+  "philosophy": [
+   "誇張ゼロ"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "不明",
+  "sources": [
+   {
+    "src_file": "docs/planning/c9/HANDOFF-c9-close-2026-07-18.md",
+    "evidence": "R135(a)○:「信頼度　カルマと評価だけで十分　事実しか要らない」",
+    "trust": "高",
+    "date": "2026-07-19"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": null,
+  "group": "g07-UIUX",
+  "v1_score": null,
+  "v1_tier": null,
+  "ds": 3,
+  "score_v2": 60,
+  "tier_v2": "A",
+  "req_status": "確定",
+  "wave": "第1波",
+  "wave_why": "ユーザー逐語「信頼度 カルマと評価だけで十分 事実しか要らない」=即効の表示原則。",
+  "hold": false
+ },
+ {
+  "id": "V3-GOV-36",
+  "group": "g05-ガバナンス法務",
+  "category": "裁判/ガバナンス",
+  "kind": "機能要件",
+  "statement": "投票制度は二層とする: ①無料のノーコスト投票(誰でも参加) ②プラチナコイン『権能』投票(1権能が無料100票級の重みを持つ経済価値付き投票)。dispute『みんなで決める』に限らず、投票を描く/実装する全画面を単層で扱わない。権能投票は経済価値付きのため、統一authz/所有者検証(T-71系・(actor,target)単位のsybil/連投dedup)を前提とする。プラチナコイン=特別権能(V3-MKT-38)・投票プラチナ還元(V3-KRM-11)と接続する。",
+  "scores": {
+   "bv": {
+    "v": 3,
+    "why": "不適切出品を運営負担ゼロで自動抑止。メルカリ型問題への構造的回答"
+   },
+   "ui": {
+    "v": 3,
+    "why": "商品非表示・出品停止は出品者/購買者の体験に直接作用"
+   },
+   "dep": {
+    "v": 2,
+    "why": "指摘経路(V3-GOV-34)とカルマΔcount(V3-GOV-08)に依存"
+   },
+   "diff": {
+    "v": 2,
+    "why": "件数閾値の機械判定のみで実装容易"
+   }
+  },
+  "ds": 4,
+  "ds_why": "ユーザー直筆の具体数値(指摘5件で非表示・非表示5件で出品停止)付き設計「これで、簡単に対処できませんか?」",
+  "score_v2": 36,
+  "tier_v2": "A",
+  "philosophy": [
+   "その他思想"
+  ],
+  "trust": "高",
+  "human_confirm": true,
+  "novelty": "ver3新規",
+  "status_in_ver2": "未実装",
+  "req_status": "確定",
+  "wave": "第2波",
+  "wave_why": "権能投票=経済価値付き機能・統一authz(T-71残)前提のため第2波",
+  "sources": [
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "R141(dispute予想図コメント2026-07-19 11:30): 投票=①無料ノーコスト ②プラチナコイン権能投票(1権能>無料100票級)の二層",
+    "date": "2026-07-19",
+    "trust": "high"
+   }
+  ],
+  "superseded": null,
+  "conflict": null,
+  "ambiguity": "『解決』の判定基準(合意クローズのみか強制クローズを含むか)と非表示カウントの解消条件は詳細設計で確定要。原文は『5件以下にならない限り』だが閾値『5件以上で非表示』と整合させ『5件未満で再表示』と解釈(境界値は本人確認済み 2026-07-10 追記裁定「4件になったら再表示」: >=5 非表示・<=4 再表示で確定)。 近似範囲の具体的判定基準(同一出品者全出品か関連観測のみか)・カルマ80のスコア体系(0-1か整数Δcountか、GOV-14 conflict参照)は詳細設計で確定要。"
  }
 ]

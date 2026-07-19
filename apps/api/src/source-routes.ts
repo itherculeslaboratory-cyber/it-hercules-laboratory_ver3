@@ -201,8 +201,57 @@ sourceRoutes.get("/device-bindings", async (c) => {
 
 // ── occupancy ───────────────────────────────────────────────────────────────
 
+// Ownership trust boundary (persona R75): a shelf QR lets a caller LINK their
+// OWN individual to a placement, but must never let them claim someone
+// else's individual by writing an occupancy directly — that must go through
+// the Market transfer flow (mkt-listing + consent). Below are the two
+// individual/market event types this needs read-only, mirrored from
+// individual-routes.ts (MASTER_TYPE / TXN_TYPE at individual-routes.ts:24,38)
+// rather than imported — individual-routes.ts already imports
+// projectOpenBindings FROM this module, so an import the other way would be
+// circular.
+const IND_MASTER_TYPE = "ihl.ind.master.v1";
+const MKT_TXN_TYPE = "ihl.mkt.transaction_event.v1";
+
+function individualIdFromSubjectRef(subjectRef: string): string | null {
+  return subjectRef.startsWith("individual/") ? subjectRef.slice("individual/".length) : null;
+}
+
+/**
+ * Current owner of an individual (fail-closed — mirrors the owner_history
+ * projection at individual-routes.ts:278-287 + the creator-scope check
+ * listIndividualsFor uses at individual-routes.ts:1049, composed into one
+ * "who owns this right now" answer):
+ *   - Any market transfer txn (kind:"transfer") whose individual_ids[]
+ *     contains this id → the LATEST one's `counterparty` (recipient) wins.
+ *     If that transfer's counterparty is null/empty (incomplete transfer),
+ *     fall back to the transfer's `actor_id` (seller/from) — never a
+ *     permissive default.
+ *   - Else → the individual master's `actor_id` (creator).
+ *   - Individual/master unknown → null (indeterminate). Callers MUST treat
+ *     null as "not the caller" (deny), never as "unowned, allow".
+ */
+export async function projectCurrentOwner(bucket: R2BucketLite, individualId: string): Promise<string | null> {
+  const s = new TruthStore(bucket);
+  const transfers = (await s.listEvents(`truth/${MKT_TXN_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.kind === "transfer" && Array.isArray(d.individual_ids) && (d.individual_ids as unknown[]).includes(individualId))
+    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+  if (transfers.length > 0) {
+    const latest = transfers[transfers.length - 1];
+    const counterparty = str(latest.counterparty);
+    if (counterparty) return counterparty;
+    return str(latest.actor_id); // incomplete transfer — fall back to seller, not null
+  }
+  const master = await s.readEvent(`truth/${IND_MASTER_TYPE}/${individualId}.json`);
+  if (!master) return null;
+  return str(dataOf(master).actor_id);
+}
+
 // POST /occupancy — register an occupancy record. placement_id + subject_ref
-// required. actor_id forced from session.
+// required. actor_id forced from session. If subject_ref names an individual,
+// the caller must currently own it (see projectCurrentOwner above) — this is
+// the trust boundary that keeps shelf-linking from bypassing Market transfer.
 sourceRoutes.post("/occupancy", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
@@ -210,6 +259,11 @@ sourceRoutes.post("/occupancy", async (c) => {
   const subjectRef = str(body.subject_ref);
   if (!placementId || !subjectRef) {
     return c.json({ error: "INVALID_OCCUPANCY", details: ["placement_id and subject_ref required"] }, 400);
+  }
+  const individualId = individualIdFromSubjectRef(subjectRef);
+  if (individualId) {
+    const owner = await projectCurrentOwner(c.env.TRUTH, individualId);
+    if (owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
   }
   const occupancyId = ulid();
   const data = {
@@ -293,9 +347,40 @@ export async function projectOccupantAt(
 }
 
 /**
+ * ALL occupants currently AT a placement (persona R75: a shelf can hold
+ * multiple adults — projectOccupantAt above silently picks just the first
+ * one, which is fine for empty/single-occupant shelves but wrong once a
+ * shelf has 2+; callers that must disambiguate use this instead). Same
+ * open-interval projection, collecting every started-and-not-ended occupancy
+ * for the placement rather than returning after the first (OBS wave1 R2).
+ */
+export async function projectOccupantsAt(
+  bucket: R2BucketLite,
+  placementId: string,
+): Promise<{ occupancy_id: string; subject_ref: string }[]> {
+  const events = (await new TruthStore(bucket).listEvents(`truth/${OCCUPANCY_TYPE}/`)).map(dataOf);
+  const started = new Map<string, string>(); // occupancy_id -> subject_ref
+  const ended = new Set<string>();
+  for (const d of events) {
+    if (d.placement_id !== placementId) continue;
+    if (d.phase === "start") started.set(String(d.occupancy_id), String(d.subject_ref));
+    else if (d.phase === "end") ended.add(String(d.occupancy_id));
+  }
+  const occupants: { occupancy_id: string; subject_ref: string }[] = [];
+  for (const [id, subjectRef] of started) {
+    if (!ended.has(id)) occupants.push({ occupancy_id: id, subject_ref: subjectRef });
+  }
+  return occupants;
+}
+
+/**
  * Move a subject to a new placement: end the currently-open occupancy (if
  * any) + start a new one, as ONE logical action (F4 wireframe「移動」/
  * batch-commit kind:"move" — device-binding start/end と同型の2相append).
+ * Same ownership trust boundary as POST /occupancy above (projectCurrentOwner)
+ * — this is not an HTTP handler, so a non-owner move is signalled via the
+ * `{ error }` result branch instead of a 403; callers (batch-commit-routes.ts)
+ * must check for it and map it to a per-item failure, not a whole-batch throw.
  */
 export async function moveOccupancy(
   bucket: R2BucketLite,
@@ -303,7 +388,12 @@ export async function moveOccupancy(
   subjectRef: string,
   toPlacementId: string,
   at: string,
-): Promise<{ occupancy_id: string; ended_previous: boolean }> {
+): Promise<{ occupancy_id: string; ended_previous: boolean } | { error: "NOT_OWNER" }> {
+  const individualId = individualIdFromSubjectRef(subjectRef);
+  if (individualId) {
+    const owner = await projectCurrentOwner(bucket, individualId);
+    if (owner !== actorId) return { error: "NOT_OWNER" };
+  }
   const s = new TruthStore(bucket);
   const open = await projectOpenOccupancy(bucket, subjectRef);
   let endedPrevious = false;
@@ -401,7 +491,16 @@ export async function deriveDeviceBindingsForCapture(
     // concern — batch-commit kind:"move" / moveOccupancy handles that).
     let occupancyId: string | null = null;
     let occupancyOpened = false;
-    if (subjectRef) {
+    // R3 ownership boundary (fail-closed): auto-linking a capture's subject onto
+    // a shelf (occupancy) is an ownership action — same trust boundary as POST
+    // /occupancy / moveOccupancy. Only derive it when the actor OWNS the
+    // individual. Observing a non-owned individual stays legal, but silently
+    // linking it to the actor's placement here would bypass the Market
+    // transfer/consent (the exact claim R3 forbids). Non-individual subjects
+    // have no ownership concept → unchanged; owner indeterminate → skip the link.
+    const indId = subjectRef ? individualIdFromSubjectRef(subjectRef) : null;
+    const ownsSubject = subjectRef && (!indId || (await projectCurrentOwner(bucket, indId)) === actorId);
+    if (ownsSubject) {
       const open = await projectOpenOccupancy(bucket, subjectRef);
       if (open) {
         occupancyId = open.occupancy_id;

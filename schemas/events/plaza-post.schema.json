@@ -89,6 +89,16 @@
       "type": "string",
       "minLength": 1,
       "description": "data スキーマ版。"
+    },
+    "context_individual_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "どの個体についての相談かを示す任意参照（KNW環境自動付与の基盤・CTX-1）。"
+    },
+    "species_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "どの観測対象（種族）についての話かを示す任意参照（種族の本 R133 の基盤・SW-1）。ヘッダー『観測対象』の選択から付与（ユーザー再入力なし）。集約キーは species_id×topic（board_kind の4分類には依存させない・fidelity-A2 #1）。"
     }
   },
   "additionalProperties": false

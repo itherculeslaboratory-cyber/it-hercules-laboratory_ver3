@@ -106,9 +106,15 @@ body {
   flex-direction: column;
   background: var(--civ-bg);
 }
+/* STRIP-1(2026-07-19・R95採用・knw-to-c9-strip-chrome/SL-1): 720px細カラムは
+ * 幅の広い画面で使い切れない(finder R52-54と同型指摘)。全ゾーン共通で
+ * home.jsonのlayout:"wide"実績値(1160px)へ統一 — 画面種別ごとの可変化は
+ * せず一律拡張(過剰設計を避ける)。旧・layout="wide"限定の上書きブロックは
+ * これでグローバル既定と同値になり冗長化したため削除(LayoutCtx/data-layout
+ * 自体はJS側に残置・無害)。 */
 .civ-page {
   width: 100%;
-  max-width: 720px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 24px 16px;
   display: flex;
@@ -118,12 +124,14 @@ body {
 
 /* V3-UIX-28 全画面共通ブランドクロム(app-shell 1箇所に実装・全画面へ横展開)。
  * 第3回裁定: モバイル下タブ/デスクトップサイドナビのレスポンシブ標準形は
- * 将来のDeepNav強化の話 — この最小クロムはヘッダー/フッターの横並びのみ
- * (作り込みすぎない・V3-UIX-32の方針に合わせる)。 */
+ * 将来のDeepNav強化の話 — この最小クロムはヘッダーの横並びのみ
+ * (作り込みすぎない・V3-UIX-32の方針に合わせる)。フッター(愚痴・改善/
+ * 投票・Fork/Builder)はSTRIP-1で撤去済み(renderer.tsx AppShellNode) —
+ * .civ-chrome-footerセレクタは既存screen向けの後方互換として残す。 */
 .civ-chrome-header,
 .civ-chrome-footer {
   width: 100%;
-  max-width: 720px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 12px 16px;
   display: flex;
@@ -156,6 +164,57 @@ body {
 }
 .civ-chrome-link {
   font-size: var(--civ-fs-1);
+}
+
+/* HDR-1(c9-structure-canon.md §1/§1c・R112/R115)ヘッダー観測対象セレクタ。
+ * ネイティブ<dialog>(renderer.tsx HeaderScopeSelector)は既定でUA配色(白背景/
+ * 黒文字)になり得るため、--civ-*トークンで両テーマ・両ThemePackに追従させる
+ * (R70の教訓と同じ「ハードコード色を使わない」ルール)。margin:auto の明示は
+ * Tailwind Preflight(`*{margin:0}`)がdialog:modalのUA既定センタリング
+ * (margin:auto)を上書きしてしまう(全画面左詰め+縦いっぱいに伸びるレイアウト
+ * 崩れを実機スクショで確認・既知のTailwind×<dialog>の定番衝突)ための復元。 */
+.civ-scope-dialog {
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface);
+  color: var(--civ-text);
+  padding: 0;
+  margin: auto;
+  max-width: 480px;
+  max-height: min(600px, calc(100vh - 64px));
+  width: calc(100% - 32px);
+}
+.civ-scope-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+.civ-scope-dialog-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* design-home-round.md §③: a #hqThemeToggle.hdtoggle button lives at the end
+ * of the app-shell header (renderer.tsx ThemeToggleButton). theme.js ships no
+ * CSS for ".hdtoggle" of its own — its documented contract is that each host
+ * page styles it. --civ-* tokens only, so it inherits both theme packs and
+ * both light/dark overrides automatically (no hand-picked colour — the R70
+ * light-mode black-on-black bug came from exactly that shortcut on the
+ * caseB7 pages). */
+.hdtoggle {
+  background: transparent;
+  border: 1px solid var(--civ-border);
+  color: var(--civ-text);
+  border-radius: var(--civ-radius);
+  min-height: var(--civ-tap);
+  min-width: var(--civ-tap);
+  cursor: pointer;
+  font-size: var(--civ-fs-3);
+  line-height: 1;
+}
+.hdtoggle:hover {
+  border-color: var(--civ-text-muted);
+  background: var(--civ-surface-2);
 }
 
 .civ-heading {
@@ -792,6 +851,34 @@ a.civ-thumb-card:focus-visible {
   font-size: var(--civ-fs-1);
   color: var(--civ-text-muted);
 }
+
+/* home「今日の状態」4タイル是正(統合オーナー差し戻し・design-home-round.md
+ * 続き): screen-defs/home.json が4つの kpi-tile を chrome最小の card
+ * `todaystats-group` へ children 化した — その card だけを :has() で特定し
+ * (kpi-tile を直接childrenに持つ card はこの1箇所のみ・market-trade の
+ * kpi-tile は tabs 経由でネストが違うため無関係)、中身をCSS gridで横並びに
+ * する。コンテナ自体の枠線/背景/paddingは打ち消し(「chrome最小」)、タイル
+ * 個別の見た目(.civ-kpi-tile)はそのまま。狭幅(〜480px)は現状どおり1列積み、
+ * 中間幅は2×2、≥1024pxで4列。 */
+.civ-card:has(> .civ-kpi-tile) {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+@media (min-width: 481px) {
+  .civ-card:has(> .civ-kpi-tile) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .civ-card:has(> .civ-kpi-tile) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .civ-form-error {
   background: var(--civ-danger-bg);
   color: var(--civ-danger);
@@ -1051,51 +1138,6 @@ a.civ-thumb-card:focus-visible {
  * +個体詳細パネル+血統)。表は既存 .civ-table を再利用し、レイアウト用のラッパ
  * クラスとソート見出しボタン・血統ツリーだけをここに足す(新規色なし)。
  * ========================================================================== */
-.civ-finder-layout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-}
-.civ-finder-table-col {
-  flex: 2 1 420px;
-  min-width: 0;
-}
-.civ-finder-detail-col {
-  flex: 1 1 280px;
-  min-width: 260px;
-  position: sticky;
-  top: 8px;
-}
-.civ-finder-sort-th {
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.civ-finder-row-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: var(--civ-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.civ-finder-row[data-selected="true"] td {
-  background: var(--civ-surface-2);
-}
-.civ-finder-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 /* 血統ツリー(先祖=info・子孫=successのテーマトークン色、矢印+上下配置で
  * 親→子の向きを示す)。ネストは buildPedigree の再帰構造をそのまま辿る
  * (世代が深いほど字下げが増える=より前の世代)。 */
@@ -1138,194 +1180,6 @@ a.civ-thumb-card:focus-visible {
  * ヘッダー/フッターを常に残す)。色はすべて既存トークン(raw hex 禁止・
  * check-ui-tokens GATE)。呼吸発光は 2.8s ease-in-out(R45: 周期2.5s以上)。
  * ========================================================================== */
-.civ-universe-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.civ-universe {
-  position: relative;
-  width: 100%;
-  height: 70vh;
-  min-height: 480px;
-  border: 1px solid var(--civ-border);
-  border-radius: var(--civ-radius);
-  overflow: hidden;
-  background: var(--civ-surface-2);
-}
-.civ-universe-canvas {
-  position: absolute;
-  inset: 0;
-}
-.civ-universe-fallback {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 24px;
-  background: var(--civ-surface-2);
-}
-.civ-universe-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  /* T-66自己QA是正: overlayはlabel/imgcardをcanvas上に絶対配置するための
-   * 透明な入れ物だが、pointer-eventsの既定autoのままだとcanvas全面を覆って
-   * WebGLキャンバス自体へのクリック/ホイールを奪ってしまう(星の直接クリック
-   * 選択・ドラッグ回転・ホイールズームが機能しなくなる)。coverはnoneにし、
-   * クリックが必要な子要素だけautoへ戻す。 */
-  pointer-events: none;
-}
-.civ-universe-label {
-  position: absolute;
-  transform: translate(-50%, -150%);
-  cursor: pointer;
-  pointer-events: auto;
-  font-size: var(--civ-fs-1);
-  font-weight: 700;
-  background: var(--civ-surface);
-  color: var(--civ-text);
-  border: 1px solid var(--civ-border);
-  border-radius: 6px;
-  padding: 3px 9px;
-  white-space: nowrap;
-}
-.civ-universe-imgcard {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  pointer-events: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  width: 64px;
-}
-.civ-universe-imgcard img {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 2px solid var(--civ-border);
-}
-.civ-universe-imgcard-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--civ-text);
-  background: var(--civ-surface);
-  border-radius: 4px;
-  padding: 1px 6px;
-  white-space: nowrap;
-}
-.civ-universe-glow {
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: civ-universe-breathe 2.8s ease-in-out infinite;
-}
-@keyframes civ-universe-breathe {
-  0%,
-  100% {
-    opacity: 0.4;
-    transform: scale(0.85);
-  }
-  50% {
-    opacity: 0.9;
-    transform: scale(1.15);
-  }
-}
-.civ-universe-banner {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
-  background: var(--civ-caution-bg);
-  border: 1px solid var(--civ-caution);
-  color: var(--civ-caution);
-  border-radius: var(--civ-radius);
-  padding: 6px 14px;
-  font-size: var(--civ-fs-1);
-  font-weight: 700;
-}
-.civ-universe-topleft {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 3;
-  max-width: 240px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.civ-universe-legend {
-  background: var(--civ-surface);
-  border: 1px solid var(--civ-border);
-  border-radius: var(--civ-radius);
-  padding: 12px;
-  font-size: var(--civ-fs-1);
-}
-.civ-universe-legend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-.civ-universe-legend-mode {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--civ-border);
-}
-.civ-universe-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex: none;
-}
-.civ-universe-rightcol {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  bottom: 12px;
-  width: min(300px, 42%);
-  overflow-y: auto;
-  z-index: 3;
-}
-/* T-66自己QA是正: 個体ファインダーと共用の.civ-pedigree-chipは.civ-badge由来の
- * white-space:nowrapで、finder本体の広い列幅では問題ないが、この300px幅の
- * 右カラムに3世代分ネストすると先祖チップが列幅からはみ出して見切れる
- * (個体ファインダー側の見た目には影響しないようスコープを絞る)。 */
-.civ-universe-rightcol .civ-pedigree-chip {
-  white-space: normal;
-  text-align: left;
-}
-.civ-universe-controls {
-  position: absolute;
-  left: 50%;
-  bottom: 12px;
-  transform: translateX(-50%);
-  z-index: 3;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  background: var(--civ-surface);
-  border: 1px solid var(--civ-border);
-  border-radius: var(--civ-radius);
-  padding: 8px 10px;
-  max-width: 92%;
-}
-.civ-universe-status {
-  flex-basis: 100%;
-  text-align: center;
-}
-
 /* =============================================================================
  * V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2) — growth-chart
  * (手書き SVG)/血縁レールの chip/判断3指標2カラム/sticky下端バー。既存トークン
@@ -2163,4 +2017,537 @@ a.civ-thumb-card:focus-visible {
 .civ-kebab-menu .civ-button {
   width: 100%;
   justify-content: flex-start;
+}
+
+/* =============================================================================
+ * home 完成予想図v2(承認済みmockup D:\claude\00-hq\dashboard\mockups\
+ * c9-home-forecast-v2.html・R112 90点採用・caseB7/KNW hub と同じ verbatim
+ * パターン)。以下は mockup.html の <style> ブロックを「値を一切変えず」
+ * ".home-dashboard " を祖先に付けて再配置したもの(選択子以外は一字一句その
+ * まま)。ribbon(「完成予想図です」バナー)・theme-toggle(アプリ本体の
+ * data-theme システム/AppShellNode の ThemeToggleButton に置き換え)・
+ * ctx-line(観測対象タグ・対応APIなし)・footer(承認メタ文言)・pc-badge
+ * (対応する実データAPIが無い4カード分のサンプル件数)は不採用(タスク報告に
+ * 記載)。CSS custom properties は mockup の :root ではなく .home-dashboard に
+ * 載せる(アプリ全体の :root と衝突させない)。data-theme トグルはアプリ側の
+ * 仕組み(tokens.generated.css と同じ :root[data-theme] hard override 規約)に
+ * 追従させるため、mockup にはない :root[data-theme] ブロックを追加している。
+ * ========================================================================== */
+.home-dashboard {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --purple: #7a5aa8;
+  --purple-bg: #f0ebf7;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+}
+@media (prefers-color-scheme: dark) {
+  .home-dashboard {
+    --bg: #14171a;
+    --card: #1c2024;
+    --text: #e8ece8;
+    --muted: #9aa39a;
+    --primary: #49a672;
+    --primary-bg: #183024;
+    --secondary: #e0975a;
+    --secondary-bg: #33261a;
+    --blue: #6a9bd1;
+    --blue-bg: #182634;
+    --purple: #a98fd0;
+    --purple-bg: #241d33;
+    --border: #2b3138;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --caution-bg: #2c2717;
+    --caution-text: #d8bd7a;
+  }
+}
+/* アプリの手動テーマ切替(lib/theme.ts が :root[data-theme] を刻印)にも追従
+ * させる hard override — mockup 自体にはこのブロックは存在しない(上の注記)。 */
+:root[data-theme="dark"] .home-dashboard {
+  --bg: #14171a;
+  --card: #1c2024;
+  --text: #e8ece8;
+  --muted: #9aa39a;
+  --primary: #49a672;
+  --primary-bg: #183024;
+  --secondary: #e0975a;
+  --secondary-bg: #33261a;
+  --blue: #6a9bd1;
+  --blue-bg: #182634;
+  --purple: #a98fd0;
+  --purple-bg: #241d33;
+  --border: #2b3138;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --caution-bg: #2c2717;
+  --caution-text: #d8bd7a;
+}
+:root[data-theme="light"] .home-dashboard {
+  --bg: #f7f8f6;
+  --card: #ffffff;
+  --text: #1f2620;
+  --muted: #6b756c;
+  --primary: #2f7d4f;
+  --primary-bg: #eaf5ee;
+  --secondary: #c9772e;
+  --secondary-bg: #fbf0e4;
+  --blue: #3a6ea5;
+  --blue-bg: #eaf1f8;
+  --purple: #7a5aa8;
+  --purple-bg: #f0ebf7;
+  --border: #e6e9e4;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 20, 0.06);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 20, 0.08);
+  --caution-bg: #f5f1e6;
+  --caution-text: #8a6d2f;
+}
+
+.home-dashboard .wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 22px 64px;
+  color: var(--text);
+}
+@media (max-width: 600px) {
+  .home-dashboard .wrap {
+    padding: 14px 12px 40px;
+  }
+}
+
+.home-dashboard header.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 6px 0 6px;
+}
+.home-dashboard .wordmark {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.home-dashboard .wordmark::before {
+  content: "🏠";
+  margin-right: 6px;
+}
+.home-dashboard .lead {
+  color: var(--muted);
+  font-size: 14.5px;
+  margin: 2px 0 10px;
+}
+
+.home-dashboard section.block {
+  margin-bottom: 30px;
+}
+.home-dashboard .section-head {
+  margin-bottom: 12px;
+}
+.home-dashboard .section-title {
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+.home-dashboard .section-caption {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.home-dashboard .card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+}
+.home-dashboard .source-note {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+/* 1. 今日の状態: stat tiles */
+.home-dashboard .stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .home-dashboard .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.home-dashboard .stat-tile {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+}
+.home-dashboard .stat-tile .st-icon {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.home-dashboard .stat-tile .st-num {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.home-dashboard .stat-tile .st-label {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-weight: 600;
+}
+.home-dashboard .stat-tile.warn .st-num {
+  color: var(--secondary);
+}
+.home-dashboard .stat-tile.info .st-num {
+  color: var(--blue);
+}
+.home-dashboard .stat-tile.good .st-num {
+  color: var(--primary);
+}
+.home-dashboard .stat-tile .st-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* 2. 主な行き先: 4 primary flows (equal weight) */
+.home-dashboard .primary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .home-dashboard .primary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .home-dashboard .primary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .primary-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 20px;
+  box-shadow: var(--shadow-sm), var(--shadow-lg);
+  overflow: hidden;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+.home-dashboard .primary-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--accent, var(--primary));
+}
+.home-dashboard .primary-card .pc-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+  background: var(--accent-bg, var(--primary-bg));
+  margin-bottom: 12px;
+}
+.home-dashboard .primary-card .pc-title {
+  font-size: 16.5px;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+.home-dashboard .primary-card .pc-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  flex: 1;
+}
+.home-dashboard .primary-card.obs {
+  --accent: var(--primary);
+  --accent-bg: var(--primary-bg);
+}
+.home-dashboard .primary-card.ind {
+  --accent: var(--blue);
+  --accent-bg: var(--blue-bg);
+}
+.home-dashboard .primary-card.knw {
+  --accent: var(--secondary);
+  --accent-bg: var(--secondary-bg);
+}
+.home-dashboard .primary-card.mkt {
+  --accent: var(--purple);
+  --accent-bg: var(--purple-bg);
+}
+
+/* 3. 次の一手 */
+.home-dashboard .today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.home-dashboard .today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.home-dashboard .today-row:last-child {
+  border-bottom: none;
+}
+.home-dashboard .today-id {
+  font-weight: 700;
+  font-size: 14px;
+}
+.home-dashboard .day-badge {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 11px;
+  margin-top: 5px;
+}
+.home-dashboard .day-badge.overdue {
+  background: var(--secondary-bg);
+  color: var(--secondary);
+}
+.home-dashboard .day-badge.near {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.home-dashboard .link-btn {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--primary-bg);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  white-space: nowrap;
+}
+.home-dashboard .link-btn.secondary {
+  background: var(--secondary-bg);
+  color: var(--secondary);
+  border: 1px solid var(--secondary);
+}
+
+/* 4. 届いた出来事 */
+.home-dashboard .inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.home-dashboard .inbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.home-dashboard .inbox-row:last-child {
+  border-bottom: none;
+}
+.home-dashboard .inbox-deadline {
+  font-size: 13.5px;
+}
+.home-dashboard .inbox-deadline .dl-label {
+  color: var(--muted);
+  font-size: 11.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* 5. 文明の状態 — 信頼度平均タイル非実装(R135-a)につき2列 */
+.home-dashboard .civ-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .home-dashboard .civ-row {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .civ-tile {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.home-dashboard .civ-tile .ct-num {
+  font-size: 21px;
+  font-weight: 800;
+}
+.home-dashboard .civ-tile .ct-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.home-dashboard .civ-privacy-note {
+  color: var(--muted);
+  font-size: 11.5px;
+  margin-top: 12px;
+}
+
+/* 6. 観測対象を特定する: tool group */
+.home-dashboard .tool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .home-dashboard .tool-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .tool-card {
+  display: flex;
+  gap: 13px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px 16px;
+}
+.home-dashboard .tool-card .tl-icon {
+  font-size: 20px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.home-dashboard .tool-card .tl-name {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+.home-dashboard .tool-card .tl-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+.home-dashboard .tool-card .tl-opt {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--caution-text);
+  background: var(--caution-bg);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+/* 7. 作る・整える: secondary grouped */
+.home-dashboard .secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .home-dashboard .secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.home-dashboard .sec-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.home-dashboard .sec-card .sc-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 6px;
+}
+.home-dashboard .sec-card .sc-icon {
+  font-size: 20px;
+}
+.home-dashboard .sec-card .sc-title {
+  font-size: 15px;
+  font-weight: 800;
+}
+.home-dashboard .sec-card .sc-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.home-dashboard .sec-card .sc-sub {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.home-dashboard .sec-card .sub-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.home-dashboard .sec-card.builder {
+  border: 1.5px solid var(--purple);
+}
+.home-dashboard .sec-card.builder .sc-title {
+  color: var(--purple);
+}
+.home-dashboard .core-tag {
+  display: inline-block;
+  background: var(--purple-bg);
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: 6px;
+}
+
+/* --- functional-only additions: the mockup's primary-card/tool-card/sec-card
+ * head/sub-chip/link-btn were static demo markup (non-interactive div/span).
+ * HomeDashboardNode wires them to real <a> elements — these rules only reset
+ * the browser's default anchor chrome so the adopted look is unchanged; no
+ * spacing/color/radius value above was touched. */
+.home-dashboard a.primary-card,
+.home-dashboard a.tool-card,
+.home-dashboard .sc-head-link,
+.home-dashboard a.sub-chip,
+.home-dashboard a.link-btn {
+  color: inherit;
+  text-decoration: none;
+}
+.home-dashboard .sc-head-link {
+  display: block;
 }

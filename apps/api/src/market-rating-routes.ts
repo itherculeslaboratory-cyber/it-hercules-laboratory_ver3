@@ -7,6 +7,8 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { projectLedger } from "./ledger-routes";
+import { reduceMarket } from "./market-settlement";
+import { loadTxns } from "./market-routes";
 import {
   LOW_RATING_BAD_THRESHOLD,
   LOW_RATING_KARMA_MAX,
@@ -105,6 +107,17 @@ marketRatingRoutes.post("/market/ratings", async (c) => {
   }
 
   const raterId = c.get("actorId");
+  // Transaction-party guard (fail-closed, T-71 GAP⑤/SEC-A5): rater must be one of
+  // the listing's two parties (seller_id or matched_with — same reduceMarket +
+  // loadTxns projection market-routes.ts POST /transition uses) and ratee must be
+  // the OTHER party. Blocks fabricated ratings against an unrelated listing_id/
+  // ratee_id (public rating-score integrity).
+  const cur = reduceMarket(listingId, await loadTxns(c, listingId));
+  const otherParty = raterId === cur.seller_id ? cur.matched_with : raterId === cur.matched_with ? cur.seller_id : undefined;
+  if (!otherParty || otherParty !== rateeId) {
+    return c.json({ error: "FORBIDDEN", details: ["rating requires being a party to this transaction"] }, 403);
+  }
+
   const id = ulid();
   const data: Record<string, unknown> = {
     rating_id: id,

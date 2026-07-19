@@ -8,12 +8,13 @@
 //   life-event   → individual-routes.writeLifeEvent
 //   clutch-event → clutch-routes.writeClutchEvent (recount/attrition のみ・超過ゲート込み)
 //   move         → source-routes.moveOccupancy (旧placementのend(あれば)+新placementのstartを束ねる)
+//   promote      → clutch-routes.promoteClutch (個別容器へ分割・個体マスタ発行は確認保存まで遅延)
 import { Hono } from "hono";
 import { TruthStore, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { writeCaptureFromCommitBody, writeAnalysisFromReanalyzeBody } from "./observation-routes";
 import { writeLifeEvent } from "./individual-routes";
-import { writeClutchEvent } from "./clutch-routes";
+import { writeClutchEvent, promoteClutch } from "./clutch-routes";
 import { moveOccupancy, type DerivedDeviceBinding } from "./source-routes";
 
 export const batchCommitRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -41,7 +42,7 @@ async function commitOne(
   if (kind === "life-event") {
     const individualId = item.individual_id;
     if (typeof individualId !== "string" || !individualId) return { ok: false, error: "INVALID_ITEM" };
-    const r = await writeLifeEvent(s, actorId, individualId, body);
+    const r = await writeLifeEvent(bucket, s, actorId, individualId, body);
     return r.ok ? { ok: true, id: individualId } : { ok: false, error: r.error };
   }
 
@@ -61,6 +62,17 @@ async function commitOne(
     return r.ok ? { ok: true, id: r.analysis_id } : { ok: false, error: r.error };
   }
 
+  if (kind === "promote") {
+    const clutchId = item.clutch_id;
+    const count = item.count;
+    if (typeof clutchId !== "string" || !clutchId) return { ok: false, error: "INVALID_ITEM" };
+    if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return { ok: false, error: "INVALID_ITEM" };
+    const deathCount = item.death_count === undefined ? 0 : item.death_count;
+    const at = typeof item.at === "string" && item.at ? item.at : new Date().toISOString();
+    const r = await promoteClutch(bucket, actorId, clutchId, { count, death_count: deathCount, at });
+    return r.ok ? { ok: true, id: clutchId } : { ok: false, error: r.error };
+  }
+
   if (kind === "move") {
     const subjectRef = item.subject_ref;
     const toPlacementId = item.to_placement_id;
@@ -68,6 +80,7 @@ async function commitOne(
     if (typeof subjectRef !== "string" || !subjectRef) return { ok: false, error: "INVALID_ITEM" };
     if (typeof toPlacementId !== "string" || !toPlacementId) return { ok: false, error: "INVALID_ITEM" };
     const r = await moveOccupancy(bucket, actorId, subjectRef, toPlacementId, at);
+    if ("error" in r) return { ok: false, error: r.error }; // per-item failure, not a whole-batch 500
     return { ok: true, id: r.occupancy_id };
   }
 

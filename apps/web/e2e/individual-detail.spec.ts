@@ -18,7 +18,7 @@ const shot = (page: Page, name: string, fullPage = false) =>
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
-  await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
 test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip差替→タイムライン訂正", async ({ page }) => {

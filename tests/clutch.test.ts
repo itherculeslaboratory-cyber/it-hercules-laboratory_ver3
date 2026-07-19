@@ -4,11 +4,16 @@
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { deriveActorId } from "@ihl/truth";
-import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
+import { issueSessionToken } from "../apps/api/src/session";
+import { DEV_TOKEN, FakeR2Bucket, SESSION_SECRET, makeEnv } from "./helpers";
 
 const AUTH = { Authorization: `Bearer ${DEV_TOKEN}` };
 const AUTH_JSON = { ...AUTH, "content-type": "application/json" };
 const DEV_ACTOR = await deriveActorId("dev@ihl.local");
+
+async function bearer(actorId: string) {
+  return { Authorization: `Bearer ${await issueSessionToken(actorId, SESSION_SECRET)}`, "content-type": "application/json" };
+}
 
 function ctx() {
   const bucket = new FakeR2Bucket();
@@ -201,6 +206,177 @@ describe("clutch promote (個別容器へ分割 / 昇格)", () => {
   });
 });
 
+describe("clutch promote ownership guard (fail-closed — promote mints individuals, so only the clutch's creator may promote it)", () => {
+  it("route: actor B promoting actor A's clutch -> 403 NOT_OWNER, no individuals minted, no promote event; actor A promoting own clutch still succeeds", async () => {
+    const { bucket, env } = ctx();
+    const aH = await bearer("actor-a");
+    const bH = await bearer("actor-b");
+
+    const createRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: aH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 10 }) },
+      env,
+    );
+    expect(createRes.status).toBe(201);
+    const clutchId = ((await createRes.json()) as { clutch_id: string }).clutch_id;
+
+    const stolen = await app.request(
+      `/api/v1/clutches/${clutchId}/promote`,
+      { method: "POST", headers: bH, body: JSON.stringify({ count: 3, at: "2026-08-01T00:00:00Z" }) },
+      env,
+    );
+    expect(stolen.status).toBe(403);
+    expect(await stolen.json()).toEqual({ error: "NOT_OWNER" });
+
+    // no write happened: zero individual masters, zero promote clutch-events
+    const masterKeys = [...bucket.objects.keys()].filter((k) => k.startsWith("truth/ihl.ind.master.v1/"));
+    expect(masterKeys).toHaveLength(0);
+    const eventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${clutchId}-`));
+    expect(eventKeys).toHaveLength(0);
+
+    // actor A (the real owner) promoting the same clutch still works
+    const legit = await app.request(
+      `/api/v1/clutches/${clutchId}/promote`,
+      { method: "POST", headers: aH, body: JSON.stringify({ count: 3, at: "2026-08-01T00:00:00Z" }) },
+      env,
+    );
+    expect(legit.status).toBe(201);
+    const legitBody = (await legit.json()) as { individual_ids: string[] };
+    expect(legitBody.individual_ids).toHaveLength(3);
+  });
+
+  it("batch-commit: actor B's promote item for actor A's clutch is a per-item NOT_OWNER failure, no individuals minted, and other items in the same batch still commit", async () => {
+    const { bucket, env } = ctx();
+    const aH = await bearer("actor-a");
+    const bH = await bearer("actor-b");
+
+    const aClutchRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: aH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 10 }) },
+      env,
+    );
+    const aClutchId = ((await aClutchRes.json()) as { clutch_id: string }).clutch_id;
+
+    const bClutchRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: bH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 5 }) },
+      env,
+    );
+    const bClutchId = ((await bClutchRes.json()) as { clutch_id: string }).clutch_id;
+
+    const res = await app.request(
+      "/api/v1/observation/batch-commit",
+      {
+        method: "POST",
+        headers: bH,
+        body: JSON.stringify({
+          items: [
+            { kind: "promote", clutch_id: aClutchId, count: 3, at: "2026-08-01T00:00:00Z" }, // B stealing A's clutch
+            { kind: "promote", clutch_id: bClutchId, count: 2, at: "2026-08-01T00:00:00Z" }, // B's own clutch — must still succeed
+            { kind: "capture", body: { domain: "biology", subject_ref: `clutch/${bClutchId}`, measurements: [] } }, // unrelated item — must still succeed
+          ],
+        }),
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { ok: boolean; id?: string; error?: string }[] };
+    expect(body.results).toHaveLength(3);
+    expect(body.results[0]).toEqual({ ok: false, error: "NOT_OWNER" });
+    expect(body.results[1]).toEqual({ ok: true, id: bClutchId });
+    expect(body.results[2].ok).toBe(true);
+
+    // exactly 2 individuals minted (from B's own promote), none from A's stolen clutch
+    const masterKeys = [...bucket.objects.keys()].filter((k) => k.startsWith("truth/ihl.ind.master.v1/"));
+    expect(masterKeys).toHaveLength(2);
+    const aEventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${aClutchId}-`));
+    expect(aEventKeys).toHaveLength(0); // A's clutch untouched
+  });
+});
+
+describe("clutch event (recount/attrition) ownership guard (fail-closed — only the clutch's creator may append events)", () => {
+  it("route: actor B posting a recount event to actor A's clutch -> 403 NOT_OWNER, no event written; actor A recounting own clutch still succeeds", async () => {
+    const { bucket, env } = ctx();
+    const aH = await bearer("actor-a");
+    const bH = await bearer("actor-b");
+
+    const createRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: aH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 10 }) },
+      env,
+    );
+    expect(createRes.status).toBe(201);
+    const clutchId = ((await createRes.json()) as { clutch_id: string }).clutch_id;
+
+    const stolen = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: bH, body: JSON.stringify({ kind: "recount", counted: 3, at: "2026-07-13T00:00:00Z" }) },
+      env,
+    );
+    expect(stolen.status).toBe(403);
+    expect(await stolen.json()).toEqual({ error: "NOT_OWNER" });
+
+    // no write happened: zero clutch-events for A's clutch
+    const eventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${clutchId}-`));
+    expect(eventKeys).toHaveLength(0);
+
+    // actor A (the real owner) recounting the same clutch still works
+    const legit = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: aH, body: JSON.stringify({ kind: "recount", counted: 9, at: "2026-07-13T00:00:00Z" }) },
+      env,
+    );
+    expect(legit.status).toBe(201);
+    const legitBody = (await legit.json()) as { discrepancy: number };
+    expect(legitBody.discrepancy).toBe(-1);
+  });
+
+  it("batch-commit: actor B's clutch-event item for actor A's clutch is a per-item NOT_OWNER failure, no event written, and other items in the same batch still commit", async () => {
+    const { bucket, env } = ctx();
+    const aH = await bearer("actor-a");
+    const bH = await bearer("actor-b");
+
+    const aClutchRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: aH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 10 }) },
+      env,
+    );
+    const aClutchId = ((await aClutchRes.json()) as { clutch_id: string }).clutch_id;
+
+    const bClutchRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: bH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 5 }) },
+      env,
+    );
+    const bClutchId = ((await bClutchRes.json()) as { clutch_id: string }).clutch_id;
+
+    const res = await app.request(
+      "/api/v1/observation/batch-commit",
+      {
+        method: "POST",
+        headers: bH,
+        body: JSON.stringify({
+          items: [
+            { kind: "clutch-event", clutch_id: aClutchId, body: { kind: "attrition", death_count: 2, at: "2026-07-13T00:00:00Z" } }, // B stealing A's clutch
+            { kind: "clutch-event", clutch_id: bClutchId, body: { kind: "attrition", death_count: 1, at: "2026-07-13T00:00:00Z" } }, // B's own clutch — must still succeed
+          ],
+        }),
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { ok: boolean; id?: string; error?: string }[] };
+    expect(body.results).toHaveLength(2);
+    expect(body.results[0]).toEqual({ ok: false, error: "NOT_OWNER" });
+    expect(body.results[1].ok).toBe(true);
+
+    const aEventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${aClutchId}-`));
+    expect(aEventKeys).toHaveLength(0); // A's clutch untouched
+    const bEventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${bClutchId}-`));
+    expect(bEventKeys).toHaveLength(1); // B's own event committed
+  });
+});
+
 describe("V3-IND-02 但し書き — アドレス(individual層のUID)は昇格(promote)時にしか発生しない", () => {
   it("count層のまま(promote前)は個体マスタが1件も存在せず、promote後にちょうど count 件だけ現れる", async () => {
     const { env } = ctx();
@@ -298,6 +474,37 @@ describe("observation/batch-commit — F4/F5 一括保存", () => {
     const res = await post("/api/v1/observation/batch-commit", { items }, env);
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe("TOO_MANY_ITEMS");
+  });
+
+  it("kind:promote performs the same effect as the direct route (individuals issued, current_count drops), and reports per-item results without failing the whole batch", async () => {
+    const { env } = ctx();
+    const clutchId = await createClutch(env, { initial_count: 10, species: "Dynastes hercules" });
+
+    const res = await post(
+      "/api/v1/observation/batch-commit",
+      {
+        items: [
+          { kind: "promote", clutch_id: clutchId, count: 4, death_count: 1, at: "2026-08-01T00:00:00Z" },
+          { kind: "promote", clutch_id: "nope-does-not-exist", count: 1, at: "2026-08-01T00:00:00Z" }, // per-item failure, not a whole-batch 500
+          { kind: "promote", clutch_id: clutchId, body: {} }, // missing count -> per-item failure
+        ],
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { ok: boolean; id?: string; error?: string }[] };
+    expect(body.results).toHaveLength(3);
+    expect(body.results[0]).toEqual({ ok: true, id: clutchId });
+    expect(body.results[1]).toEqual({ ok: false, error: "NOT_FOUND" });
+    expect(body.results[2]).toEqual({ ok: false, error: "INVALID_ITEM" });
+
+    // same effect as POST /clutches/:id/promote: current_count dropped by count+death_count,
+    // and exactly `count` new individuals exist (address/UID only exists after promote).
+    const clutchDetail = (await (await get(`/api/v1/clutches/${clutchId}`, env)).json()) as { current_count: number };
+    expect(clutchDetail.current_count).toBe(5); // 10 - 4 - 1
+    const individuals = (await (await get("/api/v1/individuals", env)).json()) as { individuals: { species: string }[] };
+    expect(individuals.individuals).toHaveLength(4);
+    expect(individuals.individuals.every((i) => i.species === "Dynastes hercules")).toBe(true);
   });
 
   it("capture item enforces the SAME subspecies gate as solid-observation/commit", async () => {

@@ -1,7 +1,7 @@
 ---
 id: V3-STATUS
 title: 本番状態・直近タスク・人間ゲート
-date: "2026-07-17"
+date: "2026-07-19"
 status: draft
 ---
 
@@ -10,6 +10,18 @@ status: draft
 > 更新のたびに「今どこ / 次 / 人間ゲート」の 3 節を最新化する。設計正本の永久配置はしない（Working）。
 
 ## 今どこ
+
+**Phase C9 品質ラウンド + wave並列化 進行中(2026-07-19)** — 正本= `docs/planning/c9/structure-canon.md`(**v2・active**)・`docs/planning/c9/HANDOFF-c9-close-2026-07-18.md`・`00-hq/kits/ihl-final-run/PLAN-ihl-final-run.md`。C8の機能実装完了を土台に、1ジャーニー=1判定の品質ラウンドで実画面を作り込む。ゲート順=worker自己QA→独立批評家→上位モデル目視→ユーザー判定(HQレビューハブ)。
+
+- **構造正本 v2(承認済)**: 9ゾーン+語彙10語(R50承認)に、v2で「観測対象=ヘッダー常駐のグローバル文脈スイッチ」(言語選択と同格・選択で全ゾーンが当該観測対象に絞られる)を追加(IA正本v2=R115○・home v2付帯指摘R112)。語彙#11「観測対象」・配置原則4問・遷移中心をHOME→ヘッダーへ。
+- **個体ファインダー(一覧⇔宇宙)=100点採用(R54/R70)**: `apps/web/public/finder/{finder,universe}.html`(Tabulator/3d-force-graph MITローカル同梱)。実API配線・血統発光・両テーマ。要件V3-UIX-83(round-17)。
+- **home IA v2=90点採用(R112)**: 完成予想図v2(`00-hq/dashboard/mockups/c9-home-forecast-v2.html`)。本実装はworker配線中(既存renderer不使用・逐語採用+実データ配線)。観測対象セレクタはヘッダー級へ昇格(付帯指摘)。
+- **セキュリティ硬化(2026-07-19)**: POST /events自己サービス型allowlist化(T-71・`SELF_SERVICE_EVENT_TYPES`fail-closed)+typed-route authz全網羅監査(`docs/planning/c9/audit-typed-route-authz-2026-07-19.md`)。GAP①(個体書込IDOR=血統詐称/改名/死亡捏造)を`projectCurrentOwner`横展開+fail-closed 403+回帰exploitテストで根治。中程度5件(SEC-A2〜A6=疑義取下げ原提起者限定/オファー権transfer追随/仮説昇格投票収束/取引評価当事者検証/広場信号sybil dedup)=R113全○で実装済。
+- **wave並列化(WAVE-DESIGN)**: 統合オーナー=C9。**OBS wave1(観測20画面)統合済**(main e97aa96)。**KNW wave1(知の広場・スレッド=グループチャット化/3モード入口/重複防止検索)統合済**(2026-07-19・reconcile=ScreenBoardsFooter復活回避+plaza両側共存・**E2E 178/178緑**)。並走スレッド: ihl-mkt(取引中=100点R121・PAY.JP Platform test配線)/ihl-img(画像解析v1=CVスカウトArUco 80点R120)/ihl-zones(IND予想図85点R128=型確定)。
+- **第18回裁定(round-18・2026-07-19)反映済**: 意図忠実性監査F-1〜F-6全○(R127)+R135余波(合成指標「信頼度」禁止=V3-UIX-84/AIセッション・secondbrain帰属否定=hold)+改善艦F-2ドラフト(R136)。新規採番7件(V3-AIP-105/106/107・V3-BBS-37/38・V3-MKT-66・V3-UIX-84)。**総数 749→757**・確定660→663・確定(修正)87→91・第1波355→363・第2波238→237。srs **v1.10→v1.12**(round-17 v1.11経由)。plaza-postに任意species_id追加(種族の本R133基盤・SW-1)。
+- **C9の残ユーザー判定待ち(HQレビューハブ)**: home v2実装後の実機判定 / ヘッダー観測対象セレクタの範囲2問(`c9-header-selector-scope`=HDR-1/HDR-2) / AIセッション・secondbrainの棄却(`c9-secondbrain-attribution`=SB-1) / mkt予約UI(`mkt-reservation-forecast`)等。
+
+---
 
 **Phase C8 全機能実装完了ラン 進行中**（`docs/planning/c8/PLAN-c8-full-run.md`・台帳 T-38）。**第16回ユーザー裁定 反映完了**（2026-07-17 — `docs/planning/rulings/user-ruling-2026-07-17-round-16.md`）: 質問シート全49問クローズ、新規採番14件（決済P2P二方式 V3-MKT-62/63/65・クラッチ二層アイデンティティ V3-IND-36・magic-link数字コードverify V3-AUT-46・Truthバックアップ二重化 V3-CST-09 他）+ 既存18件patch（うち V3-FND-13 は確定→**棄却**・第1波→対象外で round-3 ruling_note を formalize、V3-AIP-61 は close/hold解除）。**決済方針が確定**: GMOあおぞら銀行は退役（個人事業主に本番API非提供・公式一次情報）、ユーザー間決済はP2Pユーザー選択二方式（①銀行振込直接・IHL非関与 ②PAY.JP Platformカード決済・5%自動控除）、IHL宛システム維持費徴収にPayPay OPAを追加、PayPay個人間送金機能は規約で利用禁止（PayPay残高規約第7条）。フォーク10%は金銭還元でなく貢献度(karma)分配と意味確定。PTチャージ（金銭でのPT購入）は廃止。総数 **735 → 749**（確定659/確定(修正)87/棄却3・保留0）。registry.json / srs.md（v1.9→**v1.10**）へ機械反映済み・検算恒等式2本とも実測一致。
 
