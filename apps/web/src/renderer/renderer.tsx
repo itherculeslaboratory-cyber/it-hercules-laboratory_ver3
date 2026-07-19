@@ -942,6 +942,25 @@ function FormNode({ node }: { node: ScreenNode }) {
 
 function ListNode({ node }: { node: ScreenNode }) {
   const p = props(node);
+  // c9 wave1 KNW Slice1: board-threads is a `list` variant (schemas/ node type
+  // enum is C9-owned/out of scope — reuse "list" + props.variant, same
+  // dispatch convention as FieldNode's props.variant, instead of adding a
+  // new node type).
+  if (p.variant === "threads") {
+    return <BoardThreadsNode node={node} />;
+  }
+  // T-70 KNW wave1(知の広場ハブ・承認モックアップの verbatim 採用): same
+  // in-scope trick — a `list` variant instead of a new node type (schema enum
+  // is C9-owned/out of scope). Replaces the earlier "thread-search" variant.
+  if (p.variant === "knowledge-hub") {
+    return <KnowledgeHubNode node={node} />;
+  }
+  // T-71 KNW wave1(スレッド=グループチャット化・承認モックアップ section3 の
+  // verbatim 採用): 同じ in-scope トリック — 新ノード種を起こさず list +
+  // props.variant で分岐する(schema node type enum は C9 スコープ外)。
+  if (p.variant === "knowledge-thread-chat") {
+    return <KnowledgeThreadChatNode node={node} />;
+  }
   useSource(node);
   const scope = useContext(ScopeCtx);
 
@@ -5673,6 +5692,13 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
   const resolved = resolvedStatus(view.posts);
   const isStarter = !!viewerId && viewerId === root.actor_id;
   const tombstoned = new Set((view.tombstones ?? []).map((t) => `${t.ref.type}:${t.ref.id}`));
+  // c9 wave1 KNW Slice2(スレッドの生ID撲滅): reply_to was rendered as a raw
+  // ULID (">>p1"形式) — unreadable to a human reader. Resolve it to the parent
+  // post's own body excerpt instead; a parent outside the loaded post list
+  // (should not happen today, but posts is append-only so nothing is ever
+  // truly deleted — defensive) falls back to an honest generic phrase, never
+  // the raw id.
+  const postById = new Map(view.posts.map((pp) => [pp.post_id, pp]));
 
   return (
     <div className="civ-thread-posts">
@@ -5707,11 +5733,24 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
                 </span>
                 {post.post_id === root.post_id && <Badge text="スレ主" tone="neutral" />}
               </div>
-              {post.reply_to && (
-                <p className="civ-text" data-muted="true">
-                  &gt;&gt;{post.reply_to}
-                </p>
-              )}
+              {post.reply_to &&
+                (() => {
+                  const parent = postById.get(post.reply_to);
+                  if (parent) {
+                    const body = parent.body ?? "";
+                    const excerpt = body.length > 24 ? `${body.slice(0, 24)}…` : body;
+                    return (
+                      <p className="civ-text civ-thread-reply-ref" data-muted="true">
+                        ↩ 「{excerpt}」への返信
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="civ-text civ-thread-reply-ref" data-muted="true">
+                      ↩ 以前の投稿への返信
+                    </p>
+                  );
+                })()}
               <p className="civ-text">{post.body}</p>
               {(post.cite_refs ?? []).length > 0 && (
                 <div className="civ-card-badges">
@@ -6136,6 +6175,637 @@ export function NodeView({ node }: { node: ScreenNode }) {
     default:
       return null;
   }
+}
+
+// 板 kind → 日本語ラベルの共有ルックアップ(guide=説明 / complaint=愚痴 / improvement=改善)。
+// 旧 V3-BBS-03 の全画面フッター板(ScreenBoardsFooter)は STRIP-1(R95・共有chrome剥がし)で
+// 撤去済み。この辞書だけは KNW wave1 の BoardThreadsNode/boardLabel が板ラベル表示に再利用する
+// ため残す(新規辞書を作らない=同じ3板の訳を二重定義しない)。板分類の3分類軸への移行は F-2
+// (round-18)で schema 側を改訂する。
+const FILE_BOARD_KINDS = [
+  { kind: "guide", label: "説明" },
+  { kind: "complaint", label: "愚痴" },
+  { kind: "improvement", label: "改善" },
+] as const;
+
+// c9 wave1 KNW Slice1(公式掲示板を探せる板にする): board-threads 専用ノード —
+// 旧実装(汎用 list の item_text: "{{topic}}（{{board_kind}} / {{post_count}}）"
+// + 常に空の thread_id へ飛ぶ「スレッドを開く」リンク)を置き換える。生の
+// English board_kind・区切り無しの件数・デッドリンクの3点がバグだった。
+// ThreadPostsNode(6719行)と同じ自前 fetch/reload パターン(useSource は使わ
+// ない — 板フィルタはこのノードだけのローカル state で、他ノードと共有する
+// 必要が無い)。板ラベルは共有の FILE_BOARD_KINDS(直上に定義)を
+// そのまま再利用(新規辞書を作らない — 同じ3板の日本語訳をここで再定義する
+// 理由が無い)。
+interface KnwBoardThread {
+  thread_id: string;
+  topic: string;
+  board_kind: string;
+  post_count: number;
+  latest_at?: string;
+}
+interface KnwBoardThreadsView {
+  channel: string;
+  threads: KnwBoardThread[];
+}
+
+function boardLabel(kind: string): string {
+  return FILE_BOARD_KINDS.find((b) => b.kind === kind)?.label ?? kind;
+}
+
+function BoardThreadsNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const execute = useContext(ExecuteCtx);
+  const path = String(p.source_path ?? "/api/v1/plaza/channels/knowledge-board/threads");
+  const [view, setView] = useState<KnwBoardThreadsView | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [activeBoard, setActiveBoard] = useState<string>("all");
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path }))
+      .then((v) => {
+        if (alive) setView((v ?? null) as KnwBoardThreadsView | null);
+      })
+      .catch(() => {
+        if (alive) setView(null);
+      })
+      .finally(() => {
+        if (alive) setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path]);
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
+
+  const threads = view?.threads ?? [];
+  const filtered = activeBoard === "all" ? threads : threads.filter((t) => t.board_kind === activeBoard);
+
+  return (
+    <div className="civ-board-threads">
+      <div className="civ-chip-row">
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+          data-active={activeBoard === "all" || undefined}
+          aria-pressed={activeBoard === "all"}
+          onClick={() => setActiveBoard("all")}
+        >
+          すべて
+        </button>
+        {FILE_BOARD_KINDS.map(({ kind, label }) => (
+          <button
+            key={kind}
+            type="button"
+            className={cn("civ-interactive", "civ-badge", "civ-facet-chip")}
+            data-active={activeBoard === kind || undefined}
+            aria-pressed={activeBoard === kind}
+            onClick={() => setActiveBoard(kind)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <p className="civ-empty">この板にはまだスレッドがありません。</p>
+      ) : (
+        <ul className="civ-list">
+          {filtered.map((t) => (
+            <li key={t.thread_id}>
+              <a
+                className={cn("civ-card", "civ-interactive", "civ-board-thread-row")}
+                href={`/s/knowledge-thread?thread_id=${t.thread_id}`}
+              >
+                <span className="civ-board-thread-topic">{t.topic}</span>
+                <span className="civ-board-thread-meta">
+                  <span className="civ-board-tag">{boardLabel(t.board_kind)}</span>
+                  <span>{t.post_count}件の投稿</span>
+                  <span>最終更新 {formatDateJa(t.latest_at)}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// T-70 KNW wave1(知の広場ハブ — 承認モックアップの verbatim 採用): list
+// variant="knowledge-hub" 専用ノード。オーナー30点評価(汎用レンダラで再解釈し
+// 見た目を損なった)の是正として、承認済みモックアップ section0(ヘッダー3タブ)+
+// section1(まず探す)の markup/className を寸分違わず採用し(globals.css の
+// `.knw-hub `スコープCSS参照)、実データだけを流し込む(caseB7 と同じ実物採用
+// パターン)。section2-5(dup-confirm/chat/summary/tree)は次波のため未着手。
+// 検索は既存 GET /plaza/search + rankThreadSearch(決定論・embedding/LLM不使用)
+// を200msデバウンスで叩く(旧 ThreadSearchNode と同じ fetch パターン)。
+interface KnwHubMatch {
+  thread_id: string;
+  topic: string;
+  post_count: number;
+  latest_at: string;
+  score: number;
+  resolved?: boolean;
+}
+interface KnwHubSearchView {
+  query: string;
+  matches: KnwHubMatch[];
+}
+type KnwHubTab = "komatta" | "hanashitai" | "ronbun";
+
+// T-72 KNW wave1(新規スレ重複確認 — 承認モックアップ section2 の verbatim 採用)。
+// 一致度%は決定論の文字bigram Dice係数(= 2・|共通bigram(多重集合)| /
+// (|bigram(a)|+|bigram(b)|))。plaza-routes.ts の rankThreadSearch に追加した
+// ファジー加点と「同じ定義」を使う(元は文字集合オーバーラップ係数だったが、
+// バックエンドを bigram Dice に統一した後に両者の数値が食い違い-- 例:
+// 「コバエがわいた時どうする」対「コバエが大量発生した — 対策まとめ」で
+// バックエンドは一致扱い(dice=0.2308)なのにフロント側の別指標が70%未満で
+// バナー不発、という実バグを本番相当のE2Eで検出したため、単一の定義に統一した
+// (コメント参照: plaza-routes.ts の diceCoefficient と同一アルゴリズム)。
+// normalizeSearchText(plaza-routes.ts)と同じ空白除去のみの正規化を踏襲
+// (embedding/LLM不使用・不変条項①)。
+function knwBigrams(s: string): string[] {
+  if (s.length < 2) return s.length ? [s] : [];
+  const out: string[] = [];
+  for (let i = 0; i < s.length - 1; i++) out.push(s.slice(i, i + 2));
+  return out;
+}
+export function titleSimilarity(a: string, b: string): number {
+  const norm = (s: string) => s.trim().replace(/\s+/g, "");
+  const A = knwBigrams(norm(a));
+  const B = knwBigrams(norm(b));
+  if (!A.length || !B.length) return 0;
+  const counts = new Map<string, number>();
+  for (const g of B) counts.set(g, (counts.get(g) ?? 0) + 1);
+  let intersect = 0;
+  for (const g of A) {
+    const c = counts.get(g) ?? 0;
+    if (c > 0) {
+      intersect++;
+      counts.set(g, c - 1);
+    }
+  }
+  return Math.round((2 * intersect) / (A.length + B.length) * 100);
+}
+// バックエンドの検索対象フロア(KNW_FUZZY_FLOOR=0.15=単なる検索結果への採用)より
+// 高く設定(「重複の確認でユーザーの手を止める」には弱い偶然一致より強い確信が
+// 要る)。実測 dice=0.2308(「コバエがわいた時どうする」対 seed トピック)を安全
+// マージン込みで超える 20 に設定(plaza-search.test.ts の実測値と揃える)。
+const KNW_DUP_THRESHOLD = 20;
+// channel/board_kind は knowledge-board 板の既定値(KnowledgeThreadChatNode の
+// 返信 POST と同じ組=既存スレの実データが channel:"knowledge-board"・
+// board_kind:"guide" で運用されている前提を踏襲・renderer-knw-thread-chat.test.tsx
+// 参照)。「困った」相談は board_kind enum(guide/complaint/improvement/engagement)の
+// どれとも完全一致しないが、既存 knowledge-board 板の実運用値と揃えるのが最小の
+// 選択(新しい enum 値は schemas/ 側の変更が要り本タスクのスコープ外)。
+const KNW_COMPOSE_CHANNEL = "knowledge-board";
+const KNW_COMPOSE_BOARD_KIND = "guide";
+
+function KnowledgeHubNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+  const path = String(p.source_path ?? "/api/v1/plaza/search");
+  const [tab, setTab] = useState<KnwHubTab>("komatta");
+  const [q, setQ] = useState("");
+  const [matches, setMatches] = useState<KnwHubMatch[]>([]);
+  const [searched, setSearched] = useState(false);
+  // section2 dup-confirm(新しく相談する → タイトル入力 → 一致度確認)。
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [topMatch, setTopMatch] = useState<KnwHubMatch | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    const query = q.trim();
+    if (!query) {
+      setMatches([]);
+      setSearched(false);
+      return;
+    }
+    let alive = true;
+    const timer = setTimeout(() => {
+      Promise.resolve(execute({ kind: "api", method: "GET", path: `${path}?q=${encodeURIComponent(query)}` }))
+        .then((v) => {
+          if (alive) setMatches(((v as KnwHubSearchView | undefined)?.matches ?? []).slice(0, 3));
+        })
+        .catch(() => {
+          if (alive) setMatches([]);
+        })
+        .finally(() => {
+          if (alive) setSearched(true);
+        });
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [q, path, execute]);
+
+  // section2 dup-confirm — 同じ 200ms デバウンス+同じ GET /plaza/search を、
+  // compose のタイトル入力に対してだけ再利用する(section1 の検索ボックスとは
+  // 独立した state・上位1件だけ使う)。
+  useEffect(() => {
+    if (!composeOpen) return;
+    const query = title.trim();
+    if (!query) {
+      setTopMatch(null);
+      return;
+    }
+    let alive = true;
+    const timer = setTimeout(() => {
+      Promise.resolve(execute({ kind: "api", method: "GET", path: `${path}?q=${encodeURIComponent(query)}` }))
+        .then((v) => {
+          if (alive) setTopMatch(((v as KnwHubSearchView | undefined)?.matches ?? [])[0] ?? null);
+        })
+        .catch(() => {
+          if (alive) setTopMatch(null);
+        });
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [title, composeOpen, path, execute]);
+
+  const similarity = topMatch ? titleSimilarity(title, topMatch.topic) : 0;
+  const dupMatch = topMatch && similarity >= KNW_DUP_THRESHOLD ? topMatch : null;
+
+  const createThread = useCallback(async () => {
+    const topic = title.trim();
+    if (!topic || creating) return;
+    setCreating(true);
+    try {
+      const res = await execute(
+        { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
+        { channel: KNW_COMPOSE_CHANNEL, board_kind: KNW_COMPOSE_BOARD_KIND, topic, body: topic },
+      );
+      const threadId = (res as { thread_id?: string } | undefined)?.thread_id;
+      if (threadId) navigate("knowledge-thread", { thread_id: threadId });
+    } finally {
+      setCreating(false);
+    }
+  }, [execute, navigate, title, creating]);
+
+  return (
+    <div className="knw-hub">
+      <div className="wrap">
+        {/* 0. header — mockup section0 (verbatim markup) */}
+        <header className="top">
+          <div className="wordmark">知の広場</div>
+          <nav className="tabs">
+            <button
+              type="button"
+              className={cn("tab", tab === "hanashitai" && "active")}
+              aria-pressed={tab === "hanashitai"}
+              onClick={() => setTab("hanashitai")}
+            >
+              話したい
+            </button>
+            <button
+              type="button"
+              className={cn("tab", tab === "komatta" && "active")}
+              aria-pressed={tab === "komatta"}
+              onClick={() => setTab("komatta")}
+            >
+              困った
+            </button>
+            <button
+              type="button"
+              className={cn("tab", tab === "ronbun" && "active")}
+              aria-pressed={tab === "ronbun"}
+              onClick={() => setTab("ronbun")}
+            >
+              論文
+            </button>
+          </nav>
+        </header>
+        <p className="lead">みんなの記録から答えを探して、いっしょに解決する場所。</p>
+
+        {/* 1. search first — mockup section1 (verbatim markup, real data wired) */}
+        {tab === "komatta" && (
+          <section className="block">
+            <div className="section-head">
+              <h2 className="section-title">🔍 まず探す</h2>
+              <p className="section-caption">打っている途中から「これ?」を3件出す。同じ悩みのスレがばらけない。</p>
+            </div>
+            <div className="card">
+              <div className="search-box">
+                <span className="icon">🔍</span>
+                <input
+                  type="search"
+                  placeholder="何に困ってる?"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  aria-label="困りごとを検索"
+                />
+              </div>
+              {searched && matches.length > 0 && (
+                <div className="suggest">
+                  {matches.map((m) => (
+                    <a key={m.thread_id} className="suggest-row" href={`/s/knowledge-thread?thread_id=${m.thread_id}`}>
+                      <div>
+                        <div className="st-title">{m.topic}</div>
+                        <div className="st-meta">
+                          {m.post_count}件のやりとり ・ 最終更新 {formatDateJa(m.latest_at)}
+                          {m.resolved && (
+                            <>
+                              {" "}
+                              ・ <span className="badge-solved">✔解決済みの答えあり</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="go">›</div>
+                    </a>
+                  ))}
+                </div>
+              )}
+              {searched && matches.length === 0 ? (
+                <p className="helper-note">まだ近いスレはありません。新しく相談できます。</p>
+              ) : (
+                <p className="helper-note">当てはまるものがあれば、そこへ流れ着く → 情報が1か所に集まる</p>
+              )}
+            </div>
+            {!composeOpen ? (
+              <p className="lead" style={{ marginTop: 12, marginBottom: 0 }}>
+                <button
+                  type="button"
+                  className="civ-link"
+                  style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                  onClick={() => setComposeOpen(true)}
+                >
+                  新しく相談する
+                </button>
+              </p>
+            ) : (
+              // 2. dup confirm on create — mockup section2 (verbatim markup, real data wired)
+              <div className="card" style={{ marginTop: 12 }}>
+                <input
+                  type="text"
+                  className="compose-title-field"
+                  placeholder="相談したいことを入力"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  aria-label="新しい相談のタイトル"
+                />
+                {dupMatch ? (
+                  <div className="dup-banner">
+                    <div className="dt">これに近い相談があります — これですか?</div>
+                    <div className="dm">
+                      「<b>{dupMatch.topic}</b>」
+                    </div>
+                    <div className="btn-row">
+                      <button
+                        type="button"
+                        className="btn primary"
+                        onClick={() => navigate("knowledge-thread", { thread_id: dupMatch.thread_id })}
+                      >
+                        これだ・開く
+                      </button>
+                      <button type="button" className="btn ghost" disabled={creating} onClick={createThread}>
+                        全然違う・新規で作る
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="btn-row">
+                    <button type="button" className="btn primary" disabled={!title.trim() || creating} onClick={createThread}>
+                      この内容で相談を始める
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "hanashitai" && (
+          <section className="block">
+            <p className="lead">同じ趣味の人と交流する。</p>
+            <a className="card" href="/s/knowledge-board">
+              <h2 className="section-title">公式掲示板</h2>
+              <p className="section-caption">説明・愚痴・改善の3板でチャネルごとに集約します。</p>
+            </a>
+          </section>
+        )}
+
+        {tab === "ronbun" && (
+          <section className="block">
+            <p className="lead">論文を読む・書く・議論する。</p>
+            <a className="card" href="/s/knowledge-paper">
+              <h2 className="section-title">論文</h2>
+              <p className="section-caption">論文の照合と引用の正本です。</p>
+            </a>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// T-71 KNW wave1(スレッド=みんなのグループチャット — 承認モックアップ section3
+// の verbatim 採用・R94「既存を捨てる」): 旧 ThreadPostsNode(投稿ごとの賛否
+// Agree/Disagree/Pass ボタン + Polis型合意可視化テーブル + テキストエリア返信
+// フォーム + 引用ref + スレ主限定解決マーク)は削除対象 — オーナーモデルは
+// 「投票スレ」ではなくグループチャットなので、その UI をこの画面から撤去する
+// (提案ベース撤去・関数自体/他画面からの参照は残置=最小diff)。バックエンド
+// (GET /plaza/threads/:thread_id・POST /plaza/posts)は第一級資産としてそのまま
+// 再利用する。ctx-chips(🌡26℃/💧60%/🧬系統/令 — mockup section3 のヘッダー
+// チップ)は実装前に schemas/events/plaza-post.schema.json を確認したが、
+// temperature/humidity/lineage/stage に相当するフィールドは存在せず
+// additionalProperties:false のため今後も投稿へ紛れ込めない。捏造しない
+// (誇張ゼロ)ため、このチップ列と .ctx-note は丸ごと省略する(タスク報告に記載)。
+// 同様に .photo-block(写真添付)に対応するフィールドも plaza-post スキーマに
+// 存在しないため、投機的な分岐コードを足さず丸ごと省略する。
+type KnwChatPost = ThreadPost;
+
+// avatar の背景色 — mockup はユーザーごとに固定色の実例(青/緑/橙/灰の4色、
+// 値は .knw-thread の --blue/--primary/--secondary/--muted トークンと同一)を
+// 示すのみで正本カラーパレットは無い。ui-tokens GATE(raw hex 禁止・design-c2
+// §4.4)に従い、raw hex を書かずトークン var() 経由で再利用する(speciesColorVar
+// と同じ「決定論ハッシュ→固定パレット選択」の流儀・per-user Truth フィールド
+// は新設しない・見た目は毎回同じ actor_id で安定)。
+const KNW_CHAT_AVATAR_VARS = ["var(--blue)", "var(--primary)", "var(--secondary)", "var(--muted)"];
+function knwChatAvatarColor(actorId: string): string {
+  let h = 0;
+  for (let i = 0; i < actorId.length; i++) h = (h * 31 + actorId.charCodeAt(i)) >>> 0;
+  return KNW_CHAT_AVATAR_VARS[h % KNW_CHAT_AVATAR_VARS.length];
+}
+
+// formatDateJa(renderer 唯一の日付整形)は "YYYY-MM-DD" 専用 — チャットの
+// msg-meta は mockup 通り時刻(HH:MM)なので別関数にする(既存を再利用できない
+// 唯一の理由=フォーマットの粒度そのものが違う)。
+function knwChatTime(value: unknown): string {
+  const d = new Date(String(value ?? ""));
+  if (Number.isNaN(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function KnwChatMessage({ post, me }: { post: KnwChatPost; me: boolean }) {
+  const time = knwChatTime(post.created_at);
+  // own posts: mockup section3's .msg.me demo shows avatar "あ" + name "あなた"
+  // literally, not the viewer's own actor_id/ActorLabel lookup — showing the
+  // raw actor_id hash for yourself is a needless ID leak (owner report).
+  return (
+    <div className={cn("msg", me && "me")} data-post-id={post.post_id}>
+      <div className="avatar" style={{ background: knwChatAvatarColor(post.actor_id) }} aria-hidden="true">
+        {me ? "あ" : monogram(post.actor_id)}
+      </div>
+      <div className="msg-body">
+        <div className="msg-meta">
+          {me ? "あなた" : <ActorLabel actorId={post.actor_id} />}
+          {time && ` ・ ${time}`}
+        </div>
+        <div className="bubble">{post.body}</div>
+        {/* .photo-block omitted — no photo/attachment field exists on
+            ihl.plaza.post.v1 (see comment above); not fabricated. */}
+      </div>
+    </div>
+  );
+}
+
+function KnowledgeThreadChatNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const execute = useContext(ExecuteCtx);
+  const scope = useContext(ScopeCtx);
+  const threadId = String(scope.params.thread_id ?? "");
+  const basePath = String(p.source_path ?? "/api/v1/plaza/threads");
+  const [view, setView] = useState<ThreadView | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [viewerId, setViewerId] = useState("");
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const reload = useCallback(async () => {
+    if (!threadId) {
+      setLoaded(true);
+      return;
+    }
+    try {
+      const v = (await execute({ kind: "api", method: "GET", path: `${basePath}/${threadId}` })) as ThreadView;
+      setView(v);
+    } catch {
+      setView(null);
+    } finally {
+      setLoaded(true);
+    }
+  }, [execute, basePath, threadId]);
+
+  useEffect(() => {
+    let alive = true;
+    void reload();
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/me/profile" }))
+      .then((r) => {
+        if (alive) setViewerId(String((r as { actor_id?: string } | undefined)?.actor_id ?? ""));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId]);
+
+  // リアルタイム = クライアントポーリング(5秒ごと)。websocket/常駐サーバー
+  // ではない(不変条項①10年ランニングコスト最小 — マウント中のみ・アンマウ
+  // ントで確実に clearInterval)。
+  useEffect(() => {
+    if (!threadId) return;
+    const timer = setInterval(() => {
+      void reload();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [threadId, reload]);
+
+  const posts = view?.posts ?? [];
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [posts.length]);
+
+  const send = useCallback(async () => {
+    const body = draft.trim();
+    if (!body || !view || sending) return;
+    setSending(true);
+    try {
+      await execute(
+        { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
+        {
+          channel: view.channel,
+          topic: view.topic,
+          board_kind: view.posts[0]?.board_kind,
+          thread_id: threadId,
+          body,
+        },
+      );
+      setDraft("");
+      await reload();
+    } finally {
+      setSending(false);
+    }
+  }, [draft, view, sending, execute, threadId, reload]);
+
+  const title = !loaded ? "読み込み中…" : (view?.topic ?? "");
+
+  return (
+    <div className="knw-thread">
+      <div className="card thread-card">
+        <div className="thread-header">
+          <h3 className="thread-title">{title}</h3>
+          {/* .ctx-chips/.ctx-note omitted — no real breeding-context data
+              (temp/humidity/lineage/stage) attaches to a plaza post today;
+              see comment above. Not fabricated (誇張ゼロ). */}
+        </div>
+        <div className="chat-scroll" ref={scrollRef}>
+          {!loaded ? (
+            <p className="civ-text" data-muted="true">
+              読み込み中…
+            </p>
+          ) : posts.length === 0 ? (
+            <p className="civ-empty">まだ投稿がありません。最初のメッセージを送ってみましょう。</p>
+          ) : (
+            posts.map((post) => <KnwChatMessage key={post.post_id} post={post} me={!!viewerId && post.actor_id === viewerId} />)
+          )}
+        </div>
+        <div className="chat-input-bar">
+          <input
+            className="chat-input"
+            type="text"
+            placeholder="メッセージを送る…"
+            aria-label="メッセージを送る"
+            value={draft}
+            disabled={sending}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="send-btn"
+            aria-label="送信"
+            disabled={sending || !draft.trim()}
+            onClick={() => void send()}
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export interface RendererProps {

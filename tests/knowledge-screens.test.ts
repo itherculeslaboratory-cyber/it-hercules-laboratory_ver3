@@ -1,8 +1,10 @@
 // V3-BBS-01 — 知の広場 screendef 群 (design-c5.md §K6 §2.4).
-//   (1) knowledge-hub は3柱カードのみ: card ノード3枚・それぞれ navigate action で
-//       {knowledge-board, knowledge-paper, knowledge-github} へ。button/list/form/field
-//       等の重複ナビ面（＝タブ/カード重複）を持たない（BBS-01 タブとカードの重複禁止）。
-//   (2) home→hub→各柱主要操作が navigation.json のエッジ上 ≤3 クリック。
+//   (1) knowledge-hub Stage1(KNW wave1・承認済み再設計 R94/R107): 単一の list ノード
+//       (variant=knowledge-hub・source_path=/api/v1/plaza/search)へ一本化。旧「3柱カード
+//       (board/paper/github)」構成はユーザー30点評価を受け撤去済み。3モード入口(困った/
+//       話したい/論文)+重複防止検索は KnowledgeHubNode コンポーネント側で描画し、screen-def
+//       は単一ノードに保つ(renderer-knw-search.test.tsx 等が挙動を検証)。
+//   (2) home→hub→各柱主要操作が navigation.json のエッジ上 ≤3 クリック(ナビ到達性は不変)。
 //   (3) 4 screendef が screendef.schema.json (draft 2020-12) に妥当。
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
@@ -39,21 +41,19 @@ function clicks(start: string, target: string): number {
 }
 
 describe("V3-BBS-01 知の広場 screendefs", () => {
-  it("knowledge-hub is exactly 3 pillar cards, no duplicate nav surface (tab/card 重複禁止)", () => {
+  it("knowledge-hub Stage1 = 単一の list ノード(variant=knowledge-hub・3モード入口)。旧3柱カードは KNW wave1 で撤去(承認済み再設計)", () => {
     const nodes = flattenNodes(hub);
+    // 旧: 3柱カード → 新(KNW wave1 stage1・R94/R107承認): カード無し・KnowledgeHubNode に一本化。
     const cards = nodes.filter((n: any) => n.type === "card");
-    expect(cards.length).toBe(3);
-    // No tab-like / duplicate navigation affordance beside the 3 cards.
-    for (const t of ["button", "list", "form", "field", "tab", "qr-code"])
+    expect(cards.length).toBe(0);
+    // content ノードは knowledge-hub variant の list ちょうど1個(3モード入口+検索はコンポーネント側)。
+    const lists = nodes.filter((n: any) => n.type === "list");
+    expect(lists.length).toBe(1);
+    expect(lists[0].props?.variant).toBe("knowledge-hub");
+    expect(lists[0].props?.source_path).toBe("/api/v1/plaza/search");
+    // 旧「タブとカードの重複」禁止の精神は維持: screen-def 直下に重複ナビ面(button/form/field/tab/qr-code)を置かない。
+    for (const t of ["button", "form", "field", "tab", "qr-code"])
       expect(nodes.some((n: any) => n.type === t), `hub must not contain ${t}`).toBe(false);
-    // Every pillar card navigates, and the 3 targets are exactly the 3 pillars.
-    const targets = cards.map((c: any) => {
-      expect(c.action?.kind, `${c.id} action`).toBe("navigate");
-      return c.action.to;
-    });
-    expect([...targets].sort()).toEqual([...PILLARS].sort());
-    // hub declares a transition per pillar card.
-    expect((hub.transitions ?? []).map((t: any) => t.to_screen_id).sort()).toEqual([...PILLARS].sort());
   });
 
   it("home → hub → each pillar's main operation is ≤3 clicks", () => {

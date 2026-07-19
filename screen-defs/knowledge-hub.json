@@ -3,7 +3,7 @@
   "route": "/knowledge",
   "title": "知の広場",
   "layout": "standard",
-  "notes": "BBS-01/36 知の広場ハブ（design-c5.md §K6 §2.4・HG-KN-08=B 仮置き）。3柱カードのみ・ナビ1層・タブノード不在（タブとカードの重複禁止=BBS-01）。各カード action=navigate。裁定確定後は JSON 差替でコード不変。",
+  "notes": "BBS-01/36 知の広場ハブ Stage1(T-70 KNW wave1・オーナー裁定=承認済みモックアップの実物採用/verbatim adoption)。ユーザー30点評価(汎用レンダラで再解釈し見た目を損なった)を受け、旧 tabs+list variant=thread-search 構成を撤去し、承認モックアップ(D:\\claude\\00-hq\\review-queue\\evidence\\knw-redesign-forecast\\mockup.html section0『ヘッダー(3モードタブ)』+ section1『まず探す』)の markup/CSS をそのまま採用する KnowledgeHubNode(list variant=knowledge-hub・新ノード型なし=既存 in-scope トリック)に一本化。困った/話したい/論文の3タブはローカル状態切替(モックアップ通りピル型・遷移はタブ内カードのクリック)。困った タブは既存 GET /api/v1/plaza/search(rankThreadSearch・embedding/LLM不使用の決定論)を200msデバウンスで叩き、mockup 準拠の .suggest-row(topic+件数+最終更新+resolved時のみ✔解決済みバッジ+›シェブロン)を最大3件描画する。新規投稿時の90%一致確認バナー・GitHub掲示板の3本目の柱・スレのグループチャット化・自動要約・上位wiki(mockup section2-5)はこのStage1では対象外(次波)。",
   "nodes": [
     {
       "id": "shell",
@@ -13,43 +13,17 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text_key": "knowledge-hub.title.text", "text": "知の広場", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text_key": "knowledge-hub.lead.text", "text": "3つの柱から選びます。", "muted": true } },
             {
-              "id": "pillar-board",
-              "type": "card",
-              "action": { "kind": "navigate", "to": "knowledge-board" },
-              "children": [
-                { "id": "pillar-board-title", "type": "heading", "props": { "text_key": "knowledge-hub.board.text", "text": "公式掲示板", "level": 2 } },
-                { "id": "pillar-board-desc", "type": "text", "props": { "text_key": "knowledge-hub.board-desc.text", "text": "説明・愚痴・改善の3板でチャネルごとに集約します。", "muted": true } }
-              ]
-            },
-            {
-              "id": "pillar-paper",
-              "type": "card",
-              "action": { "kind": "navigate", "to": "knowledge-paper" },
-              "children": [
-                { "id": "pillar-paper-title", "type": "heading", "props": { "text_key": "knowledge-hub.paper.text", "text": "論文", "level": 2 } },
-                { "id": "pillar-paper-desc", "type": "text", "props": { "text_key": "knowledge-hub.paper-desc.text", "text": "論文の照合と引用の正本です。", "muted": true } }
-              ]
-            },
-            {
-              "id": "pillar-github",
-              "type": "card",
-              "action": { "kind": "navigate", "to": "knowledge-github" },
-              "children": [
-                { "id": "pillar-github-title", "type": "heading", "props": { "text_key": "knowledge-hub.github.text", "text": "GitHub 掲示板", "level": 2 } },
-                { "id": "pillar-github-desc", "type": "text", "props": { "text_key": "knowledge-hub.github-desc.text", "text": "改善履歴とフォークを追います。", "muted": true } }
-              ]
+              "id": "hub",
+              "type": "list",
+              "props": {
+                "variant": "knowledge-hub",
+                "source_path": "/api/v1/plaza/search"
+              }
             }
           ]
         }
       ]
     }
-  ],
-  "transitions": [
-    { "from": "pillar-board", "to_screen_id": "knowledge-board", "label": "公式掲示板へ" },
-    { "from": "pillar-paper", "to_screen_id": "knowledge-paper", "label": "論文へ" },
-    { "from": "pillar-github", "to_screen_id": "knowledge-github", "label": "GitHub 掲示板へ" }
   ]
 }

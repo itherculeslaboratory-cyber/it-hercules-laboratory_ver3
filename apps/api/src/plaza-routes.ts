@@ -266,6 +266,140 @@ plazaRoutes.get("/plaza/channels/:channel/threads", async (c) => {
   return c.json(await projectChannelThreads(store(c), c.req.param("channel")));
 });
 
+// ── 検索(T-69 KNW wave1 Stage1「これ?」重複防止検索)────────────────────────
+// projectChannelThreads と同じ post 全走査(常駐 index 無し・都度再計算=不変
+// 条項①)を channel 未指定でも使えるよう素通しした薄いスレ集約(board_kind は
+// 検索に不要なので持たない)。
+export interface PlazaSearchThread {
+  thread_id: string;
+  topic: string;
+  post_count: number;
+  latest_at: string;
+}
+
+async function collectSearchThreads(s: TruthStore, channel?: string): Promise<PlazaSearchThread[]> {
+  const prefix = channel ? `truth/${POST_TYPE}/${channel}/` : `truth/${POST_TYPE}/`;
+  const posts = (await s.listEvents(prefix)).map(dataOf);
+  const threads = new Map<string, PlazaSearchThread>();
+  for (const p of posts) {
+    const tid = str(p.thread_id);
+    const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), post_count: 0, latest_at: "" };
+    t.post_count += 1;
+    if (str(p.created_at) > t.latest_at) t.latest_at = str(p.created_at);
+    if (str(p.post_id) === tid) t.topic = str(p.topic); // root post の topic を代表値に採る。
+    threads.set(tid, t);
+  }
+  return [...threads.values()];
+}
+
+// normalizeSearchText — 小文字化+空白除去のみ(不変条項①: embedding/FAISS/LLM 不使用の
+// 決定論正規化)。
+function normalizeSearchText(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+// 文字2-gram(bigram)化。日本語は単語間スペースが無いため単語トークン化ができず、
+// 素の部分文字列一致(rankThreadSearch の従来ロジック)は言い換え・語尾差分に弱い
+// (T-72 KNW wave1 実測: 「コバエがわいた時どうする」は「コバエが大量発生した」の
+// 部分文字列でないため matches:[] になっていた)。1文字しか無い場合は bigram が
+// 作れないため、その1文字自体を要素とする配列にフォールバック(文字集合オーバー
+// ラップ相当)。
+function bigrams(s: string): string[] {
+  if (s.length < 2) return s.length ? [s] : [];
+  const out: string[] = [];
+  for (let i = 0; i < s.length - 1; i++) out.push(s.slice(i, i + 2));
+  return out;
+}
+
+// diceCoefficient — 2·|共通bigram(多重集合)| / (|bigram(a)|+|bigram(b)|)。
+// embedding/LLM不使用の決定論ファジー類似度(不変条項①)。同一 bigram が両方に
+// 複数回出ても片方ずつ消費して数える(多重集合交差・水増し防止)。
+function diceCoefficient(a: string, b: string): number {
+  const A = bigrams(a);
+  const B = bigrams(b);
+  if (!A.length || !B.length) return 0;
+  const counts = new Map<string, number>();
+  for (const g of B) counts.set(g, (counts.get(g) ?? 0) + 1);
+  let intersect = 0;
+  for (const g of A) {
+    const c = counts.get(g) ?? 0;
+    if (c > 0) {
+      intersect++;
+      counts.set(g, c - 1);
+    }
+  }
+  return (2 * intersect) / (A.length + B.length);
+}
+
+// ファジー採用の床値。「近い内容があれば これですか?」(ユーザー要件)を満たす
+// には、コーディネーター指定の 0.3 では実測不足だった: 「コバエがわいた時
+// どうする」対「コバエが大量発生した — 対策まとめ」の実測 dice は 0.2308
+// (node で実測・下記コメント参照)、section1 の部分クエリ「コバエわいた」は
+// 0.2。どちらも 0.3 未満で削られてしまうため、実測値に安全マージンを残して
+// 0.15 へ下げた(無関係ペア「梱包のコツ」は実測 dice=0 なので 0 より大きい
+// 床であれば何であれ弾ける=床を下げても無関係ペアが漏れるリスクは無い)。
+// ponytail: 短い文字列同士は bigram 1個の一致でも dice が跳ね上がりやすい
+// (例: 3文字語同士が bigram を1個共有すると dice=0.5)。これは bigram Dice
+// 係数そのものの既知の限界で、長さ考慮の重み付けを足せば緩和できるが本タスク
+// では過剰実装(YAGNI)。ノイズ報告が来たら見直す。
+const KNW_FUZZY_FLOOR = 0.15;
+
+// rankThreadSearch — 「これ?」候補ランキング(純関数・TruthStore 非依存でテスト可能)。
+// (1) 正規化後の完全部分文字列一致(最優先=1000点)、(2) 先頭一致(prefix・直接マッチを
+// 中間一致より上に出す=+100点)、(3) クエリを空白区切りトークンへ分割した各トークンの
+// 部分一致(10点/トークン)を加点、(4) 文字bigramのDice係数によるファジー類似度加点
+// (最大+600・部分文字列一致より必ず下位)。(1)〜(3)のいずれかにヒットするか、Dice
+// 係数が KNW_FUZZY_FLOOR 以上のスレのみ候補に残す(単発の偶然一致ノイズを排除)。
+// 同点は latest_at 降順→thread_id 昇順で安定ソート(同一入力→同一出力・決定論)。
+// 上位5件のみ返す。
+export function rankThreadSearch(
+  threads: PlazaSearchThread[],
+  query: string,
+): (PlazaSearchThread & { score: number })[] {
+  const q = query.trim();
+  if (!q) return [];
+  const normQ = normalizeSearchText(q);
+  const tokens = q.split(/\s+/).filter(Boolean).map(normalizeSearchText);
+  const scored = threads
+    .map((t) => {
+      const normTopic = normalizeSearchText(t.topic);
+      let hit = 0;
+      if (normQ && normTopic.includes(normQ)) hit += 1000;
+      if (normQ && normTopic.startsWith(normQ)) hit += 100;
+      for (const tok of tokens) {
+        if (tok && normTopic.includes(tok)) hit += 10;
+      }
+      const dice = diceCoefficient(normQ, normTopic);
+      const score = hit + Math.round(dice * 600);
+      return { ...t, score, hit, dice };
+    })
+    .filter((t) => t.hit > 0 || t.dice >= KNW_FUZZY_FLOOR)
+    .map(({ hit: _hit, dice: _dice, ...rest }) => rest);
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.latest_at !== b.latest_at) return a.latest_at < b.latest_at ? 1 : -1;
+    return a.thread_id < b.thread_id ? -1 : 1;
+  });
+  return scored.slice(0, 5);
+}
+
+// GET /plaza/search?q=<text>&channel=<optional> — 決定論スレ検索投影。空 q は空配列
+// (エラーにしない)。読み取り専用・Truth 追記なし。T-70 KNW wave1(知の広場ハブ実物採用):
+// 各マッチに resolved(✔解決済みバッジ表示可否)を同梱。既存 projectResolution(BBS-05・
+// OQ-PLZ-03)をマッチ上位5件だけに適用する薄い追加投影(常駐 index 無し・都度再計算)。
+plazaRoutes.get("/plaza/search", async (c) => {
+  const q = c.req.query("q") ?? "";
+  const channel = c.req.query("channel") || undefined;
+  if (!q.trim()) return c.json({ query: q, matches: [] });
+  const s = store(c);
+  const threads = await collectSearchThreads(s, channel);
+  const ranked = rankThreadSearch(threads, q);
+  const matches = await Promise.all(
+    ranked.map(async (t) => ({ ...t, resolved: (await projectResolution(s, t.thread_id)).resolved })),
+  );
+  return c.json({ query: q, matches });
+});
+
 // ── 改善要求 優先度キュー(BBS-14)────────────────────────────────────────
 // projectImprovementQueue — board_kind=improvement のスレ(root post=thread_id)を
 // プラチナ投票合計(target_id=thread_id・既存 KRM-25 基盤を再利用・GOV-07/MKT-35 と同一方式)
@@ -472,7 +606,16 @@ plazaRoutes.get("/plaza/threads/:thread_id/consensus", async (c) => {
   const posts = (await store(c).listEvents(`truth/${POST_TYPE}/`)).map(dataOf).filter((d) => d.thread_id === threadId);
   const statementIds = posts.map((p) => str(p.post_id));
   const statements = await projectConsensus(store(c), statementIds);
-  return c.json({ thread_id: threadId, statements });
+  // c9 wave1 KNW Slice2(スレッドの生ID撲滅): the consensus table's UI column
+  // showed the raw statement_id (= post_id ULID) — attach a readable excerpt
+  // of the statement's own post body so the UI never has to render the id.
+  // Read-side projection only (statement_id itself is kept, not replaced).
+  const bodyById = new Map(posts.map((p) => [str(p.post_id), str(p.body)]));
+  const withExcerpt = statements.map((s) => {
+    const body = bodyById.get(s.statement_id) ?? "";
+    return { ...s, excerpt: body.length > 30 ? `${body.slice(0, 30)}…` : body };
+  });
+  return c.json({ thread_id: threadId, statements: withExcerpt });
 });
 
 // ── Fork / Rank(BBS-29/GOV-19/23)──────────────────────────────────────

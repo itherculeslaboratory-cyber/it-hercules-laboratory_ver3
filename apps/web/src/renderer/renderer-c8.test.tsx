@@ -177,7 +177,10 @@ describe("ThreadPostsNode — c8 knowledge-thread dedicated node", () => {
     );
     expect(await screen.findByText("根投稿の本文")).toBeInTheDocument();
     expect(screen.getByText("返信の本文")).toBeInTheDocument();
-    expect(screen.getByText(">>p1")).toBeInTheDocument();
+    // c9 wave1 KNW Slice2: reply_to renders the parent post's own body excerpt,
+    // never the raw post_id ULID.
+    expect(screen.getByText("↩ 「根投稿の本文」への返信")).toBeInTheDocument();
+    expect(screen.queryByText(">>p1")).not.toBeInTheDocument();
     expect(screen.getByText("R")).toBeInTheDocument(); // monogram of "root-user"
     expect(screen.getByText("Z")).toBeInTheDocument(); // monogram of "zed-user"
     expect(screen.getByText(/observation: obs-1（無効）/)).toBeInTheDocument();

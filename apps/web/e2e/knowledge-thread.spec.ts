@@ -1,14 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// c8(ui-asset-catalog.md 【最優先2】)再構築版・UI磨き第2弾(受領10)で追改修 —
-// 知の広場 per-thread ビューの実ブラウザ通貫。dev-login → スレを1本作成
-// (POST /plaza/posts で thread_id/topic を確定)→ /s/knowledge-thread?thread_id=...
-// を実 worker + R2-local で描画 → (1) スレ頭カード+専用ノード thread-posts が
-// 実 API 値を綴じて可視 (2) 返信 compose(textarea variant)で新規投稿→自動
-// 再読込 (3) 磨き第2弾#6: 投稿ごとのインライン賛否ボタン(Agree/Disagree/Pass・
-// 投稿ID手入力は撤去)を投じ Polis 型 consensus 投影(table)が反映 (4) 磨き
-// 第2弾#3: 「この投稿を相談室へ」は既定非表示・kebab(⋮)を開いて初めて見える
-// (5) スレ主(dev actor 自身)だけに見える解決マーク(round-16 OQ-PLZ-03)をトグル。
+// T-71 KNW wave1(スレッド=みんなのグループチャット — 承認モックアップ section3
+// の verbatim 採用・オーナー裁定 R94「既存を捨てる」)。旧構成(投稿ごと賛否
+// Agree/Disagree/Pass ボタン + Polis型合意可視化テーブル + textarea 返信
+// フォーム + スレ主限定解決マーク)は撤去済み — この e2e もそれに合わせて
+// 書き直す。実ブラウザ通貫: dev-login → スレを2投稿(root+返信)で seed
+// (POST /plaza/posts・実 API)→ /s/knowledge-thread?thread_id=... を実 worker +
+// R2-local で描画 → (1) 両投稿が .msg 吹き出しとして可視(本文テキスト+
+// 自分/他人の左右寄せ)(2) チャット入力欄からメッセージ送信 → ポーリング/
+// 再取得後に新規メッセージが可視。
 
 const WEB = "http://127.0.0.1:3000";
 
@@ -18,72 +18,70 @@ async function devLogin(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "観測ホーム" })).toBeVisible();
 }
 
-test("knowledge thread: view (avatar/body/cite) -> reply -> stance vote -> thread-starter resolve mark", async ({ page }) => {
+test("knowledge thread chat: seeded posts render as bubbles (own vs others) -> send a new message -> appears after refetch", async ({ page }) => {
   await devLogin(page);
 
   // 1. seed a thread via the real API (same-origin cookie auth) — the dev
-  //    actor is the root post's author, i.e. the thread starter.
-  const threadId = `e2e-thr-${Date.now().toString(36)}`;
-  const post = await page.evaluate(async (tid) => {
-    const r = await fetch("/api/v1/plaza/posts", {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ thread_id: tid, channel: "knowledge-board", topic: "E2E consensus check", board_kind: "improvement", body: "first post" }),
-    });
-    return { status: r.status, json: await r.json() };
-  }, threadId);
-  expect(post.status, "seed post must be 201").toBe(201);
-  const postId = (post.json as { post_id: string }).post_id;
-  expect(typeof postId).toBe("string");
+  //    actor is the root post's author (own message → .msg.me).
+  const threadId = `e2e-thr-chat-${Date.now().toString(36)}`;
+  const rootTopic = "E2Eチャット確認スレ";
+  const root = await page.evaluate(
+    async ({ tid, topic }) => {
+      const r = await fetch("/api/v1/plaza/posts", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ thread_id: tid, channel: "knowledge-board", topic, board_kind: "guide", body: "これは自分の最初の投稿です" }),
+      });
+      return { status: r.status, json: await r.json() };
+    },
+    { tid: threadId, topic: rootTopic },
+  );
+  expect(root.status, "seed root post must be 201").toBe(201);
 
-  // 2. open the per-thread screen with the thread_id as a query param.
+  const reply = await page.evaluate(
+    async ({ tid, topic }) => {
+      const r = await fetch("/api/v1/plaza/posts", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ thread_id: tid, channel: "knowledge-board", topic, board_kind: "guide", body: "これは(別視点の)返信投稿です" }),
+      });
+      return { status: r.status, json: await r.json() };
+    },
+    { tid: threadId, topic: rootTopic },
+  );
+  expect(reply.status, "seed reply post must be 201").toBe(201);
+
+  // 2. open the per-thread chat screen with the thread_id as a query param.
   await page.goto(`${WEB}/s/knowledge-thread?thread_id=${threadId}`);
-  await expect(page.getByRole("heading", { name: "スレッド", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: rootTopic })).toBeVisible();
   await page.waitForLoadState("networkidle");
 
-  // head card (topic) + thread-posts (real body text, not a mock).
-  await expect(page.getByText("話題: E2E consensus check（チャンネル knowledge-board）")).toBeVisible();
-  await expect(page.getByText("first post")).toBeVisible();
-  // starter-only resolve mark (round-16 OQ-PLZ-03) — dev actor authored the
-  // root post, so it must be visible and start unresolved.
-  await expect(page.getByText("未解決")).toBeVisible();
-  await expect(page.getByRole("button", { name: "✔ 解決済みにする" })).toBeVisible();
+  // both seeded posts render as real body text inside .msg bubbles.
+  const rootMsg = page.locator(".msg", { hasText: "これは自分の最初の投稿です" });
+  await expect(rootMsg).toBeVisible();
+  // the dev actor authored BOTH seed posts here (same session), so both are
+  // "own" messages — the honest own/others split is exercised by the
+  // dedicated renderer unit test (renderer-knw-thread-chat.test.tsx) with two
+  // distinct actor_ids, which a single dev-login session cannot produce in a
+  // real end-to-end run. Here we assert the structural class is present.
+  await expect(rootMsg).toHaveClass(/\bme\b/);
 
-  // 3. reply compose (textarea variant, c8) — self-navigates back here so the
-  //    new post is visible without a manual reload.
-  await page.getByLabel("返信本文 *").fill("これはE2Eからの返信です");
-  await page.getByRole("button", { name: "返信する" }).click();
-  await expect(page.getByRole("heading", { name: "スレッド", level: 1 })).toBeVisible();
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("これはE2Eからの返信です")).toBeVisible();
+  // R94: the old per-post Agree/Disagree/Pass + Polis consensus table + resolve
+  // mark are GONE from this screen.
+  await expect(page.getByRole("button", { name: "賛成" })).toHaveCount(0);
+  await expect(page.getByText("合意の可視化")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "✔ 解決済みにする" })).toHaveCount(0);
 
-  // 4. 磨き第2弾#6: cast a stance via the seed post's OWN inline vote button
-  //    (no more manual "対象の投稿 ID" field — the post is scoped by
-  //    data-post-id, since the reply post from step 3 has an identical-looking
-  //    "賛成" button of its own). The consensus projection recounts and the
-  //    Polis table shows the tally.
-  const seedArticle = page.locator(`article[data-post-id="${postId}"]`);
-  await seedArticle.getByRole("button", { name: "賛成" }).click();
-  await page.waitForLoadState("networkidle");
-  await page.reload(); // per-post vote has no self-navigate transition (matches the pre-c8 stance-form behaviour)
-  await page.waitForLoadState("networkidle");
-  const row = page.locator("tr", { hasText: postId });
-  await expect(row).toBeVisible();
-  await expect(row.locator("td").nth(1)).toHaveText("1"); // agree count
+  // 3. send a new message via the chat input bar.
+  const input = page.getByPlaceholder("メッセージを送る…");
+  await input.fill("これはE2Eからのチャット送信です");
+  await page.getByRole("button", { name: "送信" }).click();
 
-  // 5. 磨き第2弾#3: 「この投稿を相談室へ」 is folded into a per-post kebab (⋮)
-  //    menu — hidden until opened, not a permanently-visible button.
-  const seedAfterReload = page.locator(`article[data-post-id="${postId}"]`);
-  await expect(seedAfterReload.getByRole("button", { name: "この投稿を相談室へ" })).not.toBeVisible();
-  await seedAfterReload.getByRole("button", { name: "この投稿の操作" }).click();
-  await expect(seedAfterReload.getByRole("button", { name: "この投稿を相談室へ" })).toBeVisible();
-
-  // 6. thread-starter resolve mark toggles without a full page navigation
-  //    (local refetch) and flips the visible copy + button label.
-  await page.getByRole("button", { name: "✔ 解決済みにする" }).click();
-  // exact:true — "✔ 解決済み" is a literal substring of the pre-click button's
-  // OWN label ("✔ 解決済みにする"), so a loose match could pass on stale state.
-  await expect(page.getByText("✔ 解決済み", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "解決を取り消す" })).toBeVisible();
+  // 4. the new message appears after the send's own refetch (no manual reload
+  //    needed — real-time here is the client poll, but the send path already
+  //    reloads once on success).
+  await expect(page.locator(".msg", { hasText: "これはE2Eからのチャット送信です" })).toBeVisible();
+  await expect(input).toHaveValue("");
 });

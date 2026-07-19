@@ -3,7 +3,7 @@
   "route": "/knowledge/thread",
   "title": "スレッド",
   "layout": "standard",
-  "notes": "c8(ui-asset-catalog.md 【最優先2】)再構築版・UI磨き第2弾(受領10)で追改修。BBS-05/10/36。GET /plaza/threads/{thread_id}(posts materialized view)+ GET /plaza/threads/{thread_id}/consensus(Polis型 Agree/Disagree/Pass 決定論投影)+ POST /plaza/stances + POST /plaza/posts を実結線。thread_id は ?thread_id= (params.thread_id)。専用ノード thread-posts が avatar(actor_id モノグラム)/actor 表示プリミティブ(display_name があれば表示・磨き第2弾#5・ihl.actor.display_name.v1)/body/引用badge(tombstone=無効引用を tone danger で明示)/相談室(dispute)導線+スレ主のみの解決マーク(round-16 OQ-PLZ-03。POST /plaza/posts への tags:['resolved'] 規約・新 Truth 型なし)を持つ。磨き第2弾#6(受領10「投稿ごとの投票ボタンに」): 賛否投票は投稿ごとのインライン Agree/Disagree/Pass ボタン(thread-posts 内・statement_id=post_id を自動送信)に統合し、旧スタンドアロン stance-form(「対象の投稿 ID」手入力)は撤去。磨き第2弾#3(受領10「『…』のなかに畳んで」): 「この投稿を相談室へ」は per-post kebab(⋮)メニューへ格納(常時露出→必要な時だけ)。返信は textarea variant。round-16 OQ-PLZ-01/02/05(昇格閾値バッジ✔/⚠の重み付き投票・カード発行委譲)は certified-breeder/primary-observer 等の actor ロール Truth データが schemas 上どこにも存在せず、ui-asset-catalog.md【最優先2】の組み立て表にも記載が無いため対象外(捏造しない・c8タスク報告に明記)。",
+  "notes": "T-71 KNW wave1(スレッド=みんなのグループチャット化・オーナー裁定 R94「既存を捨てる」= 承認済みモックアップ D:\\claude\\00-hq\\review-queue\\evidence\\knw-redesign-forecast\\mockup.html section3 の markup/CSS を verbatim 採用)。旧構成(head カード+専用ノード thread-posts の投稿ごと賛否 Agree/Disagree/Pass ボタン+Polis型合意可視化テーブル+textarea 返信フォーム+per-post kebab の相談室導線+スレ主限定解決マーク)は撤去(提案ベース撤去・オーナーモデルは投票スレではなくグループチャット)。knowledge-hub.json と同じ流儀で単一ノード list(props.variant=\"knowledge-thread-chat\"・新ノード型なし=既存 in-scope トリック)に一本化し、KnowledgeThreadChatNode(renderer.tsx)が GET /plaza/threads/{thread_id}(既存 posts materialized view・第一級資産としてそのまま再利用)を5秒ポーリングで実結線し .msg 吹き出しへ描画、POST /plaza/posts で新規メッセージを送信する(クライアントポーリング=不変条項①10年ランニングコスト最小に沿った低コストのリアルタイム。websocket/常駐サーバーは使わない)。mockup の ctx-chips(🌡26℃等)は実装前に schemas/events/plaza-post.schema.json を確認したが temperature/humidity/lineage/stage に相当するフィールドが存在せず(additionalProperties:false)、捏造しないため丸ごと省略(タスク報告に明記)。旧 GET /plaza/threads/{thread_id}/consensus + POST /plaza/stances(Polis型賛否)・round-16 OQ-PLZ-03(解決マーク)は本ウェーブでは未使用(バックエンド自体は削除していない・4層自動要約+解決カードは mockup section4=次波)。",
   "nodes": [
     {
       "id": "shell",
@@ -13,68 +13,17 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text_key": "knowledge-thread.title.text", "text": "スレッド", "level": 1 } },
             {
-              "id": "head",
-              "type": "card",
+              "id": "chat",
+              "type": "list",
               "props": {
-                "source_path": "/api/v1/plaza/threads/{{params.thread_id}}",
-                "bind_text": "話題: {{topic}}（チャンネル {{channel}}）"
+                "variant": "knowledge-thread-chat",
+                "source_path": "/api/v1/plaza/threads"
               }
-            },
-            { "id": "posts-title", "type": "heading", "props": { "text_key": "knowledge-thread.posts-title.text", "text": "投稿", "level": 2 } },
-            {
-              "id": "posts-rich",
-              "type": "thread-posts",
-              "props": { "empty_text": "まだ投稿がありません。" }
-            },
-            { "id": "consensus-title", "type": "heading", "props": { "text_key": "knowledge-thread.consensus-title.text", "text": "合意の可視化(Polis型)", "level": 2 } },
-            {
-              "id": "consensus-table",
-              "type": "table",
-              "props": {
-                "source_path": "/api/v1/plaza/threads/{{params.thread_id}}/consensus",
-                "bind_items": "data.consensus-table.statements",
-                "columns": [
-                  { "key": "statement_id", "label": "論点(投稿ID)" },
-                  { "key": "agree", "label": "賛成" },
-                  { "key": "disagree", "label": "反対" },
-                  { "key": "pass", "label": "保留" },
-                  { "key": "consensus", "label": "合意", "cell": "badge", "tone": "success", "true_label": "✔ 合意", "false_label": "—" },
-                  { "key": "divisive", "label": "対立", "cell": "badge", "tone": "caution", "true_label": "⚠ 対立", "false_label": "—" }
-                ],
-                "empty_text": "まだ賛否の投票がありません。"
-              }
-            },
-            { "id": "reply-title", "type": "heading", "props": { "text": "返信する", "level": 2 } },
-            {
-              "id": "reply-form",
-              "type": "form",
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/plaza/posts" },
-              "props": {
-                "static": {
-                  "channel": "{{data.head.channel}}",
-                  "topic": "{{data.head.topic}}",
-                  "board_kind": "{{data.head.posts.0.board_kind}}",
-                  "thread_id": "{{params.thread_id}}"
-                }
-              },
-              "children": [
-                { "id": "reply-body", "type": "field", "props": { "name": "body", "label": "返信本文", "variant": "textarea", "required": true } },
-                { "id": "reply-submit", "type": "button", "props": { "type": "submit", "label": "返信する", "variant": "primary" } }
-              ]
-            },
-            {
-              "id": "back-board",
-              "type": "link",
-              "props": { "label_key": "knowledge-thread.back-board.label", "label": "掲示板へ戻る", "href": "/s/knowledge-board" }
             }
           ]
         }
       ]
     }
-  ],
-  "transitions": [
-    { "from": "reply-form", "to_screen_id": "knowledge-thread", "label": "返信後に再読込" }
   ]
 }
