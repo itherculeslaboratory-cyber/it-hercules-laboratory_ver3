@@ -20310,6 +20310,12 @@
     "evidence": "ボツ文章/愚痴日記を食わせ整形保存 記事/論文のタネ SoulProfile",
     "trust": "中",
     "date": "2026-03-23"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "【SB-1○・R149(2026-07-19)】ユーザー『会話履歴・secondbrain=サブ脳はこのシステムに入る?なんか変ですよね?』(R135)により棄却。飼育観測プラットフォームIHLの正式要件から外す(必要なら将来別プロダクトへ切り出し)。関連実装(GET /research/chat-index・POST /research/ai-sessions・記憶ボタン/SoulProfile/Cursorセッション閲覧)は着手しない。ME画面から除去確定。",
+    "date": "2026-07-19",
+    "trust": "high"
    }
   ],
   "superseded": null,
@@ -20321,10 +20327,10 @@
   "ds": 3,
   "score_v2": 36,
   "tier_v2": "A",
-  "req_status": "確定",
-  "wave": "第1波",
+  "req_status": "棄却",
+  "wave": "対象外",
   "wave_why": "desireテーマ「全自動運用/改善ループ」既定=第1波(§2/§5)",
-  "hold": "【R135】ユーザー『会話履歴・secondbrainはこのシステムに入る?なんか変ですよね?』=IHL帰属に疑義。round-18で棄却/システム外切り出しを裁定カードに回付・確定まで実装凍結"
+  "ruling_note": "ユーザー裁定 2026-07-19(SB-1○・R149・カードc9-secondbrain-attribution): 会話履歴/AIセッション=サブ脳のIHL帰属を棄却(req_status=棄却・wave=対象外)。撤回理由=R135『会話履歴・secondbrainはこのシステムに入る?変ですよね?』。関連実装(research chat-index/ai-sessions・記憶ボタン/SoulProfile)着手せず。V3-WIK-16(記事/論文CMS)は対象外=正当機能として存置。"
  },
  {
   "id": "V3-AUT-11",
@@ -54216,6 +54222,12 @@
     "evidence": "OKF/SPEC karpathy gist等 外部知識共有フォーマット検討",
     "trust": "低",
     "date": null
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "【SB-1○・R149(2026-07-19)】ユーザー『会話履歴・secondbrain=サブ脳はこのシステムに入る?なんか変ですよね?』(R135)により棄却。飼育観測プラットフォームIHLの正式要件から外す(必要なら将来別プロダクトへ切り出し)。関連実装(GET /research/chat-index・POST /research/ai-sessions・記憶ボタン/SoulProfile/Cursorセッション閲覧)は着手しない。ME画面から除去確定。",
+    "date": "2026-07-19",
+    "trust": "high"
    }
   ],
   "superseded": null,
@@ -54227,7 +54239,7 @@
   "ds": 1,
   "score_v2": 2,
   "tier_v2": "C",
-  "req_status": "確定",
+  "req_status": "棄却",
   "adjudication": {
    "conclusion": "承認",
    "reason": "AIセッション全閲覧のサブ脳化は記憶OS(75ソース最頻出・非撤回)の背骨。karpathy gist/OKF参考もver2で採用済み思想。Cursor実体4.1GB SQLiteはingest対象として第1波コア。",
@@ -54237,9 +54249,9 @@
     "R4"
    ]
   },
-  "wave": "第1波",
+  "wave": "対象外",
   "wave_why": "tier_v2=C/status_in_ver2=部分→第1波(desire台帳未掲載・実装実績/高tier)",
-  "hold": "【R135】ユーザー『会話履歴・secondbrainはこのシステムに入る?なんか変ですよね?』=IHL帰属に疑義。round-18で棄却/システム外切り出しを裁定カードに回付・確定まで実装凍結"
+  "ruling_note": "ユーザー裁定 2026-07-19(SB-1○・R149・カードc9-secondbrain-attribution): 会話履歴/AIセッション=サブ脳のIHL帰属を棄却(req_status=棄却・wave=対象外)。撤回理由=R135『会話履歴・secondbrainはこのシステムに入る?変ですよね?』。関連実装(research chat-index/ai-sessions・記憶ボタン/SoulProfile)着手せず。V3-WIK-16(記事/論文CMS)は対象外=正当機能として存置。"
  },
  {
   "id": "V3-WIK-29",
