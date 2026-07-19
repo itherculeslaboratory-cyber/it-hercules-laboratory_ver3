@@ -3,7 +3,7 @@
   "route": "/individuals/detail",
   "title": "個体の詳細",
   "layout": "standard",
-  "notes": "V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2・判断3指標=成長比較/血統健全度/近交リスク+血縁レール+変化点タイムラインを1画面に集約)。実装は individual-profile ノード1個(ヘッダ/血統健全度・近交リスクチップ/血縁レール/タイムライン/sticky下端バーを持つ)が担う。GET /individuals/{id}/profile + /pedigree を自前取得し(近交F係数はクライアント計算)、成長グラフは新レンダラ部品 growth-chart(手書き SVG 折れ線・依存追加なし・NodeType としても登録済みで単独 screen-def からも宣言的に使える)を内部呼び出しする(二重取得を避けるため個体詳細では growth-chart を別ノードとして並べない)。旧版(6文化ブロックの薄い一覧58点)を同じ screen_id で置き換え — 累代分析(cross)・バイオカード(bio-card)は引き続きスコープA対象外(死にUIを出さない)。QR発行リンクは「後続波で復活検討」の後続波(C8第1波・qr-physical-label-ops)につき復活(2026-07-17裁定): 元のワイヤー(0076681以前)と同じ button(POST /individuals/{id}/qr)+qr-code(value={{result.token}})の2ノード構成をそのまま置く(bio-cardの一括発行=POST /individuals/qr-batchとは別物・単発トークン発行のみ)。親カーブ欠損(購入個体・[訂正8])はⓘ帯+親リンク小フォームで第一級表示、due目安は中立表示(赤/催促禁止・2026-07-12ユーザー裁定)。",
+  "notes": "個体・種(IND)ゾーン 完成予想図(承認済みmockup D:\\claude\\00-hq\\dashboard\\mockups\\ind-forecast.html・R128 85点採用「使いやすそうでいいですね」)の実物採用+実データ配線。home v2(home-dashboard)/KNW hub と同じ in-scope トリック — 単一の list ノード(variant=ind-detail)へ一本化し、IndDetailNode(apps/web/src/renderer/renderer.tsx)が mockup の markup/CSS を逐語描画しつつ実データを流し込む。取得= GET /individuals/{id}/profile + /pedigree + /authenticity(近交F係数はクライアント計算=既存 inbreedingCoefficient を再利用)。旧版(individual-profile ノード=pre-C9 58点)は screen-def からは外したが、node type 自体と GrowthChartNode/個体プロフィール renderer は削除していない(他のinline-def testが参照・最小diff)。QR発行は sticky操作バーの button(POST /individuals/{id}/qr)。next_step は前進アフォーダンス(check-screendef-structure V3-UIX-05・CLUSTER_OWNED)。親カーブ欠損(購入個体)はⓘ帯で第一級表示、次の観測目安は中立表示(赤/催促なし・2026-07-12裁定)。共有ヘッダ(観測対象+4ゾーン)は AppShellNode が提供。",
   "nodes": [
     {
       "id": "shell",
@@ -13,19 +13,14 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text_key": "individual-detail.title.text", "text": "個体の詳細", "level": 1 } },
             {
-              "id": "profile",
-              "type": "individual-profile",
-              "props": { "next_step": "sticky下端バー: 記録を追加 / まとめて記録へ(individual-profile ノードが自前で navigate する)" }
-            },
-            {
-              "id": "issue-qr",
-              "type": "button",
-              "props": { "label_key": "individual-detail.issue-qr.label", "label": "QR ラベルを発行する", "variant": "secondary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/{{params.id}}/qr" }
-            },
-            { "id": "qr", "type": "qr-code", "props": { "value": "{{result.token}}" } }
+              "id": "detail",
+              "type": "list",
+              "props": {
+                "variant": "ind-detail",
+                "next_step": "記録を追加(obs-entry) / まとめて記録(obs-register-batch) / QRラベルを発行 — IndDetailNode 内の実導線"
+              }
+            }
           ]
         }
       ]

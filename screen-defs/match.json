@@ -3,7 +3,7 @@
   "route": "/match",
   "title": "マッチング",
   "layout": "standard",
-  "notes": "IND-07 2枚を並べ左右どちらか1タップ、またはどちらも×。preference は単一 preference_event(kind 分岐)。ランキングは内積降順で score は露出しない。",
+  "notes": "個体・種(IND)ゾーン 完成予想図(承認済みmockup ind-forecast.html・R128 85点)の実物採用+実データ配線。home v2/KNW と同じ in-scope トリック(単一 list ノード variant=ind-match)。IndMatchNode が mockup の markup/CSS を逐語描画。match=好み学習型(気晴らし・寄り道の探索。fidelity-A5#8=婚活ではなく個体好み学習に限定)。取得= GET /match/convergence(好みの固まり具合=auc/converged/n_events)+ GET /match/ranking(内積降順の item_id・点数は非公開)。候補カードは各 bio-card で実フィールド(種/特徴タグ/最新サイズ)に肉付け。正直な限界: 左右選択で好みを教える往復は順位APIが features を伏せる設計(点数非公開)のためこの画面からは学習書き込みまでつなげず、カードは個体詳細への実導線+順位=学習済みの好みに近い順の正直表示にした(学習自体は観測時)。旧版(source_path=/match/ranking の text 2本+POST 3ボタン)は screen-def から撤去。",
   "nodes": [
     {
       "id": "shell",
@@ -13,34 +13,10 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "マッチング", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text": "好みに近い方を1タップ。どちらも違えば見送れます。", "muted": true } },
             {
-              "id": "pair",
-              "type": "card",
-              "props": { "source_path": "/api/v1/match/ranking" },
-              "children": [
-                { "id": "left", "type": "text", "props": { "text": "左: {{data.pair.ranking.0.item_id}}" } },
-                { "id": "right", "type": "text", "props": { "text": "右: {{data.pair.ranking.1.item_id}}" } }
-              ]
-            },
-            {
-              "id": "pick-left",
-              "type": "button",
-              "props": { "label": "左を選ぶ", "variant": "primary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/match/preference" }
-            },
-            {
-              "id": "pick-right",
-              "type": "button",
-              "props": { "label": "右を選ぶ", "variant": "primary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/match/preference" }
-            },
-            {
-              "id": "pass",
-              "type": "button",
-              "props": { "label": "どちらも違う", "variant": "secondary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/match/preference" }
+              "id": "match",
+              "type": "list",
+              "props": { "variant": "ind-match" }
             }
           ]
         }

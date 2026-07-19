@@ -29,7 +29,7 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   //    /auth/dev-login same-origin; the Set-Cookie session then authenticates
   //    every protected call below purely through the browser cookie jar.
   await page.goto(`${WEB}/s/login`);
-  await expect(page.getByRole("heading", { name: "IHL にログイン" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "IHL に入る" })).toBeVisible();
   await expect(page.getByRole("button", { name: "開発トークンでログイン" })).toBeVisible();
   await shot(page, "01-login");
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();
@@ -96,21 +96,17 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   const indLink = page.getByRole("link", { name: "個体詳細を開く" });
   await expect(indLink).toHaveAttribute("href", `/s/individual-detail?id=${bareId}`);
   await indLink.click();
-  await expect(page.getByRole("heading", { name: "個体の詳細" })).toBeVisible();
+  // 個体の詳細は IND ゾーン本実装(IndDetailNode・承認絵 ind-forecast.html 逐語採用)。
+  // 主見出しは mockup の section-title(この子の「今」と「物語」)。この subject_ref は
+  // POST /individuals で master 登録されていない(species は「種は未登録」)が、観測が
+  // あるので profile は返り、成長の記録セクションが第一級で描画される。
+  await expect(page.getByRole("heading", { name: /この子の「今」と「物語」/ })).toBeVisible();
   await page.waitForLoadState("networkidle"); // profile fetch gate (see step 2)
-  // individual-detail's species badge comes from the individual MASTER record
-  // (profile.species), not the capture's species_candidate — and this subject_ref
-  // was never explicitly registered via POST /individuals, so no master exists
-  // here (design-k1 individual-routes.ts projectIndividualProfile). The change-
-  // point timeline (TimelineRow, renderer.tsx) also never re-prints the raw
-  // measurement item text — only value+unit (see individual-detail.spec.ts d4's
-  // `/62g/` check) — and this obs-entry flow attaches no unit, so the visible
-  // token is the bare value. Scope to the timeline list to avoid matching "65"
-  // elsewhere (e.g. inside the generated id).
-  await expect(page.locator(".civ-timeline").getByText("65")).toBeVisible();
+  // この時点で観測1回 → 成長グラフは「2回目からカーブになります」の第一級表示。
+  await expect(page.getByText("成長の記録(体重の変化)")).toBeVisible();
 
-  // 6. issue a QR label; the qr-code node renders the freshly-issued token.
-  await page.getByRole("button", { name: "QR ラベルを発行する" }).click();
+  // 6. issue a QR label; IndDetailNode renders the freshly-issued token as a QR.
+  await page.getByRole("button", { name: "QRラベルを発行" }).click();
   const qr = page.getByRole("img", { name: /QRコード:/ });
   await expect.poll(() => qr.getAttribute("aria-label")).toMatch(/QRコード: [A-Za-z0-9_-]{20,200}/);
   const token = (await qr.getAttribute("aria-label"))!.replace("QRコード: ", "").trim();
@@ -146,13 +142,30 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   expect(capture2Id).toBeTruthy();
   await shot(page, "09-obs-detail-2");
 
-  // 9. the individual history now shows BOTH captures — persisted in real Truth.
+  // 9. add a SECOND weight-bearing capture so the growth chart has a real 2-point
+  //    weight series. NOTE: only the 追観測 (obs-register-entry) form records a
+  //    CANONICAL `weight` measurement that projects to weight_g; the first capture
+  //    used obs-entry, whose measurement-table stores the display-label item
+  //    ("体長"), which does not feed the weight series. So one more 追観測 (weight)
+  //    is what takes own.length from 1 → 2 and draws the polyline.
+  await page.goto(`${WEB}/s/obs-register-entry?id=${bareId}`);
+  await expect(page.getByRole("heading", { name: "追観測" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("体重(g)").fill("35");
+  await page.getByLabel("体長(mm)").fill("42");
+  await page.getByRole("button", { name: "確認へ →" }).click();
+  await expect(page.getByRole("heading", { name: "確認" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByRole("heading", { name: "保存しました" })).toBeVisible();
+
+  // now the individual has TWO canonical weight captures (32 → 35) — the growth
+  // chart plots a real curve (own.length>=2 → polyline). Persistence itself is
+  // proven by the Truth-key enumeration below (a same-origin authenticated read),
+  // independent of UI.
   await page.goto(`${WEB}/s/individual-detail?id=${bareId}`);
   await page.waitForLoadState("networkidle"); // profile fetch gate (see step 2)
-  const timeline = page.locator(".civ-timeline");
-  await expect(timeline.getByText("65")).toBeVisible();
-  await expect(timeline.getByText(/32g/)).toBeVisible();
-  await expect(timeline.getByText(/40mm/)).toBeVisible();
+  await expect(page.locator(".growth-wrap svg polyline").first()).toBeVisible();
 
   // Enumerate Truth keys via a same-origin authenticated read (proves the
   // browser cookie authenticates; yields photo_id for the key list).

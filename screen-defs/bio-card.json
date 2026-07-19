@@ -3,7 +3,7 @@
   "route": "/individuals/bio-card",
   "title": "バイオカード",
   "layout": "standard",
-  "notes": "IND-15 名刺型バイオカード。種/最新サイズ/特徴/QR(=個体 URL)。qr-batch は {100,500,1000} のみ。等倍印刷の物理ズレは人間ゲート。",
+  "notes": "個体・種(IND)ゾーン 完成予想図(承認済みmockup ind-forecast.html・R128 85点)の実物採用+実データ配線。home v2/KNW と同じ in-scope トリック(単一 list ノード variant=ind-bio-card)。IndBioCardNode が mockup の markup/CSS を逐語描画。個体経由でのみ開く(?id= 必須)。取得= GET /individuals/{id}/bio-card(種・最新サイズ・特徴タグ・qr_url=個体URL)+ GET /individuals/{id}(名刺上部の表示名=master.local_label_text優先、次にprojectName)。QRは実データ(qrcode ライブラリ)。一括発行= POST /individuals/qr-batch(count は 100/500/1000 のみ)。形態(モルフ)は個体ひもづけが入る後の波(morph=null)。等倍印刷の物理ズレ確認は人間ゲート。旧版(card+text 2本+qr-code+一括ボタン)は screen-def から撤去。",
   "nodes": [
     {
       "id": "shell",
@@ -13,22 +13,10 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "バイオカード", "level": 1 } },
             {
-              "id": "card",
-              "type": "card",
-              "props": { "source_path": "/api/v1/individuals/{{params.id}}/bio-card" },
-              "children": [
-                { "id": "species", "type": "text", "props": { "text": "種: {{data.card.species}}" } },
-                { "id": "size", "type": "text", "props": { "text": "最新サイズ: {{data.card.latest_size}}", "muted": true } },
-                { "id": "qr", "type": "qr-code", "props": { "value": "{{data.card.qr_url}}" } }
-              ]
-            },
-            {
-              "id": "issue-batch",
-              "type": "button",
-              "props": { "label": "QR ラベルを一括発行する", "variant": "secondary" },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/individuals/qr-batch" }
+              "id": "bio-card",
+              "type": "list",
+              "props": { "variant": "ind-bio-card" }
             }
           ]
         }

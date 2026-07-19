@@ -1,19 +1,20 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { mkdirSync } from "node:fs";
 import { makePng } from "./make-png";
 
-// V3-AIP-101 個体詳細スライスA(individual-detail・c7-wireframes-core5 §4 F1/F2)。
-// 家族(♂親+♀親に観測2点ずつ→子3体に観測2〜3点・1体死亡・1体は親リンク無しの
-// 単体個体)を実データで作り、d1(子個体=判断3指標フル: チャート親破線+コホート
-// 帯・血統健全度・近交リスク・血縁レール+代表写真サムネ)→d2(親リンク無し=ⓘ帯+
-// 算定不能の第一級表示)→d3(血縁chipタップで親に差替+パンくず)→d4(タイムライン
-// +値を訂正の展開)を実ブラウザで打鍵まで通す(目視ゲート用スクリーンショット4枚)。
+// 個体・種(IND)ゾーン 5画面 本実装(承認済みmockup ind-forecast.html・R128 85点の
+// 逐語採用+実データ配線)の実ブラウザ検証+目視ゲート用スクリーンショット。
+// 家族(♂親+♀親→子3体・1体死亡・1体羽化)と好み学習イベントを実データで作り、
+// 5画面(個体の詳細=中心/累代分析/バイオカード/マッチング/種の管理)を本物の
+// wrangler(local R2)+next dev 経由で描画し、両テーマ(light/dark)×両幅(1280/390)で
+// 撮る。旧UI(individual-profile ノード=pre-C9)のアサーションは新UI(IndDetailNode)へ
+// 置換した(screen-def が variant=ind-detail に移行したため)。
 const WEB = "http://127.0.0.1:3000";
-const SPEC_DIR = dirname(fileURLToPath(import.meta.url));
-const SHOTS = resolve(SPEC_DIR, "..", "..", "..", "docs", "planning", "c7", "screens");
-const shot = (page: Page, name: string, fullPage = false) =>
-  page.screenshot({ path: resolve(SHOTS, `individual-detail-${name}.png`), fullPage });
+// HQ レビューキューの evidence へ直接出力(カードが参照する4枚+各画面の代表)。
+const SHOTS = "D:/claude/00-hq/review-queue/evidence/ind-impl";
+mkdirSync(SHOTS, { recursive: true });
 
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
@@ -21,186 +22,161 @@ async function devLogin(page: Page) {
   await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
 }
 
-test("個体詳細スライスA: 判断3指標→親カーブ欠損→血縁chip差替→タイムライン訂正", async ({ page }) => {
+// theme.js(public/assets/theme.js)は localStorage['hqTheme'] を読んで <html data-theme>
+// を刻む。テーマを固定 → 再読込 → 各幅で fullPage 撮影(HANDOFF のスクショ規約)。
+async function shootAll(page: Page, url: string, base: string) {
+  for (const theme of ["light", "dark"] as const) {
+    await page.evaluate((t) => {
+      try {
+        localStorage.setItem("hqTheme", t);
+      } catch {
+        /* blocked storage */
+      }
+    }, theme);
+    for (const w of [1280, 390]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      await page.goto(url);
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${SHOTS}/${base}-${theme}-${w}.png`, fullPage: true });
+    }
+  }
+}
+
+test("IND 5画面: 実データ配線の実ブラウザ検証+両テーマ×両幅スクショ", async ({ page }) => {
+  test.setTimeout(180_000);
   await devLogin(page);
   const tag = Date.now().toString(36);
-  // fix#6(写真表示): 既存の2段階アップロード(POST capture → POST upload
-  // multipart)をブラウザ内 fetch で再現するため、Node 側で作った PNG を
-  // base64 にして evaluate へ渡す(page.evaluate はシリアライズ可能な値のみ)。
   const pngBase64 = makePng().toString("base64");
 
-  const seed = await page.evaluate(async ({ tag, pngBase64 }) => {
-    const post = async (path: string, body: unknown) =>
-      fetch(`/api/v1${path}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      }).then((r) => r.json());
-    const capture = async (individualId: string, weight: number) =>
-      post("/observation/captures", {
-        domain: "biology",
-        subject_ref: `individual/${individualId}`,
-        measurements: [{ item: "weight", kind: "number", value: weight, unit: "g", value_origin: "direct_observed" }],
+  const seed = await page.evaluate(
+    async ({ tag, pngBase64 }) => {
+      const post = async (path: string, body: unknown) =>
+        fetch(`/api/v1${path}`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }).then((r) => r.json());
+      const capture = async (individualId: string, weight: number) =>
+        post("/observation/captures", {
+          domain: "biology",
+          subject_ref: `individual/${individualId}`,
+          measurements: [{ item: "weight", kind: "number", value: weight, unit: "g", value_origin: "direct_observed" }],
+        });
+      const uploadPhoto = async (captureId: string) => {
+        const bin = atob(pngBase64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const fd = new FormData();
+        fd.append("capture_id", captureId);
+        fd.append("file", new Blob([bytes], { type: "image/png" }), "e2e.png");
+        return fetch("/api/v1/observation/upload", { method: "POST", credentials: "include", body: fd }).then((r) => r.json());
+      };
+
+      const species = "ヘラクレスオオカブト";
+      const sire = await post("/individuals", { local_label_text: `父レッド-${tag}`, species });
+      const dam = await post("/individuals", { local_label_text: `母-${tag}`, species });
+      await capture(sire.individual_id, 140);
+      await capture(sire.individual_id, 150);
+      await capture(dam.individual_id, 118);
+      await capture(dam.individual_id, 124);
+
+      const a = await post("/individuals", { local_label_text: `子A-${tag}`, species });
+      const b = await post("/individuals", { local_label_text: `子B-${tag}`, species });
+      const c = await post("/individuals", { local_label_text: `子C-${tag}`, species });
+      for (const kid of [a, b, c]) {
+        await post(`/individuals/${kid.individual_id}/parents`, { parent_id: sire.individual_id, parent_role: "sire" });
+        await post(`/individuals/${kid.individual_id}/parents`, { parent_id: dam.individual_id, parent_role: "dam" });
+      }
+      await capture(a.individual_id, 30);
+      await capture(a.individual_id, 45);
+      await post(`/individuals/${a.individual_id}/life-events`, { kind: "birth", at: "2025-09-14T00:00:00Z" });
+      await post(`/individuals/${a.individual_id}/life-events`, {
+        kind: "molt",
+        at: "2026-01-20T00:00:00Z",
+        detail: { to_stage: "third_early" },
       });
-    const uploadPhoto = async (captureId: string) => {
-      const bin = atob(pngBase64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const fd = new FormData();
-      fd.append("capture_id", captureId);
-      fd.append("file", new Blob([bytes], { type: "image/png" }), "e2e.png");
-      return fetch("/api/v1/observation/upload", { method: "POST", credentials: "include", body: fd }).then((r) =>
-        r.json(),
-      );
-    };
+      const capLast = await capture(a.individual_id, 62);
+      await uploadPhoto(capLast.capture_id);
+      await post(`/individuals/${a.individual_id}/life-events`, { kind: "eclosion", at: "2026-06-01T00:00:00Z" });
 
-    const species = "オオクワガタ";
-    const sireLabel = `E2E-IND-父-${tag}`;
-    const damLabel = `E2E-IND-母-${tag}`;
-    const aLabel = `E2E-IND-子A-${tag}`;
-    const bLabel = `E2E-IND-子B-${tag}`;
-    const cLabel = `E2E-IND-子C-${tag}`;
-    const zLabel = `E2E-IND-単体Z-${tag}`;
-    const zeroLabel = `E2E-IND-ゼロ-${tag}`;
+      await capture(b.individual_id, 28);
+      await capture(b.individual_id, 40);
+      await post(`/individuals/${b.individual_id}/life-events`, { kind: "death", at: "2026-02-01T00:00:00Z" });
+      await capture(c.individual_id, 32);
+      await capture(c.individual_id, 47);
 
-    const sire = await post("/individuals", { local_label_text: sireLabel, species });
-    const dam = await post("/individuals", { local_label_text: damLabel, species });
-    await capture(sire.individual_id, 140);
-    await capture(sire.individual_id, 150);
-    await capture(dam.individual_id, 118);
-    await capture(dam.individual_id, 124);
+      // 好み学習イベント(マッチング画面の convergence/ranking を populate)。
+      const pref = async (itemId: string, kind: string, y: number, features: number[]) =>
+        post("/match/preference", { item_id: itemId, kind, y, features });
+      await pref(a.individual_id, "swipe", 1, [1, 0.8, 0.6]);
+      await pref(c.individual_id, "swipe", 1, [0.9, 0.7, 0.5]);
+      await pref(b.individual_id, "pass", -1, [0.2, 0.1, 0.1]);
 
-    const a = await post("/individuals", { local_label_text: aLabel, species });
-    const b = await post("/individuals", { local_label_text: bLabel, species });
-    const c = await post("/individuals", { local_label_text: cLabel, species });
-    for (const kid of [a, b, c]) {
-      await post(`/individuals/${kid.individual_id}/parents`, { parent_id: sire.individual_id, parent_role: "sire" });
-      await post(`/individuals/${kid.individual_id}/parents`, { parent_id: dam.individual_id, parent_role: "dam" });
-    }
+      // 種マスタ+その種に紐づく観測(種の管理画面の平均体長/体重は
+      // species_candidate 一致の観測から都度計算)。個体aの詳細を汚さないよう
+      // subject_ref は合成(存在しない個体ref・stats は species_candidate だけ見る)。
+      const sp1 = await post("/species", { name: "ヘラクレスオオカブト" });
+      const sp2 = await post("/species", { name: "オオクワガタ" });
+      const spCapture = async (speciesId: string, len: number, wt: number) =>
+        post("/observation/captures", {
+          domain: "biology",
+          subject_ref: `individual/spsample-${tag}`,
+          species_candidate: speciesId,
+          species_confirmed_by: "user",
+          measurements: [
+            { item: "length", kind: "number", value: len, unit: "mm", value_origin: "direct_observed" },
+            { item: "weight", kind: "number", value: wt, unit: "g", value_origin: "direct_observed" },
+          ],
+        });
+      for (const [l, w] of [[145, 80], [151, 85], [148, 82]]) await spCapture(sp1.species_id, l, w);
+      for (const [l, w] of [[74, 26], [78, 28]]) await spCapture(sp2.species_id, l, w);
 
-    await capture(a.individual_id, 30);
-    await capture(a.individual_id, 45);
-    // fix#1(磨き直し): d1 のヘッダにステージbadgeが出ることを確認するための脱皮。
-    await post(`/individuals/${a.individual_id}/life-events`, {
-      kind: "molt",
-      at: new Date().toISOString(),
-      detail: { to_stage: "third_early" },
-    });
-    // fix#6(写真表示): 最新観測に写真を1枚添える(d1 ヘッダのサムネ+
-    // タイムラインの62g行のサムネの両方を検証する)。
-    const capLast = await capture(a.individual_id, 62);
-    await uploadPhoto(capLast.capture_id);
-    await post(`/individuals/${a.individual_id}/life-events`, { kind: "eclosion", at: new Date().toISOString() });
+      return {
+        sireId: sire.individual_id as string,
+        aId: a.individual_id as string,
+      };
+    },
+    { tag, pngBase64 },
+  );
 
-    await capture(b.individual_id, 28);
-    await capture(b.individual_id, 40);
-    await post(`/individuals/${b.individual_id}/life-events`, { kind: "death", at: new Date().toISOString() });
-
-    await capture(c.individual_id, 32);
-    await capture(c.individual_id, 47);
-
-    // 親リンク無しの単体個体(購入個体相当) — 親カーブ欠損の第一級状態(d2)。
-    // 観測1点のみ(fix#5: 観測1回の縮小チャート状態を兼ねる)。
-    const z = await post("/individuals", { local_label_text: zLabel, species });
-    await capture(z.individual_id, 55);
-
-    // fix#5(磨き直し): 観測0回状態の確認専用(スクショなし・打鍵チェックのみ)。
-    const zero = await post("/individuals", { local_label_text: zeroLabel, species });
-
-    return {
-      sireId: sire.individual_id as string,
-      aId: a.individual_id as string,
-      zId: z.individual_id as string,
-      zeroId: zero.individual_id as string,
-      sireLabel,
-      damLabel,
-      aLabel,
-      bLabel,
-      cLabel,
-      species,
-    };
-  }, { tag, pngBase64 });
-
-  // ── d1: 子個体(親あり・きょうだいあり)= 判断3指標フル ──────────────────
-  await page.goto(`${WEB}/s/individual-detail?id=${seed.aId}`);
-  await expect(page.getByRole("heading", { name: "個体の詳細" })).toBeVisible();
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("heading", { name: seed.aLabel })).toBeVisible();
-
-  // fix#1(磨き直し): ヘッダに種badge・ステージbadgeが並ぶ(obs-register-entry
-  // ヘッダと同じ言語)。
-  await expect(page.getByText(seed.species, { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("三令初期", { exact: true })).toBeVisible();
-
-  // fix#6(写真表示): ヘッダの代表写真サムネ(直近captureの写真)が実際に
-  // デコードされた画像として表示される(naturalWidth>0)。
-  const headerThumb = page.locator(".civ-profile-thumb");
-  await expect(headerThumb).toBeVisible();
-  await expect
-    .poll(() => headerThumb.evaluate((el: HTMLImageElement) => el.naturalWidth), { timeout: 10_000 })
-    .toBeGreaterThan(0);
-
-  // 成長チャート: 親♂/親♀の破線凡例+コホート(きょうだい2匹・観測4点)帯。
-  await expect(page.locator(".civ-growth-chart-svg")).toBeVisible();
-  await expect(page.getByText("┄┄ 親♂")).toBeVisible();
-  await expect(page.getByText("┈┈ 親♀")).toBeVisible();
-  await expect(page.getByText(/▧ 同腹帯\(n=4\)/)).toBeVisible();
-  // fix#2(磨き直し): Y軸min/max(全系列の実値28g〜150g)・X軸最初/最後の観測日
-  // が小さく添えられる(グリッド線は最大3本)。
-  await expect(page.getByText("150g", { exact: true })).toBeVisible();
-  await expect(page.getByText("28g", { exact: true })).toBeVisible();
-  await expect(page.locator(".civ-chart-axis-label")).toHaveCount(4);
-
-  // 血統健全度: 同腹3匹(母数小)・死亡率33%(b死亡・⚠高)・羽化到達33%(aのみ羽化)。
-  await expect(page.getByText("同腹 3匹(母数小)")).toBeVisible();
-  await expect(page.getByText(/死亡率 33%.*⚠高/)).toBeVisible();
-  await expect(page.getByText(/羽化到達 33%/)).toBeVisible();
-
-  // 近交リスク: sire/damは互いに無関係(共通祖先なし)なので F=0(算定は可能・低)。
-  await expect(page.getByText("F = 0.000 ●低(共通祖先なし)")).toBeVisible();
-
-  // 血縁レール: 親♂/♀chip・死亡きょうだいは(死亡)付き・生存きょうだいは通常表示。
-  await expect(page.getByRole("button", { name: new RegExp(`♂ ${seed.sireLabel}`) })).toBeVisible();
-  await expect(page.getByRole("button", { name: new RegExp(`♀ ${seed.damLabel}`) })).toBeVisible();
-  await expect(page.getByRole("button", { name: `${seed.bLabel}(死亡)`, exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: seed.cLabel, exact: true })).toBeVisible();
-  await shot(page, "d1");
-
-  // ── d2: 親リンク無しの単体個体 = ⓘ帯+算定不能の第一級表示 ──────────────
-  await page.goto(`${WEB}/s/individual-detail?id=${seed.zId}`);
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText(/ⓘ 親データ無し/)).toBeVisible();
-  await expect(page.getByText("同腹集計なし(単体登録)")).toBeVisible();
-  await expect(page.getByText("算定不能(血統データ無し)")).toBeVisible();
-  await expect(page.getByText("血縁情報なし(単体登録)")).toBeVisible();
-  // fix#5(磨き直し): 観測1回のみ=点1つ+ミュート1行(広い空白にしない)。
-  await expect(page.getByText("観測1回 — 2回目からカーブになります")).toBeVisible();
-  await shot(page, "d2");
-
-  // fix#5(磨き直し): 観測0回状態の確認(スクショなし・4枚制約を守る)。
-  await page.goto(`${WEB}/s/individual-detail?id=${seed.zeroId}`);
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("まだ観測がありません")).toBeVisible();
-
-  // ── d3: 血縁chipタップで対象個体を親に差替(パンくず「前の個体に戻る」)──
+  // ── 中心画面: 個体の詳細(子A・親あり・きょうだいあり・観測3点・写真・脱皮・羽化) ──
   await page.goto(`${WEB}/s/individual-detail?id=${seed.aId}`);
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: new RegExp(`♂ ${seed.sireLabel}`) }).click();
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("heading", { name: seed.sireLabel })).toBeVisible();
-  await expect(page.getByRole("button", { name: "← 前の個体に戻る" })).toBeVisible();
-  await shot(page, "d3");
+  await expect(page.getByRole("heading", { name: /この子の「今」と「物語」/ })).toBeVisible();
+  await expect(page.getByText("成長のぐあい")).toBeVisible();
+  await expect(page.getByText("血統の確かさ")).toBeVisible();
+  await expect(page.getByText("近い血の度合い(近交)")).toBeVisible();
+  await expect(page.getByText("血縁レール(親 → 自分 → 子)")).toBeVisible();
+  await expect(page.getByText("誕生(孵化)")).toBeVisible();
+  await shootAll(page, `${WEB}/s/individual-detail?id=${seed.aId}`, "detail");
 
-  // ── d4: 変化点タイムライン+「値を訂正」展開状態 ─────────────────────────
-  await page.goto(`${WEB}/s/individual-detail?id=${seed.aId}`);
+  // ── 累代分析(親sire・子3体を集計) ──
+  await page.goto(`${WEB}/s/individual-detail?id=${seed.sireId}`);
   await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("heading", { name: "変化点タイムライン" })).toBeVisible();
-  await expect(page.getByText(/62g/)).toBeVisible();
-  await expect(page.getByText(/\+17\.0g/)).toBeVisible(); // 62g - 45g(前回)のΔ
-  // fix#6(写真表示): 写真付き観測行(62g)に小サムネが出る。
-  await expect(page.locator(".civ-timeline-thumb")).toBeVisible();
-  await page.getByRole("button", { name: /値を訂正/ }).first().click();
-  await expect(page.getByText("記録値 62g → 訂正後の値")).toBeVisible();
-  await shot(page, "d4", true);
+  await page.goto(`${WEB}/s/cross?id=${seed.sireId}`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText(/匹 を集計/)).toBeVisible();
+  await expect(page.getByText("生存率")).toBeVisible();
+  await shootAll(page, `${WEB}/s/cross?id=${seed.sireId}`, "cross");
+
+  // ── バイオカード(子A) ──
+  await page.goto(`${WEB}/s/bio-card?id=${seed.aId}`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("まとめて印刷")).toBeVisible();
+  await expect(page.getByRole("img", { name: /QRコード:/ })).toBeVisible();
+  await shootAll(page, `${WEB}/s/bio-card?id=${seed.aId}`, "bio-card");
+
+  // ── マッチング(好み学習の状況+順位) ──
+  await page.goto(`${WEB}/s/match`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText(/好みに近い1匹を選ぶ/)).toBeVisible();
+  await shootAll(page, `${WEB}/s/match`, "match");
+
+  // ── 種の管理(観測から自動計算した平均) ──
+  await page.goto(`${WEB}/s/species`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("扱う種の基礎データ")).toBeVisible();
+  await expect(page.getByText("ヘラクレスオオカブト").first()).toBeVisible();
+  await shootAll(page, `${WEB}/s/species`, "species");
 });
