@@ -208,7 +208,10 @@ D:\claude\systems\ihl-ver3 で起動して。
 ### round-18 addenda(本セッションで着弾・処理済)
 - **R141(6-c)**=投票二層(V3-GOV-36新規=無料+プラチナコイン権能投票)。**R142(6-d)**=経済3層是正(V3-MKT-36/V3-KRM-11: 5%維持費/3%商用利用料/10%は金銭でなくfork系譜三世代への貢献度追加発行ボーナス)。**R144(6-e)**=観測対象三層定義(structure-canon §1c+V3-OBS-43にスコープ明記・他は既存充足)。**R149(SB-1○)**=secondbrain棄却(V3-WIK-17/28 hold→棄却)。**総数758・確定661・確定(修正)92・棄却5**(第1波361/第2波238/実験枠21/対象外138)。
 
+### ヘッダー観測対象セレクタ 第1スライス=完了・push済(`09e7a4a`・reviewer PASS-WITH-CONCERNS/blocking0)
+- pref-set schema(scope_species/scope_lineage_id)+AppShellNodeにセレクタ常駐(obs-navigator3モード流用ドロワー・onConfirmで選好保存)+HeaderScopeCtx全画面配布+preferences永続。**個体ドメイン実配線**: /individuals(finder)・/individuals/pedigree-links(新フィルタ・GAP①所有者検証保持)・obs-search(SearchNavigator=localStorage→サーバ側スコープ昇格)・universe。**home v2 bad対応(R157)=観測対象ブロック撤去・ヘッダー一本化**。実回帰(閉dialogのciv-heading leak)捕捉修正。**実機判定カード=`c9-header-selector-live-2026-07-19`(ready)**。
+- **次スライス(A1#4未配線=正直明示済)**: 市場/知の広場/研究=種族フィールド不在→**スキーマ設計先行**(plaza=SW-1のspecies_id活用/市場=mkt-listingにspecies参照追加/研究=content schema拡張)+配線。clutches(GET /clutches・speciesフィルタ追加)/observation-capture一覧/BatchRosterNode(/individuals未scope)。finder-proのTruth/WebGL環境flakeはCI確認推奨(diff非起因を批評家実証)。
+
 ### 現在地
-- main = **`842a71d`**(全push済・lint22緑・E2E 178/178緑[clean]+home E2E 3/3・pytest49/web225/tests1488)。本セッション14コミット(structure-canon v2/KNW wave1統合/round-18+4addenda/SW-1/鮮度是正/usecase追いつき/home v2)。
-- 外出モードMonitor稼働(review-queue+DISPATCH-c9監視)。**回答済でifYes実行完了**: home v2(R112)/header-selector-scope(R144)/secondbrain(R149)。**残ユーザー判定待ち**: home v2実機(`c9-home-v2-live`=ready)/mkt予約等。
-- **次の最大タスク=ヘッダー観測対象セレクタ実装**(HDR-1○解禁・3ドメイン先行・A1#4全listまで完了報告しない・pref-set scope追加+finder/obs-searchのクライアント側チップをサーバ側フィルタへ)。
+- main = **`09e7a4a`**(全push済・lint22緑・clean Truth E2E screen-sweep全55+observation/market/obs-search緑・web226/tests1491/api8/pytest49)。本セッション**16コミット**(structure-canon v2/KNW wave1統合178緑/round-18+4addenda758件/SW-1/鮮度是正/usecase追いつき/home v2/ヘッダーセレクタ第1スライス)。
+- 外出モードMonitor稼働。**回答済でifYes実行完了**: home v2(R157○→bad対応=ヘッダー一本化実施)/header-selector-scope(R144)/secondbrain(R149)。**残ユーザー判定待ち**: home v2実機(answered R157○済)/ヘッダーセレクタ実機(`c9-header-selector-live`=ready)/mkt予約等。
