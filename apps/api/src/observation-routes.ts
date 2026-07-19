@@ -15,7 +15,7 @@ import {
   NAVIGATOR_TARGET_QUESTIONS,
   CONFIDENCE_ORDER,
 } from "./observation-constants";
-import { ENV_QR_TYPE, projectOccupantsAt, projectOpenOccupancy, projectLabEnvironmentAt } from "./source-routes";
+import { ENV_QR_TYPE, projectOccupantsAt, projectOpenOccupancy, projectLabEnvironmentAt, projectCurrentOwner } from "./source-routes";
 import { projectIndividualSummary } from "./individual-routes";
 import { parseObservationFreetext } from "./freetext-parser";
 import { projectPreferenceWeights, dot } from "./match-routes";
@@ -288,6 +288,27 @@ function validatePhotoConditions(
   return { ok: true, normalized: out, alerts };
 }
 
+// R4 (OBS-R4 / T-71 GAP audit, 2026-07-19 critic-found): adding an observation
+// to an individual is an owner-only write. Viewing an individual stays public,
+// but appending a capture onto an individual whose current owner is someone
+// else is fail-closed 403 NOT_OWNER — the same projectCurrentOwner boundary
+// POST /occupancy and life-events already enforce (the audit's 模範). A subject
+// with no determinable owner (no master AND no transfer — e.g. a clutch/* or
+// device/* ref, or an orphan id) is not "someone else's individual" and passes
+// through unchanged; only a KNOWN foreign owner is denied. Both HTTP capture
+// write paths (this route + writeCaptureFromCommitBody) call this one guard.
+async function captureSubjectDeniedForActor(
+  bucket: Bindings["TRUTH"],
+  actorId: string,
+  subjectRef: unknown,
+): Promise<boolean> {
+  if (typeof subjectRef !== "string" || !subjectRef.startsWith("individual/")) return false;
+  const id = subjectRef.slice("individual/".length);
+  if (!id) return false;
+  const owner = await projectCurrentOwner(bucket, id);
+  return owner !== null && owner !== actorId;
+}
+
 // POST /observation/captures — append a capture event (202/400/409).
 // capture_id: client MAY supply a ULID (idempotency key → 409 on replay);
 // else generated. actor_id is ALWAYS the session principal (V3-AUT-17).
@@ -295,6 +316,9 @@ obsRoutes.post("/observation/captures", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return c.json({ error: "INVALID_BODY" }, 400);
   const actorId = c.get("actorId");
+  if (await captureSubjectDeniedForActor(c.env.TRUTH, actorId, body.subject_ref)) {
+    return c.json({ error: "NOT_OWNER" }, 403);
+  }
   const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
 
   const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId };
@@ -1036,6 +1060,12 @@ export async function writeCaptureFromCommitBody(
   if ((await projectSellerModeration(s, actorId)).suspended) {
     return { ok: false, error: "OBSERVATION_FROZEN" };
   }
+  // R4 (OBS-R4): same owner-only boundary as the direct POST /observation/captures
+  // route — the 追観測 UI saves through here (/solid-observation/commit), and
+  // batch-commit kind:"capture" also routes through this function.
+  if (await captureSubjectDeniedForActor(bucket, actorId, body.subject_ref)) {
+    return { ok: false, error: "NOT_OWNER" };
+  }
   const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
   const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId };
   for (const k of CAPTURE_FIELDS) if (body[k] !== undefined) data[k] = body[k];
@@ -1078,7 +1108,8 @@ obsRoutes.post("/solid-observation/commit", async (c) => {
   const actorId = c.get("actorId");
   const r = await writeCaptureFromCommitBody(store(c), c.env.TRUTH, actorId, body);
   if (!r.ok) {
-    const status = r.error === "DUPLICATE_CAPTURE" ? 409 : r.error === "OBSERVATION_FROZEN" ? 403 : 400;
+    const status =
+      r.error === "DUPLICATE_CAPTURE" ? 409 : r.error === "OBSERVATION_FROZEN" || r.error === "NOT_OWNER" ? 403 : 400;
     return c.json({ error: r.error, details: r.details }, status);
   }
   return c.json({ capture_id: r.capture_id, committed: true, device_bindings: r.device_bindings }, 202);

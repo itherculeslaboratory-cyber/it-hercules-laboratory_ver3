@@ -2322,6 +2322,7 @@ function ParentPicker({
 function ClutchIntakeNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
+  const scope = useContext(ScopeCtx);
   const [parentMode, setParentMode] = useState<"pair" | "dam_only" | "later">("pair");
   const [sire, setSire] = useState<ParentSel>(null);
   const [dam, setDam] = useState<ParentSel>(null);
@@ -2353,6 +2354,33 @@ function ClutchIntakeNode() {
     setSpecies((s) => (s ? s : String(sire?.species ?? dam?.species ?? "")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sire, dam]);
+
+  // R4 (OBS-R4): a scanned individual arrives as a parent candidate via
+  // ?parent_id= (qr-resume hub「繁殖(クラッチ)に親として記録」→ 割り出し). Prefill
+  // the sire slot once from the individual's own record so 割り出し opens with the
+  // scanned bug already set as a parent (species then inherits via the effect
+  // above). Best-effort: a failed lookup just leaves the picker empty — this is
+  // UX prefill, not a trust path (write-time ownership is enforced server-side).
+  const parentIdParam = String(scope.params.parent_id ?? "");
+  useEffect(() => {
+    if (!parentIdParam) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = (await execute({ kind: "api", method: "GET", path: `/api/v1/individuals/${parentIdParam}` })) as
+          | { master?: { local_label_text?: string; species?: string } }
+          | undefined;
+        if (!cancelled) {
+          setSire({ id: parentIdParam, label: r?.master?.local_label_text || parentIdParam, species: r?.master?.species });
+        }
+      } catch {
+        // best-effort prefill only
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [parentIdParam, execute]);
 
   const submit = useCallback(async () => {
     setError(null);

@@ -13,6 +13,7 @@ import { TruthStore, ulid, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { subspeciesGateError } from "./observation-routes";
 import { createIndividualMaster, linkParent } from "./individual-routes";
+import { projectCurrentOwner } from "./source-routes";
 
 export const clutchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -147,6 +148,22 @@ async function clutchView(s: TruthStore, clutchId: string): Promise<Record<strin
 clutchRoutes.post("/clutches", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
+
+  // R4 (OBS-R4 / T-71): naming an individual as sire/dam links this clutch's
+  // pedigree to it — and on promote mints real children carrying that parent
+  // link (§promoteClutch linkParent). So it is an owner-only action: you may
+  // only cite parents you currently own. A parent with a KNOWN foreign owner is
+  // fail-closed 403 NOT_OWNER (same projectCurrentOwner boundary as POST
+  // /occupancy / clutch events·promote). An orphan/unknown parent id (no owner
+  // to wrong) passes — only a determinable foreign owner is denied. Checked
+  // BEFORE any write.
+  for (const key of ["sire_id", "dam_id"] as const) {
+    const pid = body[key];
+    if (typeof pid === "string" && pid) {
+      const owner = await projectCurrentOwner(c.env.TRUTH, pid);
+      if (owner !== null && owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
+    }
+  }
 
   const gateErr = subspeciesGateError(body);
   if (gateErr) return c.json({ error: gateErr }, 400);
