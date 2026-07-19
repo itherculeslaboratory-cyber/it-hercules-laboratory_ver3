@@ -226,7 +226,7 @@ D:\claude\systems\ihl-ver3 で起動して。
    - **IND=○90(R169)** `wave-ind-impl` 3ff7f97 — globals.css末尾に.ind-zoneスコープ追記(受入可否C9裁量・正直申告済)。**【本セッションでmerge試行→abort・要E2E reconcile】renderer.tsx/globals.cssは自動マージ成功(コード衝突ゼロ=クリーン)・csvのみ衝突(再生成で解決)・lint22/tsc/web243/tests1500緑。ただしclean Truth E2E=observation.spec:150 `.growth-wrap svg polyline`(2回capture後の成長曲線)がFAIL(他8 passed)。INDはindividual-detailをIndDetailNode(承認絵ind-forecast.html逐語・IndGrowthChart=.growth-wrap)へ書換+observation.spec該当箇所も更新済だが、walkthroughの2回目captureが体重を持つか vs IndGrowthChartのpolyline描画条件(own.length>=2かつ体重値)の突合が要る=flake/データ/回帰の判別を要調査。統合後E2E全緑ゲート未達のためcommitせずabort。次: この1点を調査(walkthrough captureに体重を付与するか/成長グラフの描画条件を確認)して緑化→統合。**
    - **ME=○60(R170)** `wave-me-impl` 91c8155 — **要rebase**・ヘッダー導線向け替え申し送り(「たぶん」=実機確認回収も)。
    - **ENTRY=○75(R167)** `wave-entry-impl` 3bb3dfc — **J-B(初回オンボーディング)=×不採用確定**「説明/チュートリアルでいい」→round-18でチュートリアル要件と突合。
-   - **FORK=○75(R168)** `wave-fork-impl` 87d0190 — **Puck+package.json reconcile対象**(依存変更=要注意)。**FORK拡張スライスは凍結中(R172/R173=fork主役+既存部品開放へ転回・判定待ち)→87d0190現物の統合のみ可・拡張着手しない**。
+   - **FORK=○75(R168)** `wave-fork-impl` 87d0190 — **Puck+package.json reconcile対象**(依存変更=要注意)。**【DISPATCH 19:40追記】FORK-AB(fork主役+既存部品開放・R174確定)が`wave-fork-ab`として wave-fork-impl の上に積層=統合順は fork-impl→fork-ab の直列**。旧「拡張スライス(部品追加)」凍結はR174で解消(A+B路線=fork-abが後継)。FORKは2ブランチ直列統合。
 4. **wave1-obs**=統合済(e97aa96)。**wave-img**(画像解析・スケール紙/capture color○100 R140・commit b35af45系)=統合候補(別worktree)。
 
 **HQ優先順(DISPATCH号砲)**: ①mkt reconcile(wave-mkt=取引中/予約/経済/話し合い全○) → ②4ゾーン統合(IND→他) → ③統合完了報告カード(実URL付き・ME60「たぶん」実機確認回収兼)。
