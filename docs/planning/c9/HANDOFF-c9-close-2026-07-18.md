@@ -208,10 +208,14 @@ D:\claude\systems\ihl-ver3 で起動して。
 ### round-18 addenda(本セッションで着弾・処理済)
 - **R141(6-c)**=投票二層(V3-GOV-36新規=無料+プラチナコイン権能投票)。**R142(6-d)**=経済3層是正(V3-MKT-36/V3-KRM-11: 5%維持費/3%商用利用料/10%は金銭でなくfork系譜三世代への貢献度追加発行ボーナス)。**R144(6-e)**=観測対象三層定義(structure-canon §1c+V3-OBS-43にスコープ明記・他は既存充足)。**R149(SB-1○)**=secondbrain棄却(V3-WIK-17/28 hold→棄却)。**総数758・確定661・確定(修正)92・棄却5**(第1波361/第2波238/実験枠21/対象外138)。
 
-### ヘッダー観測対象セレクタ 第1スライス=完了・push済(`09e7a4a`・reviewer PASS-WITH-CONCERNS/blocking0)
+### ヘッダー観測対象セレクタ=**機能完成・push済**(slice1 `09e7a4a`○70/slice2+2b `1ab47d6`)
+- **全ドメイン絞り込み+create自動タグが実際に機能**: 個体/finder/obs-search(slice1)+市場/知の広場/研究/clutch/BatchRoster(slice2 read)+create時にheader scopeのspeciesを自動付与(slice2b producer=FormNode header_scoped_producer・plaza compose)。**批評家がslice2の『producer無し=飾りフィルタ』をblocking指摘→2bで是正**(市場lifecycle全通貫E2E緑=money path無回帰・回帰テスト4本+API round-trip)。正直な限界(コード注記): lineage_id=個体/産卵のみ(市場/広場/研究に血統欄無し)・home集計エンドポイントは対象外(申し送り)・placement/device/種族マスタ=原理的対象外。research projects=content.project_id経由derived join(複数種束ねるため単一field不採用)。実機判定カード=`c9-header-selector-complete-2026-07-19`(ready)。
+
+### (旧)第1スライス詳細=完了・push済(`09e7a4a`・reviewer PASS/blocking0)
 - pref-set schema(scope_species/scope_lineage_id)+AppShellNodeにセレクタ常駐(obs-navigator3モード流用ドロワー・onConfirmで選好保存)+HeaderScopeCtx全画面配布+preferences永続。**個体ドメイン実配線**: /individuals(finder)・/individuals/pedigree-links(新フィルタ・GAP①所有者検証保持)・obs-search(SearchNavigator=localStorage→サーバ側スコープ昇格)・universe。**home v2 bad対応(R157)=観測対象ブロック撤去・ヘッダー一本化**。実回帰(閉dialogのciv-heading leak)捕捉修正。**実機判定カード=`c9-header-selector-live-2026-07-19`(ready)**。
 - **次スライス(A1#4未配線=正直明示済)**: 市場/知の広場/研究=種族フィールド不在→**スキーマ設計先行**(plaza=SW-1のspecies_id活用/市場=mkt-listingにspecies参照追加/研究=content schema拡張)+配線。clutches(GET /clutches・speciesフィルタ追加)/observation-capture一覧/BatchRosterNode(/individuals未scope)。finder-proのTruth/WebGL環境flakeはCI確認推奨(diff非起因を批評家実証)。
 
 ### 現在地
-- main = **`09e7a4a`**(全push済・lint22緑・clean Truth E2E screen-sweep全55+observation/market/obs-search緑・web226/tests1491/api8/pytest49)。本セッション**16コミット**(structure-canon v2/KNW wave1統合178緑/round-18+4addenda758件/SW-1/鮮度是正/usecase追いつき/home v2/ヘッダーセレクタ第1スライス)。
-- 外出モードMonitor稼働。**回答済でifYes実行完了**: home v2(R157○→bad対応=ヘッダー一本化実施)/header-selector-scope(R144)/secondbrain(R149)。**残ユーザー判定待ち**: home v2実機(answered R157○済)/ヘッダーセレクタ実機(`c9-header-selector-live`=ready)/mkt予約等。
+- main = **`1ab47d6`**(全push済・lint22緑・clean Truth E2E=market lifecycle全通貫+knowledge-thread+screen-sweep全55緑・web230/tests1500/api8/pytest49)。本セッション**19コミット**(structure-canon v2/KNW wave1統合178緑/round-18+addenda758件/SW-1/鮮度是正/usecase/home v2/**ヘッダー観測対象セレクタ機能完成**)。
+- 外出モードMonitor稼働。**回答済でifYes全実行完了**: home v2(R157○)/header-selector-scope(R144)/secondbrain(R149)/header-selector-live(R161○→slice2+2b実装)。**残ユーザー判定待ち**: ヘッダーセレクタ完成(`c9-header-selector-complete`=ready)/mkt予約等。
+- **次のC9業務=HQ発進の4ゾーン(IND5/ME5/ENTRY6/FORK2)背景実装ブランチ(worktree wave-{ind,me,entry,fork}-impl・R163)の統合**。完成するとブランチ+判定カードが届く→KNW wave1同様にC9がmerge+reconcile(共有物=renderer/AppShellNode/HeaderScopeCtx/schemas整合)+E2E緑まで。DISPATCH-c9末尾通知参照。
