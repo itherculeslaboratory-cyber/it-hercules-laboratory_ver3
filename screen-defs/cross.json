@@ -3,7 +3,7 @@
   "route": "/individuals/cross",
   "title": "累代分析",
   "layout": "standard",
-  "notes": "IND-12 率カード。共通カードノードを source_path の ?metric= で差し替える(決定論投影・個体経由のみ・ホーム直接不可)。色再現性は色解析後波のため未表示。",
+  "notes": "個体・種(IND)ゾーン 完成予想図(承認済みmockup ind-forecast.html・R128 85点)の実物採用+実データ配線。home v2/KNW と同じ in-scope トリック(単一 list ノード variant=ind-cross)。IndCrossNode が mockup の markup/CSS を逐語描画。個体経由でのみ開く(?id= 必須・無い時は正直な誘導表示)。取得= GET /individuals/{id}/cross(metric なし=全体)= cohort_size/rates(survival・completion・eclosion_failure・hatch_rate・mortality・sex_ratio)/weight_by_instar/size_extremes をすべて観測から都度計算。色の再現性(color_reproducibility=null)は色解析が入る後の波。旧版(?metric= で差し替える card 3枚)は screen-def から撤去。",
   "nodes": [
     {
       "id": "shell",
@@ -13,34 +13,10 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "累代分析", "level": 1 } },
-            { "id": "ind-id", "type": "text", "props": { "text": "個体 ID: {{params.id}}", "muted": true } },
             {
-              "id": "mortality",
-              "type": "card",
-              "props": { "source_path": "/api/v1/individuals/{{params.id}}/cross?metric=mortality" },
-              "children": [
-                { "id": "mortality-label", "type": "heading", "props": { "text": "死亡率", "level": 2 } },
-                { "id": "mortality-value", "type": "text", "props": { "text": "{{data.mortality.value}}" } }
-              ]
-            },
-            {
-              "id": "completion",
-              "type": "card",
-              "props": { "source_path": "/api/v1/individuals/{{params.id}}/cross?metric=completion" },
-              "children": [
-                { "id": "completion-label", "type": "heading", "props": { "text": "完品率", "level": 2 } },
-                { "id": "completion-value", "type": "text", "props": { "text": "{{data.completion.value}}" } }
-              ]
-            },
-            {
-              "id": "eclosion",
-              "type": "card",
-              "props": { "source_path": "/api/v1/individuals/{{params.id}}/cross?metric=eclosion_failure" },
-              "children": [
-                { "id": "eclosion-label", "type": "heading", "props": { "text": "羽化不全率", "level": 2 } },
-                { "id": "eclosion-value", "type": "text", "props": { "text": "{{data.eclosion.value}}" } }
-              ]
+              "id": "cross",
+              "type": "list",
+              "props": { "variant": "ind-cross" }
             }
           ]
         }

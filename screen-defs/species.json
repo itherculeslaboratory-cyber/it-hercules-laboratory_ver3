@@ -3,7 +3,7 @@
   "route": "/species",
   "title": "種の管理",
   "layout": "standard",
-  "notes": "IND-19 種/形態。put-if-absent(重複は 409)・fork(forked_from)系譜・統計は自動計算投影(平均サイズ/体重/市場平均価格)。alias は人間承認後のみ統合。",
+  "notes": "個体・種(IND)ゾーン 完成予想図(承認済みmockup ind-forecast.html・R128 85点)の実物採用+実データ配線。home v2/KNW と同じ in-scope トリック(単一 list ノード variant=ind-species)。IndSpeciesNode が mockup の markup/CSS を逐語描画。取得= GET /species(各種の stats=sample_count/avg_size/avg_weight を観測から都度再計算)。種の追加= POST /species(重複は409・forked_from で派生)。似た名前= GET /species/alias-candidates?name=(決定論の文字列類似・提案のみ、統合は人の承認後のみ)。市場平均価格(avg_market_price=null)は市場と種のひもづけが無いため出さない(後の波)。種名は1つの name フィールド(学名か通称)。旧版(source_path=/species の bind list + form)は screen-def から撤去。",
   "nodes": [
     {
       "id": "shell",
@@ -13,27 +13,10 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "種の管理", "level": 1 } },
-            { "id": "list-title", "type": "heading", "props": { "text": "登録済みの種", "level": 2 } },
             {
-              "id": "species-list",
+              "id": "species",
               "type": "list",
-              "props": {
-                "source_path": "/api/v1/species",
-                "bind_items": "data.species-list.species",
-                "item_text": "{{name}}"
-              }
-            },
-            { "id": "create-title", "type": "heading", "props": { "text": "種を追加する", "level": 2 } },
-            {
-              "id": "create-form",
-              "type": "form",
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/species" },
-              "children": [
-                { "id": "name", "type": "field", "props": { "variant": "text", "name": "name", "label": "種名", "placeholder": "例: Dynastes hercules", "required": true } },
-                { "id": "forked-from", "type": "field", "props": { "variant": "text", "name": "forked_from", "label": "fork 元の種 ID（任意）", "placeholder": "species/..." } },
-                { "id": "submit", "type": "button", "props": { "label": "追加する", "variant": "primary", "type": "submit" } }
-              ]
+              "props": { "variant": "ind-species" }
             }
           ]
         }
