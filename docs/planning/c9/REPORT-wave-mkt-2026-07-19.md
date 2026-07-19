@@ -21,7 +21,8 @@ kickoff: 00-hq/kits/ihl-mkt/KICKOFF.md
 | 2 | pt_topup削除の実施確認 | **確認完了（コード変更不要）** | grep監査：obligation enum=`["fee_tax","p2p"]`・pt_topup無し。残2件は削除を記録する説明コメントのみ |
 | 3 | 「取引中」独立画面の完成予想図 | **完了・○採用（R121・100点）** | 批評家PASS→カード `mkt-torihikichu-forecast`→**○採用「めっちゃいい・すごく使いやすそう」** |
 | 3.5 | 「割り出し予約」完成予想図（3方式・単価固定を実描画） | **完了・○採用（R134・90点）** | 批評家PASS blocking0→カード `mkt-reservation-forecast`→**○採用「UI作るのうまくなったね！最高！」**（MKT-RESERVATION-1/2=○） |
-| 4 | market-trade/economy-status/platinum-shop/dispute 予想図 | 未着手 | — |
+| 4a | dispute「話し合いの場」予想図（round-16 0点の作り直し） | **完了・判定待ち** | 独立批評家(opus)PASS blocking0（0点是正/出典実在/誇張ゼロ/視覚品質）→カード `mkt-dispute-forecast` ready。plain-language是正済 |
+| 4b | market-trade / economy-status / platinum-shop 予想図 | 未着手（次・1ゾーン=1カード） | economy-status 一次資料調査中 |
 | 5a | 「取引中」逐語採用+実データ配線 | **完了・○統合承認（R137・80点「承認します」）** | 批評家PASS blocking0→カード `mkt-torihikichu-wired`→○。commit d1eb6a2。誇張是正(自動dispute導線→手動)を後追い |
 | 5b | 「割り出し予約」逐語採用+実データ配線（単価固定・買い手ダッシュボード） | **実装完了・批評家ゲート中** | 既存予約ルート再利用(新route無し)・GET /market/reservations等に配線・lint 21緑→独立批評家(opus)実行中→カード `mkt-reservation-wired` 投函予定 |
 
