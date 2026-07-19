@@ -222,7 +222,15 @@ D:\claude\systems\ihl-ver3 で起動して。
 
 1. **wave-mkt統合=解禁済(全4カード○: 取引中80/予約70/economy90/dispute70)・要精密reconcile**。ブランチ=`wave-mkt`(7コミット・tip 21b3b56・merge-base 6831ef2)。**merge試行済→2衝突(csv=再生成・home.json=下記)。market-routes.ts/i18nは自動マージ成功(species filterと新route別region)**。**home.json衝突のreconcile方針(要判断)**: HEAD=home v2単一node(採用が正=承認済R157)。wave-mktは旧home構造に4リンク(open-torihikichu/reservation/economy/hanashiai)追加+**4つの独立HTMLページ新設**(`apps/web/public/{torihikichu,reservation,economy-status,hanashiai}/*.html`=finder型)。**要確認**: (a)home v2採用時、この4ページの入口をどこに置くか(市場primary card→market-trade経由で取引中/予約が届くか・economy-status/hanashiaiの入口)。(b)**/hanashiai/hanashiai.html(新)と既存/s/dispute(renderer)の関係=置換か共存か**(wave-mktはdispute.json/renderer未改変=hanashiai.htmlは新規追加・話し合いの場の新canonical候補)。ihl-mkt意図の確認が要る。**abort理由**: このアーキテクチャreconcileは20コミット末尾で急ぐとmain破損/入口orphanリスク→fresh sessionで着手が安全(wave-mktは○済・ブランチ上で安全)。
 2. ~~knw-to-c9-integrate-wave1~~ = **統合完了(`1c6867f`・○R171)**。KNW stage4「種族の本」(WikiLLM決定論・SpeciesBookNode+knowledge-hub4タブ+GET /plaza/species/:id/book)。reconcile=compose species_id重複をslice2b版へ一本化(二重付与なし)。KNW wave1完全統合(stage1-3=1cf1c89+stage4=1c6867f)。clean Truth E2E緑。
-3. **4ゾーン(IND5/ME5/ENTRY6/FORK2)背景実装ブランチ(`wave-{ind,me,entry,fork}-impl`・R163)**: HQ発進済・実装中。完成→ブランチ+判定カード→○で統合。ME/ENTRY/FORK/INDの○はこれから。
-4. **wave1-obs**: 統合済(e97aa96)。**wave-img**(画像解析・color○100 R140)も別途統合候補。
+3. **4ゾーン=全て○出揃った(HQ号砲 2026-07-19 19:15・DISPATCH-c9末尾)・統合待ち**。※カードはproj=ihl-zonesのためC9 Monitor外=DISPATCH追記が号砲。各`review-queue\{ind,me,entry,fork}-impl-2026-07-19.json`のhq_noteに統合申し送り:
+   - **IND=○90(R169)** `wave-ind-impl` 3ff7f97 — globals.css末尾に.ind-zoneスコープ追記(受入可否C9裁量・正直申告済)。最高スコア=最もクリーンな統合候補。
+   - **ME=○60(R170)** `wave-me-impl` 91c8155 — **要rebase**・ヘッダー導線向け替え申し送り(「たぶん」=実機確認回収も)。
+   - **ENTRY=○75(R167)** `wave-entry-impl` 3bb3dfc — **J-B(初回オンボーディング)=×不採用確定**「説明/チュートリアルでいい」→round-18でチュートリアル要件と突合。
+   - **FORK=○75(R168)** `wave-fork-impl` 87d0190 — **Puck+package.json reconcile対象**(依存変更=要注意)。**FORK拡張スライスは凍結中(R172/R173=fork主役+既存部品開放へ転回・判定待ち)→87d0190現物の統合のみ可・拡張着手しない**。
+4. **wave1-obs**=統合済(e97aa96)。**wave-img**(画像解析・スケール紙/capture color○100 R140・commit b35af45系)=統合候補(別worktree)。
+
+**HQ優先順(DISPATCH号砲)**: ①mkt reconcile(wave-mkt=取引中/予約/経済/話し合い全○) → ②4ゾーン統合(IND→他) → ③統合完了報告カード(実URL付き・ME60「たぶん」実機確認回収兼)。
+
+> **統合ラン申し送り(2026-07-19セッション末・23コミット到達点から)**: このmkt+4ゾーン=**5ブランチ統合波**は各々KNW wave1規模のmerge+reconcile。特にwave-mktは4独立HTMLページのnav-reconcile(home v2への入口配置・hanashiai/dispute関係)が架構判断を要し、FORKはpackage.json依存reconcile、MEはrebase要。全て○済・ブランチ上で安全なので、**fresh sessionで1本ずつ確実に**(型=KNW wave1実績: merge--no-ff→衝突精査→共有物reconcile→lint/tsc/tests→clean Truth E2E全緑→push)。共有物(renderer/AppShellNode/HeaderScopeCtx/home.json/navigation.json/globals.css/schemas)整合を毎回確認。
 
 **統合の型(KNW wave1実績)**: merge --no-ff → 衝突精査(生成物=再生成・共有物=共有オーナー判断でreconcile) → lint/tsc/tests → **clean Truth E2E全緑**(finder-proのTruth/WebGL環境flakeは既知・diff非起因) → push。共有物(renderer/AppShellNode/HeaderScopeCtx/schemas/home.json/navigation.json)の整合を必ず確認。
