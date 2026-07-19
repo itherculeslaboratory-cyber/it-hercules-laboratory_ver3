@@ -254,7 +254,7 @@ D:\claude\systems\ihl-ver3 で起動して。
 | (E2E是正) finder-pro追随 | — | 84f6dba | — |
 
 ### ゲート実測(統合後・main=84f6dba)
-- lint=22ゲート全緑(各merge後)・web tsc clean・**vitest 1798緑**(api18+contract1528+web252)・**pytest 49緑1skip**。
+- lint=21ゲート全緑(各merge後)・web tsc clean・**vitest 1798緑**(api18+contract1528+web252)・**pytest 49緑1skip**。
 - **E2E: 全spec health時緑**。第1回フル走査=177/180(実赤1=finder-pro・是正済/既知flake2=obs-register-batch・obs-search=clean単独緑で二重実証)。統合影響spec(finder-pro/fork-ab-shots/individual-detail/observation)=clean単独で全緑再確認。※フル走査は next dev サーバが8分超で稀にクラッシュ(ERR_CONNECTION_REFUSED連鎖・環境debt)=コード非起因。
 
 ### reconcile判断(記録)
