@@ -169,8 +169,8 @@ function disputeHtml(d) {
     </div>
     <div class="mini-card">
       <h4>💬 もめごとを相談</h4>
-      <p>死着・性別違い・系統違いなどの重大な相違は、受け取り時に自動で相談(話し合いの場)へ回ります。アプリへの不満・改善要望もここへ。</p>
-      <div class="cancel-state" style="background:var(--danger-bg);color:var(--danger);">重大相違を見つけたら → 話し合いの場</div>
+      <p>死着・性別違い・系統違いなど重大な相違を見つけたら、受け取りを確定せず<b>話し合いの場</b>へ相談してください。アプリへの不満・改善要望もここから出せます。</p>
+      <div class="cancel-state" style="background:var(--danger-bg);color:var(--danger);">重大相違を見つけたら → 話し合いの場へ相談</div>
       <a class="btn ghost sm" href="/s/dispute">話し合いの場をひらく</a>
     </div>
   </div>`;
@@ -219,7 +219,7 @@ function renderDetail() {
     <section class="block">
       <div class="section-head">
         <h2 class="section-title">🛟 うまくいかない時</h2>
-        <p class="section-caption">キャンセル依頼ともめごと相談への入口。深刻な相違は相談へ強制的に回ります。</p>
+        <p class="section-caption">キャンセル依頼ともめごと相談への入口。重大な相違は受け取りを確定せず相談してください。</p>
       </div>
       ${disputeHtml(d)}
     </section>`;

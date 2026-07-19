@@ -22,8 +22,16 @@ kickoff: 00-hq/kits/ihl-mkt/KICKOFF.md
 | 3 | 「取引中」独立画面の完成予想図 | **完了・○採用（R121・100点）** | 批評家PASS→カード `mkt-torihikichu-forecast`→**○採用「めっちゃいい・すごく使いやすそう」** |
 | 3.5 | 「割り出し予約」完成予想図（3方式・単価固定を実描画） | **完了・○採用（R134・90点）** | 批評家PASS blocking0→カード `mkt-reservation-forecast`→**○採用「UI作るのうまくなったね！最高！」**（MKT-RESERVATION-1/2=○） |
 | 4 | market-trade/economy-status/platinum-shop/dispute 予想図 | 未着手 | — |
-| 5a | 「取引中」逐語採用+実データ配線 | **実装完了・批評家ゲート中** | lint 21緑・tests/market-transactions-view 15緑・market回帰38緑→独立批評家(opus)実行中→カード `mkt-torihikichu-wired` 投函予定 |
-| 5b | 「割り出し予約」逐語採用+実データ配線（単価固定） | 未着手（R134承認済・次） | — |
+| 5a | 「取引中」逐語採用+実データ配線 | **完了・○統合承認（R137・80点「承認します」）** | 批評家PASS blocking0→カード `mkt-torihikichu-wired`→○。commit d1eb6a2。誇張是正(自動dispute導線→手動)を後追い |
+| 5b | 「割り出し予約」逐語採用+実データ配線（単価固定・買い手ダッシュボード） | **実装完了・批評家ゲート中** | 既存予約ルート再利用(新route無し)・GET /market/reservations等に配線・lint 21緑→独立批評家(opus)実行中→カード `mkt-reservation-wired` 投函予定 |
+
+## スライス5b 詳細（「割り出し予約」買い手ダッシュボード・V3-IND-35）
+
+- **新規**: `apps/web/public/reservation/{reservation.html,reservation.js}`（承認済み予想図R134のCSS視覚系採用・requireSession auth-gate）。
+- **実データ配線（新route無し）**: GET /market/reservations（状態付き自分の予約）+ GET /market/listings（title結合）+ GET /market/transfer/{id}（offeredの自分の順位）+ POST /confirm|/decline。既存の予約ルート（market-reservation-routes.ts・実装+TC済）を再利用。
+- **範囲の正直明記**: この画面は買い手の予約状態のみ。申込フォーム・出品者しきい値・マッチング実行は出品/個体側の別画面（scope-note明示）。ラブレー/貢献度は「これから」正直表示。
+- **誇張是正（取引中）**: torihikichu.js の「重大相違は受け取り時に自動でdisputeへ回る/強制的に回る」を、バックエンド未実装（market-settlement.ts receive遷移に自動分岐なし＝設計意図のみ）に合わせ「見つけたら話し合いの場へ相談してください」の手動導線へ是正（誇張ゼロ）。
+- 共有部（schemas/renderer全域/theme）不変。home.jsonに入口link `open-reservation` 追加（既存契約不変・i18nキー追加のみ）。
 
 ## スライス3.5 詳細（割り出し予約 予想図・V3-IND-35 + F-3裁定 R127）
 

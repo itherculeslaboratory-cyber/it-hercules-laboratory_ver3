@@ -116,6 +116,11 @@
               "props": { "label_key": "home.open-torihikichu.label", "label": "取引中の取引を見る", "href": "/torihikichu/torihikichu.html" }
             },
             {
+              "id": "open-reservation",
+              "type": "link",
+              "props": { "label_key": "home.open-reservation.label", "label": "割り出し予約を見る", "href": "/reservation/reservation.html" }
+            },
+            {
               "id": "open-match",
               "type": "button",
               "props": { "label_key": "home.open-match.label", "label": "マッチングを見る", "variant": "secondary" },
