@@ -11,6 +11,11 @@ import { mkdirSync } from "node:fs";
 const WEB = "http://127.0.0.1:3000";
 const SHOTS = "D:/claude/00-hq/review-queue/evidence/obs-r4-impl-2026-07-19";
 
+// Capture at 2x DPR so the mobile (390) evidence renders crisp like a real
+// phone (~2-3x DPI) instead of thin/aliased at DPR=1 — representative of what
+// the user actually sees on a handset.
+test.use({ deviceScaleFactor: 2 });
+
 async function devLogin(page: Page) {
   await page.goto(`${WEB}/s/login`);
   await page.getByRole("button", { name: "開発トークンでログイン" }).click();

@@ -58,7 +58,6 @@
               "props": {
                 "text_key": "qr-resume.lead.text",
                 "text": "この個体の文脈で、前回値を引き継いで観測を続けます。",
-                "muted": true,
                 "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
               }
             },
@@ -68,7 +67,6 @@
               "props": {
                 "text_key": "qr-resume.lead-empty.text",
                 "text": "この棚にはまだ個体がいません。この棚で新規個体を登録できます。",
-                "muted": true,
                 "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
               }
             },
@@ -78,7 +76,6 @@
               "props": {
                 "text_key": "qr-resume.lead-multi.text",
                 "text": "この棚には複数の個体がいます。観測する個体を選んでください。",
-                "muted": true,
                 "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_multi"] }
               }
             },
@@ -102,7 +99,6 @@
                   "props": {
                     "text_key": "qr-resume.prefill-species.text",
                     "text": "前回の種の候補: {{data.resolve.prefill.species_candidate}}",
-                    "muted": true,
                     "when": { "not_eq": ["{{data.resolve.individual_id}}", ""] }
                   }
                 },
@@ -112,7 +108,6 @@
                   "props": {
                     "text_key": "qr-resume.placement-id.text",
                     "text": "棚 ID: {{data.resolve.placement_id}}",
-                    "muted": true,
                     "when": { "eq": ["{{data.resolve.entry_mode}}", "qr_placement_empty"] }
                   }
                 }
