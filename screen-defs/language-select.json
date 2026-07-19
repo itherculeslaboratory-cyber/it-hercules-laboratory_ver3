@@ -3,6 +3,7 @@
   "route": "/onboarding/language",
   "title": "言語を選ぶ",
   "layout": "standard",
+  "notes": "ENTRY実装(entry-forecast.html R145○)。表示言語(locale=ja/en)を選ぶ独立導線。実際の保存は setup-profile.json の同じ locale フィールド(PATCH /me/preferences)で行い、ここでは二重保存しない(誇張ゼロ=画面にも明記)。用意している言語は日本語/英語の2つ(settings-routes.ts locales)。",
   "nodes": [
     {
       "id": "shell",
@@ -12,21 +13,23 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "表示言語を選んでください", "level": 1 } },
+            { "id": "title", "type": "heading", "props": { "text": "表示言語を選ぶ", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "画面の文言を表示する言語です。あとで設定からいつでも変えられます。", "muted": true } },
             {
               "id": "language",
               "type": "field",
               "props": {
-                "variant": "select",
+                "variant": "segmented",
                 "name": "language",
                 "label": "言語",
-                "placeholder": "言語を選択",
+                "default": "ja",
                 "options": [
                   { "value": "ja", "label": "日本語" },
                   { "value": "en", "label": "English" }
                 ]
               }
             },
+            { "id": "note", "type": "text", "props": { "text": "言語の保存は「プロフィールを整える」で行います(同じ設定なので二重には保存しません)。この画面は国・言語を続けて選ぶための入口です。", "muted": true } },
             {
               "id": "continue",
               "type": "button",

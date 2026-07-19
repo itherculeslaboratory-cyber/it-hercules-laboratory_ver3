@@ -3,7 +3,7 @@
   "route": "/login/sent",
   "title": "送信しました",
   "layout": "standard",
-  "notes": "V3-AUT-46(round-16 OQ-ONB-03)。POST /api/v1/auth/magic-link は列挙防止のため 202 {sent:true} を常に返すので、この画面は誤入力時にも表示される「送信成功画面」— usecase-driven-design.md §収束フロー『届かない全経路の受け皿』の一部として、数字コード入力欄(login.json と同じ code-form)を常設する。email は magic-form の送信値が queryFromBody 経由で {{params.email}} に載る(renderer.tsx queryFromBody)。",
+  "notes": "ENTRY実装(entry-forecast.html R145○)。POST /api/v1/auth/magic-link は列挙防止のため常に 202 {sent:true} を返すので、この画面は誤入力時にも同じ表示になる『送信成功画面』(登録済みかを外から当てられないための安全設計)。それを notice カードで明記する(契約=列挙防止文言の維持)。『届かない全経路の受け皿』として数字コード欄(login.json と同じ verify-code)を常設。email は magic-form の送信値が queryFromBody 経由で {{params.email}} に載る。",
   "nodes": [
     {
       "id": "shell",
@@ -25,6 +25,15 @@
                 { "id": "code", "type": "field", "props": { "variant": "text", "name": "code", "label_key": "login-sent.code.label", "label": "数字コード(6桁)", "placeholder": "123456", "required": true } },
                 { "id": "code-submit", "type": "button", "props": { "label_key": "login-sent.code-submit.label", "label": "コードでログイン", "variant": "primary", "type": "submit" } }
               ]
+            },
+            {
+              "id": "enum-notice",
+              "type": "card",
+              "props": {
+                "icon": "ⓘ",
+                "title_key": "login-sent.notice.title", "title": "このメールアドレスが未登録でも、同じ画面が出ます",
+                "meta_key": "login-sent.notice.body", "meta": "登録済みかどうかを外部から知られないための安全設計です(列挙防止)。心当たりのないメールアドレスなら、下から入力し直してください。"
+              }
             },
             {
               "id": "back-to-login",

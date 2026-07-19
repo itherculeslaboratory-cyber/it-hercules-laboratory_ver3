@@ -3,6 +3,7 @@
   "route": "/onboarding/terms",
   "title": "利用規約",
   "layout": "standard",
+  "notes": "ENTRY実装(entry-forecast.html R145○)。規約同意はログイン画面のチェックボックス(terms)で記録し、この画面は本文の確認と同意の置き場所。規約の最終文面は公開前に確定する人間ゲート(AGENTS.md 人間ゲート①)なので、本文は暫定版であることを画面に明記する(契約=仮文言と画面に明記)。同意後はホーム(司令塔)へ。",
   "nodes": [
     {
       "id": "shell",
@@ -12,8 +13,16 @@
           "id": "page",
           "type": "page",
           "children": [
-            { "id": "title", "type": "heading", "props": { "text": "利用規約", "level": 1 } },
-            { "id": "body", "type": "text", "props": { "text": "本サービスの利用にあたり、観測データの取り扱いとコミュニティ行動規範に同意いただきます。同意すると観測を始められます。" } },
+            { "id": "title", "type": "heading", "props": { "text": "規約に同意して始める", "level": 1 } },
+            { "id": "lead", "type": "text", "props": { "text": "観測を始める前に、データの扱いとコミュニティの決まりに同意します。", "muted": true } },
+            { "id": "provisional", "type": "text", "props": { "text": "下記は暫定版です。正式な規約は公開時に確定します。", "muted": true } },
+            { "id": "h-data", "type": "heading", "props": { "text": "観測データの取り扱い", "level": 2 } },
+            { "id": "t-data", "type": "text", "props": { "text": "あなたの観測記録は、消さずに積み重ねる(追記のみ)方式で扱います。住所や口座番号などの個人を特定する情報は、サーバに平文で持ちません。" } },
+            { "id": "h-comm", "type": "heading", "props": { "text": "コミュニティの決まり", "level": 2 } },
+            { "id": "t-comm", "type": "text", "props": { "text": "他の観測者への敬意、記録の正直さ、疑義は当事者どうしで落ち着いて解決すること。良いテンプレートは、真似されるほど作者の得になる文化を尊重します。" } },
+            { "id": "h-agree", "type": "heading", "props": { "text": "同意すると", "level": 2 } },
+            { "id": "t-agree", "type": "text", "props": { "text": "観測を始められます。データはいつでもCSVで持ち出せます(設定→バックアップ)。" } },
+            { "id": "agree-check", "type": "field", "props": { "variant": "checkbox", "name": "agree", "label": "上記に同意します", "required": true } },
             {
               "id": "agree",
               "type": "button",
