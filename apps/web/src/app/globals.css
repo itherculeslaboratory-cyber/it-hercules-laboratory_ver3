@@ -166,6 +166,34 @@ body {
   font-size: var(--civ-fs-1);
 }
 
+/* HDR-1(c9-structure-canon.md §1/§1c・R112/R115)ヘッダー観測対象セレクタ。
+ * ネイティブ<dialog>(renderer.tsx HeaderScopeSelector)は既定でUA配色(白背景/
+ * 黒文字)になり得るため、--civ-*トークンで両テーマ・両ThemePackに追従させる
+ * (R70の教訓と同じ「ハードコード色を使わない」ルール)。margin:auto の明示は
+ * Tailwind Preflight(`*{margin:0}`)がdialog:modalのUA既定センタリング
+ * (margin:auto)を上書きしてしまう(全画面左詰め+縦いっぱいに伸びるレイアウト
+ * 崩れを実機スクショで確認・既知のTailwind×<dialog>の定番衝突)ための復元。 */
+.civ-scope-dialog {
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface);
+  color: var(--civ-text);
+  padding: 0;
+  margin: auto;
+  max-width: 480px;
+  max-height: min(600px, calc(100vh - 64px));
+  width: calc(100% - 32px);
+}
+.civ-scope-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+.civ-scope-dialog-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* design-home-round.md §③: a #hqThemeToggle.hdtoggle button lives at the end
  * of the app-shell header (renderer.tsx ThemeToggleButton). theme.js ships no
  * CSS for ".hdtoggle" of its own — its documented contract is that each host

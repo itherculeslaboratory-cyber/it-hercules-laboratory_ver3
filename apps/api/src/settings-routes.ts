@@ -32,6 +32,8 @@ const PREF_FIELDS = [
   "push_notifications_enabled",
   "delivery_pref",
   "bank_transfer_ready",
+  "scope_species",
+  "scope_lineage_id",
 ] as const;
 
 export const settingsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -54,6 +56,8 @@ export type Preferences = {
   push_notifications_enabled: string;
   delivery_pref: string;
   bank_transfer_ready: string;
+  scope_species: string;
+  scope_lineage_id: string;
 };
 
 // 選好投影(都度再計算)。pref-set を prefix scan → actor 一致のみ → created_at/ULID
@@ -83,6 +87,8 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
     push_notifications_enabled: "off", // V3-UIX-43: 配信基盤は人間ゲート・既定オフ
     delivery_pref: "", // V3-UIX-80: 未設定 = 取引前ナッジの対象
     bank_transfer_ready: "", // V3-UIX-80: 未設定(≠"yes") = 取引前ナッジの対象
+    scope_species: "", // HDR-1/R112/R115: ヘッダー観測対象セレクタ・未設定=すべて
+    scope_lineage_id: "", // HDR-1/R112/R115: 同上・血統ブランドタグ層(層2)
   };
   for (const e of events) {
     for (const k of PREF_FIELDS) {

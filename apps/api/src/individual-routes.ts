@@ -1228,13 +1228,22 @@ individualRoutes.get("/individuals/lineage-check", async (c) => {
 // スコープに絞る(他者の血統情報は返さない)。cross_parent Truth を都度全件scan
 // (常駐indexなし・不変条項①)。NOTE: `/individuals/:id` より前に登録
 // (lineage-check と同じ static-vs-param 順序の理由)。
+// HDR-1(c9-structure-canon.md §1c/R112/R115)ヘッダー観測対象セレクタ配線:
+// ?species=/?lineage_id= は listIndividualsFor と同じフィルタ規約(species は
+// 大小無視の完全一致・lineage_id は完全一致)を ownIds の絞り込みに横展開する
+// (エッジ自身に種/系統フィールドは無いので、両端が対象母集団に入っている
+// リンクだけを返す=個体一覧側フィルタと同じ母集団に揃える)。
 individualRoutes.get("/individuals/pedigree-links", async (c) => {
   const actorId = c.get("actorId");
+  const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
+  const lineageFilter = c.req.query("lineage_id") ?? "";
   const s = store(c);
   const ownIds = new Set(
     (await s.listEvents(`truth/${MASTER_TYPE}/`))
       .map(dataOf)
       .filter((m) => m.actor_id === actorId)
+      .filter((m) => !speciesFilter || (typeof m.species === "string" && m.species.toLowerCase() === speciesFilter))
+      .filter((m) => !lineageFilter || m.lineage_id === lineageFilter)
       .map((m) => String(m.individual_id ?? "")),
   );
   const links = (await s.listEvents(`truth/${CROSS_TYPE}/`))

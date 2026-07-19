@@ -3,7 +3,7 @@
   "route": "/",
   "title": "ホーム",
   "layout": "standard",
-  "notes": "ホーム完成予想図v2(承認済みmockup D:\\claude\\00-hq\\dashboard\\mockups\\c9-home-forecast-v2.html・R112 90点採用)の実物採用+実データ配線。KNW wave1(knowledge-hub.json)と同じ in-scope トリック — 単一の list ノード(variant=home-dashboard)へ一本化し、HomeDashboardNode(apps/web/src/renderer/renderer.tsx)が mockup の markup/CSS を逐語描画しつつ実データを流し込む。旧・多ノードJSON構成(kpi-tile×7・table×2・button/link多数)は撤去 — 個々のnode id/label_key はもう存在しないが、同等のナビ導線(観測を始める→obs-entry/知の広場→knowledge-hub/マーケット→market-trade/観測対象を特定する→obs-navigator/記録画面を作る→ui-templates/テーマ→theme-gallery/設定→settings+サブチップ(device/costs/ai-profile-settings/language-select/profile)/話し合いの場→dispute)はHomeDashboardNode内のhrefとして残り、下記transitions[]がnav-reachability.test.ts+check-navigation.mjsの契約を保つ。旧'ドメインから選んで始める'(→obs-domain-select)は新IAで撤去(obs-entryがdomainを自前収集・観測対象の特定はobs-navigatorが引き継ぐ)——navigation.jsonのhome→obs-domain-selectエッジ自体は維持(消していない)がscreendef transitionからは外した。nav-reachability.test.tsのobs-domain-select===1アサーションもこの設計変更に合わせて更新済み(削除ではなくコメントで理由記載)。信頼度平均タイルはR135-a裁定により実装せず(round-18 V3-UIX-84)。ctx-line(観測対象タグ)と primary-grid の pc-badge(サンプル件数)は対応する実データAPIが無いため省略(誇張ゼロ)。",
+  "notes": "ホーム完成予想図v2(承認済みmockup D:\\claude\\00-hq\\dashboard\\mockups\\c9-home-forecast-v2.html・R112 90点採用)の実物採用+実データ配線。KNW wave1(knowledge-hub.json)と同じ in-scope トリック — 単一の list ノード(variant=home-dashboard)へ一本化し、HomeDashboardNode(apps/web/src/renderer/renderer.tsx)が mockup の markup/CSS を逐語描画しつつ実データを流し込む。旧・多ノードJSON構成(kpi-tile×7・table×2・button/link多数)は撤去 — 個々のnode id/label_key はもう存在しないが、同等のナビ導線(観測を始める→obs-entry/知の広場→knowledge-hub/マーケット→market-trade/記録画面を作る→ui-templates/テーマ→theme-gallery/設定→settings+サブチップ(device/costs/ai-profile-settings/language-select/profile)/話し合いの場→dispute)はHomeDashboardNode内のhrefとして残り、下記transitions[]がnav-reachability.test.ts+check-navigation.mjsの契約を保つ。旧'ドメインから選んで始める'(→obs-domain-select)は新IAで撤去(obs-entryがdomainを自前収集)——navigation.jsonのhome→obs-domain-selectエッジ自体は維持(消していない)がscreendef transitionからは外した。nav-reachability.test.tsのobs-domain-select===1アサーションもこの設計変更に合わせて更新済み(削除ではなくコメントで理由記載)。信頼度平均タイルはR135-a裁定により実装せず(round-18 V3-UIX-84)。ctx-line(観測対象タグ)と primary-grid の pc-badge(サンプル件数)は対応する実データAPIが無いため省略(誇張ゼロ)。R157(2026-07-19ユーザー指摘「ヘッダーにあるのにホーム内にあるのはおかしい」)対応: home v2の旧6番セクション「観測対象を特定する」(obs-navigatorへの3枚tool-card)は撤去し、ヘッダー常駐HeaderScopeSelector(AppShellNode・全画面共通・c9-structure-canon.md §1/§1c)へ一本化した。obs-navigator画面自体は撤去していない(obs-entry「対象を特定する」リンクから引き続き到達可能)——dashboard→obs-navigatorのtransitionのみ、それを描画するUI(tool-card)が無くなったので下記transitions[]からも外した(navigation.jsonのhome→obs-navigatorエッジは他クラスタの復活導線用に維持)。",
   "nodes": [
     {
       "id": "shell",
@@ -27,7 +27,6 @@
     { "from": "dashboard", "to_screen_id": "obs-entry", "label": "観測を始める(主な行き先)" },
     { "from": "dashboard", "to_screen_id": "knowledge-hub", "label": "知の広場へ(主な行き先)" },
     { "from": "dashboard", "to_screen_id": "market-trade", "label": "マーケットへ(主な行き先)" },
-    { "from": "dashboard", "to_screen_id": "obs-navigator", "label": "観測対象を特定するへ(名前で探す/はい・いいえで絞る/分類からたどるの3枚とも)" },
     { "from": "dashboard", "to_screen_id": "ui-templates", "label": "記録画面を作るへ(作る・整える)" },
     { "from": "dashboard", "to_screen_id": "theme-gallery", "label": "テーマ(色を変える)へ(記録画面を作る内サブチップ)" },
     { "from": "dashboard", "to_screen_id": "settings", "label": "設定へ(作る・整える)" },

@@ -98,6 +98,31 @@ export const LocaleCtx = createContext<string>("ja");
 // Ctx/data-layout配線自体は他消費者が現れた場合に備えて残置(無害)。
 export const LayoutCtx = createContext<string>("standard");
 
+// HDR-1(c9-structure-canon.md §1/§1c・R112/R115採用)「観測対象」グローバル
+// 文脈スイッチ。AppShellNode がヘッダーセレクタで確定した選択(層1=学術分類の
+// 種・層2=血統ブランドタグ)を保持し、全画面の子ノードへ配る。空文字="すべて"
+// (未選択・フィルタなし)。第1スライス(HDR-1○実装方針)は種族/系統フィールドが
+// 実在する個体ドメインの消費者(SearchNavigatorNode 等)のみがこれを読む —
+// 市場/知の広場/研究はスキーマにこの2フィールドが無いため対象外(申し送り)。
+// 未配線=次スライス(A1#4正直台帳): clutches(GET /clutches・lineage_idは既存/species要追加)/
+// observation-capture一覧/BatchRosterNode(renderer.tsx obs-register-batchの /individuals fetch)。
+// これらは種族narrowingが原理的に効くが本スライスでは未配線=「配線済」と偽らない。
+export type HeaderScope = { species: string; lineageId: string };
+export const DEFAULT_HEADER_SCOPE: HeaderScope = { species: "", lineageId: "" };
+export const HeaderScopeCtx = createContext<HeaderScope>(DEFAULT_HEADER_SCOPE);
+
+// individual-routes.ts の既存 ?species=(大小無視完全一致)/?lineage_id=(完全
+// 一致)クエリへ HeaderScope をそのまま流し込む共通ビルダー(未選択の軸は
+// 付けない="" 全体を表す)。空スコープは "" を返す(既存の無引数呼び出しと
+// バイト同一になる=デフォルト挙動を壊さない)。
+function headerScopeQuery(scope: HeaderScope): string {
+  const params = new URLSearchParams();
+  if (scope.species) params.set("species", scope.species);
+  if (scope.lineageId) params.set("lineage_id", scope.lineageId);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 // Resolve a node's display string: prefer the i18n catalog value for `keyVal`,
 // else the literal, else `fallback`. Empty catalog hits fall through to literal.
 function displayText(
@@ -3643,7 +3668,17 @@ function primaryMeasure(row: SearchRow): { text: string; unit: string } | null {
 // フィールドはユーザー編集可のプレフィルなので、確定は commit 側で改めて起きる)。
 type TargetCandidate = { qid: string; scientific_name: string };
 
-function TargetNavigatorNode() {
+// HDR-1(c9-structure-canon.md §1b/§1c・R112/R115)ヘッダー観測対象セレクタ:
+// obs-navigator画面の既定(確定→obs-entryへnavigate)と、ヘッダーの既定
+// (確定→アプリ全体スコープの選好保存)は同じUI部品(target-navigator)を使う
+// が別概念(§1b名称衝突注記)。onConfirm を渡すと確定アクションが丸ごと
+// 差し替わる(navigate は一切呼ばれない) — obs-navigator画面側の呼び出しは
+// props無しのまま(挙動無変更)。confirmLabel は文言の書き分け用
+// (「今この対象を見ています」= ヘッダー / 「この記録の対象種を選ぶ」= 画面)。
+function TargetNavigatorNode({
+  onConfirm,
+  confirmLabel,
+}: { onConfirm?: (candidate: TargetCandidate) => void; confirmLabel?: string } = {}) {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
 
@@ -3728,8 +3763,12 @@ function TargetNavigatorNode() {
 
   const continueTo = useCallback(() => {
     if (!chosen) return;
+    if (onConfirm) {
+      onConfirm(chosen);
+      return;
+    }
     navigate("obs-entry", { species_candidate: chosen.scientific_name });
-  }, [chosen, navigate]);
+  }, [chosen, navigate, onConfirm]);
 
   return (
     <div className="civ-target-navigator">
@@ -3841,7 +3880,7 @@ function TargetNavigatorNode() {
 
       {chosen && (
         <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="primary" onClick={continueTo}>
-          この対象で観測を続ける
+          {confirmLabel ?? "この対象で観測を続ける"}
         </button>
       )}
     </div>
@@ -3851,6 +3890,7 @@ function TargetNavigatorNode() {
 function SearchNavigatorNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
+  const headerScope = useContext(HeaderScopeCtx);
 
   const [individuals, setIndividuals] = useState<SearchRow[]>([]);
   const [placements, setPlacements] = useState<PlacementRow[]>([]);
@@ -3875,8 +3915,14 @@ function SearchNavigatorNode() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // HDR-1(c9-structure-canon.md §1/R112/R115): ヘッダー観測対象セレクタの
+      // 選択をサーバ側フィルタとして付ける(individual-routes.ts の既存
+      // ?species=/?lineage_id= に配線するだけ)。画面内の種/ステージ/棚チップ
+      // (filters state)はこの母集団に対する二次的な絞り込みのまま(A1#4:
+      // localStorage 内だけで完結する旧・画面内ファセットではなくサーバ母集団
+      // 自体がヘッダー選択に従う)。
       const [ind, pl] = await Promise.all([
-        execute({ kind: "api", method: "GET", path: "/api/v1/individuals" }) as Promise<
+        execute({ kind: "api", method: "GET", path: `/api/v1/individuals${headerScopeQuery(headerScope)}` }) as Promise<
           { individuals?: SearchRow[] } | undefined
         >,
         execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
@@ -3903,8 +3949,11 @@ function SearchNavigatorNode() {
     return () => {
       alive = false;
     };
+    // headerScope の primitives のみを deps にする(オブジェクト参照ではなく
+    // 値で比較 — AppShellNode 側の再レンダーで参照が変わっても値が同じなら
+    // 再フェッチしない)。ヘッダーで選択を変えたら個体母集団を取り直す。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [headerScope.species, headerScope.lineageId]);
 
   // 直近条件の永続化(初回ロード後のみ — 復元直後の再書き込みで壊さない)。
   useEffect(() => {
@@ -5949,12 +5998,154 @@ function ThemeToggleButton() {
   );
 }
 
+// HDR-1(c9-structure-canon.md §1/§1b/§1c・R112/R115採用)ヘッダー常駐「観測対象」
+// セレクタ。ロゴ隣に現在の選択(層1=種・層2=血統ブランド)をチップ表示し、開く
+// と target-navigator(既存の3モード=名前で探す/はい・いいえ/分類からたどる)
+// を「確定=preferences保存」に差し替えて流用する(TargetNavigatorNodeの
+// onConfirm差し替え・obs-navigator画面側は無変更)。血統ブランド(層2)は
+// taxonomy検索の対象外の自由タグ(V3-IND-34)なので別枠のテキスト入力。
+// ネイティブ<dialog>(showModal)を使う(rung4: モーダルライブラリを増やさない)。
+function HeaderScopeSelector({
+  scope,
+  onSaved,
+}: {
+  scope: HeaderScope;
+  onSaved: (next: HeaderScope) => void;
+}) {
+  const execute = useContext(ExecuteCtx);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [lineageDraft, setLineageDraft] = useState(scope.lineageId);
+  const [saving, setSaving] = useState(false);
+  // screen-sweep.spec.ts(e2e)の "最初の.civ-heading" 契約(全55画面共通)を
+  // 壊さないための必須ガード: <dialog>は閉じていてもDOM上に残る(UAが
+  // display:noneにするだけ)ため、中身を無条件に描画すると隠れたh2.civ-heading
+  // がDOM順で本文の見出しより先に来て `.first()` を奪う。ドロワーが開いている
+  // 間だけ中身を描画する(TargetNavigatorNodeの初回taxonomy fetchも未使用時に
+  // 走らせない副次効果あり=不変条項①)。
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const onNativeClose = () => setIsOpen(false);
+    el.addEventListener("close", onNativeClose);
+    return () => el.removeEventListener("close", onNativeClose);
+  }, []);
+
+  // showModal/close は jsdom(単体テスト環境)に実装が無いため feature-detect
+  // し、無い環境では素の open 属性トグルへ退化させる(トップレイヤー/背景幕/
+  // フォーカストラップは失うが、コンテンツ自体は非モーダル<dialog>として
+  // 引き続き可視・操作可能 — 実ブラウザは常にshowModal/closeを持つので通常
+  // 経路は変わらない)。close() は isOpen を直接falseにする(ESCキー等ネイティブ
+  // 経路は上のuseEffectの'close'イベント購読が担当・二重にfalseを立てても無害)。
+  const open = useCallback(() => {
+    setLineageDraft(scope.lineageId);
+    setIsOpen(true);
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.showModal === "function") el.showModal();
+    else el.setAttribute("open", "");
+  }, [scope.lineageId]);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.close === "function") el.close();
+    else el.removeAttribute("open");
+  }, []);
+
+  const patchScope = useCallback(
+    async (partial: Partial<HeaderScope>) => {
+      setSaving(true);
+      try {
+        const body: Record<string, string> = {};
+        if (partial.species !== undefined) body.scope_species = partial.species;
+        if (partial.lineageId !== undefined) body.scope_lineage_id = partial.lineageId;
+        await execute({ kind: "api", method: "PATCH", path: "/api/v1/me/preferences" }, body);
+        onSaved({ ...scope, ...partial });
+        close();
+      } finally {
+        setSaving(false);
+      }
+    },
+    [execute, scope, onSaved, close],
+  );
+
+  const chipText =
+    scope.species && scope.lineageId
+      ? `${scope.species} / ${scope.lineageId}`
+      : scope.species || scope.lineageId || "すべて";
+
+  return (
+    <div className="civ-scope-selector">
+      <button
+        type="button"
+        className={cn("civ-interactive", "civ-button")}
+        data-variant="secondary"
+        aria-haspopup="dialog"
+        onClick={open}
+      >
+        観測対象: {chipText}
+      </button>
+      <dialog ref={dialogRef} className="civ-scope-dialog" aria-label="観測対象を選ぶ">
+        {isOpen && (
+          <div className="civ-scope-dialog-body">
+            <h2 className="civ-heading">観測対象を選ぶ</h2>
+            <p className="civ-text" data-muted="true">
+              今この対象を見ています。選ぶと、個体一覧・個体ファインダー・検索がこの対象だけに絞られます(市場・知の広場・研究は次のスライスまで対象外)。
+            </p>
+            {(scope.species || scope.lineageId) && (
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="ghost"
+                disabled={saving}
+                onClick={() => void patchScope({ species: "", lineageId: "" })}
+              >
+                すべてに戻す
+              </button>
+            )}
+            <TargetNavigatorNode
+              confirmLabel="この対象を観測対象にする"
+              onConfirm={(c) => void patchScope({ species: c.scientific_name })}
+            />
+            <div className="civ-field">
+              <label className="civ-text" htmlFor="civ-scope-lineage">
+                系統(血統ブランド)
+              </label>
+              <input
+                id="civ-scope-lineage"
+                className="civ-input"
+                value={lineageDraft}
+                onChange={(e) => setLineageDraft(e.target.value)}
+                placeholder="例: 王シリーズ"
+              />
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="primary"
+                disabled={saving || !lineageDraft.trim()}
+                onClick={() => void patchScope({ lineageId: lineageDraft.trim() })}
+              >
+                この系統にする
+              </button>
+            </div>
+            <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="ghost" onClick={close}>
+              閉じる
+            </button>
+          </div>
+        )}
+      </dialog>
+    </div>
+  );
+}
+
 function AppShellNode({ node }: { node: ScreenNode }) {
   const execute = useContext(ExecuteCtx);
   const layout = useContext(LayoutCtx);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [scope, setScope] = useState<HeaderScope>(DEFAULT_HEADER_SCOPE);
 
   useEffect(() => {
     let alive = true;
@@ -5975,6 +6166,29 @@ function AppShellNode({ node }: { node: ScreenNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // HDR-1: 選好投影(scope_species/scope_lineage_id)をログイン確定後に1度だけ
+  // 取得する(未ログイン中は/me/preferencesが本人スコープを持たないため待つ)。
+  useEffect(() => {
+    if (!authLoaded || !authenticated) return;
+    let alive = true;
+    Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/me/preferences" }))
+      .then((r) => {
+        if (!alive) return;
+        const body = r as { scope_species?: unknown; scope_lineage_id?: unknown } | undefined;
+        setScope({
+          species: typeof body?.scope_species === "string" ? body.scope_species : "",
+          lineageId: typeof body?.scope_lineage_id === "string" ? body.scope_lineage_id : "",
+        });
+      })
+      .catch(() => {
+        if (alive) setScope(DEFAULT_HEADER_SCOPE);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoaded, authenticated]);
 
   const onLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -6000,6 +6214,7 @@ function AppShellNode({ node }: { node: ScreenNode }) {
         <a className="civ-brand" href="/">
           IHL
         </a>
+        {authLoaded && authenticated && <HeaderScopeSelector scope={scope} onSaved={setScope} />}
         {authLoaded && authenticated && (
           <nav className="civ-chrome-nav" aria-label="主要ナビゲーション">
             <a className="civ-link civ-chrome-link" href="/s/obs-search">
@@ -6021,7 +6236,9 @@ function AppShellNode({ node }: { node: ScreenNode }) {
         </div>
         <ThemeToggleButton />
       </header>
-      <Children nodes={node.children} />
+      <HeaderScopeCtx.Provider value={scope}>
+        <Children nodes={node.children} />
+      </HeaderScopeCtx.Provider>
     </div>
   );
 }
@@ -6893,48 +7110,12 @@ function HomeDashboardNode({ node }: { node: ScreenNode }) {
           </div>
         </section>
 
-        {/* 6. 観測対象を特定する(obs-navigator の3モード・再ラベル) — 情報表示
-            のまま、3枚とも obs-navigator へ誘導(ヘッダー昇格は Phase D) */}
-        <section className="block">
-          <div className="section-head">
-            <h2 className="section-title">🔎 観測対象を特定する</h2>
-            <p className="section-caption">
-              目の前の生きものが何かを絞り込む方法。観測を始める前に使う「観測対象を特定する」画面の3つのやり方です。
-            </p>
-          </div>
-          <div className="card">
-            <div className="tool-grid">
-              <a className="tool-card" href="/s/obs-navigator">
-                <div className="tl-icon">🔍</div>
-                <div>
-                  <div className="tl-name">名前で探す</div>
-                  <div className="tl-desc">種名や学名の一部を入れて、候補をしぼる。名前がわかっている時はこれが一番早い。</div>
-                </div>
-              </a>
-              <a className="tool-card" href="/s/obs-navigator">
-                <div className="tl-icon">❓</div>
-                <div>
-                  <div className="tl-name">はい・いいえで絞る</div>
-                  <div className="tl-desc">いくつかの質問にはい／いいえで答えると候補がしぼられる。名前がわからない時のガイド式。</div>
-                </div>
-              </a>
-              <a className="tool-card" href="/s/obs-navigator">
-                <div className="tl-icon">🌿</div>
-                <div>
-                  <div className="tl-name">分類からたどる</div>
-                  <div className="tl-desc">科 → 属 → 種と生物分類をたどって特定する。</div>
-                  <span className="tl-opt">分類データは順次拡充中(いまは一部)</span>
-                </div>
-              </a>
-            </div>
-            <p className="source-note">
-              これは既存の「観測対象を特定する」画面(3モードとも実装済み)をホームから見える形にしたものです。用途不明だった旧ラベルの正体はこれです。
-              <b>「種図鑑」のような閲覧図鑑は現在ありません</b>(いまは上の「分類からたどる」が近い機能)。
-            </p>
-          </div>
-        </section>
-
-        {/* 7. 作る・整える(二次項目をグルーピング) */}
+        {/* 6. 作る・整える(二次項目をグルーピング) — 旧6番「観測対象を特定する」
+            (obs-navigator の3モード・3枚のtool-card)はR157「ヘッダーにあるのに
+            ホーム内にあるのはおかしい」でホームから撤去し、HeaderScopeSelector
+            (AppShellNode・ロゴ隣)へ一本化した(c9-structure-canon.md §1・§1c)。
+            obs-navigator画面自体は撤去していない(obs-entry「対象を特定する」
+            リンクから引き続き到達可能・home.jsonのtransitions[]からは除去)。 */}
         <section className="block">
           <div className="section-head">
             <h2 className="section-title">🛠 作る・整える</h2>

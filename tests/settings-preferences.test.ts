@@ -60,6 +60,8 @@ describe("UIX-16 選好 append + LWW 投影", () => {
       push_notifications_enabled: "off",
       delivery_pref: "", // V3-UIX-80: 未設定 = 取引前ナッジの対象
       bank_transfer_ready: "", // V3-UIX-80: 未設定 = 取引前ナッジの対象
+      scope_species: "", // HDR-1/R112/R115: ヘッダー観測対象セレクタ・未設定=すべて
+      scope_lineage_id: "", // HDR-1/R112/R115: 同上・血統ブランドタグ層
     });
   });
 
@@ -140,5 +142,26 @@ describe("UIX-16/I18-08 負の validation(write-time 検証配線・批評家修
     const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
     expect(p.delivery_pref).toBe("post_office_hold");
     expect(p.bank_transfer_ready).toBe("yes");
+  });
+
+  // HDR-1/R112/R115(c9-structure-canon.md §1/§1c): ヘッダー観測対象セレクタが
+  // 保存する2フィールド(層1=学術分類の種・層2=血統ブランドタグ)。自由文字列
+  // (enum なし・minLengthなし)。空文字PATCHは「すべてに戻す」の表現として
+  // 明示的に許可(他の任意フィールドと違い、空="フィルタなし"自体が意味を持つ)。
+  it("scope_species/scope_lineage_id は自由文字列で append され、空文字で『すべて』に戻せる", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("gina");
+    expect(
+      (await patchPrefs(env, h, { scope_species: "Dynastes hercules", scope_lineage_id: "王シリーズ" })).status,
+    ).toBe(200);
+    const p1 = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p1.scope_species).toBe("Dynastes hercules");
+    expect(p1.scope_lineage_id).toBe("王シリーズ");
+
+    await sleep(2);
+    expect((await patchPrefs(env, h, { scope_species: "" })).status).toBe(200);
+    const p2 = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p2.scope_species).toBe(""); // すべてに戻った
+    expect(p2.scope_lineage_id).toBe("王シリーズ"); // 別フィールドは併存維持(LWWは各フィールド独立)
   });
 });

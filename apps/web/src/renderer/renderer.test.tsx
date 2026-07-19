@@ -1365,6 +1365,48 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     });
     expect(onAction).toHaveBeenCalledWith({ kind: "api", method: "POST", path: "/api/v1/auth/logout" });
   });
+
+  // HDR-1(c9-structure-canon.md §1/§1c・R112/R115)ヘッダー観測対象セレクタ。
+  // 閉じている間は<dialog>の中身(h2.civ-heading含む)をDOMに一切出さないこと
+  // が必須契約 — 出したままだと screen-sweep.spec.ts(e2e)の
+  // `.civ-heading,.section-title,.thread-title`.first() が閉じた隠しh2を
+  // 拾って全55画面が「見出しなし」誤検知で落ちる(実際に踏んだ回帰・本テストは
+  // その恒久ガード)。
+  it("HDR-1: scope selector chip renders, opens with no leaked hidden heading, saves lineage via PATCH, and closes", async () => {
+    const onAction = vi.fn(async (action: Action, body?: unknown) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
+      if (action.path === "/api/v1/me/preferences" && action.method === "GET") {
+        return { scope_species: "", scope_lineage_id: "" };
+      }
+      if (action.path === "/api/v1/observation/targets/search") return { mode: "tree", children: [] };
+      if (action.path === "/api/v1/me/preferences" && action.method === "PATCH") {
+        return { scope_species: "", scope_lineage_id: (body as { scope_lineage_id?: string })?.scope_lineage_id ?? "" };
+      }
+      return undefined;
+    });
+    render(<Renderer def={shellDef()} onAction={onAction} />);
+
+    const chip = await screen.findByRole("button", { name: "観測対象: すべて" });
+    // 閉じている間は中身が一切DOMに無い(screen-sweepの .first() を汚さない)。
+    expect(screen.queryByText("観測対象を選ぶ")).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(chip);
+    });
+    expect(screen.getByText("観測対象を選ぶ")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("系統(血統ブランド)"), { target: { value: "王シリーズ" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "この系統にする" }));
+    });
+    expect(onAction).toHaveBeenCalledWith(
+      { kind: "api", method: "PATCH", path: "/api/v1/me/preferences" },
+      { scope_lineage_id: "王シリーズ" },
+    );
+    // 保存後は自動で閉じ、隠しh2も再びDOMから消える。チップは新しい選択を表示。
+    await waitFor(() => expect(screen.queryByText("観測対象を選ぶ")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "観測対象: 王シリーズ" })).toBeInTheDocument();
+  });
 });
 
 // home v2(承認済みmockup c9-home-forecast-v2.html・R112 90点採用)以降:

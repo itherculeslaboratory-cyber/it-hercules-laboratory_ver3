@@ -69,6 +69,14 @@
       "enum": ["yes", "no"],
       "description": "V3-UIX-80 取引前準備: 銀行振込の受け取り準備(相手への口座共有・振込コード確認)が済んでいるかの自己申告(任意)。実口座番号はシステムが保持しない(V3-SEC-06)。"
     },
+    "scope_species": {
+      "type": "string",
+      "description": "ヘッダー常駐「観測対象」グローバル文脈スイッチ(HDR-1/R112/R115・c9-structure-canon.md §1・§1c層1=学術分類)の選択種(任意・空文字/未設定=すべて)。individual-routes.ts の既存 ?species= 完全一致フィルタ(大小無視)と同じ値域。他フィールドと異なり minLength を課さない — 空文字PATCHが『すべてに戻す』の唯一の表現(ヘッダーの既定=空はsentinelでなく実際の非フィルタ状態そのもの)。"
+    },
+    "scope_lineage_id": {
+      "type": "string",
+      "description": "ヘッダー常駐「観測対象」グローバル文脈スイッチの選択血統ブランドタグ(任意・空文字/未設定=すべて。c9-structure-canon.md §1c層2=育種ブランド・V3-IND-34 lineage_id と同一値域。実の親子エッジ=層3とは別軸)。scope_species と同じ理由でminLengthなし(空文字=クリア)。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

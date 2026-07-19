@@ -57,6 +57,14 @@ export interface PrefSet {
    */
   bank_transfer_ready?: "yes" | "no";
   /**
+   * ヘッダー常駐「観測対象」グローバル文脈スイッチ(HDR-1/R112/R115・c9-structure-canon.md §1・§1c層1=学術分類)の選択種(任意・空文字/未設定=すべて)。individual-routes.ts の既存 ?species= 完全一致フィルタ(大小無視)と同じ値域。他フィールドと異なり minLength を課さない — 空文字PATCHが『すべてに戻す』の唯一の表現(ヘッダーの既定=空はsentinelでなく実際の非フィルタ状態そのもの)。
+   */
+  scope_species?: string;
+  /**
+   * ヘッダー常駐「観測対象」グローバル文脈スイッチの選択血統ブランドタグ(任意・空文字/未設定=すべて。c9-structure-canon.md §1c層2=育種ブランド・V3-IND-34 lineage_id と同一値域。実の親子エッジ=層3とは別軸)。scope_species と同じ理由でminLengthなし(空文字=クリア)。
+   */
+  scope_lineage_id?: string;
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;
