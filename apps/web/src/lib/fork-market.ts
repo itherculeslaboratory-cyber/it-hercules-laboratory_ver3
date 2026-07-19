@@ -60,13 +60,33 @@ export async function forkTemplate(id: string, title?: string): Promise<{ templa
 // POST /builder/canvas。ui-template.schema.json は additionalProperties:false のため、
 // 送れるのは name / level / social / screen_overrides / parent_template_id / theme_pack_id
 // のみ(template_id/actor_id/created_at/schema_version はサーバが刻む)。組んだ画面ツリーは
-// screen_overrides[screen_id] = ScreenDef として載せる。
+// screen_overrides[screen_id] = ScreenDef として載せる。fork 元があれば parent_template_id
+// で系譜連結(ui-template schema 既存フィールド)。
 export interface SaveCanvasPayload {
   name: string;
   level: "default" | "recommended" | "custom";
   social?: { author_name?: string };
   screen_overrides?: Record<string, unknown>;
+  parent_template_id?: string;
 }
 export async function saveCanvas(payload: SaveCanvasPayload): Promise<{ template_id: string }> {
   return call("/api/v1/builder/canvas", jsonInit("POST", payload)) as Promise<{ template_id: string }>;
+}
+
+// (あ) 既存画面の fork 支援。/fork/screens は同一オリジンの Next Route Handler
+// (screen-defs/*.json のファイル読み・認証不要)。誇張ゼロ: 返った物だけ扱う。
+export interface ForkableScreen {
+  id: string;
+  title: string;
+}
+export async function listForkableScreens(): Promise<ForkableScreen[]> {
+  const res = await fetch("/fork/screens", { credentials: "include" });
+  if (!res.ok) throw new Error(`api ${res.status}`);
+  const body = (await res.json()) as { screens?: unknown };
+  return Array.isArray(body.screens) ? (body.screens as ForkableScreen[]) : [];
+}
+export async function getScreenDef(id: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`/fork/screens?id=${encodeURIComponent(id)}`, { credentials: "include" });
+  if (!res.ok) throw new Error(`api ${res.status}`);
+  return (await res.json()) as Record<string, unknown>;
 }
