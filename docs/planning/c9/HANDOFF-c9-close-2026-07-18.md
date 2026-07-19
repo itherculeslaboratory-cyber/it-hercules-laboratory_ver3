@@ -218,4 +218,11 @@ D:\claude\systems\ihl-ver3 で起動して。
 ### 現在地
 - main = **`1ab47d6`**(全push済・lint22緑・clean Truth E2E=market lifecycle全通貫+knowledge-thread+screen-sweep全55緑・web230/tests1500/api8/pytest49)。本セッション**19コミット**(structure-canon v2/KNW wave1統合178緑/round-18+addenda758件/SW-1/鮮度是正/usecase/home v2/**ヘッダー観測対象セレクタ機能完成**)。
 - 外出モードMonitor稼働。**回答済でifYes全実行完了**: home v2(R157○)/header-selector-scope(R144)/secondbrain(R149)/header-selector-live(R161○→slice2+2b実装)。**残ユーザー判定待ち**: ヘッダーセレクタ完成(`c9-header-selector-complete`=ready)/mkt予約等。
-- **次のC9業務=HQ発進の4ゾーン(IND5/ME5/ENTRY6/FORK2)背景実装ブランチ(worktree wave-{ind,me,entry,fork}-impl・R163)の統合**。完成するとブランチ+判定カードが届く→KNW wave1同様にC9がmerge+reconcile(共有物=renderer/AppShellNode/HeaderScopeCtx/schemas整合)+E2E緑まで。DISPATCH-c9末尾通知参照。
+### 次のC9業務=**統合キュー**(各カードの○が統合解禁の号砲・fresh attentionで着手推奨)
+
+1. **wave-mkt統合=解禁済(全4カード○: 取引中80/予約70/economy90/dispute70)・要精密reconcile**。ブランチ=`wave-mkt`(7コミット・tip 21b3b56・merge-base 6831ef2)。**merge試行済→2衝突(csv=再生成・home.json=下記)。market-routes.ts/i18nは自動マージ成功(species filterと新route別region)**。**home.json衝突のreconcile方針(要判断)**: HEAD=home v2単一node(採用が正=承認済R157)。wave-mktは旧home構造に4リンク(open-torihikichu/reservation/economy/hanashiai)追加+**4つの独立HTMLページ新設**(`apps/web/public/{torihikichu,reservation,economy-status,hanashiai}/*.html`=finder型)。**要確認**: (a)home v2採用時、この4ページの入口をどこに置くか(市場primary card→market-trade経由で取引中/予約が届くか・economy-status/hanashiaiの入口)。(b)**/hanashiai/hanashiai.html(新)と既存/s/dispute(renderer)の関係=置換か共存か**(wave-mktはdispute.json/renderer未改変=hanashiai.htmlは新規追加・話し合いの場の新canonical候補)。ihl-mkt意図の確認が要る。**abort理由**: このアーキテクチャreconcileは20コミット末尾で急ぐとmain破損/入口orphanリスク→fresh sessionで着手が安全(wave-mktは○済・ブランチ上で安全)。
+2. **knw-to-c9-integrate-wave1カード(pending・2026-07-19着弾)**: KNWの追加統合依頼(stage4種族の本 knw-species-book-built等)。○化を待って統合。※KNW wave1本体(stage1-3)は統合済(1cf1c89)。
+3. **4ゾーン(IND5/ME5/ENTRY6/FORK2)背景実装ブランチ(`wave-{ind,me,entry,fork}-impl`・R163)**: HQ発進済・実装中。完成→ブランチ+判定カード→○で統合。ME/ENTRY/FORK/INDの○はこれから。
+4. **wave1-obs**: 統合済(e97aa96)。**wave-img**(画像解析・color○100 R140)も別途統合候補。
+
+**統合の型(KNW wave1実績)**: merge --no-ff → 衝突精査(生成物=再生成・共有物=共有オーナー判断でreconcile) → lint/tsc/tests → **clean Truth E2E全緑**(finder-proのTruth/WebGL環境flakeは既知・diff非起因) → push。共有物(renderer/AppShellNode/HeaderScopeCtx/schemas/home.json/navigation.json)の整合を必ず確認。
