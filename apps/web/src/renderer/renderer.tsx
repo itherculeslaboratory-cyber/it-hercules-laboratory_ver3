@@ -6309,7 +6309,7 @@ function AppShellNode({ node }: { node: ScreenNode }) {
             <a className="civ-link civ-chrome-link" href="/s/obs-search">
               観測対象を探す
             </a>
-            <a className="civ-link civ-chrome-link" href="/s/profile">
+            <a className="civ-link civ-chrome-link" href="/me/me.html">
               マイページ
             </a>
             <a className="civ-link civ-chrome-link" href="/">

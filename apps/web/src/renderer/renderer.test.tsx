@@ -1353,7 +1353,7 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     await waitFor(() => {
       expect(screen.getByRole("link", { name: "設定" })).toHaveAttribute("href", "/s/settings");
     });
-    expect(screen.getByRole("link", { name: "マイページ" })).toHaveAttribute("href", "/s/profile");
+    expect(screen.getByRole("link", { name: "マイページ" })).toHaveAttribute("href", "/me/me.html");
     expect(screen.queryByRole("link", { name: "ログイン" })).not.toBeInTheDocument();
 
     // logout redirects via a raw browser navigation afterwards (jsdom logs a
