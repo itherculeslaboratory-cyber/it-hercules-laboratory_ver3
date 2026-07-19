@@ -3341,7 +3341,7 @@
  },
  {
   "id": "V3-OBS-43",
-  "statement": "観測を文明OSの中心Input(全機能の一次データ/機能の中心)と位置づけ、固体標本・環境・デジタル記録を観測セッションとして残しR2文明史へINSERTする。全KernelをObservation(入力)→Transform(処理)→Insight/Generate(出力)構造とし、生体から無機物まで欲しいデータの形に変換して収納する。観測データは仮説生成・空白検出・引用ネットワークの基盤となる。",
+  "statement": "観測を文明OSの中心Input(全機能の一次データ/機能の中心)と位置づけ、固体標本・環境・デジタル記録を観測セッションとして残しR2文明史へINSERTする。全KernelをObservation(入力)→Transform(処理)→Insight/Generate(出力)構造とし、生体から無機物まで欲しいデータの形に変換して収納する。観測データは仮説生成・空白検出・引用ネットワークの基盤となる。  【R144・観測対象の三層定義・round-18】観測対象は昆虫に限らず全生物・無機物を含む汎用スコープ。観測対象モデルは三層: ①学術分類(種→亜種粒度・例Dynastes hercules hercules=V3-OBS-03/V3-OBS-62で亜種確定必須) ②血統=育種ブランド(王/玉/彩シリーズ型のlineage_id自由タグ=V3-IND-34) ③実の親子エッジ(sire/dam=V3-IND-01・血統ブランド管理に必要だがヘッダー絞りには不使用)。ヘッダーの観測対象グローバル文脈スイッチは①species+②lineage_idで絞る(structure-canon v2 §1c)。",
   "category": "観測",
   "kind": "機能要件",
   "scores": {
@@ -3417,6 +3417,12 @@
     "evidence": "「観測データの最終 Schema（実装レベル）」3/31",
     "trust": "中",
     "date": "2026-03-31"
+   },
+   {
+    "src_file": "docs/planning/rulings/user-ruling-2026-07-19-round-18.md",
+    "evidence": "R144(2026-07-19): 観測対象=①学術分類(亜種粒度・全生物/無機物) ②血統=育種ブランド ③実親エッジ。DHHは育種ライン(天皇の血筋みたいなもん)",
+    "date": "2026-07-19",
+    "trust": "high"
    }
   ],
   "superseded": null,
