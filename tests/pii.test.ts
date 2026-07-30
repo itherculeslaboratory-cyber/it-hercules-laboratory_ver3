@@ -9,6 +9,7 @@ import {
   maskPii,
   redactForPublic,
   deriveEmailIndex,
+  derivePublicUserId,
 } from "../apps/api/src/pii.mjs";
 import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
 
@@ -107,6 +108,28 @@ describe("deriveEmailIndex(async・crypto.subtle SHA-256 hex)", () => {
     expect(again).toBe(a);
     const other = await deriveEmailIndex("carol@example.com");
     expect(other).not.toBe(a);
+  });
+});
+
+describe("V3-SEC-08 derivePublicUserId(不可逆ハッシュ・継続追跡可能な匿名化)", () => {
+  it("同一 (userId, salt) は常に同一の64桁 hex を返す(継続追跡可能)", async () => {
+    const a = await derivePublicUserId("user-123", "salt-abc");
+    const b = await derivePublicUserId("user-123", "salt-abc");
+    expect(a).toBe(b);
+    expect(a).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("salt が異なれば別ユーザーと区別不能ではなく、別ハッシュになる(salt 依存)", async () => {
+    const a = await derivePublicUserId("user-123", "salt-abc");
+    const c = await derivePublicUserId("user-123", "salt-xyz");
+    expect(a).not.toBe(c);
+  });
+
+  it("異なる userId は異なるハッシュになる(衝突しない・元IDは出力から復元不可)", async () => {
+    const a = await derivePublicUserId("user-123", "salt-abc");
+    const d = await derivePublicUserId("user-456", "salt-abc");
+    expect(a).not.toBe(d);
+    expect(a).not.toContain("user-123");
   });
 });
 

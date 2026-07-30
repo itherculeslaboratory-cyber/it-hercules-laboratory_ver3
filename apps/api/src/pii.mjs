@@ -126,6 +126,23 @@ export function normalizeEmail(email) {
 }
 
 /**
+ * public_user_id = SHA256(user_id + ":" + secret_salt)(V3-SEC-08)。不可逆
+ * ハッシュ(salt 無しでは元 user_id 復元不可)かつ決定論(同一入力は常に同一出力
+ * = 同一ユーザーの継続追跡が可能)。deriveEmailIndex と同じ WebCrypto-only 規約
+ * (workerd は node:crypto 不可)。
+ * @param {string} userId
+ * @param {string} secretSalt
+ * @returns {Promise<string>}
+ */
+export async function derivePublicUserId(userId, secretSalt) {
+  const bytes = new TextEncoder().encode(`${String(userId)}:${String(secretSalt)}`);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  let hex = "";
+  for (const b of digest) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+/**
  * email → 安定 index(SHA-256 hex)。呼ぶ瞬間に算出・非保存(不変条項①)。
  * WebCrypto のみ(Worker 安全)。
  * @param {string} email

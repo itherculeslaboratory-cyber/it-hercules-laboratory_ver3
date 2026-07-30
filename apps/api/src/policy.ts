@@ -99,3 +99,194 @@ export function checkProdAuthEnv(env: Record<string, string | undefined>): ProdA
   if (env.IHL_WEB_AUTH_BYPASS) problems.push("IHL_WEB_AUTH_BYPASS must be unset (would bypass all routes)");
   return { ok: problems.length === 0, problems };
 }
+
+// ── V3-SEC-10 サンドボックス用ユーザーID連番再割当 ──────────────────────────
+// 外部開発者向け完全クローン環境で本番 actorId を隠すため、登場順に 1,2,3... の
+// 連番へ再割当する。変換表(戻り値の Map)は呼び出し側がローカル暗号化ストレージに
+// のみ保持し、TRUTH(R2・公開/共有ストレージ)には一切保存しない — この関数自体が
+// TruthStore/R2 を一切 import/参照しないことが、その構造的な保証(下記
+// sec-w2-batch.test.ts の負の回帰テストが固定)。
+export function assignSandboxIds(actorIds: readonly string[]): Map<string, number> {
+  const map = new Map<string, number>();
+  let next = 1;
+  for (const id of actorIds) {
+    if (!map.has(id)) map.set(id, next++);
+  }
+  return map;
+}
+
+// ── V3-SEC-21/22/23 利用規約バージョン管理・動画resolver・scroll gate ──────────
+// 実際の法的文書本文(docs/legal/等)は本艦の書いてよい場所(apps/api/src・tests)の
+// 外にあるため作成しない(発注書「書いてよい場所」節・スコープ境界を厳守)。ここでは
+// 「版管理・動画URL間接参照・スクロール完了判定」という版に依存しないロジックだけを
+// 提供する(実際の条文/動画URL登録は法務ドラフト整備=SEC-25と合わせて別途)。
+export interface TermsVersionInfo {
+  terms_version: string;
+  effective_at: string;
+}
+
+/** 法的版のみが契約上の効力を持つ(V3-SEC-21)。やさしい版・動画は説明用の別表現。 */
+export const TERMS_KIND_LEGAL = "legal" as const;
+export const TERMS_KIND_EASY = "easy" as const;
+export const TERMS_KIND_VIDEO = "video" as const;
+export type TermsKind = typeof TERMS_KIND_LEGAL | typeof TERMS_KIND_EASY | typeof TERMS_KIND_VIDEO;
+
+export interface TermsMediaRow {
+  terms_version: string;
+  section_id: string;
+  media_kind: TermsKind;
+  resolved_url: string;
+}
+
+/**
+ * terms_version + section_id + media_kind → resolved_url の間接参照(V3-SEC-22)。
+ * 版が変わってもマッピング行を追加するだけでよく、規約本文に動画URLを直書きしない。
+ */
+export function resolveTermsMediaUrl(
+  rows: readonly TermsMediaRow[],
+  termsVersion: string,
+  sectionId: string,
+  mediaKind: TermsKind,
+): string | null {
+  const row = rows.find(
+    (r) => r.terms_version === termsVersion && r.section_id === sectionId && r.media_kind === mediaKind,
+  );
+  return row ? row.resolved_url : null;
+}
+
+/**
+ * scroll gate(V3-SEC-23): 全文スクロール完了までは同意チェックを不可にする。
+ * 1px の丸め誤差を許容(下端到達判定の一般的な許容差)。
+ */
+export function isScrollComplete(scrollTop: number, scrollHeight: number, clientHeight: number): boolean {
+  return scrollTop + clientHeight >= scrollHeight - 1;
+}
+
+// ── V3-SEC-29 収集項目の透明性・ログ用途限定 ────────────────────────────────
+// 利用規約に明記すべき収集項目一覧(実際の条文掲載はSEC-25の法務ドラフト整備側)。
+export const DATA_COLLECTION_ITEMS = [
+  "email",
+  "country",
+  "language",
+  "screen_transition_log",
+  "post_history",
+  "ai_usage_log",
+] as const;
+
+/** 行動ログの利用目的はサービス改善・不正防止のみに限定し、広告目的を含まない。 */
+export const LOG_PURPOSE_ALLOWED = ["service_improvement", "fraud_prevention"] as const;
+export type LogPurpose = (typeof LOG_PURPOSE_ALLOWED)[number];
+
+export function isLogPurposeAllowed(purpose: string): purpose is LogPurpose {
+  return (LOG_PURPOSE_ALLOWED as readonly string[]).includes(purpose);
+}
+
+// ── V3-SEC-35 外部AIモデル再学習に使わない宣言 ───────────────────────────────
+// 実装の裏付け: ai-kernel.ts は IHL_AI_PROVIDER 未設定時デフォルトで全タスクを
+// AiDisabledError(501 AI_DISABLED)にする(ai-kernel.ts:20-33)— 外部AIへの
+// データ送信経路自体が既定でゼロであり、再学習用途に使われる余地が構造的に無い。
+export const AI_TRAINING_POLICY = "no-retrain" as const;
+
+// ── V3-SEC-37 OSS/テンプレートのライセンス管理 ──────────────────────────────
+export type OssLicenseKind = "CC-BY" | "no-redistribute" | "GPL" | "other";
+export type OssLicenseAction = "auto_credit_lock" | "public_forbidden" | "reject_import" | "manual_review";
+
+export interface OssLicenseRule {
+  license: OssLicenseKind;
+  action: OssLicenseAction;
+  why: string;
+}
+
+export const OSS_LICENSE_RULES: readonly OssLicenseRule[] = [
+  { license: "CC-BY", action: "auto_credit_lock", why: "クレジット自動挿入・ロック" },
+  { license: "no-redistribute", action: "public_forbidden", why: "再配布NGは公開不可" },
+  { license: "GPL", action: "reject_import", why: "GPLは取り込み拒否" },
+  { license: "other", action: "manual_review", why: "未分類ライセンスは人手確認" },
+];
+
+export function resolveOssLicenseAction(license: OssLicenseKind): OssLicenseAction {
+  const rule = OSS_LICENSE_RULES.find((r) => r.license === license);
+  return rule ? rule.action : "manual_review";
+}
+
+// ── V3-SEC-39 コンテンツ本文のXSS対策(Markdown→sanitize済みHTML) ────────────
+// ponytail: 新規npm依存(DOMPurify等)を追加せずホワイトリスト方式の最小サニタイザを
+// 自前実装する(V3-FND-28凍結リストの「新規ライブラリ差し戻し」誘惑を避ける)。
+// 生HTML注入を一切許さない(入力中の `<`/`>`/`&` は常にエンティティ化してからMarkdown
+// 記法だけを許可タグへ変換 = raw HTML パススルー経路が構造的に存在しない)。
+const MD_ESCAPE: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"]/g, (ch) => MD_ESCAPE[ch]);
+}
+
+/**
+ * 最小 Markdown → sanitize済みHTML。対応記法: **bold**, *italic*, `code`,
+ * [text](url)(http/httpsのみ許可)、改行→<br>。それ以外は全てエスケープ済み
+ * テキストとして出力される(raw HTML の注入不可)。
+ */
+export function sanitizeMarkdownToHtml(markdown: string): string {
+  let out = escapeHtml(markdown);
+  out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  out = out.replace(/`([^`]+)`/g, "<code>$1</code>");
+  out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, text, url) => `<a href="${url}" rel="noopener noreferrer">${text}</a>`);
+  out = out.replace(/\n/g, "<br>");
+  return out;
+}
+
+// ── V3-SEC-43 投稿画像の知覚ハッシュ(盗用・すり替え検知) ────────────────────
+// difference hash (dHash): 隣接ピクセルの明度勾配をビット列化する古典的知覚ハッシュ。
+// 画像デコード自体(JPEG/PNG展開)は新規npm依存を要するため対象外とし、既に
+// グレースケール輝度配列へ展開済みのピクセルデータを受け取る形にする(呼び出し側=
+// 画像アップロード経路の所有ドメイン(obs/mkt)が既存のサムネイル生成等でピクセル配列を
+// 用意する)。「ひっそり警告してeventに記録」の判定閾値はハミング距離で表現する。
+export function dHash(pixels: readonly number[], width: number, height: number): bigint {
+  if (pixels.length !== width * height) {
+    throw new Error(`dHash: pixels.length (${pixels.length}) must equal width*height (${width * height})`);
+  }
+  let bits = 0n;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width - 1; x++) {
+      bits <<= 1n;
+      if (pixels[y * width + x] < pixels[y * width + x + 1]) bits |= 1n;
+    }
+  }
+  return bits;
+}
+
+/** 2つの知覚ハッシュ間のハミング距離(ビット差の数)。小さいほど類似=盗用疑い。 */
+export function hammingDistance(a: bigint, b: bigint): number {
+  let x = a ^ b;
+  let count = 0;
+  while (x > 0n) {
+    count += Number(x & 1n);
+    x >>= 1n;
+  }
+  return count;
+}
+
+/** 既定の盗用疑い閾値(較正knob)。距離がこれ以下なら「ひっそり警告」対象。 */
+export const IMAGE_REUSE_SUSPECT_THRESHOLD = 10;
+
+// ── V3-SEC-50 保護アセット(ブランド資産)NG設定 ───────────────────────────
+export type ProtectedAssetKind = "brand" | "general" | "observation";
+export type AssetUseKind = "video_generation" | "ui_generation" | "rag_search" | "ai_training";
+
+export interface ProtectedAssetEntry {
+  asset_id: string;
+  kind: ProtectedAssetKind;
+  blocked_uses: readonly AssetUseKind[];
+  ai_training_allowed: boolean;
+}
+
+/**
+ * アセット種別はユーザーが明示指定し自動判定しない(誤BAN防止)。observation
+ * (観測データ=文明資産)は保護対象に登録されていても常に観測・採用候補として
+ * 扱う=blocked_uses に含めても RAG検索/採用候補化はブロックしない、という
+ * 呼び出し側の運用規約をここに固定する。
+ */
+export function isAssetAllowedForUse(entry: ProtectedAssetEntry, use: AssetUseKind): boolean {
+  if (entry.kind === "observation") return true; // 観測データは保護対象に入れられない
+  if (use === "ai_training") return entry.ai_training_allowed;
+  return !entry.blocked_uses.includes(use);
+}

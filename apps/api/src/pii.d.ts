@@ -19,3 +19,4 @@ export function maskPii(text: string): { masked: string; findings: PiiFinding[] 
 export function redactForPublic(text: string): { redacted: string; findings: PiiFinding[] };
 export function normalizeEmail(email: string): string;
 export function deriveEmailIndex(email: string): Promise<string>;
+export function derivePublicUserId(userId: string, secretSalt: string): Promise<string>;
