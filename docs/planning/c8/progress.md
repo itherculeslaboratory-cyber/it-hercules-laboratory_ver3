@@ -10,41 +10,45 @@
 
 ## サマリー
 
-- 全体: █████░░░░░░░░░░░░░░░ 27%（158/587）
-- 第1波必達(required): █████████░░░░░░░░░░░ 43%（155/364）
-- 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 1%（3/223）
+- 全体: ███████████░░░░░░░░░ 53%（310/587）
+- 第1波必達(required): █████████████████░░░ 84%（306/364）
+- 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（4/223）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 400 |
-| 着手中(in_progress) | 26 |
-| ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 3 |
-| 完了(done) | 158 |
+| 未着手(todo) | 239 |
+| 着手中(in_progress) | 32 |
+| ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 6 |
+| 完了(done) | 310 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
 
-- 件数: 3
+- 件数: 6
 
 | id | title | lane | note |
 |---|---|---|---|
 | V3-AIP-92 | Builder(文明編集ツール)をOSDefinition/Component/… | L4 | 裁定待ち—実質解消提案: V3-AIP-92が前提とするBuilder(文明編集ツール)経由のKernel編集/OSDefinition差し替え一本道パイプラインは、round-16裁定で棄却済みのBuilder中心アーキテクチャに依拠している。推奨=(a) 既存codegenパイプライン(schemas/→generated一方向・npm run codegen:check GATE・scripts/codegen-*.mjs群)を『危険なDiffの拒否・検証・再現性』の機能的等価物として充足扱いとし、Builder UIそのものの新設は不要と裁定する。 |
 | V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | L3/L4-auth | 裁定待ち: V3-AUT-15が求める Scope A(観測search/list/detail/imageの未ログイン公開READ)は、CL-04 route-matrix(tests/fixtures/route-matrix.csv・cl-04-route-matrix.test.ts、現行73行)が凍結する『auth系3route+verify-code+payjp-webhook以外は全protected(deny-by-default)』契約と矛盾する。観測系routeをpublic化するとCL-04凍結契約・関連TC群の全面作り直しが要る。推奨=(a) 当面は全ログイン必須(現行route-matrix)を正としV3-AUT-15のScope A公開READ要件は将来波(CL-04契約緩和が別途承認された時点)へ先送り。 |
-| V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | L4-gov | 裁定待ち: device-routes.ts(POST/GET /devices・apps/api/src/device-routes.ts:38-156)が provider api_key を AES-GCM 暗号化のうえ R2(api_key_ciphertext)にサーバー側保持し、/devices/{id}/test route で復号使用しており、V3-SEC-03『外部サービスAPIキー・秘密はサーバー側に一切保持・使用せず』と直接矛盾する。推奨=(a) サーバー側保管/復号を廃止しユーザー側(Docker/.env/ブラウザlocalStorage)管理のみに一本化(WEB版は手入力/CSVインポートのみへ縮小)。影響範囲: device-routes.tsのAES-GCM実装+tests/devices.test.tsの作り直し。 |
+| V3-I18-02 | 新規登録/オンボーディングで表示言語(locale)を必須選択… | L3/L4-auth | 持ち越し(差し戻し対象)。locale必須選択のサブ要件は実装済み(apps/api/src/account.ts:45-76 hasExplicitLocale+projectOnboardingStatus・w1-aut所有のtests/account-onboarding.test.tsで検証済み・私は変更していない)。しかし「所属国は必須選択(UI非表示)」のサブ要件は前任者が2案(CF request.cf.country自動補完/任意のまま人間裁定待ち)のどちらも実装せず据え置いた状態から変化なし(apps/api/src/settings-routes.ts:84の country:"" 既定のまま)。二者択一の設計判断のため推測で実装せず持ち越す。 |
+| V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | L4-gov | 前任のnoteを維持(据置)。device-routes.ts(w1-obs所有)がAES-GCMでサーバー側にAPIキーを暗号化保管しており要件『サーバー側に一切保持・使用せず』と直接矛盾。修正には自分のglob外のファイル書込が必要なため今回は変更していない。HQ裁定待ち。 |
+| V3-AUT-14 | 観測配下はREAD既定・WRITE列挙のdeny-listとし、新WRITEルー… | L3/L4-auth | OBSERVATION_WRITE_PREFIXESはapps/api/src配下に0件(grep実測・未実装)。実装箇所はobservation-routes.ts(w1-obs所有・w1-autのglob外)。かつ前提となるV3-AUT-15(観測READのScope A公開化)自体がCL-04契約と矛盾しblocked中のため、本波では着手不能と判断し持ち越し。 |
+| V3-AUT-16 | 観測検索スコープはScope A（コミュニティ）とし、ログイン済ユーザーは全観測… | L3/L4-auth | 全観測カタログ横断検索(owner_user_idで絞り込まない)の実装箇所はobservation-routes.ts(w1-obs所有・w1-autのglob外)。V3-AUT-14と同一の前提(V3-AUT-15 blocked)により本波では着手不能と判断し持ち越し。 |
 
 ## lane 別内訳
 
 | lane | 進捗 |
 |---|---|
 | CSV | ████████████████████ 100%（1/1） |
-| L1/PAY | ████████░░░░░░░░░░░░ 39%（35/89） |
-| L3/L4-auth | ███████░░░░░░░░░░░░░ 33%（14/42） |
-| L4 | ████░░░░░░░░░░░░░░░░ 22%（29/130） |
-| L4-gov | ███░░░░░░░░░░░░░░░░░ 13%（10/75） |
-| L4-knowledge | ███████░░░░░░░░░░░░░ 34%（26/76） |
-| L4-obs | ███████░░░░░░░░░░░░░ 35%（32/92） |
+| L1/PAY | █████████████░░░░░░░ 65%（58/89） |
+| L3/L4-auth | ██████████░░░░░░░░░░ 52%（22/42） |
+| L4 | ███████████████░░░░░ 75%（98/130） |
+| L4-gov | ████████░░░░░░░░░░░░ 41%（31/75） |
+| L4-knowledge | ██████████░░░░░░░░░░ 51%（39/76） |
+| L4-obs | ██████████░░░░░░░░░░ 52%（37/71） |
 | L5-video | ░░░░░░░░░░░░░░░░░░░░ 0%（0/24） |
 | L6-ui | ████░░░░░░░░░░░░░░░░ 19%（11/58） |
+| w1-obs | ████████████░░░░░░░░ 62%（13/21） |
 
 ## lane 別明細
 
@@ -58,8 +62,8 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-KRM-01 | カルマは『カルマ値([-100,+100]、登録直後0)』と『カルマカウント(別… | required | todo | — |
-| V3-KRM-02 | カルマカウントが n-1→n に増加するたびカルマ値を -Fib(n) 減点し(… | required | todo | — |
+| V3-KRM-01 | カルマは『カルマ値([-100,+100]、登録直後0)』と『カルマカウント(別… | required | done | — |
+| V3-KRM-02 | カルマカウントが n-1→n に増加するたびカルマ値を -Fib(n) 減点し(… | required | done | — |
 | V3-KRM-03 | 毎月25日(クレジット締め日同型)を基準日に、カルマカウント≥1ならcount-… | required | done | 039a4c5 |
 | V3-KRM-04 | カルマ値≤-100で永久BAN(ログイン拒否)とし、アカウント・R2データは削除… | required | done | 3631352 |
 | V3-KRM-05 | 免罪符『黄金ヘラクレス教の免罪符』をプラチナコインマーケットで販売し、1購入=カ… | required | done | 3631352 |
@@ -67,29 +71,29 @@
 | V3-KRM-10 | 貢献度(Contribution Score)はいいね・コピー・組み込み等のKe… | required | done | 3631352 |
 | V3-KRM-11 | applyContributionDeltaで子ノードにΔを反映後、依存グラフの… | required | done | 3631352 |
 | V3-KRM-12 | 貢献度をADR-H-38の3軸(research 研究/capital 資本(維… | required | done | 9b5d1fa |
-| V3-KRM-13 | GitHub上の開発者貢献(PRマージ・Issueクローズ・レビュー・コメント・… | required | todo | — |
-| V3-KRM-16 | プラチナ・カルマ・貢献度・称号の付与条件を『何が起きたか(イベント/API)をキ… | required | todo | — |
+| V3-KRM-13 | GitHub上の開発者貢献(PRマージ・Issueクローズ・レビュー・コメント・… | required | done | — |
+| V3-KRM-16 | プラチナ・カルマ・貢献度・称号の付与条件を『何が起きたか(イベント/API)をキ… | required | done | — |
 | V3-KRM-18 | (旧設計/legacy経済カーネル) カルマ計算(通常違反+1/重大違反+5)、… | required | done | a6d90e7 |
 | V3-KRM-19 | 全付与イベント(プラチナ・カルマ・貢献・称号)をAppend-only履歴として… | required | done | 9229c57 |
 | V3-KRM-20 | 使用率・投票・いいね・悪いね・お気に入り・作者フォロー・フォーク数・改善案数の総… | required | done | 3631352 |
 | V3-KRM-21 | プロフィールではKarma(善良/取引/BAN)・Contribution(貢献… | required | done | 3631352 |
-| V3-KRM-23 | 個人の人格・価値観・判断癖・行動ログ・世界観は完全にユーザー個人のものとし他ユー… | required | todo | — |
+| V3-KRM-23 | 個人の人格・価値観・判断癖・行動ログ・世界観は完全にユーザー個人のものとし他ユー… | required | done | — |
 | V3-KRM-24 | 文化サイクル(使う→不便→改善案を見る→採用→フォーク→評価→RAG学習→Bui… | required | done | 3631352 |
-| V3-KRM-25 | 改善要求は『プラチナ投票』制度とし、1票=1プラチナコインで任意枚数積める(誰が… | required | todo | — |
+| V3-KRM-25 | 改善要求は『プラチナ投票』制度とし、1票=1プラチナコインで任意枚数積める(誰が… | required | done | — |
 | V3-KRM-28 | 観測commit成功時に研究貢献度フックを発火する(observation_sa… | required | done | 7591a5f |
 | V3-KRM-32 | 経済システム(Economy)としてプラチナコイン(通貨でなく貢献を示すメダル)… | required | in_progress | 4cf360b |
-| V3-MKT-01 | 個体/観測(RAG chunk)を軸に、固定価格・オークション・抽選・プラチナコ… | required | todo | — |
+| V3-MKT-01 | 個体/観測(RAG chunk)を軸に、固定価格・オークション・抽選・プラチナコ… | required | done | — |
 | V3-MKT-02 | Listingは状態機械(unlisted→listed_*→sold/deli… | required | done | 3631352 |
 | V3-MKT-03 | 取引ステージモデルを採用: マッチング前は公開(商品詳細+公開Q&A+ほめボード… | required | done | 0a868da |
 | V3-MKT-04 | 取引成立を『配送完了確認(買い手受取申告) かつ 評価確定』と定義し、マッチング… | required | done | 3631352 |
 | V3-MKT-05 | オークションは締切(ends_at)経過でsettleDueAuctionsが自… | required | done | 31fc4f9 |
 | V3-MKT-06 | オークション以外に、未出品個体への直接オファー(欲しい意思表示、拒否設定は現観測… | required | done | 8a40adf |
 | V3-MKT-10 | 取引成立時に売上5%を(旧8%から引き下げ)『システム維持費税』として売り手に負… | required | done | 674a5dc, 1c5d912, bff1b98, 9d14f02 |
-| V3-MKT-11 | マーケットの「システム維持費」(旧称:手数料。悪印象回避+利益からの貢献還元とい… | required | todo | — |
+| V3-MKT-11 | マーケットの「システム維持費」(旧称:手数料。悪印象回避+利益からの貢献還元とい… | required | done | — |
 | V3-MKT-12 | 振込コードはuserIdから決定的に生成(SHA-256→uint24先頭3バイ… | required | done | 887bb12 |
-| V3-MKT-15 | 【第16回裁定で読み替え】GMOあおぞら退役に伴い、本条の人間ゲートはPAY.J… | required | todo | — |
+| V3-MKT-15 | 【第16回裁定で読み替え】GMOあおぞら退役に伴い、本条の人間ゲートはPAY.J… | required | done | — |
 | V3-MKT-18 | マーケット争いは当事者opt-inの『公開して投票』を提供する。7日・1票=1P… | required | done | adae1e9 |
-| V3-MKT-19 | 悪質ユーザーを排除するのでなく、正しい取引の方が儲かるインセンティブ設計(『10… | required | todo | — |
+| V3-MKT-19 | 悪質ユーザーを排除するのでなく、正しい取引の方が儲かるインセンティブ設計(『10… | required | done | — |
 | V3-MKT-20 | 取引の配送では自社DBに送り手ID/受け手ID(システム内ニックネーム)と取引ス… | required | done | b070403 |
 | V3-MKT-22 | テンプレート(論文/UIスキン/グラフ/重み付け設定/AI設定パック/プロンプト… | required | done | 3631352 |
 | V3-MKT-23 | 出品は個体ID一覧の複数選択で9割完成させ、個体を選ぶだけで親個体画像・血統・成… | required | done | 3631352, b01847d |
@@ -97,27 +101,27 @@
 | V3-MKT-27 | マーケット評価は自前スコアを発明せずADR-H-08の『良い/普通/悪い』件数モ… | required | done | 3631352 |
 | V3-MKT-29 | 取引成立後は所有者移転と観測データ(温度/重量/齢/成長速度/画像/取引履歴)引… | required | done | 3631352, 5d11d74 |
 | V3-MKT-35 | プラチナコインを投票通貨とし、認証ユーザーが/economy/voteで対象・枚… | required | done | c21bc00 |
-| V3-MKT-36 | 経済層を3層構造とする: (1)IT.Hercules.Laboratoryマー… | required | in_progress | 674a5dc, 1c5d912, bff1b98 |
-| V3-MKT-39 | 経済(カルマ・プラチナ・マーケット)データは全てR2(JSON)のみで管理しDB… | required | todo | — |
+| V3-MKT-36 | 経済層を3層構造とする: (1)IT.Hercules.Laboratoryマー… | required | in_progress | — |
+| V3-MKT-39 | 経済(カルマ・プラチナ・マーケット)データは全てR2(JSON)のみで管理しDB… | required | done | — |
 | V3-MKT-40 | 市場台帳(ledger)を複式簿記(Σdebit=Σcredit一致・残高非負・… | required | done | dbbb506, 1d472b1 |
 | V3-MKT-45 | 研究成果(projectId)に紐づく商品を出品し外部EC(BASE/Shopi… | required | done | 1d472b1 |
 | V3-MKT-47 | Docker観測拡張をフォーク管理(parent_extension_id/li… | required | done | 0958f97 |
 | V3-MKT-49 | ランニングコスト(R2・さくらVPS等)をAPIで取得して透明に表示する。ただし… | required | done | 36bc43c |
-| V3-MKT-55 | 全決済がprojectIdに紐づき透明であること、マーケットデータは公開情報とす… | required | todo | — |
+| V3-MKT-55 | 全決済がprojectIdに紐づき透明であること、マーケットデータは公開情報とす… | required | done | — |
 | V3-MKT-61 | ブロックしたユーザーとは金銭・成体・標本の取引(オファー送信・購入確定・予約マッ… | required | done | 3d21ba6 |
-| V3-MKT-62 | P2P決済ユーザー選択制: 買主→売主決済を取引ごとに①銀行振込(既定・無料・I… | required | in_progress | 5d11d74 |
-| V3-MKT-63 | 5%システム維持費ゆる請求徴収: 取引完了後「計算して振り込んでね」方式でゆるく… | required | in_progress | 5d11d74, 9d14f02 |
+| V3-MKT-62 | P2P決済ユーザー選択制: 買主→売主決済を取引ごとに①銀行振込(既定・無料・I… | required | done | — |
+| V3-MKT-63 | 5%システム維持費ゆる請求徴収: 取引完了後「計算して振り込んでね」方式でゆるく… | required | done | — |
 | V3-MKT-64 | カード非保有ユーザー向けプリペイドカード案内: PAY.JP Platform選… | required | done | a06fc66 |
 | V3-MKT-65 | P2P送金アプリの取引利用禁止の規約明記: ユーザー間代金決済にPayPay送金… | required | done | 2cf67e0 |
-| V3-OTH-01 | ユーザーのコア思想2点は不可侵: (1)10年続くランニングコスト最小=R2/保… | required | todo | — |
-| V3-OTH-02 | OSS/フォーク文化を中核に据える: 世界中のエンジニアが粒度自由(ボタン一つ〜… | required | todo | — |
-| V3-OTH-03 | OSS公開を前提に、市場(#06)・掲示板(#07)等をcivilization… | required | todo | — |
-| V3-OTH-05 | 分類・観測・API基盤のスキーマは生物専用に固定せず自由キー構造とし表記揺れはA… | required | todo | — |
-| V3-OTH-06 | ブランド/アイデンティティ: サービス名は必ず『ヘラクレス』を含める(英雄でなく… | required | todo | — |
-| V3-OTH-07 | 少人数×物量の思想: 運営者一人が多数の役職(研究者/開発者/法務/デザイナー)… | required | todo | — |
-| V3-OTH-10 | 好みモデルは離散モデルとし連続数値の合計スコアを定義しない。検索スコア順序はRA… | required | todo | — |
-| V3-OTH-12 | 生成物の再現性を保証: 同じ入力からは必ず同じ結果を返し、乱数など非決定的処理を… | required | todo | — |
-| V3-OTH-27 | 根本ビジョン: 単なる甲虫飼育管理アプリではなく『ユーザーが自分の文明を作り育て… | required | todo | — |
+| V3-OTH-01 | ユーザーのコア思想2点は不可侵: (1)10年続くランニングコスト最小=R2/保… | required | done | — |
+| V3-OTH-02 | OSS/フォーク文化を中核に据える: 世界中のエンジニアが粒度自由(ボタン一つ〜… | required | done | — |
+| V3-OTH-03 | OSS公開を前提に、市場(#06)・掲示板(#07)等をcivilization… | required | done | — |
+| V3-OTH-05 | 分類・観測・API基盤のスキーマは生物専用に固定せず自由キー構造とし表記揺れはA… | required | done | — |
+| V3-OTH-06 | ブランド/アイデンティティ: サービス名は必ず『ヘラクレス』を含める(英雄でなく… | required | done | — |
+| V3-OTH-07 | 少人数×物量の思想: 運営者一人が多数の役職(研究者/開発者/法務/デザイナー)… | required | done | — |
+| V3-OTH-10 | 好みモデルは離散モデルとし連続数値の合計スコアを定義しない。検索スコア順序はRA… | required | done | — |
+| V3-OTH-12 | 生成物の再現性を保証: 同じ入力からは必ず同じ結果を返し、乱数など非決定的処理を… | required | done | — |
+| V3-OTH-27 | 根本ビジョン: 単なる甲虫飼育管理アプリではなく『ユーザーが自分の文明を作り育て… | required | done | — |
 | V3-KRM-08 | カルマが下がるのは問題行為(詐欺・故意の未発送/未入金・誹謗中傷・虚偽レビュー・… | best-effort | todo | — |
 | V3-KRM-09 | 指摘の二者が1ヶ月以内に合意しなければ強制クローズとし、未解決強制クローズをユー… | best-effort | todo | — |
 | V3-KRM-14 | 貢献度を『直接貢献』(論文投稿・生体登録・記事・アフィリエイト等、例paper5… | best-effort | todo | — |
@@ -153,31 +157,31 @@
 | id | title | scope | status | commits |
 |---|---|---|---|---|
 | V3-AUT-01 | 認証はメール宛マジックリンク方式のみ（パスワードレス）とし、パスワード・OAut… | required | done | 1409b6b |
-| V3-AUT-02 | マジックリンクトークンはTTL15分・ワンタイム（検証済はR2で消費済に更新）と… | required | todo | — |
+| V3-AUT-02 | マジックリンクトークンはTTL15分・ワンタイム（検証済はR2で消費済に更新）と… | required | done | — |
 | V3-AUT-03 | ver3のセッションは署名付きステートレストークン(HMAC/JWT系・サーバ側… | required | done | a49ca1c |
-| V3-AUT-04 | マジックリンクの本番SMTP鍵・送信ドメイン設定は人間ゲートとし、実メール送信は… | required | todo | — |
-| V3-AUT-05 | SMTP未設定/送信失敗/CI時はdev_tokenフォールバック（画面内トーク… | required | todo | — |
+| V3-AUT-04 | マジックリンクの本番SMTP鍵・送信ドメイン設定は人間ゲートとし、実メール送信は… | required | done | — |
+| V3-AUT-05 | SMTP未設定/送信失敗/CI時はdev_tokenフォールバック（画面内トーク… | required | done | — |
 | V3-AUT-06 | ログイン画面はメールアドレス入力と利用規約同意チェックを必須とし、未同意/未入力… | required | done | 4295494 |
 | V3-AUT-08 | @ユーザーID（handle）は3〜30文字の限定文字種で一意・不変（確定後変更… | required | done | e9db7f7 |
 | V3-AUT-09 | 新規登録は独立サインアップ画面を持たず、ログイン画面のマジックリンク初回検証時に… | required | done | eda9946 |
 | V3-AUT-10 | オンボーディング未完了(onboardingComplete===false)の… | required | done | eda9946, 2126232, 8e792cb |
 | V3-AUT-11 | 認証→初期設定フロー（登録→国/言語→利用規約→ホーム）を明示的に定義し、全画面… | required | done | 4295494 |
 | V3-AUT-12 | 保護ルートはProtectedApp/middlewareでガードし未ログイン時… | required | done | db2bc69, 3f5012a, 2126232 |
-| V3-AUT-13 | 認証境界はデフォルトデナイ（疑わしきは保護）とし、公開は認証入口(/login … | required | todo | — |
-| V3-AUT-14 | 観測配下はREAD既定・WRITE列挙のdeny-listとし、新WRITEルー… | required | todo | — |
+| V3-AUT-13 | 認証境界はデフォルトデナイ（疑わしきは保護）とし、公開は認証入口(/login … | required | done | — |
+| V3-AUT-14 | 観測配下はREAD既定・WRITE列挙のdeny-listとし、新WRITEルー… | required | blocked | — |
 | V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | required | blocked | — |
-| V3-AUT-16 | 観測検索スコープはScope A（コミュニティ）とし、ログイン済ユーザーは全観測… | required | todo | — |
-| V3-AUT-17 | 書き込み・個人設定(commit・命名・個体・デバイス等)はuseActorId… | required | todo | — |
-| V3-AUT-18 | 個体QRはihl://individual/<id>のアプリスキームdeep l… | required | todo | — |
+| V3-AUT-16 | 観測検索スコープはScope A（コミュニティ）とし、ログイン済ユーザーは全観測… | required | blocked | — |
+| V3-AUT-17 | 書き込み・個人設定(commit・命名・個体・デバイス等)はuseActorId… | required | done | — |
+| V3-AUT-18 | 個体QRはihl://individual/<id>のアプリスキームdeep l… | required | done | — |
 | V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | in_progress | 987c5c3 |
 | V3-AUT-20 | APIエラーは機械可読なerrorコードで返し、クライアントはそれをユーザー向け… | required | done | 987c5c3 |
-| V3-AUT-22 | admin系ルートのroleゲート・devツール既定off・Capability… | required | todo | — |
-| V3-AUT-45 | レガシー register/locale/complete-onboarding… | required | todo | — |
+| V3-AUT-22 | admin系ルートのroleゲート・devツール既定off・Capability… | required | in_progress | — |
+| V3-AUT-45 | レガシー register/locale/complete-onboarding… | required | done | — |
 | V3-AUT-46 | magic-link数字コードフォールバック: magic-link発行時に同一… | required | done | a49ca1c |
 | V3-I18-01 | 翻訳/i18n(#21)の横断機能を認証・UI・掲示板・裁判・マーケット・カルマ… | required | done | d59fb61 |
-| V3-I18-02 | 新規登録/オンボーディングで表示言語(locale)を必須選択させ、国籍・国コー… | required | in_progress | — |
+| V3-I18-02 | 新規登録/オンボーディングで表示言語(locale)を必須選択… | required | blocked | — |
 | V3-I18-03 | 表示言語(locale)を設定/プロフィールからいつでも変更でき、保存成功後は製… | required | done | d59fb61 |
-| V3-I18-04 | ログインUI文言は日本語中心とし、locale設定はオンボーディング側に委譲する… | required | todo | — |
+| V3-I18-04 | ログインUI文言は日本語中心とし、locale設定はオンボーディ… | required | done | — |
 | V3-I18-06 | UGC(掲示板投稿・二人部屋メッセージ・出品説明・自由記述等)は作者言語の原文の… | required | done | b3cd929 |
 | V3-I18-08 | UI文言リソースをキー化({screen}.{component}.{field… | required | done | — |
 | V3-AUT-24 | 創世アカウント IT.Hercules.Laboratory(role:admi… | best-effort | todo | — |
@@ -199,107 +203,107 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-AIP-01 | モデル分業を制度化する：計画・設計・レビューは高effortモデル、機械的作業は… | required | todo | — |
-| V3-AIP-02 | タスク重要度に応じてeffort/モデルTierを動的ルーティングし既定を下げて… | required | todo | — |
-| V3-AIP-03 | 実装物は独立の批評家/監査エージェント(実装EXECと監査AUDITは別エージェ… | required | todo | — |
-| V3-AIP-04 | 敵対的検証の独立性は、決定論チェック(lint/test/schema)を前段に… | required | todo | — |
-| V3-AIP-05 | 機能ごとにV-model5点ゲート(要件定義・詳細設計・遷移設計・UI設計・テス… | required | todo | — |
-| V3-AIP-06 | 設計→実装の解禁は3段の委任Goチェーン(DELEGATED-DESIGN-GO… | required | todo | — |
+| V3-AIP-01 | モデル分業を制度化する：計画・設計・レビューは高effortモデル、機械的作業… | required | done | — |
+| V3-AIP-02 | タスク重要度に応じてeffort/モデルTierを動的ルーティングし既定を下げて… | required | done | — |
+| V3-AIP-03 | 実装物は独立の批評家/監査エージェント(実装EXECと監査AUDITは別エージェ… | required | done | — |
+| V3-AIP-04 | 敵対的検証の独立性は、決定論チェック(lint/test/schema)を前段に必ず… | required | done | — |
+| V3-AIP-05 | 機能ごとにV-model5点ゲート(要件定義・詳細設計・遷移設計・UI設計・テス… | required | done | — |
+| V3-AIP-06 | 設計→実装の解禁は3段の委任Goチェーン(DELEGATED-DESIGN-GO→… | required | done | — |
 | V3-AIP-07 | FR/NFRの100%をRTM行に紐づけreq_id↔test_case_idを… | required | done | 8e00920 |
-| V3-AIP-08 | 既存の先行実装はretrofit(impl-ahead)として扱い、V-mode… | required | todo | — |
-| V3-AIP-09 | 人間の「完成」宣言より機械GATE PASSを優先する(C6)。「完成しましたか… | required | todo | — |
-| V3-AIP-10 | 設計・DOC作業を4段階(1フォルダ構成→2設計書構成→3設計作成→3b網羅GA… | required | todo | — |
-| V3-AIP-101 | 完成報告の実機検証義務(AI完成報告恐怖症対策): AI は「できました」報告の… | required | todo | — |
+| V3-AIP-08 | 既存の先行実装はretrofit(impl-ahead)として扱い、V-model右腕は… | required | done | — |
+| V3-AIP-09 | 人間の「完成」宣言より機械GATE PASSを優先する(C6)。「完成しました… | required | done | — |
+| V3-AIP-10 | 設計・DOC作業を4段階(1フォルダ構成→2設計書構成→3設計作成→3b網… | required | done | — |
+| V3-AIP-101 | 完成報告の実機検証義務(AI完成報告恐怖症対策): AI は「できました」… | required | done | — |
 | V3-AIP-104 | 写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedd… | required | done | 912941e, ed2c13a |
-| V3-AIP-105 | file-board-registry の board_thread_id 列を… | required | todo | — |
-| V3-AIP-106 | 実装コードを変更するPRは、対応する設計書§の同時更新、または理由付きの「設計影… | required | todo | — |
-| V3-AIP-107 | リリースごとにgit tag+リリースノート(GitHub Releases)を… | required | todo | — |
-| V3-AIP-11 | 設計書憲法の不変原則を守る：同一トピックに正本を1つに固定(C1)、情報は削除せ… | required | todo | — |
-| V3-AIP-12 | REQは1機能200–400行を目安に意図と測定可能な受入基準のみ書き、API … | required | todo | — |
-| V3-AIP-13 | 詳細設計はv3を唯一のDET正本とし旧版は1行stub化してアーカイブmove、… | required | todo | — |
-| V3-AIP-14 | 契約変更はDET v3§3→契約レジスタ更新→オラクルcheck→TESTの順で… | required | todo | — |
-| V3-AIP-15 | 横断アーキ決定は機能番号を付けない新ADRに記録し、要件定義書には仕様(WHAT… | required | todo | — |
-| V3-AIP-16 | contributorが3hop以内に辿れるContributor Spine(… | required | todo | — |
-| V3-AIP-17 | 全パスをCanonical/Working/Generated/Archiveの… | required | todo | — |
-| V3-AIP-18 | 24機能すべてにfeature README(IDXテンプレ・全正本層への1枚リ… | required | todo | — |
-| V3-AIP-19 | 新規フォルダ作成はデフォルト禁止(新#NN feature/sub/_横断種別/… | required | todo | — |
-| V3-AIP-20 | .github/CODEOWNERSで01-04・05-運用/queuesをde… | required | todo | — |
-| V3-AIP-21 | リポジトリを単一repo正本(it-hercules-laboratory-cl… | required | todo | — |
+| V3-AIP-105 | file-board-registry の board_thread_id 列を実運用化す… | required | done | — |
+| V3-AIP-106 | 実装コードを変更するPRは、対応する設計書§の同時更新、または理由付き… | required | done | — |
+| V3-AIP-107 | リリースごとにgit tag+リリースノート(GitHub Releases)を発… | required | done | — |
+| V3-AIP-11 | 設計書憲法の不変原則を守る：同一トピックに正本を1つに固定(C1)、情… | required | done | — |
+| V3-AIP-12 | REQは1機能200–400行を目安に意図と測定可能な受入基準のみ書き、A… | required | done | — |
+| V3-AIP-13 | 詳細設計はv3を唯一のDET正本とし旧版は1行stub化してアーカイブm… | required | done | — |
+| V3-AIP-14 | 契約変更はDET v3§3→契約レジスタ更新→オラクルcheck→TESTの… | required | done | — |
+| V3-AIP-15 | 横断アーキ決定は機能番号を付けない新ADRに記録し、要件定義書には仕様… | required | done | — |
+| V3-AIP-16 | contributorが3hop以内に辿れるContributor Spine(READ… | required | done | — |
+| V3-AIP-17 | 全パスをCanonical/Working/Generated/Archiveの四… | required | done | — |
+| V3-AIP-18 | 24機能すべてにfeature README(IDXテンプレ・全正本層への1枚リ… | required | done | — |
+| V3-AIP-19 | 新規フォルダ作成はデフォルト禁止(新#NN feature/sub/_横断種別… | required | done | — |
+| V3-AIP-20 | .github/CODEOWNERSで01-04・05-運用/queuesをdesign… | required | done | — |
+| V3-AIP-21 | リポジトリを単一repo正本(it-hercules-laboratory-cle… | required | done | — |
 | V3-AIP-22 | GitHub ActionsでpytestとApps/webのtest/buil… | required | done | 124027b(既存) |
 | V3-AIP-23 | CONTRIBUTINGのcloneパスをrepoルート相対に統一しdesign… | required | done | 567a554 |
-| V3-AIP-24 | 設計正本の物理配置をREQ=01-要件/・DET/TRN/UI=02-設計/fe… | required | todo | — |
-| V3-AIP-25 | AI執筆はスライス執筆/stub/索引をAutoで機能あたり≤8並列(ファイル衝… | required | todo | — |
-| V3-AIP-26 | ラボ画面/実装はREQ→DET→UI→TRNのオラクル階層に従い該当設計書の該当… | required | todo | — |
-| V3-AIP-27 | エージェントの自己採点とユーザー採点の差分を採点テンプレート・キャリブレーション… | required | todo | — |
+| V3-AIP-24 | 設計正本の物理配置をREQ=01-要件/・DET/TRN/UI=02-設計/f… | required | done | — |
+| V3-AIP-25 | AI執筆はスライス執筆/stub/索引をAutoで機能あたり≤8並列(ファイ… | required | done | — |
+| V3-AIP-26 | ラボ画面/実装はREQ→DET→UI→TRNのオラクル階層に従い該当設計書… | required | done | — |
+| V3-AIP-27 | エージェントの自己採点とユーザー採点の差分を採点テンプレート・キャリ… | required | done | — |
 | V3-AIP-28 | 成果物はスコアカードで加重機械採点する(例: STRUCTURAL25%・DES… | required | done | 3d21a73, 8e00920(cwd依存バグ修正) |
-| V3-AIP-29 | 大規模作業は司令塔(オーケストレーター)1体が計画・分配し、実作業は単一巨大エー… | required | todo | — |
-| V3-AIP-30 | 詳細設計文書を巨大単一ファイルにせずAPI1ルート・FR1ID・スキーマフィール… | required | todo | — |
+| V3-AIP-29 | 大規模作業は司令塔(オーケストレーター)1体が計画・分配し、実作業は… | required | done | — |
+| V3-AIP-30 | 詳細設計文書を巨大単一ファイルにせずAPI1ルート・FR1ID・スキー… | required | done | — |
 | V3-AIP-31 | 人間ゲート/human-in-the-loopを必須とする：ワンクリック全自動を… | required | done | b88a0f6 |
-| V3-AIP-32 | 要件は一度凍結したら変更はCR(変更要求)のみ：抜けが見つかったら§9未決に追記… | required | todo | — |
-| V3-AIP-33 | 要件の正本階層を憲法>採用REQ(accepted_requirements.c… | required | todo | — |
-| V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を採り、憲… | required | in_progress | 124027b, fc2fada |
-| V3-AIP-35 | 意図駆動開発ISP(Intent→Spec→Implementation)を正式… | required | todo | — |
-| V3-AIP-36 | 全変更で意図↔仕様↔コミット↔文明史(R2)を紐付け、意図メタデータ(inten… | required | todo | — |
-| V3-AIP-37 | 改善履歴・改善サイクルはGitHub(PR/Discussions/BOARD.… | required | todo | — |
-| V3-AIP-40 | AI機能ごとに使用モデル/計算資源を差し替え可能にする(ai-profile: … | required | todo | — |
-| V3-AIP-41 | AI推論はスマホ/エッジ(ユーザーの計算資源)推論をデフォルト最優先としクラウド… | required | todo | — |
-| V3-AIP-43 | AI機能をタグ別(#script/#image/#video/#analytic… | required | todo | — |
-| V3-AIP-44 | 全コンポーネントにEngineer Spec(技術者用)・Human-Frien… | required | todo | — |
-| V3-AIP-45 | データ設計をAIのRAG検索・引用で最大限活用できる形へ最適化する(最大のユーザ… | required | todo | — |
-| V3-AIP-46 | OSS/importを最大活用し車輪の再発明をしない：各サブシステムをOSSから… | required | todo | — |
-| V3-AIP-48 | 完成の定義は「欲しい機能が実際に使え、データが保管され、エラーが無く、UXが最低… | required | todo | — |
-| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | in_progress | 124027b, a0c631d |
-| V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytestの正統な流… | required | in_progress | 124027b |
-| V3-AIP-52 | 機能追加は機能単位のプチウォーターフォール(micro-waterfall)で進… | required | todo | — |
-| V3-AIP-53 | 一般的なウォーターフォール型で要件定義・詳細設計・UI設計・テスト設計・CI設計… | required | todo | — |
-| V3-AIP-54 | ver1を「完璧」に仕上げてから同一品質バー(同DoD・同Tier体系)で機能単… | required | todo | — |
-| V3-AIP-55 | 自律実行の運用ルール：可逆なステップでは許可を求めて止まらず自律実行し、確認質問… | required | todo | — |
-| V3-AIP-56 | 大型・自律的な開発はultracode相当の複数ステージ(Stage P調査→R… | required | todo | — |
+| V3-AIP-32 | 要件は一度凍結したら変更はCR(変更要求)のみ：抜けが見つかったら§9… | required | done | — |
+| V3-AIP-33 | 要件の正本階層を憲法>採用REQ(accepted_requirements.… | required | done | — |
+| V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を… | required | done | — |
+| V3-AIP-35 | 意図駆動開発ISP(Intent→Spec→Implementation)を正… | required | done | — |
+| V3-AIP-36 | 全変更で意図↔仕様↔コミット↔文明史(R2)を紐付け、意図メタデータ… | required | done | — |
+| V3-AIP-37 | 改善履歴・改善サイクルはGitHub(PR/Discussions/BOARD.… | required | done | — |
+| V3-AIP-40 | AI機能ごとに使用モデル/計算資源を差し替え可能にする(ai-prof… | required | done | — |
+| V3-AIP-41 | AI推論はスマホ/エッジ(ユーザーの計算資源)推論をデフォルト最優先… | required | done | — |
+| V3-AIP-43 | AI機能をタグ別(#script/#image/#video/#analytic… | required | done | — |
+| V3-AIP-44 | 全コンポーネントにEngineer Spec(技術者用)・Human-Fri… | required | done | — |
+| V3-AIP-45 | データ設計をAIのRAG検索・引用で最大限活用できる形へ最適化する(… | required | done | — |
+| V3-AIP-46 | OSS/importを最大活用し車輪の再発明をしない：各サブシステムをOS… | required | done | — |
+| V3-AIP-48 | 完成の定義は「欲しい機能が実際に使え、データが保管され、エラーが無… | required | done | — |
+| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | done | — |
+| V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytes… | required | done | — |
+| V3-AIP-52 | 機能追加は機能単位のプチウォーターフォール(micro-waterfall… | required | done | — |
+| V3-AIP-53 | 一般的なウォーターフォール型で要件定義・詳細設計・UI設計・テスト… | required | done | — |
+| V3-AIP-54 | ver1を「完璧」に仕上げてから同一品質バー(同DoD・同Tier体系)… | required | done | — |
+| V3-AIP-55 | 自律実行の運用ルール：可逆なステップでは許可を求めて止まらず自律実… | required | done | — |
+| V3-AIP-56 | 大型・自律的な開発はultracode相当の複数ステージ(Stage P調査… | required | done | — |
 | V3-AIP-57 | 繰り返し使うワークフロー・手順はまず1回手動で正しさを確認してからスキル/ルール… | required | done | b1511e4 |
-| V3-AIP-59 | セッション進捗報告は「今どこ/完了/進行中/次はあなた/次はAuto/数字/既知… | required | todo | — |
+| V3-AIP-59 | セッション進捗報告は「今どこ/完了/進行中/次はあなた/次はAuto… | required | done | — |
 | V3-AIP-60 | ver1・ver2のコード・設計書・過去のAIとの要件整理やり取りを全て資料とし… | required | done | 91e2e17 |
-| V3-AIP-61 | システム構築に必要な最高の技術選定をまずdeep researchで行い(ant… | required | todo | — |
-| V3-AIP-63 | 環境層・知識層・プロダクト層の3層を相互補強させ、プロダクト層での学びを知識層へ… | required | todo | — |
-| V3-AIP-64 | 並列実行の資源制御：worktree分離は並列エージェントが同一ファイルを触る場… | required | todo | — |
-| V3-AIP-65 | 既存設計書はいきなり動かさずStage Rで全設計書の一覧・重複・矛盾・参照切れ… | required | todo | — |
-| V3-AIP-66 | git運用ルール：ユーザーが明示的に指示しない限りcommitしない、force… | required | todo | — |
+| V3-AIP-61 | システム構築に必要な最高の技術選定をまずdeep researchで行い… | required | done | — |
+| V3-AIP-63 | 環境層・知識層・プロダクト層の3層を相互補強させ、プロダクト層での… | required | done | — |
+| V3-AIP-64 | 並列実行の資源制御：worktree分離は並列エージェントが同一ファイ… | required | done | — |
+| V3-AIP-65 | 既存設計書はいきなり動かさずStage Rで全設計書の一覧・重複・矛盾… | required | done | — |
+| V3-AIP-66 | git運用ルール：ユーザーが明示的に指示しない限りcommitしない、… | required | done | — |
 | V3-AIP-67 | GitHub Issues(label=improvement/feature-… | required | done | 55f7fc7 |
-| V3-AIP-68 | ユーザーが機能を改善・開発した際に本番同様に結合・試用できるサンドボックス(本番… | required | todo | — |
+| V3-AIP-68 | ユーザーが機能を改善・開発した際に本番同様に結合・試用できるサンド… | required | done | — |
 | V3-AIP-70 | 本番apps/webは編集禁止(読み取り専用参照)、apps/ui-parts-… | required | todo | — |
-| V3-AIP-76 | AIプロンプト・評価軸・文化テンプレート(UIテーマ/掲示板構造/評価軸)をコー… | required | todo | — |
+| V3-AIP-76 | AIプロンプト・評価軸・文化テンプレート(UIテーマ/掲示板構造/評… | required | done | — |
 | V3-AIP-78 | 大量タスクを夜間overnight/週次実行パックとしてAI(Auto余力)に切… | required | done | 4883f25 |
-| V3-AIP-80 | システムの「外側」(UI Schema/思想/宣言書Manifesto/技術思想… | required | todo | — |
+| V3-AIP-80 | システムの「外側」(UI Schema/思想/宣言書Manifesto/技術思… | required | done | — |
 | V3-AIP-90 | RAG検索基盤を文明の脳とし全データ(観測・論文・掲示板・UI・テンプレート)を… | required | done | 91a782f |
 | V3-AIP-92 | Builder(文明編集ツール)をOSDefinition/Component/… | required | blocked | — |
 | V3-AIP-93 | 各正本Markdown/画面1ファイルに開発掲示板スレ1本を1:1で紐づけ(fi… | required | done | 2219a99 |
-| V3-AIP-94 | 仕様書と実装の間で思想レイヤー(不変:哲学・文明観・目的・価値観)/構造レイヤー… | required | todo | — |
+| V3-AIP-94 | 仕様書と実装の間で思想レイヤー(不変:哲学・文明観・目的・価値観)… | required | done | — |
 | V3-AIP-96 | 就寝中など人間不在の時間帯に、Claude Code の余剰セッション/スケジュ… | required | done | 26bbb23 |
 | V3-AIP-97 | D:\claude を Claude の本拠地（HQ）とするワークスペース階層を… | required | done | 4ac0d40 |
 | V3-AIP-98 | 夜間限定の自動運転(V3-AIP-96)を時間帯予約式スケジューラへ拡張し、夜間… | required | done | 3388451 |
-| V3-AIP-99 | モデル階層ポリシー: 自動運転(開発予約外時間帯の無人運転)は軽量モデル(Son… | required | todo | — |
+| V3-AIP-99 | モデル階層ポリシー: 自動運転(開発予約外時間帯の無人運転)は軽量モ… | required | done | — |
 | V3-CST-01 | 10年間ユーザーが増えなくてもコストを賄える構造を最優先とし、ユーザー数に比例し… | required | done | 831f14f |
 | V3-CST-02 | Sakura VPS(サーバー費)+Cloudflare R2(ストレージ費)等… | required | done | f3ebe59 |
-| V3-CST-04 | 最安インフラを選定する:独自ドメインは年間更新料が最小のTLD(.uk最安)を採… | required | todo | — |
-| V3-CST-05 | デプロイ/運用手順を整備する:nginx+certbot(Let's Encry… | required | todo | — |
+| V3-CST-04 | 最安インフラを選定する:独自ドメインは年間更新料が最小の… | required | done | — |
+| V3-CST-05 | デプロイ/運用手順を整備する:nginx+certbot(Let'… | required | done | — |
 | V3-CST-09 | Truth(R2)バックアップ二重化: Truth正本を別プロバイダ(Backb… | required | done | fed43fb |
 | V3-FND-01 | R2/Truth への書き込みは INSERT ONLY(append-only… | required | done | 8fbcc49 |
 | V3-FND-02 | 永続正本は Cloudflare R2 のみとし、常駐DB(Postgres/S… | required | done | e4e79ee |
 | V3-FND-03 | システムを「個体の一生と再解析可能性を守るファイルベース研究データレイク」として… | required | done | 32099ac |
 | V3-FND-04 | 世界状態の更新は Command → 純粋関数 Reducer(Kernel) … | required | done | 8271f49 |
 | V3-FND-05 | 文明の同一性を Genesis Hash + 連続したR2イベント列(各イベント… | required | done | 8271f49 |
-| V3-FND-10 | ver4では負荷を偏在させず、メインAPI・スケール・R2バインディングを Cl… | required | todo | — |
-| V3-FND-11 | 本番API接続は Cloudflare Pages 経由 rewrite ではな… | required | todo | — |
+| V3-FND-10 | ver4では負荷を偏在させず、メインAPI・スケール・R2バイン… | required | done | — |
+| V3-FND-11 | 本番API接続は Cloudflare Pages 経由 rewrite ではな… | required | done | — |
 | V3-FND-12 | 依存方向を apps→libs/ihl\|packages\|components … | required | done | e4e79ee |
 | V3-FND-14 | システムの同期・接続・管理の最小単位を C-USB(Civilization-U… | required | done | 07fda74 |
-| V3-FND-15 | 全進化しうるデータ構造に系譜メタ(uuid/parent_uuid/ancest… | required | todo | — |
-| V3-FND-16 | フォーク文化を前提とし全構成を置換しても同一文明であり続ける(R2=神域はfor… | required | todo | — |
-| V3-FND-17 | it-hercules-laboratory を唯一の新製品(OSS publi… | required | todo | — |
+| V3-FND-15 | 全進化しうるデータ構造に系譜メタ(uuid/parent_uuid/… | required | done | — |
+| V3-FND-16 | フォーク文化を前提とし全構成を置換しても同一文明であ… | required | done | — |
+| V3-FND-17 | it-hercules-laboratory を唯一の新製品(OSS pub… | required | done | — |
 | V3-FND-18 | データ取得元管理を Placement/DeviceBinding/Occupa… | required | done | 9eeea25 |
-| V3-FND-19 | 重い計算は原則ユーザー端末(WASM/WebGPU/ローカルLLM+8GB GP… | required | todo | — |
-| V3-FND-20 | WASM(Extism/Spin)ドライバで中間APIサーバーを不要化し、既存フ… | required | in_progress | df69bc9 |
+| V3-FND-19 | 重い計算は原則ユーザー端末(WASM/WebGPU/ローカルLLM+8… | required | in_progress | — |
+| V3-FND-20 | WASM(Extism/Spin)ドライバで中間APIサーバーを不要化し… | required | in_progress | — |
 | V3-FND-21 | AI呼び出しを集約する AI Kernel(A90)を新設し全機能のAI利用(翻… | required | done | 8271f49 |
-| V3-FND-25 | 『文明として進化するOS』を第一原理の上位ビジョンとして承認する。ただし実装スコ… | required | todo | — |
-| V3-FND-30 | MVP v1スコープを明確化する:マーケット(#06)・マチアプ(#10)・裁判… | required | todo | — |
+| V3-FND-25 | 『文明として進化するOS』を第一原理の上位ビジョンとして承… | required | done | — |
+| V3-FND-30 | MVP v1スコープを明確化する:マーケット(#06)・マチアプ(… | required | in_progress | — |
 | V3-FND-34 | バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバ… | required | done | c5ecd17 |
 | V3-FND-35 | 外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配… | required | done | 8eb8358, f3ebe59 |
 | V3-AIP-100 | 使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)が… | best-effort | todo | — |
@@ -334,41 +338,41 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-GOV-01 | 争い処理の基本モデル: 開発者・創世者は裁判官にならず、争いは(1)マーケット(… | required | todo | — |
+| V3-GOV-01 | 争い処理の基本モデル: 開発者・創世者は裁判官にならず、争いは(1)マーケット(… | required | done | — |
 | V3-GOV-07 | プラチナ投票は当事者が「公開して投票」を選んだ場合のみ開始し、7日間・1票=1P… | required | done | adae1e9 |
-| V3-GOV-09 | 行政・当局から指摘があった場合、該当出品・データ・画像に即『不使用フラグ』を立て… | required | todo | — |
+| V3-GOV-09 | 行政・当局から指摘があった場合、該当出品・データ・画像に即『不使用フラグ』を立て… | required | done | — |
 | V3-GOV-10 | 掲示板・マーケットの指摘は30回ごとにプラチナ1枚を消費し(クールダウンなし)、… | required | in_progress | 0c866ff |
 | V3-GOV-11 | ホームは司法インボックスのプレビュー(最大5件)と環境IoT due予定(最大3… | required | done | 837b314 |
-| V3-GOV-12 | 判例をR2 append-onlyに蓄積し引用可能にする。争いクローズ時にAIが… | required | todo | — |
-| V3-GOV-13 | AI違法性スコアによる自動モデレーション(NGワード表)は採用せず、人間の指摘と… | required | todo | — |
-| V3-GOV-19 | 統治ルール群(ProjectRules/Governance/Civilizat… | required | todo | — |
+| V3-GOV-12 | 判例をR2 append-onlyに蓄積し引用可能にする。争いクローズ時にAIが… | required | done | — |
+| V3-GOV-13 | AI違法性スコアによる自動モデレーション(NGワード表)は採用せず、人間の指摘と… | required | done | — |
+| V3-GOV-19 | 統治ルール群(ProjectRules/Governance/CivilizationSyncEngine/PlatinumCoinRules/世界法)自体をフォーク・改善・投票可能とし… | required | done | — |
 | V3-GOV-20 | 世界法(A50)を憲法/物理法則/文化法/経済法/AI法/翻訳法/観測法の統合体… | required | todo | — |
-| V3-GOV-22 | 機能・UI・部品・コードを4レイヤー(3:機能構成/2:UI構成/1:部品/0:… | required | todo | — |
-| V3-GOV-23 | OS自体をフォーク可能とし(C-USB準拠なら誰でもブランチ可)、マージは投票制… | required | todo | — |
-| V3-SEC-02 | 収集エージェント(collector)の秘密鍵はcollector/.envにの… | required | todo | — |
+| V3-GOV-22 | 機能・UI・部品・コードを4レイヤー(3:機能構成/2:UI構成/1:部品/0:… | required | in_progress | — |
+| V3-GOV-23 | OS自体をフォーク可能とし(C-USB準拠なら誰でもブランチ可)、マージは投票制… | required | done | — |
+| V3-SEC-02 | 収集エージェント(collector)の秘密鍵はcollector/.envにの… | required | done | — |
 | V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | required | blocked | — |
-| V3-SEC-04 | 秘密値(.env/credentials/APIキー/Cloudflare/Sa… | required | todo | — |
-| V3-SEC-05 | LLMのAPI Keyは保存時のみ送信しレスポンスに返さず存在フラグのみ表示する… | required | todo | — |
-| V3-SEC-06 | システムは個人情報・決済情報(氏名/住所/電話/クレカ/口座)の平文を一切保持し… | required | todo | — |
-| V3-SEC-07 | 個人情報を保存前に必ずPII検出→マスク→保存の順で処理し、マスク前データの保存… | required | todo | — |
-| V3-SEC-11 | プロフィールに住所を保持せず主体識別はUUID/UserID/表示名のみとし、O… | required | todo | — |
-| V3-SEC-13 | 公開エクスチェンジ移行時はPIIをredactし構造化ID(追跡番号・観測画像I… | required | todo | — |
+| V3-SEC-04 | 秘密値(.env/credentials/APIキー/Cloudflare/Sa… | required | done | — |
+| V3-SEC-05 | LLMのAPI Keyは保存時のみ送信しレスポンスに返さず存在フラグのみ表示する… | required | done | — |
+| V3-SEC-06 | システムは個人情報・決済情報(氏名/住所/電話/クレカ/口座)の平文を一切保持し… | required | done | — |
+| V3-SEC-07 | 個人情報を保存前に必ずPII検出→マスク→保存の順で処理し、マスク前データの保存… | required | done | — |
+| V3-SEC-11 | プロフィールに住所を保持せず主体識別はUUID/UserID/表示名のみとし、O… | required | done | — |
+| V3-SEC-13 | 公開エクスチェンジ移行時はPIIをredactし構造化ID(追跡番号・観測画像I… | required | done | — |
 | V3-SEC-14 | ログイン系エンドポイントにレート制限(magiclink 20回/60秒/IP、… | required | done | 7c28a03 |
-| V3-SEC-15 | open-redirectガードとして、認証済み /login?next= は内… | required | todo | — |
-| V3-SEC-16 | セキュリティ機構(認証ゲート等)は『置いただけで効いている』と仮定せず、未ログイ… | required | todo | — |
-| V3-SEC-17 | 画像取得エンドポイントの認証は、blob取得方式が不十分でない限り除外(認証免除… | required | todo | — |
-| V3-SEC-19 | 本番環境変数を人間が確認する — VPS APIは IHL_AUTH_REQUI… | required | todo | — |
+| V3-SEC-15 | open-redirectガードとして、認証済み /login?next= は内… | required | done | — |
+| V3-SEC-16 | セキュリティ機構(認証ゲート等)は『置いただけで効いている』と仮定せず、未ログイ… | required | done | — |
+| V3-SEC-17 | 画像取得エンドポイントの認証は、blob取得方式が不十分でない限り除外(認証免除… | required | done | — |
+| V3-SEC-19 | 本番環境変数を人間が確認する — VPS APIは IHL_AUTH_REQUI… | required | done | — |
 | V3-SEC-20 | 利用規約(ToS)機能はサービスの性質・データの扱い・禁止行為をユーザーが理解し… | required | done | 067fd1d |
-| V3-SEC-24 | 利用規約の条文正本・法務文言はAIが自律的に変更してはならない(#02 HUMA… | required | todo | — |
+| V3-SEC-24 | 利用規約の条文正本・法務文言はAIが自律的に変更してはならない(#02 HUMA… | required | done | — |
 | V3-SEC-26 | 自己ホスト版とクラウド提供版の責任分界を条文で明示し、自己ホスト利用者向けに『デ… | required | todo | — |
 | V3-SEC-30 | 文明OSはOSS前提(Apache 2.0/MIT検討)で公開し、仕様書・R2構… | required | todo | — |
 | V3-SEC-31 | 特許は取得せず、公開日をもって先使用権を主張する『公開宣言書』(MANIFEST… | required | todo | — |
-| V3-SEC-34 | 外部データの取り込みは共有ボタン/認証済みAPI/OAuth(GitHub/No… | required | todo | — |
+| V3-SEC-34 | 外部データの取り込みは共有ボタン/認証済みAPI/OAuth(GitHub/No… | required | done | — |
 | V3-SEC-41 | ValueCheck/好みセッションは本人JWTと組み合わせた検索ブーストのみに… | required | done | ec51ada |
 | V3-SEC-42 | 画像・解析データにSHA-256(元画像・ROIマスク・解析結果JSON)/Me… | required | done | ca52bb8 |
 | V3-SEC-45 | ユーザーコード/ドライバー実行はサンドボックス境界(Extism/Docker/… | required | in_progress | 6db3dd9 |
-| V3-SEC-46 | ロジックはAPIに固定しUIはAPIを呼ぶだけの『皮』に留める。価値ある操作(コ… | required | todo | — |
-| V3-SEC-52 | cron等でユーザー不在時に勝手に情報取得する仕組みは日本の法律上問題がある恐れ… | required | todo | — |
+| V3-SEC-46 | ロジックはAPIに固定しUIはAPIを呼ぶだけの『皮』に留める。価値ある操作(コ… | required | done | — |
+| V3-SEC-52 | cron等でユーザー不在時に勝手に情報取得する仕組みは日本の法律上問題がある恐れ… | required | done | — |
 | V3-SEC-56 | 出品状態書込・テンプレ公開・GMO等は認可(requireMarketListi… | required | done | 6bcd976 |
 | V3-SEC-57 | 鍵バンドルのサーバzero-knowledge保管+オフラインリカバリコード: … | required | done | 290c33d |
 | V3-SEC-58 | 書込系レート制限+ユーザー別クォータ: R2書込経路にレート制限とユーザー別クォ… | required | done | c3a907e |
@@ -414,28 +418,28 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-BBS-01 | 知の広場(/knowledge)を掲示板改称の統合ハブとし、3柱構成(1.公式掲… | required | todo | — |
+| V3-BBS-01 | 知の広場(/knowledge)を掲示板改称の統合ハブとし、3柱構成(1.公式掲… | required | done | — |
 | V3-BBS-03 | 全ファイル・全コンポーネント・全画面テンプレートに『説明掲示板(使い方)・愚痴掲… | required | in_progress | e61f50b, 0bf56a8, 640fa3b |
 | V3-BBS-05 | 掲示板スレ・投稿は上書き・削除せず、訂正は追記セクションで行う(INSERT O… | required | done | e61f50b, 0bf56a8 |
-| V3-BBS-09 | 掲示板の投稿者名は入力欄を廃止し、初回登録時に確定した固定ユーザーネーム({{c… | required | todo | — |
-| V3-BBS-10 | スレッドは一定量(100投稿ごと)でAIが要約・タグ付け・RAG向け整形を行い、… | required | todo | — |
+| V3-BBS-09 | 掲示板の投稿者名は入力欄を廃止し、初回登録時に確定した固定ユーザーネーム({{c… | required | done | — |
+| V3-BBS-10 | スレッドは一定量(100投稿ごと)でAIが要約・タグ付け・RAG向け整形を行い、… | required | done | — |
 | V3-BBS-14 | 掲示板への改善要求はvoteable(積み投票/プラチナコイン)方式で扱い、AI… | required | done | 814c648 |
-| V3-BBS-20 | 全エンティティ(観測個体・スレ・投稿・ユーザー・タグ・論文・マーケット出品等)を… | required | todo | — |
+| V3-BBS-20 | 全エンティティ(観測個体・スレ・投稿・ユーザー・タグ・論文・マーケット出品等)を… | required | done | — |
 | V3-BBS-28 | 公開Q&A・称賛・未出品オファー・ラブレター一括募集などのEngagement(… | required | done | d005f3a |
-| V3-BBS-29 | フォーク前提の文明とし、改善案(フォーク)は既存コンポーネントから必ず自動でブラ… | required | todo | — |
-| V3-BBS-36 | 知の広場の設計目標は「意見交換と化学反応(異視点の衝突・合意形成・セレンディピテ… | required | todo | — |
-| V3-BBS-37 | 任意の画面/機能/正本ファイルから、関連する議論スレ・intentチェーン(in… | required | todo | — |
-| V3-BBS-38 | GitHub統合は画面遷移(外部リンク)ではなくAPI連携を原則とする。知の広場… | required | todo | — |
+| V3-BBS-29 | フォーク前提の文明とし、改善案(フォーク)は既存コンポーネントから必ず自動でブラ… | required | done | — |
+| V3-BBS-36 | 知の広場の設計目標は「意見交換と化学反応(異視点の衝突・合意形成・セレンディピテ… | required | done | — |
+| V3-BBS-37 | 任意の画面/機能/正本ファイルから、関連する議論スレ・intentチェーン(in… | required | done | — |
+| V3-BBS-38 | GitHub統合は画面遷移(外部リンク)ではなくAPI連携を原則とする。知の広場… | required | in_progress | — |
 | V3-PPR-01 | 論文照合(Paper Match)機能: 論文が要求する条件P(JSON)とユー… | required | done | 0bf56a8 |
 | V3-PPR-02 | 論文の条件P(P⇒Qの前提)のJSON Schemaを単一正本としてファイル化し… | required | done | 2678d20 |
 | V3-PPR-03 | 論文をPaperSectionsV1の6節(目的/仮説/条件/検証/現在のフェー… | required | in_progress | 0bf56a8 |
-| V3-PPR-04 | 論文を『進行中(in_progress)を一級市民』として扱い、下書き概念を使わ… | required | todo | — |
+| V3-PPR-04 | 論文は進行中(in_progress)を一級市民として下書き概念なしappend-onlyで保存し、指標を論文数でなくresearch velocityに置く | required | done | — |
 | V3-PPR-06 | 論文全文(sections+conditions+tags)をembedding… | required | done | 33b8a6d |
 | V3-PPR-07 | 研究の空白領域を、観測データの4象限モデル(P∧Q=n11/P∧¬Q=n10/¬… | required | done | 41600e4 |
 | V3-PPR-09 | 全派生成果物にrun_id・model_name/version・input_h… | required | done | e61f50b, 9eeea25, 33b8a6d |
 | V3-PPR-12 | 解析は端末CPU/GPUをフル活用した完全ローカル計算(マルチスレッド/SIMD… | required | done | f2ac74c |
 | V3-PPR-13 | 科学OSの世界接続層(3要素: Wikidata正規ID・使用時発行の内部Ind… | required | done | 33b8a6d, 52cef86 |
-| V3-PPR-14 | 論文をLiving Paper(動的論文)として構造化データ(JSON)で管理し… | required | todo | — |
+| V3-PPR-14 | 論文をLiving Paper(動的論文)として構造データで管理し、観測追加のたびグラフ・4象限・信頼度を自動更新する(POST /graph/update) | required | in_progress | — |
 | V3-PPR-16 | 研究プロジェクトをprojectId中心(研究の最小単位=背骨)に、プロフィール… | required | done | 33b8a6d |
 | V3-PPR-17 | 研究テーマ(温度・容器サイズ・湿度・振動等がヘラクレス成長に与える影響)を洗い出… | required | done | 33b8a6d |
 | V3-PPR-18 | 追検証は『データ提供のみ』で完了できるようにし、グラフへの自動追加・相関係数の自… | required | done | 33b8a6d |
@@ -443,22 +447,22 @@
 | V3-PPR-23 | 論文管理を章構成+引用管理(observation/paper/url/book… | required | done | c4af847 |
 | V3-PPR-30 | 研究者でない一般ユーザーが論文級の成果物を簡単に作れる仕組みを提供する: Dat… | required | done | 33b8a6d |
 | V3-WIK-01 | エージェント維持型の永続Wiki(サブブレイン)を情報源(掲示板/論文/観測)の… | required | done | 33b8a6d |
-| V3-WIK-02 | 知識バンドルはOKF v0.1規約(type frontmatter必須/ind… | required | todo | — |
+| V3-WIK-02 | 知識バンドルはOKF v0.1規約(type frontmatter必須/ind… | required | done | — |
 | V3-WIK-03 | 検索は決定論の梯子(キーワード抽出→index.mdスコアリングでファイルを開か… | required | done | de5376e |
 | V3-WIK-04 | 決定論ingest CLI(tools/knowledge_ingest.py)… | required | done | b902af9 |
-| V3-WIK-05 | ページを作成・改名したら同じ変更でindex.mdに1行を追加・修正し、inde… | required | todo | — |
-| V3-WIK-06 | 各TopicページはTruthイベント・設計doc・辞書への引用をCitatio… | required | todo | — |
+| V3-WIK-05 | ページを作成・改名したら同じ変更でindex.mdに1行を追加・修正し、inde… | required | in_progress | — |
+| V3-WIK-06 | 各TopicページはTruthイベント・設計doc・辞書への引用をCitatio… | required | in_progress | — |
 | V3-WIK-07 | 月次Lint(矛盾・孤立ページ・古い記述・リンク切れ)を実行しlog.mdに記録… | required | done | 7c2049a |
-| V3-WIK-09 | 安定・高信頼な知識のみwiki層に蒸留し、高頻度更新・大量データ(生の時系列画像… | required | todo | — |
+| V3-WIK-09 | 安定・高信頼な知識のみwiki層に蒸留し、高頻度更新・大量データ(生の時系列画像… | required | done | — |
 | V3-WIK-13 | 統合検索を全文/タグ/ユーザー/ノードの4本柱で提供し、投稿(ノード)作成時にR… | required | done | 0bf56a8 |
-| V3-WIK-14 | 検索用タグを3層(system_tags=UI自動付与・編集不可/ai_tags… | required | todo | — |
+| V3-WIK-14 | 検索用タグを3層(system_tags=UI自動付与・編集不可/ai_tags… | required | done | — |
 | V3-WIK-16 | 記事・ブログ機能を論文(#09)とほぼ同じ共通CMS基盤で提供する。記事とブログ… | required | done | 33b8a6d |
 | V3-WIK-17 | 会話ログ・AIチャット・観測データ・行動履歴を『共有』ボタン1タップ(PWA共有… | required | done | 33b8a6d |
 | V3-WIK-20 | 設計書・コード・掲示板・修整理由・世界観・動画/記事メタ・フォーク系統・種(血統… | required | done | 783b38f |
-| V3-WIK-22 | 知識の属人化を完全に消し(『本人しか知らない』が存在しない)、誰でも短時間で『わ… | required | todo | — |
+| V3-WIK-22 | 知識の属人化を完全に消し(『本人しか知らない』が存在しない)、誰でも短時間で『わ… | required | in_progress | — |
 | V3-WIK-28 | Cursor等のAIセッションを全て閲覧できるようにし、サブ脳として情報を整理・… | required | done | 36fa042 |
 | V3-WIK-29 | 論文/研究のためにanthropics/life-sciences等の外部知識(… | required | done | bc4f513 |
-| V3-WIK-30 | 仕様書のルール(例: 掲示板作成+5Pt)をJSONで全公開し、誰でも文明の『法… | required | todo | — |
+| V3-WIK-30 | 仕様書のルール(例: 掲示板作成+5Pt)をJSONで全公開し、誰でも文明の『法… | required | done | — |
 | V3-BBS-02 | 製品掲示板の主入口を『愚痴・改善・論文・その他』の4つのみに限定し、独立Rese… | best-effort | todo | — |
 | V3-BBS-04 | 全画面分の掲示板スレッド(公式説明スレ+愚痴スレ、125画面×2=250スレ)を… | best-effort | todo | — |
 | V3-BBS-06 | 掲示板の紛争解決は『通報』ではなく『指摘』ボタンとし、指摘タグ選択と理由記入を必… | best-effort | todo | — |
@@ -466,7 +470,7 @@
 | V3-BBS-11 | 掲示板は自然言語検索で先に既存の適合掲示板へ誘導・提案し(複数候補)、結果が十分… | best-effort | todo | — |
 | V3-BBS-12 | 掲示板作成はAIがタイトル・タグ・説明・目的のたたき台を自動記入し、ユーザーがク… | best-effort | todo | — |
 | V3-BBS-15 | 通報システムは導入せず、法律に反する言動があれば即BAN、それ以外はコミュニティ… | best-effort | todo | — |
-| V3-BBS-16 | 開発掲示板はOS/システムのフォルダ構造・ファイル構成と同じ階層・同粒度で用意し… | best-effort | todo | — |
+| V3-BBS-16 | 開発掲示板はOS/システムのフォルダ構造・ファイル構成と同じ階層・同粒度で用意し… | best-effort | done | — |
 | V3-BBS-18 | 文明のあらゆる行動(カルマ変動・プラチナ付与・貢献度・称号・レビュー・取引・DM… | best-effort | todo | — |
 | V3-BBS-19 | DM/メッセージ機能をスレッド一覧+バブル表示で提供しR2(dm/{thread… | best-effort | todo | — |
 | V3-BBS-21 | 掲示板/コミュニティを『掲示板』ではなく『コミュニティの記憶・知識史システム』と… | best-effort | todo | — |
@@ -495,64 +499,43 @@
 
 | id | title | scope | status | commits |
 |---|---|---|---|---|
-| V3-IND-01 | 観測セッションを親個体(individual)に紐づけ父(sire)・母(dam… | required | todo | — |
+| V3-IND-01 | 観測セッションを親個体(individual)に紐づけ父(sire)・母(dam)IDを記録でき、家系図はbuildPedigreeで再構成する | required | done | — |
 | V3-IND-02 | individual masterの保存先をIHL R2のindividualテ… | required | done | e61f50b |
 | V3-IND-04 | 個体名のリネーム/改名・昇格・テンプレ更新はUPDATEせずname_event… | required | done | e61f50b |
-| V3-IND-07 | マチアプ(個体マッチング/ValueCheck)は画像に対するYES/NO(緑/… | required | todo | — |
+| V3-IND-07 | マチアプ(個体マッチング/ValueCheck)はYES/NO直感評価でオンライン線形学習しスコア非公開でランキングする | required | done | — |
 | V3-IND-08 | マチアプの数式エンジンは計算量O(nタグ数)・GPU不要・深層学習/ブラックボッ… | required | done | 145d78d |
 | V3-IND-12 | 血統(Cross)画面は非常に重要な機能として、齢別平均体重(初令/二令/三令初… | required | done | e61f50b, 3f941f2 |
 | V3-IND-13 | 個体詳細(A2)を「個体のホーム画面」とし、観測(最新観測・履歴・成長曲線グラフ… | required | done | e61f50b, d49dcd9, 3d89c63, 57cc941 |
 | V3-IND-15 | 生体カード(種・形態・サイズ・特徴・QRコード)を生成し、印刷用テンプレートをf… | required | in_progress | e61f50b |
-| V3-IND-18 | 血統(個体)機能にランキング・トップ10・最高サイズ等の競争煽り要素は一切作らず… | required | todo | — |
-| V3-IND-19 | 種(species)と形態(morph/Form)のCRUD管理をR2(spec… | required | todo | — |
+| V3-IND-18 | 血統(個体)機能にランキング・トップ10・最高サイズ等の競争煽り要素は一切作らない | required | done | — |
+| V3-IND-19 | 種(species)と形態(morph)のCRUDをR2で提供し統計自動計算+AI表記揺れ検出(人間承認のみ統合) | required | done | — |
 | V3-IND-20 | スケジュール(飼育タスク)ノードを個体・観測テンプレに紐付け、AIが種族・成長ス… | required | in_progress | 57cc941 |
 | V3-IND-21 | 個体・血統情報の登録数と実在数を照合できる透明性プラットフォームを作り水増… | required | done | e61f50b, 8b05247, 57cc941 |
-| V3-IND-30 | 研究用の個体ID・観測IDは「生体情報ではなく研究ID」として個人情報と切り分け… | required | todo | — |
+| V3-IND-30 | 研究用ID(bioId)は個人情報と切り分けマスクしない。個人情報のみマスク。ToS同意を得る | required | done | — |
 | V3-IND-34 | 血統管理は複数系統(A:体格重視、C:色重視等)を並行してインライン累代させ、理… | required | in_progress | 3f941f2, 57cc941 |
 | V3-IND-35 | 割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ… | required | done | b5fd006 |
 | V3-IND-36 | 割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl… | required | done | 65d7a00 |
-| V3-OBS-01 | 観測は昆虫専用ではなく、対象を生物/器物/デジタル/環境/カスタムの5ドメインに… | required | todo | — |
 | V3-OBS-02 | 観測対象ナビゲータはテキストのみ(画像・サムネイル非表示)で、学名検索・アキネー… | required | done | ee79efd |
-| V3-OBS-03 | 種の同定候補はAI/GBIF/Wikidataが提示してよいが、種・亜種・個体ラ… | required | todo | — |
-| V3-OBS-04 | TaxonomyCandidateとUserConfirmedTaxonomyを… | required | todo | — |
-| V3-OBS-05 | 観測はappend-onlyとし編集UIを禁止、修正は新規追記(APPEND)で… | required | todo | — |
 | V3-OBS-06 | 全ての計測・特徴値にvalue_origin(direct_observed/i… | required | done | e61f50b |
 | V3-OBS-07 | 観測の信頼度モデルを設け、自動取得>手入力>後日編集の順で信頼度を明示スコア化し… | required | done | e61f50b, aa9dee3 |
 | V3-OBS-08 | 観測パイプラインはITO構造(IN:写真・env・metadata → Tran… | required | done | e61f50b, 35e555e |
 | V3-OBS-09 | 画像埋め込みはEmbeddingBackend Protocolで一本化し、本番… | required | done | e61f50b, 35e555e |
-| V3-OBS-10 | 類似検索は決定論優先の梯子(metadata whitelist絞り込み→siz… | required | todo | — |
 | V3-OBS-11 | 類似検索の最終rerankスコアはembedding+color+size+li… | required | done | e61f50b |
 | V3-OBS-14 | 撮影特徴量は部位別平均L*a*b*(頭部/胸角/前胸/上翅)+分散+色ヒストグラ… | required | done | 426c2ca |
-| V3-OBS-15 | 環境データは生値(温度・湿度・light_level)のみ保存し、露点・飽差・絶… | required | todo | — |
-| V3-OBS-16 | 環境点はBモデルでenvironment_snapshotとphoto_cond… | required | todo | — |
 | V3-OBS-17 | 観測commit時にデバイス(devices[])を宣言するとDeviceBin… | required | done | ce81dd5 |
-| V3-OBS-18 | 計測テンプレートはユーザーが完全自由に項目(数値/テキスト/選択/画像アノテーシ… | required | todo | — |
 | V3-OBS-19 | 種族+発育段階を1度決めて観測画面に引き継ぐWorkflowContext(観測… | required | done | f728a06 |
 | V3-OBS-20 | 個体ID・棚・場所からQRコードを発行/スキャンし、スキャンで該当個体の新規観測… | required | done | 890f079 |
-| V3-OBS-21 | 観測入力時に次回観測日(next_observation_at)を決め、テンプレ… | required | todo | — |
 | V3-OBS-22 | MVP v1観測コアスコープを「観測データ収集・写真登録・詳細ビュー・親個体連携… | required | done | — |
 | V3-OBS-23 | 観測セッションに写真を1枚以上アップロードしてR2に保存し、thumbnailは… | required | done | e3d5aa5 |
 | V3-OBS-24 | 観測詳細ビューは高忠実度モック準拠で、大型写真・構造化撮影条件・由来タグ付き測定… | required | done | f728a06 |
 | V3-OBS-25 | 観測登録は3画面フロー(対象を選ぶ→入力→確認)とし、入力画面単体での即時保存(… | required | done | — |
 | V3-OBS-26 | 観測計測入力の1行UIは(項目)ドロップダウン選択or新規追加/数値入力/(単位… | required | done | f728a06 |
 | V3-OBS-27 | 測定行・撮影条件行・環境スナップショット行を単一のStructuredRowコン… | required | done | f728a06 |
-| V3-OBS-28 | SwitchBot等IoT環境センサー(温度/湿度/CO2/照度/ジャイロ/pH… | required | todo | — |
-| V3-OBS-29 | SwitchBot等IoTの秘密鍵(TOKEN/SECRET)をIHLサーバ/V… | required | todo | — |
-| V3-OBS-31 | 計測機器(Device)は環境(placement)に紐づけ個体には紐づけない。… | required | todo | — |
 | V3-OBS-43 | 観測を文明OSの中心Input(全機能の一次データ/機能の中心)と位置づけ、固体… | required | done | — |
-| V3-OBS-44 | 観測input取得はDocker拡張側に寄せ、文明OS本体はC-USB Lite… | required | todo | — |
-| V3-OBS-45 | スケール紙/計測台を標準化(A4方眼19×26cm+四隅マーカー10mm角+QR… | required | in_progress | 2dcf396 |
-| V3-OBS-46 | LabelMe相当の画像アノテーション(点/線/ポリゴン/ラベル)を統合し、観測… | required | in_progress | e61f50b |
-| V3-OBS-47 | 写真を撮った瞬間に大きさ・角の長さ・色などをローカル解析(HSV/Lab色空間・… | required | in_progress | e61f50b |
 | V3-OBS-48 | 観測詳細画面に「この観測を再解析する」ボタンを1つ置き、新しい画像なしで既存画像… | required | done | e61f50b |
-| V3-OBS-52 | 写真・音声・センサー生データ等のRawData/元画像はRDBに入れずR2/S3… | required | todo | — |
-| V3-OBS-53 | 写真1枚からmm単位精度で色・光度・湿度・温度を取得・記録できる観測システムと設… | required | in_progress | 2dcf396 |
-| V3-OBS-54 | 観測データは改ざん不可・透明・再現可能とし、捏造・他者観測の盗用・AI偽造を禁止… | required | todo | — |
 | V3-OBS-56 | searchable_capture_setを検索中核Parquetとし、cap… | required | done | 2dc42f8 |
 | V3-OBS-57 | 写真解析で個体観測画像から種候補・形態特徴・タグ・taxonomyを導く。種候補… | required | done | b7078e5 |
 | V3-OBS-61 | 観測入力を自然言語のフリーテキスト欄1つ+「解析する」ボタンで受け付け、日付・個… | required | done | 4ab0135 |
-| V3-OBS-62 | 観測フローを固定順で定義する: userId/auth→種族確定(taxonom… | required | in_progress | — |
-| V3-OBS-63 | タグは真実でなく解釈のため固定列の現在値でなくappend-onlyなtag e… | required | todo | — |
 | V3-OBS-72 | 研究室環境コンテキストの紐付け: 部屋・棚の配置、エアコン等の空調環境、センサー… | required | done | 23a4064 |
 | V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | done | 65d7a00, cc21229 |
 | V3-IND-03 | 観測登録時に個体をindividual_id+display_nameで扱い、ユ… | best-effort | todo | — |
@@ -679,3 +662,29 @@
 | V3-UIX-75 | UIは知識が無くても小学生でもぱっと見で使えるよう機能を詰め込みすぎずシンプル・… | best-effort | todo | — |
 | V3-UIX-78 | 価値観テンプレート(タグセット、ユーザーが追加/削除/変更/フォーク可能)で各項… | best-effort | todo | — |
 | V3-UIX-79 | pairwise好み入力は既定Nラウンド(N=10)で収束させ、現在ラウンド/上… | best-effort | todo | — |
+
+### w1-obs
+
+| id | title | scope | status | commits |
+|---|---|---|---|---|
+| V3-OBS-01 | 観測は昆虫専用ではなく、対象を生物/器物/デジタル/環境/カスタムの5ドメインに… | required | done | — |
+| V3-OBS-03 | 種の同定候補はAI/GBIF/Wikidataが提示してよいが、種・亜種・個体ラ… | required | done | — |
+| V3-OBS-04 | TaxonomyCandidateとUserConfirmedTaxonomyを… | required | in_progress | — |
+| V3-OBS-05 | 観測はappend-onlyとし編集UIを禁止、修正は新規追記(APPEND)で… | required | done | — |
+| V3-OBS-10 | 類似検索は決定論優先の梯子(metadata whitelist絞り込み→siz… | required | done | — |
+| V3-OBS-15 | 環境データは生値(温度・湿度・light_level)のみ保存し、露点・飽差・絶… | required | in_progress | — |
+| V3-OBS-16 | 環境点はBモデルでenvironment_snapshotとphoto_cond… | required | done | — |
+| V3-OBS-18 | 計測テンプレートはユーザーが完全自由に項目(数値/テキスト/選択/画像アノテーシ… | required | done | — |
+| V3-OBS-21 | 観測入力時に次回観測日(next_observation_at)を決め、テンプレ… | required | done | — |
+| V3-OBS-28 | SwitchBot等IoT環境センサー(温度/湿度/CO2/照度/ジャイロ/pH… | required | done | — |
+| V3-OBS-29 | SwitchBot等IoTの秘密鍵(TOKEN/SECRET)をIHLサーバ/V… | required | done | — |
+| V3-OBS-31 | 計測機器(Device)は環境(placement)に紐づけ個体には紐づけない。… | required | done | — |
+| V3-OBS-44 | 観測input取得はDocker拡張側に寄せ、文明OS本体はC-USB Lite… | required | done | — |
+| V3-OBS-45 | スケール紙/計測台を標準化(A4方眼19×26cm+四隅マーカー10mm角+QR… | required | in_progress | 2dcf396 |
+| V3-OBS-46 | LabelMe相当の画像アノテーション(点/線/ポリゴン/ラベル)を統合し、観測… | required | in_progress | e61f50b |
+| V3-OBS-47 | 写真を撮った瞬間に大きさ・角の長さ・色などをローカル解析(HSV/Lab色空間・… | required | in_progress | e61f50b |
+| V3-OBS-52 | 写真・音声・センサー生データ等のRawData/元画像はRDBに入れずR2/S3… | required | done | — |
+| V3-OBS-53 | 写真1枚からmm単位精度で色・光度・湿度・温度を取得・記録できる観測システムと設… | required | in_progress | 2dcf396 |
+| V3-OBS-54 | 観測データは改ざん不可・透明・再現可能とし、捏造・他者観測の盗用・AI偽造を禁止… | required | in_progress | — |
+| V3-OBS-62 | 観測フローを固定順で定義する: userId/auth→種族確定(taxonom… | required | in_progress | — |
+| V3-OBS-63 | タグは真実でなく解釈のため固定列の現在値でなくappend-onlyなtag e… | required | done | — |
