@@ -16,6 +16,7 @@ import {
   derivePropositions,
   hypothesisDraftsForGaps,
   autoGeneratePaperDraft,
+  computeLivingPaperGraph,
   type ConditionsP,
   type ObservationJson,
   type NeighborPaper,
@@ -159,6 +160,34 @@ paperMatchRoutes.post("/research/auto-draft", async (c) => {
     : [];
   const title = typeof body.title === "string" && body.title ? body.title : "無題(自動生成下書き)";
   return c.json({ ...autoGeneratePaperDraft(observations, { title }), persisted: false });
+});
+
+// POST /research/graph/update — Living Paper(V3-PPR-14)グラフ自動更新プレビュー。
+// 「観測データが追加されるたびグラフ・統計値・4象限・結果Q・信頼度を全自動更新する」
+// の再計算式のみを提供する(POST /research/auto-draft と同じ非永続プレビュー規約・
+// persisted:false=呼び手が確認して別途 POST /research/content で書込む)。content_id
+// 指定時はその paper の conditions/claims を土台にする(未指定時は body 直指定)。
+// 要件本文が求める「更新履歴の自動保存・表示」は新規 Truth イベント型
+// (ihl.research.graph_update.v1)の追加を要し、schemas/ + packages/truth のコード
+// 生成(本艦の書いてよい場所=apps/api/src・tests の外)が必要なため対象外——
+// 持ち越し(次波での設計判断・KIT-TEMPLATE 差し戻し経路参照)。
+paperMatchRoutes.post("/research/graph/update", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  let paper: Record<string, unknown> = {};
+  if (typeof body.content_id === "string") {
+    const ev = await store(c).readEvent(contentKey(body.content_id));
+    if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+    paper = dataOf(ev);
+  }
+  const conditions = (body.conditions ?? paper.conditions ?? {}) as ConditionsP;
+  const claims = (body.claims ?? paper.claims) as
+    | Array<{ claim_id: string; statement: string; evidence_keys?: string[] }>
+    | undefined;
+  const sections = (body.sections ?? paper.sections) as Record<string, { filled: boolean; text: string }> | undefined;
+  const observations = Array.isArray(body.observations) ? (body.observations as ObservationJson[]) : [];
+  const threshold = typeof body.threshold === "number" ? body.threshold : undefined;
+  const graph = computeLivingPaperGraph({ sections, conditions, claims }, observations, { threshold });
+  return c.json({ ...graph, persisted: false });
 });
 
 // POST /research/content/:id/hypothesis — 仮説を別イベントとして append（PPR-01）。

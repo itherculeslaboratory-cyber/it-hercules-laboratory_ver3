@@ -5,7 +5,7 @@
 // gapAnalysis: injected fixed vectors -> neighbour diff axis -> stable missing_perspectives
 // (all-species, no species filter) + data_gap key diff, vector-absent -> data_gap only.
 import { describe, expect, it } from "vitest";
-import { matchConditions, autoFillDescriptor, gapAnalysis, hintsForMissing, computeSectionsCompleteness, conditionVector } from "../apps/api/src/paper-match";
+import { matchConditions, autoFillDescriptor, gapAnalysis, hintsForMissing, computeSectionsCompleteness, conditionVector, computeLivingPaperGraph } from "../apps/api/src/paper-match";
 import app from "../apps/api/src/index";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
 
@@ -313,5 +313,96 @@ describe("paper-match routes wiring (protected, append-only hypothesis)", () => 
       makeEnv(bucket),
     );
     expect(res.status).toBe(401);
+  });
+
+  it("POST /research/graph/update recomputes match/quadrant/confidence from accumulated observations (V3-PPR-14 Living Paper preview, non-persistent)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/graph/update", {
+      conditions: { temp: { min: 25, max: 30, required: true } },
+      claims: [{ claim_id: "c1", statement: "warmth helps", evidence_keys: ["temp"] }],
+      observations: [{ temp: 27 }],
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      confidence: number; observation_count: number; persisted: boolean;
+      match: { satisfied: string[] }; claims: { status: string }[]; quadrant: { total: number };
+    };
+    expect(body.persisted).toBe(false);
+    expect(body.observation_count).toBe(1);
+    expect(body.confidence).toBe(1); // required key satisfied by the single observation
+    expect(body.match.satisfied).toEqual(["temp"]);
+    expect(body.claims[0].status).toBe("evidenced");
+    expect(body.quadrant.total).toBe(1);
+  });
+
+  it("POST /research/graph/update confidence rises as more accumulated observations satisfy required keys (append-only fold)", async () => {
+    const bucket = new FakeR2Bucket();
+    const before = await post(bucket, "/api/v1/research/graph/update", {
+      conditions: { temp: { required: true }, humidity: { required: true } },
+      observations: [{ temp: 27 }],
+    });
+    const beforeBody = (await before.json()) as { confidence: number };
+    expect(beforeBody.confidence).toBe(0.5);
+
+    const after = await post(bucket, "/api/v1/research/graph/update", {
+      conditions: { temp: { required: true }, humidity: { required: true } },
+      observations: [{ temp: 27 }, { humidity: 55 }],
+    });
+    const afterBody = (await after.json()) as { confidence: number };
+    expect(afterBody.confidence).toBe(1);
+  });
+
+  it("POST /research/graph/update reads conditions/claims from an existing content_id when not overridden inline", async () => {
+    const bucket = new FakeR2Bucket();
+    const paper = await post(bucket, "/api/v1/research/content", {
+      content_id: "PAP-LIVING-1",
+      content_type: "paper",
+      title: "Living paper study",
+      sections: {
+        purpose: { filled: true, text: "p" }, hypothesis: { filled: true, text: "h" },
+        conditions: { filled: true, text: "c" }, verification: { filled: true, text: "v" },
+        phase: { filled: true, text: "ph" }, gap: { filled: true, text: "g" },
+      },
+      completeness_pct: 50,
+      conditions: { temp: { min: 25, max: 30, required: true } },
+      claims: [{ claim_id: "c1", statement: "warmth helps", status: "hypothesis", evidence_refs: [] }],
+    });
+    expect(paper.status).toBe(201);
+    const res = await post(bucket, "/api/v1/research/graph/update", {
+      content_id: "PAP-LIVING-1",
+      observations: [{ temp: 27 }],
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { confidence: number };
+    expect(body.confidence).toBe(1);
+  });
+
+  it("POST /research/graph/update is protected (401 without auth)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await app.request(
+      "/api/v1/research/graph/update",
+      { method: "POST", headers: { "content-type": "application/json" }, body: "{}" },
+      makeEnv(bucket),
+    );
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("V3-PPR-14 computeLivingPaperGraph (pure fn)", () => {
+  it("no claim -> quadrant defaults to all-zero counts over the observation total", () => {
+    const g = computeLivingPaperGraph({ conditions: { temp: { required: true } } }, [{ temp: 27 }, {}]);
+    expect(g.quadrant.total).toBe(2);
+    expect(g.quadrant.gaps).toEqual([]);
+    // merged fold across both observations already satisfies "temp" (first-seen 27 wins).
+    expect(g.confidence).toBe(1);
+  });
+
+  it("later observations never un-satisfy a key already satisfied by an earlier one (append-only fold)", () => {
+    const g = computeLivingPaperGraph(
+      { conditions: { temp: { min: 25, max: 30, required: true } } },
+      [{ temp: 27 }, { temp: 999 }],
+    );
+    expect(g.match.satisfied).toEqual(["temp"]); // first-seen 27 wins, not overwritten by 999
+    expect(g.confidence).toBe(1);
   });
 });

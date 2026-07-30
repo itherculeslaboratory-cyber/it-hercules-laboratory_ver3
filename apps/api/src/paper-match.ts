@@ -379,6 +379,45 @@ export function hypothesisDraftsForGaps(gaps: Quadrant[], pLabel: string, qLabel
   return gaps.map((g) => QUADRANT_HYPOTHESIS_TEMPLATE[g](pLabel, qLabel));
 }
 
+// ── computeLivingPaperGraph(PPR-14 Living Paper グラフ自動更新エンジン・純関数)──
+// 「観測データが追加されるたびグラフ・統計値・4象限・結果Q・信頼度を全自動更新する」
+// の再計算本体。既存の matchConditions/autoFillDescriptor/quadrantAnalysis を
+// そのまま合成するだけ(新規判定ロジックを増やさない=車輪の再発明をしない)。
+// 複数観測の合成則: 各 required キーは「いずれかの観測で充足していれば充足」
+// (append-only に観測が積み上がるほど条件充足が進む、という要件の性質に対応する
+// 決定論的な畳み込み — 後着の観測が既に充足したキーを未充足に戻すことはない)。
+export interface LivingPaperGraphState {
+  conditions: ConditionsP;
+  sections: Record<string, SectionState>;
+  match: MatchResult;
+  claims: FilledClaim[];
+  quadrant: QuadrantDensity;
+  confidence: number; // = match.match_rate(0..1・決定論・LLM不使用)
+  observation_count: number;
+}
+
+export function computeLivingPaperGraph(
+  template: DescriptorTemplate,
+  observations: ObservationJson[],
+  opts?: { threshold?: number },
+): LivingPaperGraphState {
+  const conditions = template.conditions ?? {};
+  const claim = (template.claims ?? [])[0];
+  const merged: ObservationJson = {};
+  for (const obs of observations) {
+    for (const [k, v] of Object.entries(obs ?? {})) if (!(k in merged)) merged[k] = v;
+  }
+  const { sections, claims, match } = autoFillDescriptor(template, merged);
+  const quadrant: QuadrantDensity = claim
+    ? quadrantAnalysis(conditions, claim, observations, opts?.threshold)
+    : {
+        n11: 0, n10: 0, n01: 0, n00: 0, total: observations.length,
+        density: { n11: 0, n10: 0, n01: 0, n00: 0 },
+        gaps: [],
+      };
+  return { conditions, sections, match, claims, quadrant, confidence: match.match_rate, observation_count: observations.length };
+}
+
 export interface NeighborPaper {
   content_id?: string;
   conditions?: ConditionsP;
