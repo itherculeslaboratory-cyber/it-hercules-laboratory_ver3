@@ -701,7 +701,7 @@
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "差し戻し(下記「差し戻し」節参照)。w1-fndの書いてよい場所(apps/api/src/{env.ts,kv,batch*,truth-backup-connector,telemetry-merge,costs-routes,i18n*}*)にWASMスクリプトドライバの実装ファイル名が該当しない。前任者のADR(02-design/adr/adr-v3-wasm-01-script-driver.md, status:proposed)から状態変化なし(コード0行のまま)。HQのファイル名/所有権裁定待ち。"
+    "note": "差し戻し(下記「差し戻し」節参照)。w1-fndの書いてよい場所(apps/api/src/{env.ts,kv,batch*,truth-backup-connector,telemetry-merge,costs-routes,i18n*}*)にWASMスクリプトドライバの実装ファイル名が該当しない。前任者のADR(02-design/adr/adr-v3-wasm-01-script-driver.md, status:proposed)から状態変化なし(コード0行のまま)。HQのファイル名/所有権裁定待ち。 ★[n61検収・HQ裁定=n61fndcritic中4] lane-thinkへの差し戻しはしない(glob/所有権はHQ運用裁定)。(c)採用: Wave1はADR(adr-v3-wasm-01, status:proposed)のままとし、実装は次波以降の発注書でglob(例: script-driver*)を明示割当してから着手する。"
   },
   {
     "id": "V3-FND-21",
@@ -4995,7 +4995,7 @@
     "status": "done",
     "commits": [],
     "tc": [],
-    "note": "w1-fnd実装レーンでコード新規追加なし(reuse-first)。既存の config/running-costs.json:5(vps.label=\"Sakura VPS\")・docs/ops/runbook.md:51(.ukドメイン)・docs/ops/runbook.md:143-149(単一Cloudflareアカウント集約+B2階層化コスト最小化)・apps/api/src/truth-backup-connector.ts(B2安価ストレージ複製アダプタ実装済み・dry-runモード)が要件を実測で満たしていることを確認して完了とした。Backblaze B2採用可否のambiguity注記(registry)自体は既にtruth-backup-connector.tsで対応済み。"
+    "note": "w1-fnd実装レーンでコード新規追加なし(reuse-first)。既存の config/running-costs.json:5(vps.label=\"Sakura VPS\")・docs/ops/runbook.md:51(.ukドメイン)・docs/ops/runbook.md:143-149(単一Cloudflareアカウント集約+B2階層化コスト最小化)・apps/api/src/truth-backup-connector.ts(B2安価ストレージ複製アダプタ実装済み・dry-runモード)が要件を実測で満たしていることを確認して完了とした。B2はdry-run計画算出のみ実装。live昇格は未着手(人間ゲート)(n61fndcritic中2是正)。"
   },
   {
     "id": "V3-CST-05",
@@ -6037,13 +6037,13 @@
     "tier": "C",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "tests/mkt-40-ledger-audit.test.ts",
       "tests/mkt-45-research-store.test.ts"
     ],
-    "note": "w1-mktレーン: マーケットデータはGET /market/listings等で認証済み全ユーザーに公開。決済のprojectId紐付けはresearch-store-routes.ts(V3-MKT-45)で文字通り実装済み。マーケット取引はlisting_id/transaction_event_idという同等の決定的キーに常時紐づく。型C・実装で自然に満たす根拠として記録。"
+    "note": "w1-mktレーン: マーケットデータはGET /market/listings等で認証済み全ユーザーに公開。決済のprojectId紐付けはresearch-store-routes.ts(V3-MKT-45)で文字通り実装済み。マーケット取引はlisting_id/transaction_event_idという同等の決定的キーに常時紐づく。型C・実装で自然に満たす根拠として記録。 ★[n61検収・n61mktcritic中1是正] done撤回→in_progress。要件は『規約/世界法で定める』を要求するが該当条文は未作成、かつマーケット決済経路のprojectId結線は0件(批評家実測。listing_id/transaction_event_idは同等キーだがprojectIdではない)。残作業=規約条文化+projectId結線(または要件noteでの読み替え裁定)。"
   },
   {
     "id": "V3-OTH-01",
@@ -6146,10 +6146,10 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "w1-mktレーン: 担当glob全域grep「Math.random|Date.now()」= Date.now()2箇所のみ(fee-routes.ts期限日数計算・gmo-connector.ts JST日付取得)でいずれも現在時刻読み取りであり生成の非決定性ではない。型C・実装で自然に満たす根拠。"
+    "note": "w1-mktレーン: 担当glob全域grep「Math.random|Date.now()」= Date.now()2箇所のみ(fee-routes.ts期限日数計算・gmo-connector.ts JST日付取得)でいずれも現在時刻読み取りであり生成の非決定性ではない。型C・実装で自然に満たす根拠。 ★[n61検収・n61mktcritic中2是正] done撤回→in_progress。根拠grep(Math.random|Date.now())は採番のulid()(乱数成分あり・fee-routes.ts:299等=同一diff内で導入分を含む)を構造的に見落としており『乱数不使用』の主張は成立しない。決定論性要件が採番を含むかの裁定、または採番の決定論化が残作業。"
   },
   {
     "id": "V3-OTH-27",
