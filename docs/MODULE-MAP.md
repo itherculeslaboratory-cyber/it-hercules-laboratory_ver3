@@ -31,7 +31,7 @@
 
 | 艦 | 担当(件数: W1+W2) | 書いてよい場所(glob) |
 |---|---|---|
-| `w1-fnd` | fnd+cst+i18(13+13) | `apps/api/src/{env.ts,kv,batch*,truth-backup-connector,telemetry-merge,costs-routes,i18n*}*`, `libs/datalake/**`, `tests/{fnd,cst,i18,foundation,costs,datalake}*`(★批評致命2反映: `env`→`env.ts`。`env-import-routes.ts`はw1-obsの明示所有) |
+| `w1-fnd` | fnd+cst+i18(13+13) | `apps/api/src/{env.ts,kv,batch*,truth-backup-connector,telemetry-merge,costs-routes,i18n*,script-driver*}*`, `libs/datalake/**`, `tests/{fnd,cst,i18,foundation,costs,datalake,script-driver}*`(★批評致命2反映: `env`→`env.ts`。`env-import-routes.ts`はw1-obsの明示所有。★2026-07-31 w2: `script-driver*`追加=V3-FND-20実装先・61代目HQ裁定(c)=次波でglob明示割当) |
 | `w1-aut` | aut(12+9) | `apps/api/src/{auth-routes,session,mail,account,consent-routes,handle-routes,profile-routes,settings-routes}*`, `tests/{auth.test,auth-,aut-,account,session,consent,profile,settings,handle}*`(★批評致命2反映: `auth`前方一致が`authz.test.ts`(w1-sec所有)を飲むため限定化) |
 | `w1-sec` | sec(20+18) | `apps/api/src/{authz,denylist,rate-limit,policy,pii*,hmac,key-bundle-routes}*`, `tests/{sec,authz,rate-limit,pii,policy,denylist,hmac}*` |
 | `w1-obs` | obs(21+19) | `apps/api/src/{observation*,collector-routes,device-routes,env-import-routes,csv-import,freetext-parser,taxon-routes,thumbnail*}*`, `components/collector-switchbot/**`, `components/obs-manifest/**`, `tests/{obs,observation,collector,device,taxon,csv,thumbnail}*` |
@@ -42,6 +42,8 @@
 | `w1-aip` | aip対応表(63+18) | 報告書のみ(コード0行) |
 
 **全艦共通の不可侵**(§7): `apps/api/src/index.ts`・`package.json`(全階層)・`packages/schema-types/src/generated/**`・他艦のglob・`screen-defs/**`(UIは後回し)・`01-requirements/**`(読むのは自由)。
+
+**★一時例外(2026-07-31 Wave2期間・V3-AUT-19是正)**: `apps/api/src/denylist.ts` は本来w1-sec globだが、AUT-19是正(失効理由コード追加)の中核のためWave2中は**autレーン(w2-aut)が一時所有**する。**w2-secはWave2中denylist.tsを編集するな**(読み取りは自由)。`ledger-routes.ts`(mkt)・`gov-routes.ts`(gov)へのAUT-19起因の1行変更はdiff-only(報告書に書きHQが適用)。是正完了後この例外は失効する。
 
 新しいルートファイルを作った場合、`index.ts` への mount 行は艦が直接書かず、報告書に「追加すべき行と挿入位置」を明記してHQが検収時に適用する(mount順は `index.ts` の実装順に意味があるため。実在例: `homeRoutes`(index.ts:256)は `obsRoutes`(index.ts:269)より先にmountされている)。
 
