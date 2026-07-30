@@ -14,7 +14,7 @@ status: frozen
 
 | ファイル | 役割 | コピー元パス（現 repo・@4a56cf6） | 変更 |
 |----------|------|-----------------------------------|------|
-| [`registry.json`](registry.json) | 機械可読正本（要件レジストリ・716 件） | `docs/planning/ver3/ver3-最終要件レジストリ-v1.json` | 内容無変更（JSON のため frontmatter なし。由来は本表で記録） |
+| [`registry.json`](registry.json) | 機械可読正本（要件レジストリ・758 件） | `docs/planning/ver3/ver3-最終要件レジストリ-v1.json` | 内容無変更（JSON のため frontmatter なし。由来は本表で記録） |
 | [`srs.md`](srs.md) | 人間可読正本（最終要件定義書 v1.3・日本語正本） | `docs/planning/ver3/ver3-最終要件定義書-v1.md` | 本文無変更。先頭に frontmatter（`source:` 含む）を付加のみ |
 | [`retracted.md`](retracted.md) | 撤回台帳 R-1〜R-9（復活禁止・人間ゲート） | `docs/planning/ver3/ver3-要望理解書-v1.md` §4 | R-1〜R-9 を「ID/内容/撤回理由/復活可否」表に転記 |
 
