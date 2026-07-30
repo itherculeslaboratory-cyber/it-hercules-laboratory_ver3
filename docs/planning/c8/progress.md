@@ -10,21 +10,21 @@
 
 ## サマリー
 
-- 全体: ██████████░░░░░░░░░░ 52%（304/587）
-- 第1波必達(required): ████████████████░░░░ 82%（300/364）
+- 全体: ██████████░░░░░░░░░░ 52%（303/587）
+- 第1波必達(required): ████████████████░░░░ 82%（299/364）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（4/223）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 239 |
-| 着手中(in_progress) | 38 |
-| ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 6 |
-| 完了(done) | 304 |
+| 未着手(todo) | 241 |
+| 着手中(in_progress) | 36 |
+| ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 7 |
+| 完了(done) | 303 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
 
-- 件数: 6
+- 件数: 7
 
 | id | title | lane | note |
 |---|---|---|---|
@@ -34,6 +34,7 @@
 | V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | L4-gov | 前任のnoteを維持(据置)。device-routes.ts(w1-obs所有)がAES-GCMでサーバー側にAPIキーを暗号化保管しており要件『サーバー側に一切保持・使用せず』と直接矛盾。修正には自分のglob外のファイル書込が必要なため今回は変更していない。HQ裁定待ち。 |
 | V3-AUT-14 | 観測配下はREAD既定・WRITE列挙のdeny-listとし、新WRITEルー… | L3/L4-auth | OBSERVATION_WRITE_PREFIXESはapps/api/src配下に0件(grep実測・未実装)。実装箇所はobservation-routes.ts(w1-obs所有・w1-autのglob外)。かつ前提となるV3-AUT-15(観測READのScope A公開化)自体がCL-04契約と矛盾しblocked中のため、本波では着手不能と判断し持ち越し。 |
 | V3-AUT-16 | 観測検索スコープはScope A（コミュニティ）とし、ログイン済ユーザーは全観測… | L3/L4-auth | 全観測カタログ横断検索(owner_user_idで絞り込まない)の実装箇所はobservation-routes.ts(w1-obs所有・w1-autのglob外)。V3-AUT-14と同一の前提(V3-AUT-15 blocked)により本波では着手不能と判断し持ち越し。 |
+| V3-OBS-29 | SwitchBot等IoTの秘密鍵(TOKEN/SECRET)をIHLサーバ/V… | L4-obs | collector-routes.ts:1-96はサーバに公開鍵のみ保持し秘密鍵を一切保持しない設計(Ed25519署名検証)。device-routes.tsの暗号化鍵保存は別画面(OBS-31)向けで実プロバイダ鍵は人間ゲート未解放(コメント実測)。本ラウンドはコード変更なし・評価のみ。 ★[n61検収・n61obscritic重大2是正] done撤回→blocked。V3-SEC-03と同一論点(device-routes.tsのAES-GCM暗号化サーバ保持が『秘密鍵を一切保持せず』を満たすか)で艦間判定が割れており(w1-sec=blocked/w1-obs=done)、単独確定させず1件の裁定に束ねる(裁定カード起票待ち)。 |
 
 ## lane 別内訳
 
@@ -45,10 +46,9 @@
 | L4 | ██████████████░░░░░░ 71%（92/130） |
 | L4-gov | ████████░░░░░░░░░░░░ 41%（31/75） |
 | L4-knowledge | ██████████░░░░░░░░░░ 51%（39/76） |
-| L4-obs | ██████████░░░░░░░░░░ 52%（37/71） |
+| L4-obs | ███████████░░░░░░░░░ 53%（49/92） |
 | L5-video | ░░░░░░░░░░░░░░░░░░░░ 0%（0/24） |
 | L6-ui | ████░░░░░░░░░░░░░░░░ 19%（11/58） |
-| w1-obs | ████████████░░░░░░░░ 62%（13/21） |
 
 ## lane 別明細
 
@@ -515,27 +515,48 @@
 | V3-IND-34 | 血統管理は複数系統(A:体格重視、C:色重視等)を並行してインライン累代させ、理… | required | in_progress | 3f941f2, 57cc941 |
 | V3-IND-35 | 割り出し前に、親個体(♂/♀)・希望単価・希望匹数を指定して事前予約できる予約シ… | required | done | b5fd006 |
 | V3-IND-36 | 割り出し前の幼虫は個体識別せず匿名count層(プール数のみ)で扱い、sampl… | required | done | 65d7a00 |
+| V3-OBS-01 | 観測は昆虫専用ではなく、対象を生物/器物/デジタル/環境/カスタムの5ドメインに… | required | done | — |
 | V3-OBS-02 | 観測対象ナビゲータはテキストのみ(画像・サムネイル非表示)で、学名検索・アキネー… | required | done | ee79efd |
+| V3-OBS-03 | 種の同定候補はAI/GBIF/Wikidataが提示してよいが、種・亜種・個体ラ… | required | done | — |
+| V3-OBS-04 | TaxonomyCandidateとUserConfirmedTaxonomyを… | required | todo | — |
+| V3-OBS-05 | 観測はappend-onlyとし編集UIを禁止、修正は新規追記(APPEND)で… | required | done | — |
 | V3-OBS-06 | 全ての計測・特徴値にvalue_origin(direct_observed/i… | required | done | e61f50b |
 | V3-OBS-07 | 観測の信頼度モデルを設け、自動取得>手入力>後日編集の順で信頼度を明示スコア化し… | required | done | e61f50b, aa9dee3 |
 | V3-OBS-08 | 観測パイプラインはITO構造(IN:写真・env・metadata → Tran… | required | done | e61f50b, 35e555e |
 | V3-OBS-09 | 画像埋め込みはEmbeddingBackend Protocolで一本化し、本番… | required | done | e61f50b, 35e555e |
+| V3-OBS-10 | 類似検索は決定論優先の梯子(metadata whitelist絞り込み→siz… | required | done | — |
 | V3-OBS-11 | 類似検索の最終rerankスコアはembedding+color+size+li… | required | done | e61f50b |
 | V3-OBS-14 | 撮影特徴量は部位別平均L*a*b*(頭部/胸角/前胸/上翅)+分散+色ヒストグラ… | required | done | 426c2ca |
+| V3-OBS-15 | 環境データは生値(温度・湿度・light_level)のみ保存し、露点・飽差・絶… | required | in_progress | — |
+| V3-OBS-16 | 環境点はBモデルでenvironment_snapshotとphoto_cond… | required | done | — |
 | V3-OBS-17 | 観測commit時にデバイス(devices[])を宣言するとDeviceBin… | required | done | ce81dd5 |
+| V3-OBS-18 | 計測テンプレートはユーザーが完全自由に項目(数値/テキスト/選択/画像アノテーシ… | required | done | — |
 | V3-OBS-19 | 種族+発育段階を1度決めて観測画面に引き継ぐWorkflowContext(観測… | required | done | f728a06 |
 | V3-OBS-20 | 個体ID・棚・場所からQRコードを発行/スキャンし、スキャンで該当個体の新規観測… | required | done | 890f079 |
+| V3-OBS-21 | 観測入力時に次回観測日(next_observation_at)を決め、テンプレ… | required | done | — |
 | V3-OBS-22 | MVP v1観測コアスコープを「観測データ収集・写真登録・詳細ビュー・親個体連携… | required | done | — |
 | V3-OBS-23 | 観測セッションに写真を1枚以上アップロードしてR2に保存し、thumbnailは… | required | done | e3d5aa5 |
 | V3-OBS-24 | 観測詳細ビューは高忠実度モック準拠で、大型写真・構造化撮影条件・由来タグ付き測定… | required | done | f728a06 |
 | V3-OBS-25 | 観測登録は3画面フロー(対象を選ぶ→入力→確認)とし、入力画面単体での即時保存(… | required | done | — |
 | V3-OBS-26 | 観測計測入力の1行UIは(項目)ドロップダウン選択or新規追加/数値入力/(単位… | required | done | f728a06 |
 | V3-OBS-27 | 測定行・撮影条件行・環境スナップショット行を単一のStructuredRowコン… | required | done | f728a06 |
+| V3-OBS-28 | SwitchBot等IoT環境センサー(温度/湿度/CO2/照度/ジャイロ/pH… | required | done | — |
+| V3-OBS-29 | SwitchBot等IoTの秘密鍵(TOKEN/SECRET)をIHLサーバ/V… | required | blocked | — |
+| V3-OBS-31 | 計測機器(Device)は環境(placement)に紐づけ個体には紐づけない。… | required | done | — |
 | V3-OBS-43 | 観測を文明OSの中心Input(全機能の一次データ/機能の中心)と位置づけ、固体… | required | done | — |
+| V3-OBS-44 | 観測input取得はDocker拡張側に寄せ、文明OS本体はC-USB Lite… | required | done | — |
+| V3-OBS-45 | スケール紙/計測台を標準化(A4方眼19×26cm+四隅マーカー10mm角+QR… | required | in_progress | 2dcf396 |
+| V3-OBS-46 | LabelMe相当の画像アノテーション(点/線/ポリゴン/ラベル)を統合し、観測… | required | in_progress | e61f50b |
+| V3-OBS-47 | 写真を撮った瞬間に大きさ・角の長さ・色などをローカル解析(HSV/Lab色空間・… | required | in_progress | e61f50b |
 | V3-OBS-48 | 観測詳細画面に「この観測を再解析する」ボタンを1つ置き、新しい画像なしで既存画像… | required | done | e61f50b |
+| V3-OBS-52 | 写真・音声・センサー生データ等のRawData/元画像はRDBに入れずR2/S3… | required | done | — |
+| V3-OBS-53 | 写真1枚からmm単位精度で色・光度・湿度・温度を取得・記録できる観測システムと設… | required | in_progress | 2dcf396 |
+| V3-OBS-54 | 観測データは改ざん不可・透明・再現可能とし、捏造・他者観測の盗用・AI偽造を禁止… | required | todo | — |
 | V3-OBS-56 | searchable_capture_setを検索中核Parquetとし、cap… | required | done | 2dc42f8 |
 | V3-OBS-57 | 写真解析で個体観測画像から種候補・形態特徴・タグ・taxonomyを導く。種候補… | required | done | b7078e5 |
 | V3-OBS-61 | 観測入力を自然言語のフリーテキスト欄1つ+「解析する」ボタンで受け付け、日付・個… | required | done | 4ab0135 |
+| V3-OBS-62 | 観測フローを固定順で定義する: userId/auth→種族確定(taxonom… | required | in_progress | — |
+| V3-OBS-63 | タグは真実でなく解釈のため固定列の現在値でなくappend-onlyなtag e… | required | done | — |
 | V3-OBS-72 | 研究室環境コンテキストの紐付け: 部屋・棚の配置、エアコン等の空調環境、センサー… | required | done | 23a4064 |
 | V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | done | 65d7a00, cc21229 |
 | V3-IND-03 | 観測登録時に個体をindividual_id+display_nameで扱い、ユ… | best-effort | todo | — |
@@ -662,29 +683,3 @@
 | V3-UIX-75 | UIは知識が無くても小学生でもぱっと見で使えるよう機能を詰め込みすぎずシンプル・… | best-effort | todo | — |
 | V3-UIX-78 | 価値観テンプレート(タグセット、ユーザーが追加/削除/変更/フォーク可能)で各項… | best-effort | todo | — |
 | V3-UIX-79 | pairwise好み入力は既定Nラウンド(N=10)で収束させ、現在ラウンド/上… | best-effort | todo | — |
-
-### w1-obs
-
-| id | title | scope | status | commits |
-|---|---|---|---|---|
-| V3-OBS-01 | 観測は昆虫専用ではなく、対象を生物/器物/デジタル/環境/カスタムの5ドメインに… | required | done | — |
-| V3-OBS-03 | 種の同定候補はAI/GBIF/Wikidataが提示してよいが、種・亜種・個体ラ… | required | done | — |
-| V3-OBS-04 | TaxonomyCandidateとUserConfirmedTaxonomyを… | required | in_progress | — |
-| V3-OBS-05 | 観測はappend-onlyとし編集UIを禁止、修正は新規追記(APPEND)で… | required | done | — |
-| V3-OBS-10 | 類似検索は決定論優先の梯子(metadata whitelist絞り込み→siz… | required | done | — |
-| V3-OBS-15 | 環境データは生値(温度・湿度・light_level)のみ保存し、露点・飽差・絶… | required | in_progress | — |
-| V3-OBS-16 | 環境点はBモデルでenvironment_snapshotとphoto_cond… | required | done | — |
-| V3-OBS-18 | 計測テンプレートはユーザーが完全自由に項目(数値/テキスト/選択/画像アノテーシ… | required | done | — |
-| V3-OBS-21 | 観測入力時に次回観測日(next_observation_at)を決め、テンプレ… | required | done | — |
-| V3-OBS-28 | SwitchBot等IoT環境センサー(温度/湿度/CO2/照度/ジャイロ/pH… | required | done | — |
-| V3-OBS-29 | SwitchBot等IoTの秘密鍵(TOKEN/SECRET)をIHLサーバ/V… | required | done | — |
-| V3-OBS-31 | 計測機器(Device)は環境(placement)に紐づけ個体には紐づけない。… | required | done | — |
-| V3-OBS-44 | 観測input取得はDocker拡張側に寄せ、文明OS本体はC-USB Lite… | required | done | — |
-| V3-OBS-45 | スケール紙/計測台を標準化(A4方眼19×26cm+四隅マーカー10mm角+QR… | required | in_progress | 2dcf396 |
-| V3-OBS-46 | LabelMe相当の画像アノテーション(点/線/ポリゴン/ラベル)を統合し、観測… | required | in_progress | e61f50b |
-| V3-OBS-47 | 写真を撮った瞬間に大きさ・角の長さ・色などをローカル解析(HSV/Lab色空間・… | required | in_progress | e61f50b |
-| V3-OBS-52 | 写真・音声・センサー生データ等のRawData/元画像はRDBに入れずR2/S3… | required | done | — |
-| V3-OBS-53 | 写真1枚からmm単位精度で色・光度・湿度・温度を取得・記録できる観測システムと設… | required | in_progress | 2dcf396 |
-| V3-OBS-54 | 観測データは改ざん不可・透明・再現可能とし、捏造・他者観測の盗用・AI偽造を禁止… | required | in_progress | — |
-| V3-OBS-62 | 観測フローを固定順で定義する: userId/auth→種族確定(taxonom… | required | in_progress | — |
-| V3-OBS-63 | タグは真実でなく解釈のため固定列の現在値でなくappend-onlyなtag e… | required | done | — |

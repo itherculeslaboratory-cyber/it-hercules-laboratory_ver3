@@ -85,6 +85,38 @@ export function calibratedRealLengthMm(
 }
 
 /**
+ * OBS-15: dew point / VPD / absolute humidity are recomputed from raw
+ * temp_c + humidity_pct at QUERY time, never persisted to Truth (保存最小・
+ * 決定論優先 — the formula can be swapped later without touching stored data).
+ * Magnus-Tetens approximation (a/b below), valid over the sensor's normal
+ * operating domain; returns all-null when humidityPct is outside (0,100]
+ * or an input is non-finite, rather than emitting a bogus number (誇張ゼロ).
+ */
+const MAGNUS_A = 17.62;
+const MAGNUS_B = 243.12; // °C
+
+export function deriveEnvironmentValues(
+  tempC: number,
+  humidityPct: number,
+): { dewPointC: number | null; vpdKPa: number | null; absHumidityGm3: number | null } {
+  if (
+    !Number.isFinite(tempC) ||
+    !Number.isFinite(humidityPct) ||
+    humidityPct <= 0 ||
+    humidityPct > 100
+  ) {
+    return { dewPointC: null, vpdKPa: null, absHumidityGm3: null };
+  }
+  const satVaporKPa = 0.61078 * Math.exp((MAGNUS_A * tempC) / (MAGNUS_B + tempC));
+  const actualVaporKPa = satVaporKPa * (humidityPct / 100);
+  const alpha = Math.log(humidityPct / 100) + (MAGNUS_A * tempC) / (MAGNUS_B + tempC);
+  const dewPointC = (MAGNUS_B * alpha) / (MAGNUS_A - alpha);
+  const vpdKPa = satVaporKPa - actualVaporKPa;
+  const absHumidityGm3 = (216.7 * (actualVaporKPa * 10)) / (273.15 + tempC);
+  return { dewPointC, vpdKPa, absHumidityGm3 };
+}
+
+/**
  * value_origin → confidence grade (OBS-07). Covers ALL 9 frozen provenance
  * value_origin enum values (schemas/frozen/provenance.schema.json) so
  * confidenceGrade() is total and never returns undefined for a valid
