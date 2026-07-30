@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: ███████████░░░░░░░░░ 53%（310/587）
-- 第1波必達(required): █████████████████░░░ 84%（306/364）
+- 全体: ██████████░░░░░░░░░░ 52%（304/587）
+- 第1波必達(required): ████████████████░░░░ 82%（300/364）
 - 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（4/223）
 
 | status | 件数 |
 |---|---|
 | 未着手(todo) | 239 |
-| 着手中(in_progress) | 32 |
+| 着手中(in_progress) | 38 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 6 |
-| 完了(done) | 310 |
+| 完了(done) | 304 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -42,7 +42,7 @@
 | CSV | ████████████████████ 100%（1/1） |
 | L1/PAY | █████████████░░░░░░░ 65%（58/89） |
 | L3/L4-auth | ██████████░░░░░░░░░░ 52%（22/42） |
-| L4 | ███████████████░░░░░ 75%（98/130） |
+| L4 | ██████████████░░░░░░ 71%（92/130） |
 | L4-gov | ████████░░░░░░░░░░░░ 41%（31/75） |
 | L4-knowledge | ██████████░░░░░░░░░░ 51%（39/76） |
 | L4-obs | ██████████░░░░░░░░░░ 52%（37/71） |
@@ -215,9 +215,9 @@
 | V3-AIP-10 | 設計・DOC作業を4段階(1フォルダ構成→2設計書構成→3設計作成→3b網… | required | done | — |
 | V3-AIP-101 | 完成報告の実機検証義務(AI完成報告恐怖症対策): AI は「できました」… | required | done | — |
 | V3-AIP-104 | 写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedd… | required | done | 912941e, ed2c13a |
-| V3-AIP-105 | file-board-registry の board_thread_id 列を実運用化す… | required | done | — |
-| V3-AIP-106 | 実装コードを変更するPRは、対応する設計書§の同時更新、または理由付き… | required | done | — |
-| V3-AIP-107 | リリースごとにgit tag+リリースノート(GitHub Releases)を発… | required | done | — |
+| V3-AIP-105 | file-board-registry の board_thread_id 列を実運用化す… | required | in_progress | — |
+| V3-AIP-106 | 実装コードを変更するPRは、対応する設計書§の同時更新、または理由付き… | required | in_progress | — |
+| V3-AIP-107 | リリースごとにgit tag+リリースノート(GitHub Releases)を発… | required | in_progress | — |
 | V3-AIP-11 | 設計書憲法の不変原則を守る：同一トピックに正本を1つに固定(C1)、情… | required | done | — |
 | V3-AIP-12 | REQは1機能200–400行を目安に意図と測定可能な受入基準のみ書き、A… | required | done | — |
 | V3-AIP-13 | 詳細設計はv3を唯一のDET正本とし旧版は1行stub化してアーカイブm… | required | done | — |
@@ -241,7 +241,7 @@
 | V3-AIP-31 | 人間ゲート/human-in-the-loopを必須とする：ワンクリック全自動を… | required | done | b88a0f6 |
 | V3-AIP-32 | 要件は一度凍結したら変更はCR(変更要求)のみ：抜けが見つかったら§9… | required | done | — |
 | V3-AIP-33 | 要件の正本階層を憲法>採用REQ(accepted_requirements.… | required | done | — |
-| V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を… | required | done | — |
+| V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を… | required | in_progress | 124027b, fc2fada |
 | V3-AIP-35 | 意図駆動開発ISP(Intent→Spec→Implementation)を正… | required | done | — |
 | V3-AIP-36 | 全変更で意図↔仕様↔コミット↔文明史(R2)を紐付け、意図メタデータ… | required | done | — |
 | V3-AIP-37 | 改善履歴・改善サイクルはGitHub(PR/Discussions/BOARD.… | required | done | — |
@@ -252,8 +252,8 @@
 | V3-AIP-45 | データ設計をAIのRAG検索・引用で最大限活用できる形へ最適化する(… | required | done | — |
 | V3-AIP-46 | OSS/importを最大活用し車輪の再発明をしない：各サブシステムをOS… | required | done | — |
 | V3-AIP-48 | 完成の定義は「欲しい機能が実際に使え、データが保管され、エラーが無… | required | done | — |
-| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | done | — |
-| V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytes… | required | done | — |
+| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | in_progress | 124027b, a0c631d |
+| V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytes… | required | in_progress | 124027b |
 | V3-AIP-52 | 機能追加は機能単位のプチウォーターフォール(micro-waterfall… | required | done | — |
 | V3-AIP-53 | 一般的なウォーターフォール型で要件定義・詳細設計・UI設計・テスト… | required | done | — |
 | V3-AIP-54 | ver1を「完璧」に仕上げてから同一品質バー(同DoD・同Tier体系)… | required | done | — |

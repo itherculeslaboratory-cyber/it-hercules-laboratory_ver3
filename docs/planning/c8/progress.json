@@ -91,10 +91,15 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "done",
-    "commits": [],
-    "tc": [],
-    "note": "[w1-aip 型C対応表] 既存機構が満たす: tests/spec-thread.test.ts + tests/spec-market-trade.test.ts(04-traceability/rtm.md:16)。progress.json上は既にin_progressで、noteに「2ドメインのみ実装、他ドメインは未着手」と正直に記録済み(前任の仕上げ対象。今回はw1-aipの対応表登録のみ行い、コード追加は実装トラック側の担当)。"
+    "status": "in_progress",
+    "commits": [
+      "124027b",
+      "fc2fada"
+    ],
+    "tc": [
+      "tests/spec-market-trade.test.ts (6 tests, market-trade画面へのspec/base契約横展開)"
+    ],
+    "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。 追加(g09レーン): in_progress残余(他ドメインへの拡張)には今回も着手できず。他18項目を優先した時間配分上の判断で、内容の困難さによるスキップではない。次セッションでの継続を推奨。\n\n[統合cleanup-final追記] 同型の契約(schema適合+deny-by-default route matrix+navigation到達可能性の3点)をmarket-trade画面へ横展開(fc2fada・tests/spec-market-trade.test.ts新設)。これで2ドメイン目まで実装済み。残りは他ドメイン(データモデル全般・付与条件・ナビ・権限)への横断適用で、in_progressのまま据え置く(status=doneへの昇格は見送り — 要件が求める全ドメイン横断にはまだ届いていないため)。 ★[n61検収・n61aipcritic重大1是正] w1-aipの型C対応表がこの行をdoneで上書きしたが、部分実装の正直記録を復元しin_progressへ戻した(HQ裁定=批評家是正案(a)採用)。w1-aipの確認内容: 既存機構が満たす: tests/spec-thread.test.ts + tests/spec-market-trade.test.ts(04-traceability/rtm.md:16)。progress.json上は既にin_progressで、noteに「2ドメインのみ実装、他ドメインは未着手」と正直に記録済み(前任の仕上げ対象。今回はw1-aipの対応表登録のみ行い、コード追加は実装トラック側の担当)。"
   },
   {
     "id": "V3-AIP-49",
@@ -104,10 +109,13 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "done",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "124027b",
+      "a0c631d"
+    ],
     "tc": [],
-    "note": "[w1-aip 型C対応表] 既存機構が満たす: apps/web/e2e/market.spec.ts + apps/web/e2e/ledger.spec.ts(04-traceability/rtm.md:21)+ .github/workflows/ci.yml(Ubuntu上でlint/test/build/pytestを実行しCIを正とする構成)。progress.json上は既にin_progress(前任note: 7 spec分の条件分岐網羅節が未執筆と正直に記録済み)。"
+    "note": "E2E(Playwright)実UI+実バックエンド統合テストをapps/web/e2e/ledger.spec.ts+market.spec.tsに実装(V3-AIP-49/C7-T1タグ)、backend unit(tests/*.test.ts 約120ファイル)+frontend unit(renderer.test.tsx等)も並行整備済み。「新機能追加時の既存回帰率0%を受入」という運用ルール自体は継続的実践であり一度の完成物ではないため部分実装のまま。 追加(g09レーン): in_progress残余の2点のうち1点を検証・確定: (1)『本番コード(R2)を差し替えずローカルメモリで統合テストする仕組み』はtests/helpers.tsのFakeR2Bucket(R2BucketLite実装)+apps/web e2eのwrangler dev local-mode R2シミュレーションとして実在確認(claim確定)。(2)『機能別E2E条件分岐網羅設計書』はdocs/planning/c5/e2e-design.mdが実在するが、C5執筆時点の6機能(observation/ugc-translate/market/ledger/spec-thread/screendef)止まりで、C6〜C8で追加された7 spec(individual-detail/knowledge-thread/market-trade-lifecycle/obs-register-batch/obs-register/obs-search/screen-sweep)は個別の条件分岐網羅節が未執筆。索引表を追加し可視化したが執筆自体は未完了(残作業として明記)。 ★[n61検収・n61aipcritic重大1是正] w1-aipの型C対応表がこの行をdoneで上書きしたが、部分実装の正直記録を復元しin_progressへ戻した(HQ裁定=批評家是正案(a)採用)。w1-aipの確認内容: 既存機構が満たす: apps/web/e2e/market.spec.ts + apps/web/e2e/ledger.spec.ts(04-traceability/rtm.md:21)+ .github/workflows/ci.yml(Ubuntu上でlint/test/build/pytestを実行しCIを正とする構成)。progress.json上は既にin_progress(前任note: 7 spec分の条件分岐網羅節が未執筆と正直に記録済み)。"
   },
   {
     "id": "V3-AIP-50",
@@ -117,10 +125,12 @@
     "tier": "S",
     "lane": "L4",
     "scope": "required",
-    "status": "done",
-    "commits": [],
+    "status": "in_progress",
+    "commits": [
+      "124027b"
+    ],
     "tc": [],
-    "note": "[w1-aip 型C対応表] 既存機構が満たす: apps/web/src/renderer/screendef-snapshots.test.tsx(04-traceability/rtm.md:22。ScreenDefスナップショットTC自動生成器)。"
+    "note": "JSON画面定義からのテスト自動生成(DSL→テストケース、Renderer→スナップショット)をscripts/gen-screendef-snapshots.mjs+apps/web/src/renderer/screendef-snapshots.test.tsxとして実装(全screen-defを描画しheading存在を検証)。TC: 同ファイル describe(\"ScreenDef snapshots — every screen-def renders (V3-AIP-50)\")。「要件→TC表→pytestの正統な流れ」の全機能への体系適用・機能別の読みやすいE2E設計書の網羅整備は未確認。 追加(g09レーン): gen-screendef-snapshots.mjsのScreenDef→スナップショット自動生成器は全50画面を実際にカバー(50/50テスト green、npm test -w apps/web -- screendef-snapshotsで再検証済み・ドリフトガード内蔵)であることを再確認。ただし『要件→TC表→pytestの正統な流れ』の全機能(Python側)への体系適用は未着手のまま(ScreenDef/UIドメインのみ実証済み、他ドメインへの拡張は別途大きな作業)。コード変更なし(検証のみ)。 ★[n61検収・n61aipcritic重大1是正] w1-aipの型C対応表がこの行をdoneで上書きしたが、部分実装の正直記録を復元しin_progressへ戻した(HQ裁定=批評家是正案(a)採用)。w1-aipの確認内容: 既存機構が満たす: apps/web/src/renderer/screendef-snapshots.test.tsx(04-traceability/rtm.md:22。ScreenDefスナップショットTC自動生成器)。"
   },
   {
     "id": "V3-AIP-57",
@@ -5198,7 +5208,7 @@
       "tests/auth.test.ts describe(C2 auth — session state + middleware paths) > V3-AUT-05: POST /dev-login mints a session cookie for the fixed dev actor",
       "tests/auth.test.ts describe(C2 auth — session state + middleware paths) > V3-AUT-05: /dev-login is 404 in prod (DEV_TOKEN unset) — no prod surface"
     ],
-    "note": "mail.ts:14でRESEND_API_KEY未設定時はsent:falseへdegrade、auth-routes.ts:198-244の/dev-loginが画面内トークン認証ボタンの実体(既存実装・本波で変更なし)。"
+    "note": "mail.ts:14でRESEND_API_KEY未設定時はsent:falseへdegrade、auth-routes.ts:215-244の/dev-login(215=コメント・220=ハンドラ。n61autcritic中1是正: 艦の198-244は編集前の行番号)が画面内トークン認証ボタンの実体(既存実装・本波で変更なし)。"
   },
   {
     "id": "V3-AUT-13",
@@ -7089,10 +7099,10 @@
     "tier": "?",
     "lane": "L4",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: 04-traceability/file-board-registry.csv(実在確認済・w0-found報告の既知lintドリフト対象と同一ファイル)のboard_thread_id列が実際に埋まっているか(空でない行の割合)を数える検査を追加提案。現状は実装トラック側(未帰属またはw1-fnd寄り)の型F実装が必要な機能要件であり、w1-aipはコードを書かないため対応表止まり。"
+    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: 04-traceability/file-board-registry.csv(実在確認済・w0-found報告の既知lintドリフト対象と同一ファイル)のboard_thread_id列が実際に埋まっているか(空でない行の割合)を数える検査を追加提案。現状は実装トラック側(未帰属またはw1-fnd寄り)の型F実装が必要な機能要件であり、w1-aipはコードを書かないため対応表止まり。 ★[n61検収・n61aipcritic中1是正] registry上のkindは機能/非機能要件(型F=コード+テスト必須)だが実装は0行のため、doneからin_progressへ是正。発注書の型C一律指示と型F完了条件の矛盾は発注書側の欠陥として記録(艦の責ではない)。実装トラック側への切り出し候補。"
   },
   {
     "id": "V3-AIP-106",
@@ -7102,10 +7112,10 @@
     "tier": "?",
     "lane": "L4",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: 「実装コードを変更するPRは対応する設計書§の同時更新、または理由付き『設計影響なし』宣言を必須」を、scripts/check-req-freeze.mjsと同型のgit diffベース検査として追加提案(apps/api/src・apps/web変更時に02-design配下の対応差分または宣言コメントの有無をチェック)。現状この専用ゲートはrepo内に存在しない(check-req-freezeは01-requirements/のみ対象)。"
+    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: 「実装コードを変更するPRは対応する設計書§の同時更新、または理由付き『設計影響なし』宣言を必須」を、scripts/check-req-freeze.mjsと同型のgit diffベース検査として追加提案(apps/api/src・apps/web変更時に02-design配下の対応差分または宣言コメントの有無をチェック)。現状この専用ゲートはrepo内に存在しない(check-req-freezeは01-requirements/のみ対象)。 ★[n61検収・n61aipcritic中1是正] registry上のkindは機能/非機能要件(型F=コード+テスト必須)だが実装は0行のため、doneからin_progressへ是正。発注書の型C一律指示と型F完了条件の矛盾は発注書側の欠陥として記録(艦の責ではない)。実装トラック側への切り出し候補。"
   },
   {
     "id": "V3-AIP-107",
@@ -7115,10 +7125,10 @@
     "tier": "?",
     "lane": "L4",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: git tag+GitHub Releases連携の実績はihl-ver3リポジトリで未確認(tag使用実績0件・実測)。「バージョン履歴」画面はV3-UIX配下でWave4(UI後回し)の対象。検査案=git tagの存在数を数える検査をwave-verifyまたは別ゲートに追加提案。気づき: これは実質型F(機能要件)でコード実装が要る項目であり、w1-aip(コード0行)の対応表止まりでは完了しない。実装トラック側(w1-fnd想定)への切り出しをHQに提案する。"
+    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: git tag+GitHub Releases連携の実績はihl-ver3リポジトリで未確認(tag使用実績0件・実測)。「バージョン履歴」画面はV3-UIX配下でWave4(UI後回し)の対象。検査案=git tagの存在数を数える検査をwave-verifyまたは別ゲートに追加提案。気づき: これは実質型F(機能要件)でコード実装が要る項目であり、w1-aip(コード0行)の対応表止まりでは完了しない。実装トラック側(w1-fnd想定)への切り出しをHQに提案する。 ★[n61検収・n61aipcritic中1是正] registry上のkindは機能/非機能要件(型F=コード+テスト必須)だが実装は0行のため、doneからin_progressへ是正。発注書の型C一律指示と型F完了条件の矛盾は発注書側の欠陥として記録(艦の責ではない)。実装トラック側への切り出し候補。"
   },
   {
     "id": "V3-AIP-11",
