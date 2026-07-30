@@ -11,6 +11,8 @@ import type { Bindings, Variables } from "./env";
 import { projectPreferences } from "./settings-routes";
 import {
   BOARD_KINDS,
+  PAPER_CASE_KINDS,
+  PAPER_CASE_TAG_PREFIX,
   FORK_RANKS,
   CONSENSUS_MIN_VOTES,
   CONSENSUS_AGREE_RATIO,
@@ -189,7 +191,17 @@ plazaRoutes.post("/plaza/posts", async (c) => {
   // (context_individual_id 等の他 passthrough と挙動を揃える)。
   if (typeof body?.species_id === "string" && body.species_id) data.species_id = body.species_id;
   if (Array.isArray(body?.mentions)) data.mentions = body.mentions;
-  if (Array.isArray(body?.tags)) data.tags = body.tags;
+  const tags: string[] = Array.isArray(body?.tags) ? [...body.tags] : [];
+  // BBS-02: 論文板ケース分け(独立Research Board板は設けない)。plaza-post.schema.json は
+  // additionalProperties:false の凍結スキーマ(本ラウンドの glob 外)のため新規 top-level
+  // フィールドは追加できない。BBS-28(engagement:<kind>)と同型の tags[] prefix 方式で表現する。
+  if (typeof body?.paper_case === "string") {
+    if (!(PAPER_CASE_KINDS as readonly string[]).includes(body.paper_case)) {
+      return c.json({ error: "INVALID_POST", details: [`paper_case must be one of ${PAPER_CASE_KINDS.join(",")}`] }, 400);
+    }
+    tags.push(`${PAPER_CASE_TAG_PREFIX}${body.paper_case}`);
+  }
+  if (tags.length) data.tags = tags;
   const refs = mergeCiteRefs(body?.cite_refs, parseCiteTokens(str(body?.body)));
   if (refs.length) data.cite_refs = refs;
   // I18-06: UGC 原文の作者言語タグを actor の locale から刻印(翻訳はしない・market-routes.ts
@@ -246,38 +258,53 @@ plazaRoutes.get("/plaza/threads/:thread_id", async (c) => {
 // root 投稿(thread_id===post_id)の species_id を代表値とみなし完全一致(大小無視)
 // で絞る(plaza-post.species_id/SW-1・ヘッダー観測対象narrowingの基盤)。省略時は
 // 既存呼び出し(projectImprovementQueue 等)と挙動不変。
-export async function projectChannelThreads(s: TruthStore, channel: string, speciesFilter?: string) {
+// BBS-02: tags[] から "paper_case:<kind>" prefix を取り出す(engagement: prefix と同型)。
+export function paperCaseOf(tags: unknown): string | undefined {
+  if (!Array.isArray(tags)) return undefined;
+  const hit = tags.find((t) => typeof t === "string" && t.startsWith(PAPER_CASE_TAG_PREFIX));
+  return typeof hit === "string" ? hit.slice(PAPER_CASE_TAG_PREFIX.length) : undefined;
+}
+
+export async function projectChannelThreads(s: TruthStore, channel: string, speciesFilter?: string, caseFilter?: string) {
   const posts = (await s.listEvents(`truth/${POST_TYPE}/${channel}/`)).map(dataOf);
   const threads = new Map<
     string,
-    { thread_id: string; topic: string; board_kind: string; post_count: number; latest_at: string; species_id?: string }
+    { thread_id: string; topic: string; board_kind: string; post_count: number; latest_at: string; species_id?: string; paper_case?: string }
   >();
   for (const p of posts) {
     const tid = str(p.thread_id);
     const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), board_kind: str(p.board_kind), post_count: 0, latest_at: "" };
     t.post_count += 1;
     if (str(p.created_at) > t.latest_at) t.latest_at = str(p.created_at);
-    // root(thread_id===post_id)の topic/board_kind/species_id を代表値に採る。
+    // root(thread_id===post_id)の topic/board_kind/species_id/paper_case を代表値に採る。
     if (str(p.post_id) === tid) {
       t.topic = str(p.topic);
       t.board_kind = str(p.board_kind);
       if (typeof p.species_id === "string") t.species_id = p.species_id;
+      const pc = paperCaseOf(p.tags);
+      if (pc) t.paper_case = pc;
     }
     threads.set(tid, t);
   }
   let list = [...threads.values()].sort((a, b) => (a.thread_id < b.thread_id ? -1 : 1));
   const speciesQ = (speciesFilter ?? "").trim().toLowerCase();
   if (speciesQ) list = list.filter((t) => (t.species_id ?? "").toLowerCase() === speciesQ);
+  // BBS-02: 論文板 case チップフィルタ(board_kind=paper のスレのみ paper_case を持つ)。
+  const caseQ = (caseFilter ?? "").trim().toLowerCase();
+  if (caseQ) list = list.filter((t) => (t.paper_case ?? "").toLowerCase() === caseQ);
   const boards: Record<string, typeof list> = {};
   for (const k of BOARD_KINDS) boards[k] = [];
   for (const t of list) (boards[t.board_kind] ??= []).push(t);
   return { channel, threads: list, boards };
 }
 
-// GET /plaza/channels/:channel/threads — channel 別スレ一覧 + 3板。?species= は
-// HDR-1(A1#4)ヘッダー観測対象narrowing。
+// GET /plaza/channels/:channel/threads — channel 別スレ一覧 + 板別集計。?species= は
+// HDR-1(A1#4)ヘッダー観測対象narrowing。?case= は BBS-02 論文板 paper_case チップフィルタ
+// (board_kind=paper 以外のスレには paper_case が無いため無視される)。
 plazaRoutes.get("/plaza/channels/:channel/threads", async (c) => {
-  return c.json(await projectChannelThreads(store(c), c.req.param("channel"), c.req.query("species")));
+  return c.json(
+    await projectChannelThreads(store(c), c.req.param("channel"), c.req.query("species"), c.req.query("case")),
+  );
 });
 
 // ── 検索(T-69 KNW wave1 Stage1「これ?」重複防止検索)────────────────────────
@@ -292,7 +319,7 @@ export interface PlazaSearchThread {
   species_id?: string; // HDR-1(A1#4): root投稿代表値(スレのヘッダー観測対象narrowing用)。
 }
 
-async function collectSearchThreads(s: TruthStore, channel?: string, speciesFilter?: string): Promise<PlazaSearchThread[]> {
+export async function collectSearchThreads(s: TruthStore, channel?: string, speciesFilter?: string): Promise<PlazaSearchThread[]> {
   const prefix = channel ? `truth/${POST_TYPE}/${channel}/` : `truth/${POST_TYPE}/`;
   const posts = (await s.listEvents(prefix)).map(dataOf);
   const threads = new Map<string, PlazaSearchThread>();
@@ -465,10 +492,16 @@ plazaRoutes.get("/plaza/channels/:channel/improvement-queue", async (c) => {
   return c.json({ channel: c.req.param("channel"), queue: await projectImprovementQueue(store(c), c.req.param("channel")) });
 });
 
+// findPostById — 単一投稿の解決(post_id 全走査一致)。他ファイル(plaza-dispute-routes.ts の
+// BBS-06/08 指摘対象解決)からの再利用のため export する(重複実装禁止・reuse-first)。
+export async function findPostById(s: TruthStore, postId: string): Promise<Record<string, unknown> | null> {
+  const post = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf).find((d) => d.post_id === postId);
+  return post ?? null;
+}
+
 // GET /plaza/posts/:post_id — 単一投稿(permalink 不変・全走査で post_id 一致)。
 plazaRoutes.get("/plaza/posts/:post_id", async (c) => {
-  const postId = c.req.param("post_id");
-  const post = (await store(c).listEvents(`truth/${POST_TYPE}/`)).map(dataOf).find((d) => d.post_id === postId);
+  const post = await findPostById(store(c), c.req.param("post_id"));
   if (!post) return c.json({ error: "NOT_FOUND" }, 404);
   return c.json({ post });
 });
@@ -1088,4 +1121,115 @@ export async function projectSpeciesBook(s: TruthStore, speciesId: string): Prom
 // GET /plaza/species/:species_id/book — 種族の本(読み取り専用投影・Truth追記なし)。
 plazaRoutes.get("/plaza/species/:species_id/book", async (c) => {
   return c.json(await projectSpeciesBook(store(c), c.req.param("species_id")));
+});
+
+// ── BBS-25: 統一ノードビュー ───────────────────────────────────────────────
+// 全投稿型(article/observation/specimen/paper/review/thread/appeal/cancel相当。本実装は
+// board_kind/paper_case/tags で型を表現し新規フィールドは増やさない・既存 tags[] 再利用)を
+// /plaza/node/:post_id の単一ビューで表示する。BBS(Discourse代替のJSONLミラー方式)は
+// 既存 Truth event(1 post = 1 append-only JSON envelope)がそのままミラー実体であり、
+// 新規ストレージは作らない(reuse-first)。>>N 引用は cite_refs(既存 CiteRef type="post")を
+// 既存 citeUrl/parseCiteTokens と同型で解決する。
+export interface PlazaNodeView {
+  post_id: string;
+  node_type: string; // board_kind(paper の場合は paper_case を併記)
+  channel: string;
+  thread_id: string;
+  post: Record<string, unknown>;
+  backlinks: string[]; // この投稿を [ihl:cite type=post id=<post_id>] で引用している他 post_id
+}
+
+export async function projectNodeView(s: TruthStore, postId: string): Promise<PlazaNodeView | null> {
+  const post = await findPostById(s, postId);
+  if (!post) return null;
+  const boardKind = str(post.board_kind);
+  const paperCase = paperCaseOf(post.tags);
+  const nodeType = paperCase ? `paper:${paperCase}` : boardKind || "thread";
+  const allPosts = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf);
+  const backlinks = allPosts
+    .filter((p) => ((p.cite_refs as CiteRef[] | undefined) ?? []).some((r) => r.type === "post" && r.id === postId))
+    .map((p) => str(p.post_id));
+  return {
+    post_id: postId,
+    node_type: nodeType,
+    channel: str(post.channel),
+    thread_id: str(post.thread_id),
+    post,
+    backlinks,
+  };
+}
+
+// GET /plaza/node/:post_id — BBS-25 統一ビュー(読み取り専用・cross-leak防止は既存
+// channel スコープ分離をそのまま踏襲=general/component の thread は channel が異なる
+// ため collectSearchThreads の channel 引数指定で漏れない)。
+plazaRoutes.get("/plaza/node/:post_id", async (c) => {
+  const view = await projectNodeView(store(c), c.req.param("post_id"));
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json(view);
+});
+
+// ── BBS-11: 掲示板作成前の検索誘導ゲート ───────────────────────────────────
+// 自然言語検索(既存 rankThreadSearch)で先に既存スレへ誘導し、結果が十分なら新規作成を
+// 抑止提案する。自動作成は行わない(ユーザーの最終判断は常に尊重・派閥等の意図的重複作成は
+// 縛らない)。新規作成可否は「提案」であって「強制」ではないため、suggest_create=false でも
+// 呼び出し側(UI)は作成を止めない設計とする。
+export const BBS11_STRONG_MATCH_SCORE = 500; // dice/prefix 一致相当以上を「結果が十分」とみなす床
+export const BBS11_STRONG_MATCH_COUNT = 1; // 上記床を超える候補が1件以上あれば新規作成を抑止提案
+
+export interface CreateCheckResult {
+  query: string;
+  suggest_create: boolean;
+  candidates: (PlazaSearchThread & { score: number })[];
+}
+
+export async function projectCreateCheck(s: TruthStore, query: string, channel?: string): Promise<CreateCheckResult> {
+  const threads = await collectSearchThreads(s, channel);
+  const candidates = rankThreadSearch(threads, query);
+  const strongCount = candidates.filter((t) => t.score >= BBS11_STRONG_MATCH_SCORE).length;
+  return { query, suggest_create: strongCount < BBS11_STRONG_MATCH_COUNT, candidates };
+}
+
+// GET /plaza/create-check?q=<text>&channel=<optional> — 新規スレ作成前の誘導判定(BBS-11)。
+plazaRoutes.get("/plaza/create-check", async (c) => {
+  const q = c.req.query("q") ?? "";
+  if (!q.trim()) return c.json({ query: q, suggest_create: true, candidates: [] });
+  return c.json(await projectCreateCheck(store(c), q, c.req.query("channel") || undefined));
+});
+
+// ── BBS-12: 掲示板作成AI補助(たたき台自動記入) ─────────────────────────────
+// LLM 既定OFF(不変条項①)のため、BBS-14(isOffensiveContent)と同型の決定論フォールバック:
+// 自由記述テキストから「作りたいものの説明」を最初の文をtitleに、残りをdescriptionに、
+// 頻出語からtagsたたき台を機械的に組み立てる(要約AIではなく決定論スキャフォールド)。
+// 実鍵配線後は ai-kernel.ts の generate task へ差し替え可能(BBS-14 と同じ upgrade path)。
+const STOPWORDS_JA = new Set(["の", "は", "が", "を", "に", "で", "と", "も", "な", "です", "ます", "した", "する"]);
+
+export interface BoardDraft {
+  title: string;
+  description: string;
+  tags: string[];
+  purpose: string;
+}
+
+export function draftBoardFromText(freeText: string): BoardDraft {
+  const text = freeText.trim();
+  const sentences = text.split(/(?<=[。.!?])\s*/).filter(Boolean);
+  const title = (sentences[0] ?? text).slice(0, 40);
+  const description = sentences.slice(1).join(" ") || text;
+  const words = text
+    .replace(/[。、.,!?]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 2 && !STOPWORDS_JA.has(w));
+  const freq = new Map<string, number>();
+  for (const w of words) freq.set(w, (freq.get(w) ?? 0) + 1);
+  const tags = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([w]) => w);
+  return { title, description, purpose: title, tags };
+}
+
+// POST /plaza/board-draft { free_text } — ワンクリック作成補助のたたき台生成(Truth追記なし・
+// 純関数の投影のみ。実際の掲示板/スレ作成は既存 POST /plaza/posts が担う)。
+plazaRoutes.post("/plaza/board-draft", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const freeText = str(body?.free_text);
+  if (!freeText.trim()) return c.json({ error: "INVALID_DRAFT", details: ["free_text required"] }, 400);
+  return c.json(draftBoardFromText(freeText));
 });

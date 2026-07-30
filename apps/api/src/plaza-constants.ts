@@ -5,7 +5,20 @@
 
 // BBS-03: 3板の別(説明/愚痴/改善)+BBS-28: Engagement板(公開Q&A/称賛/未出品オファー
 // 一括募集の募集スレ型・subject_key=channel単位)。plaza-post.board_kind enum の正本。
+// 出典: schemas/events/plaza-post.schema.json(凍結・additionalProperties:false・
+// board_kind enum 固定・本ラウンドの glob 外につき編集不可)。よって BBS-02(論文板 4主入口
+// 統合)は board_kind enum 拡張ではなく、BBS-28 と同型の tags[] 再利用(タグ prefix 方式)で
+// 表現する(下記 PAPER_CASE_TAG_PREFIX・reuse-first・新規フィールド追加なし)。
 export const BOARD_KINDS = ["guide", "complaint", "improvement", "engagement"] as const;
+
+// BBS-02: 論文板の投稿ケース分け enum。独立Research Board板は設けない(「研究は論文内で
+// しょ?」)。paper_case は既存 tags[] へ "paper_case:<kind>" 形式で載せる(ENGAGEMENT_KINDS/
+// ENGAGEMENT_TAG_PREFIX と同型・plaza-post.schema.json の additionalProperties:false 制約下で
+// 新規 top-level フィールドを追加しないための upgrade path)。AI査読の欠損検出は "review"。
+export const PAPER_CASE_KINDS = [
+  "observation", "breeding_log", "analysis", "review", "replication", "hypothesis", "paper", "other",
+] as const;
+export const PAPER_CASE_TAG_PREFIX = "paper_case:";
 
 // BBS-28: Engagement 板の投稿サブ種別。tags[0] に "engagement:<kind>" 形式で載せる
 // (新規フィールドを増やさず既存 tags[] を再利用・ponytail: rung2)。
@@ -118,3 +131,43 @@ export const PLZ_RESOLVE_PERMISSION = "thread_owner_only" as const;
 // 両方へ通知委譲(自動発行はしない・opt-in規律維持)。委譲実装自体は識別/認定の正本が
 // 別途必要なため本ラウンドでは定数のみ確定する。
 export const PLZ_CARD_DELEGATION_DAYS = 14;
+
+// R0731 w2-plaza(Wave2)追加分。既存 K6 定数(上記)と同一ファイルに集約(散在禁止)。
+
+// BBS-06/08: 指摘(dispute)。「通報」ではなく「指摘」ボタン。二者間の議論room を開くが
+// 書込は当事者2名限定・閲覧は誰でも可(非公開部屋ではあるが「進行中の議論は他ユーザーも
+// 閲覧できる」要件文どおり)。GOV-01 の DISPUTE_TTL_DAYS=14(ガバナンス取引紛争room)とは
+// 別ドメイン・別値のため流用しない(要件文が明示的に「1ヶ月」と書いている)。
+export const BBS_DISPUTE_TTL_DAYS = 30;
+// 未解決クローズ(1ヶ月合意なし)のカウントが 5 の倍数に達するたびカルマ value -1
+// (grantKarmaCountIncrease の Fibonacci 減点モデルとは別径路・要件文「5回目・10回目…」の
+// 逐語どおり線形処理。値は appendKarma(layer="value") へ直接 -1 を渡す)。
+export const BBS_DISPUTE_UNRESOLVED_KARMA_EVERY = 5;
+// 30回の指摘消費で1プラチナコイン消費(GOV_INDICTMENT_PT_FEE_EVERY と同じ値・同じ運用だが
+// 掲示板側は指摘イベント種別が gov 側(market-flag)と別ストリームのため独立カウント)。
+export const BBS_DISPUTE_PT_FEE_EVERY = 30;
+
+// BBS-15: 通報システムは導入せず自治(自然に離脱)に委ねる。行動規範は Contributor
+// Covenant 2.1 をベースに透明性・Append-only・AIとの協働・進化の4文言を追加する。
+// 実体は憲章文字列(型C・遵守の証拠=このファイル+/plaza/rules への同梱)。
+export const CODE_OF_CONDUCT = {
+  base: "Contributor Covenant 2.1",
+  principles: ["transparency", "append-only", "human-ai-collaboration", "evolution"],
+  no_report_system: true,
+  moderation_model: "law-violation-immediate-ban_otherwise-community-self-governance",
+} as const;
+
+// WIK-18: 記憶OS 2階層チャンク(mini_chunk=1〜2往復・theme_chunk=4〜6往復or1000トークン)。
+export const WIK_MINI_CHUNK_MAX_TURNS = 2;
+export const WIK_THEME_CHUNK_MAX_TURNS = 6;
+export const WIK_THEME_CHUNK_MAX_TOKENS = 1000;
+
+// WIK-24: RAG 3層(Base/Culture/Predictive)。バッチ(append-only)更新・リアルタイム更新禁止。
+export const WIK_RAG_LAYERS = ["base", "culture", "predictive"] as const;
+export const WIK_RAG_UPDATE_MODE = "batch" as const;
+
+// WIK-32: テンプレート市場の2操作(公開fork=進化対象 / 個人コピー=非公開)。
+export const WIK_TEMPLATE_OPERATIONS = ["fork", "copy"] as const;
+export const WIK_TEMPLATE_KINDS = [
+  "scale_paper", "qr_label", "research_note", "specimen_card", "ui_template", "script", "ai_settings_pack",
+] as const;
