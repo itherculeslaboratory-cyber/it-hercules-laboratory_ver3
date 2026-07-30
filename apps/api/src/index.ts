@@ -25,6 +25,10 @@ import { plazaRoutes } from "./plaza-routes";
 import { engagementRoutes } from "./engagement-routes";
 import { knowledgeGraphRoutes } from "./knowledge-graph-routes";
 import { knowledgeLintRoutes } from "./knowledge-lint-routes";
+import { plazaFileBoardRoutes } from "./plaza-file-board-registry";
+import { knowledgeTimelineRoutes } from "./knowledge-timeline-routes";
+import { plazaGithubRoutes } from "./plaza-github-routes";
+import { plazaRulesRoutes } from "./plaza-rules-routes";
 import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
@@ -343,6 +347,14 @@ app.route("/api/v1", knowledgeGraphRoutes);
 // リンク切れ・既存 WIK-01 wiki_node[level=lint_log] へ log.md 形式で記録)・
 // GET /wiki/lint-log(履歴)。月次スケジューリングは §6 人間ゲート(常駐なし)。
 app.route("/api/v1", knowledgeLintRoutes);
+
+// w1-plaza 新規4ルート (V3-BBS-16/WIK-24/WIK-31/WIK-30): file-board索引・知識タイムライン・
+// GitHub連携・広場ルール。mount は HQ が検収時に適用(艦は index.ts 不可侵・R0731-feb2a1 §mount指示)。
+// PUBLIC_ROUTES への /plaza/rules 追加は SB-1/2 回答待ちで保留(現状は保護既定のまま)。
+app.route("/api/v1", plazaFileBoardRoutes);
+app.route("/api/v1", knowledgeTimelineRoutes);
+app.route("/api/v1", plazaGithubRoutes);
+app.route("/api/v1", plazaRulesRoutes);
 
 // Governance / ガバナンス (design-c5.md §K6 §2.1 slot037-040 / V3-GOV-01/09/12/19/23): POST
 // votes/disputes(+messages/close)/flags + 決定論投影(threshold/os-promotion/dispute/
