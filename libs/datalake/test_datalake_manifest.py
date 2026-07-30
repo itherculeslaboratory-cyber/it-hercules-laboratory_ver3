@@ -13,8 +13,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from manifest import (  # noqa: E402
     SUBSET_COSINE_MAX_ROWS,
+    GenerationExistsError,
+    read_latest_generation,
     search_manifest,
     should_use_subset_cosine,
+    update_latest_pointer,
+    write_generation_manifest,
     write_manifest,
 )
 
@@ -70,3 +74,36 @@ def test_should_use_subset_cosine_threshold() -> None:
     assert should_use_subset_cosine(1_000) is True
     assert should_use_subset_cosine(10_000) is True
     assert should_use_subset_cosine(10_001) is False
+
+
+# V3-FND-06 — generation-N immutable manifest + latest.json pointer-only update.
+def test_write_generation_manifest_creates_generation_dir(tmp_path: Path) -> None:
+    out = write_generation_manifest(_rows(), tmp_path, 1)
+    assert out.exists()
+    assert out.parent.name == "generation-1"
+
+
+def test_write_generation_manifest_rejects_overwrite_of_existing_generation(tmp_path: Path) -> None:
+    write_generation_manifest(_rows(), tmp_path, 1)
+    try:
+        write_generation_manifest(_rows(), tmp_path, 1)
+        assert False, "expected GenerationExistsError"
+    except GenerationExistsError:
+        pass
+
+
+def test_latest_pointer_updates_without_touching_generation_files(tmp_path: Path) -> None:
+    write_generation_manifest(_rows(), tmp_path, 1)
+    write_generation_manifest(_rows(), tmp_path, 2)
+    update_latest_pointer(tmp_path, 1)
+    assert read_latest_generation(tmp_path) == 1
+    # pointer が古い世代を指したまま — generation-2 の中身には触れていない(履歴保持)
+    update_latest_pointer(tmp_path, 2)
+    assert read_latest_generation(tmp_path) == 2
+    # generation-1 のファイルは無傷のまま参照可能(過去 worldSnapshot 再現性)
+    got = search_manifest(tmp_path / "generation-1" / "manifest.parquet")
+    assert {r["capture_id"] for r in got} == {"c1", "c2", "c3"}
+
+
+def test_read_latest_generation_returns_none_when_unset(tmp_path: Path) -> None:
+    assert read_latest_generation(tmp_path) is None

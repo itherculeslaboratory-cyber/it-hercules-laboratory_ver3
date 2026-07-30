@@ -51,6 +51,55 @@ def write_manifest(rows: list[dict[str, Any]], path: str | Path) -> None:
     pl.DataFrame(rows).write_parquet(out)
 
 
+# V3-FND-06(制約): embedding等の派生層は generation-N/immutable manifest で世代管理し、
+# latest は pointer 更新のみとする。write_manifest() 自体は投影(regenerable)なので
+# 常に上書き可能だが、embedding 世代のように「過去の worldSnapshot を対応 embedding で
+# 再現可能にする」必要がある層はこの2関数を使う: 既存 generation ディレクトリは決して
+# 上書きせず(ValueError)、latest.json だけが pointer 更新される。
+class GenerationExistsError(ValueError):
+    """既存の generation-N manifest を上書きしようとした(immutable違反)。"""
+
+
+def write_generation_manifest(
+    rows: list[dict[str, Any]], base_dir: str | Path, generation: int
+) -> Path:
+    """generation-N/manifest.parquet を新規作成する。同じ generation が既に存在する
+    場合は書かず GenerationExistsError を投げる(上書き禁止=V3-FND-06 の中核)。
+    Truth 本体を書き換えないのと同じ規約(このファイルも投影の一種だが、世代番号が
+    バージョンを兼ねるため generation 単位では immutable にする)。
+    """
+    gen_dir = Path(base_dir) / f"generation-{generation}"
+    out = gen_dir / "manifest.parquet"
+    if out.exists():
+        raise GenerationExistsError(f"generation-{generation} already exists at {out}")
+    gen_dir.mkdir(parents=True, exist_ok=True)
+    pl.DataFrame(rows).write_parquet(out)
+    return out
+
+
+def update_latest_pointer(base_dir: str | Path, generation: int) -> Path:
+    """latest.json を { "generation": N } で pointer 更新する(既存 generation manifest
+    ファイル自体は一切書き換えない — pointer のみが変わる)。
+    """
+    import json
+
+    base = Path(base_dir)
+    base.mkdir(parents=True, exist_ok=True)
+    latest_path = base / "latest.json"
+    latest_path.write_text(json.dumps({"generation": generation}), encoding="utf-8")
+    return latest_path
+
+
+def read_latest_generation(base_dir: str | Path) -> int | None:
+    """latest.json が指す generation 番号を返す(未作成なら None)。"""
+    import json
+
+    latest_path = Path(base_dir) / "latest.json"
+    if not latest_path.exists():
+        return None
+    return json.loads(latest_path.read_text(encoding="utf-8"))["generation"]
+
+
 def _cosine(a: list[float], b: list[float]) -> float:
     if len(a) != len(b):
         raise ValueError(f"embedding dim mismatch: {len(a)} vs {len(b)}")

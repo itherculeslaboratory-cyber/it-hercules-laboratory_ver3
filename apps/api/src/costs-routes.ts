@@ -89,3 +89,48 @@ costsRoutes.get("/costs", async (c) => {
   const usage = await fetchR2Usage(c.env);
   return c.json(computeCostsSummary(runningCosts as RunningCostsConfig, usage));
 });
+
+// V3-CST-03: AI運用コストの3層モデルルーティング規律を machine-readable な表として
+// 固定する(正本=C:\Users\sawad\.claude\CLAUDE.md「モデル役割分担・費用最適化」節の
+// 4層表。ここはその値をコピーするのではなく、コードとして参照できる形に落とすだけ)。
+// この表自体はAIオーケストレーション(Claude Code側)の運用規律であり、この API 自体は
+// 呼ばない — costs-routes.ts に置くのは「AI運用コスト」というカテゴリの一致による
+// (V3-CST-03 は g01-基盤コストクラスタ・非機能要件)。
+export type ModelTier = "orchestration" | "implementation" | "mechanical" | "ceiling";
+export const MODEL_ROUTING_TABLE: Record<ModelTier, { model: string; effort: string; usage: string }> = {
+  orchestration: { model: "claude-opus-5", effort: "high", usage: "統括・設計・最終レビュー" },
+  implementation: { model: "claude-sonnet-5", effort: "medium", usage: "承認済み実装・調査" },
+  mechanical: { model: "claude-haiku-4-5", effort: "low", usage: "判断ゼロの機械的作業のみ" },
+  ceiling: { model: "claude-fable-5", effort: "xhigh", usage: "Opus 5で実際に詰まった時のみ(指名制)" },
+};
+
+/**
+ * タスク種別からモデル層を決める純関数(V3-CST-03「判断密度の低い作業は最下層へ」)。
+ * 未知の種別は implementation(既定=承認済み実装・調査)へ倒す — mechanical への
+ * 誤ルーティング(判断が混ざる作業をHaikuへ回す)より安全な既定。
+ */
+export function routeModelForTask(taskKind: "orchestration" | "review" | "implementation" | "research" | "mechanical" | "deep-stuck"): ModelTier {
+  switch (taskKind) {
+    case "orchestration":
+    case "review":
+      return "orchestration";
+    case "mechanical":
+      return "mechanical";
+    case "deep-stuck":
+      return "ceiling";
+    case "implementation":
+    case "research":
+    default:
+      return "implementation";
+  }
+}
+
+// V3-FND-33: 段階的リリース設計(観測画面を先行公開し、他システムは後から追加できる
+// 構成にする)。演出機能(4D Viewer等)はリリース必須から外し、R2+Kernelだけで動く
+// 最小集合(観測・マーケット・認証)に絞る、という区分をコードとして固定する。
+export type ReleaseStageDomain = "obs" | "mkt" | "aut" | "plaza" | "gov" | "ind" | "vid" | "ui-4d-viewer";
+// リリース必須(R2+Kernelだけで動く最小集合)。V3-FND-33 statement 準拠。
+export const RELEASE_REQUIRED_DOMAINS: ReadonlySet<ReleaseStageDomain> = new Set(["obs", "mkt", "aut"]);
+export function isReleaseRequiredDomain(domain: ReleaseStageDomain): boolean {
+  return RELEASE_REQUIRED_DOMAINS.has(domain);
+}
