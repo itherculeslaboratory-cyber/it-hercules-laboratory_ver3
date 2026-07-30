@@ -204,12 +204,17 @@ const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 
 export interface PaymentStatus {
-  method: "bank_transfer"; // 将来 PAY.JP カードオプション追加時に拡張(round-16 決済裁定・本波は銀行振込のみ)
+  // V3-MKT-62(round-16裁定・P2P決済ユーザー選択制): 既定=bank_transfer。直近 pay_confirm の
+  // payload.method が "payjp_platform" のときだけ切り替わる(fee-routes.ts の
+  // POST /market/listings/{id}/payjp-charge が system actor で append・後方互換=既存の
+  // bank_transfer 専用 pay_confirm は payload.method 省略のまま bank_transfer 判定を維持)。
+  method: "bank_transfer" | "payjp_platform";
   declared_at?: string; // 買主:振込済み申告(pay_declare・最初の申告時刻)
   confirmed_at?: string; // 売主:入金確認(pay_confirm・最初の確認時刻)
   declared_amount?: number; // V3-MKT-13: 買主の直近自己申告額(最新の pay_declare.amount)
   confirmed_amount?: number; // V3-MKT-13: 売主の直近確認額(最新の pay_confirm.amount)
   mismatch?: "partial" | "over"; // V3-MKT-13: 直近 pay_confirm の金額相違自己申告(省略=一致・自動制裁なし)
+  payjp_charge_id?: string; // V3-MKT-63: method=payjp_platform のときの PAY.JP charge id(5%自動控除の照合用)
 }
 
 /** round-16 決済裁定(受領7): P2P=銀行振込既定・IHL非関与(「振込自動検知」前提は廃止)。
@@ -228,13 +233,16 @@ export function projectPayment(events: TxnEvent[]): PaymentStatus {
   const lastDeclare = declares[declares.length - 1];
   const lastConfirm = confirms[confirms.length - 1];
   const mismatchRaw = (lastConfirm?.payload as { mismatch?: unknown } | undefined)?.mismatch;
+  const lastConfirmPayload = lastConfirm?.payload as { method?: unknown; charge_id?: unknown } | undefined;
+  const method = lastConfirmPayload?.method === "payjp_platform" ? "payjp_platform" : "bank_transfer";
   return {
-    method: "bank_transfer",
+    method,
     declared_at: firstDeclare?.created_at,
     confirmed_at: firstConfirm?.created_at,
     declared_amount: lastDeclare?.amount,
     confirmed_amount: lastConfirm?.amount,
     mismatch: mismatchRaw === "partial" || mismatchRaw === "over" ? mismatchRaw : undefined,
+    payjp_charge_id: method === "payjp_platform" && typeof lastConfirmPayload?.charge_id === "string" ? lastConfirmPayload.charge_id : undefined,
   };
 }
 

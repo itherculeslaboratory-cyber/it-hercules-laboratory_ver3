@@ -12,7 +12,14 @@ import { Hono } from "hono";
 import { TruthStore, ulid, deriveTransferCode } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { OBLIGATION_TYPE, toObligation, safeKeyPart, type ObligationRec } from "./gmo-routes";
-import { makePayjpConnector, parseChargeIdFromWebhook, type PayjpConnector } from "./payjp-connector";
+import {
+  makePayjpConnector,
+  parseChargeIdFromWebhook,
+  type PayjpConnector,
+  type CreateTenantParams,
+} from "./payjp-connector";
+import { loadTxns, TXN_TYPE, TXN_SCHEMA, TXN_SCHEMA_VERSION } from "./market-routes";
+import { reduceMarket, isAllowedEdge } from "./market-settlement";
 
 export const INVOICE_TYPE = "ihl.fee.invoice.v1";
 export const SETTLEMENT_TYPE = "ihl.fee.settlement.v1";
@@ -202,6 +209,122 @@ export function createFeeRoutes(makeConnector: (env: Bindings) => PayjpConnector
       // V3-MKT-12: 銀行振込で払う人向けの案内コード(見出し欄・上の invoice と同じ導出)。
       bank_transfer_code: await deriveTransferCode(actorId),
     });
+  });
+
+  // ── V3-MKT-62/63: PAY.JP Platform(Payouts型)test-mode 結線 ──────────────────
+  // round-16裁定(受領7)「両方作ってみて、最後ユーザーが選ぶ」= 銀行振込(既定・fee-routes
+  // ゆる請求)に加え、PAY.JP Platform カード決済をオプションとして選べるようにする。
+  // テナント本人確認(実際の銀行口座情報入力)自体は本人が行う行為であり AI の人間ゲートには
+  // 当たらない — 人間ゲートは PAY.JP "本番"アカウント申込のみ(V3-MKT-15/round-16裁定)。
+  // よって test モード API 呼び出しの結線はここまで進めてよい。
+
+  // POST /api/v1/market/payjp/tenant — 呼び出し本人を PAY.JP テナント(売主)として test
+  // モードで作成する(自己スコープ・保護)。tenant id はセッション principal から決定的に
+  // 導出(safeId 形状に合わせ actor_id をそのまま使う・PAY.JP 側は英数字+アンダースコアのみ
+  // 許容)。Truth への永続化はしない(カードトークンと同じくフロントエンド/本人が
+  // tenant_id を保持し、出品時に添える運用=市場側の状態機械を増やさない・reuse-first)。
+  feeRoutes.post("/market/payjp/tenant", async (c) => {
+    const actorId = c.get("actorId");
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    const required = [
+      "bankAccountHolderName",
+      "bankCode",
+      "bankBranchCode",
+      "bankAccountType",
+      "bankAccountNumber",
+    ] as const;
+    for (const key of required) {
+      if (!body || typeof body[key] !== "string" || !body[key]) {
+        return c.json({ error: "INVALID_TENANT", details: [`${key} required`] }, 400);
+      }
+    }
+    const tenantId = `ten_${actorId}`.replace(/[^A-Za-z0-9_]/g, "_").slice(0, 255);
+    const params: CreateTenantParams = {
+      id: tenantId,
+      name: typeof body?.name === "string" && body.name ? body.name : actorId,
+      platformFeeRate: 0.05, // V3-MKT-63: 5%固定(economy-constants SETTLEMENT_ACCRUAL_RATE と同値)
+      minimumTransferAmount: Number.isInteger(Number(body?.minimumTransferAmount)) ? Number(body?.minimumTransferAmount) : 1,
+      bankAccountHolderName: String(body?.bankAccountHolderName),
+      bankCode: String(body?.bankCode),
+      bankBranchCode: String(body?.bankBranchCode),
+      bankAccountType: String(body?.bankAccountType),
+      bankAccountNumber: String(body?.bankAccountNumber),
+    };
+    try {
+      const connector = makeConnector(c.env);
+      const tenant = await connector.createTenant(params);
+      return c.json({ tenant }, 201);
+    } catch (err) {
+      return c.json({ error: "PAYJP_TENANT_FAILED", details: [(err as Error).message] }, 502);
+    }
+  });
+
+  // POST /api/v1/market/listings/{listing_id}/payjp-charge — 取引の落札者(matched buyer)が
+  // PAY.JP Platform カードで支払う(V3-MKT-62 選択肢②)。charge 成功(paid)時、5%は
+  // createPlatformCharge が platformFeeFor() で自動控除済み(V3-MKT-63)。取引状態機械へは
+  // system actor(agent)が pay_confirm を deterministic key(charge id)で put-if-absent
+  // する(settleNoPayCancel と同型の自己修復パターン・二重発火は 409→無視で自然に防げる)。
+  // カードトークンはフロントエンド専有情報としてそのまま connector へ渡すだけでログしない
+  // (payjp-connector.ts 冒頭コメントの方針を踏襲)。
+  feeRoutes.post("/market/listings/:listing_id/payjp-charge", async (c) => {
+    const listingId = c.req.param("listing_id");
+    const actorId = c.get("actorId");
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    const amount = Number(body?.amount);
+    const card = typeof body?.card === "string" ? body.card : "";
+    const tenant = typeof body?.tenant === "string" ? body.tenant : "";
+    if (!(amount > 0) || !card || !tenant) {
+      return c.json({ error: "INVALID_CHARGE", details: ["amount>0, card, tenant required"] }, 400);
+    }
+
+    const s = store(c);
+    const events = await loadTxns(c, listingId);
+    const cur = reduceMarket(listingId, events);
+    if (cur.matched_with !== actorId) {
+      return c.json({ error: "FORBIDDEN", details: ["matched buyer only"] }, 403);
+    }
+    if (!isAllowedEdge(cur.state, "pay_confirm")) {
+      return c.json({ error: "ILLEGAL_TRANSITION", from: cur.state, kind: "pay_confirm" }, 409);
+    }
+
+    const connector = makeConnector(c.env);
+    let charge: Awaited<ReturnType<PayjpConnector["createPlatformCharge"]>>;
+    try {
+      charge = await connector.createPlatformCharge({ amount, card, tenant });
+    } catch (err) {
+      return c.json({ error: "PAYJP_CHARGE_FAILED", details: [(err as Error).message] }, 502);
+    }
+    if (!charge.paid) return c.json({ error: "CHARGE_NOT_PAID", charge_id: charge.id }, 402);
+
+    const id = ulid();
+    const data: Record<string, unknown> = {
+      transaction_event_id: id,
+      listing_id: listingId,
+      actor_id: "system:payjp-charge",
+      kind: "pay_confirm",
+      amount: charge.amount,
+      payload: { method: "payjp_platform", charge_id: charge.id },
+      created_at: new Date().toISOString(),
+      schema_version: TXN_SCHEMA_VERSION,
+    };
+    const res = await s.putEventAt(`truth/${TXN_TYPE}/payjp-charge-${safeKeyPart(charge.id)}.json`, {
+      specversion: "1.0",
+      id,
+      source: "apps/api",
+      type: TXN_TYPE,
+      time: new Date().toISOString(),
+      dataschema: TXN_SCHEMA,
+      provenance: { generator_kind: "agent", agent_name: "payjp-platform-charge" },
+      data,
+    });
+    if (res.status === "invalid") return c.json({ error: "INVALID_TRANSITION", details: res.errors }, 400);
+    if (res.status === "conflict") {
+      return c.json({ ok: true, duplicate: true, charge_id: charge.id }, 200); // 冪等(同一 charge 再送)
+    }
+    return c.json(
+      { listing_id: listingId, charge_id: charge.id, amount: charge.amount, platform_fee: charge.platform_fee },
+      201,
+    );
   });
 
   return feeRoutes;

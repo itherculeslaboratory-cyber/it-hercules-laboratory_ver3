@@ -57,9 +57,13 @@ const LISTING_PHOTO_TYPE = "ihl.mkt.listing_photo.v1";
 const LISTING_PHOTO_SCHEMA = "schemas/events/mkt-listing-photo.schema.json";
 
 // 取引状態機械イベント(design-k3 §2.1)。schema_version は string。
-const TXN_TYPE = "ihl.mkt.transaction_event.v1";
-const TXN_SCHEMA = "schemas/events/mkt-transaction-event.schema.json";
-const TXN_SCHEMA_VERSION = "1";
+// export: fee-routes.ts(V3-MKT-62/63 PAY.JP Platform charge 結線)が同じ取引イベント型へ
+// system-generated pay_confirm を append するために再利用する(型リネーム禁止・新規型を
+// 増やさない=payload は schemas/events/mkt-transaction-event.schema.json 上 additionalProperties
+// 無しの自由オブジェクトのため、method/charge_id を additive に載せられる)。
+export const TXN_TYPE = "ihl.mkt.transaction_event.v1";
+export const TXN_SCHEMA = "schemas/events/mkt-transaction-event.schema.json";
+export const TXN_SCHEMA_VERSION = "1";
 
 // system actor(V3-AUT-17 例外): 48h no-pay 自動キャンセルは人間操作でなく read-time
 // 自己修復(batch.ts SYSTEM_ACTOR="system:cron" と同型の命名。cron でなく request 契機)。
@@ -552,6 +556,11 @@ async function settleFeeObligation(
 ): Promise<void> {
   if (!sellerId) return;
   const payment = projectPayment(events);
+  // V3-MKT-63: PAY.JP Platform charge は createPlatformCharge() が platformFeeFor() で
+  // 5%を charge 作成時に自動控除済み(fee-routes.ts payjp-charge route)。ここでゆる請求の
+  // 義務台帳(5%)を重ねて計上すると二重徴収になるためスキップする(bank_transfer のみ本来の
+  // ゆる請求フローの対象)。
+  if (payment.method === "payjp_platform") return;
   const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
   const listingPrice = listingEv ? Number(dataOf(listingEv).price) : NaN;
   const gross = payment.confirmed_amount ?? payment.declared_amount ?? (Number.isFinite(listingPrice) ? listingPrice : undefined);
