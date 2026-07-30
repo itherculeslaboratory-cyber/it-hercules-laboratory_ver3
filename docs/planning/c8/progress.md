@@ -10,21 +10,21 @@
 
 ## サマリー
 
-- 全体: ██████████░░░░░░░░░░ 51%（301/587）
-- 第1波必達(required): ████████████████░░░░ 82%（297/364）
-- 第2波(best-effort): ░░░░░░░░░░░░░░░░░░░░ 2%（4/223）
+- 全体: █████████████░░░░░░░ 65%（380/587）
+- 第1波必達(required): ████████████████░░░░ 82%（298/364）
+- 第2波(best-effort): ███████░░░░░░░░░░░░░ 37%（82/223）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 241 |
-| 着手中(in_progress) | 38 |
-| ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 7 |
-| 完了(done) | 301 |
+| 未着手(todo) | 122 |
+| 着手中(in_progress) | 70 |
+| ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 15 |
+| 完了(done) | 380 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
 
-- 件数: 7
+- 件数: 15
 
 | id | title | lane | note |
 |---|---|---|---|
@@ -32,21 +32,29 @@
 | V3-AUT-15 | 本番はWRITE(commit/upload等)のみログイン必須(IHL_AUT… | L3/L4-auth | 裁定待ち: V3-AUT-15が求める Scope A(観測search/list/detail/imageの未ログイン公開READ)は、CL-04 route-matrix(tests/fixtures/route-matrix.csv・cl-04-route-matrix.test.ts、現行73行)が凍結する『auth系3route+verify-code+payjp-webhook以外は全protected(deny-by-default)』契約と矛盾する。観測系routeをpublic化するとCL-04凍結契約・関連TC群の全面作り直しが要る。推奨=(a) 当面は全ログイン必須(現行route-matrix)を正としV3-AUT-15のScope A公開READ要件は将来波(CL-04契約緩和が別途承認された時点)へ先送り。 |
 | V3-I18-02 | 新規登録/オンボーディングで表示言語(locale)を必須選択… | L3/L4-auth | 持ち越し(差し戻し対象)。locale必須選択のサブ要件は実装済み(apps/api/src/account.ts:45-76 hasExplicitLocale+projectOnboardingStatus・w1-aut所有のtests/account-onboarding.test.tsで検証済み・私は変更していない)。しかし「所属国は必須選択(UI非表示)」のサブ要件は前任者が2案(CF request.cf.country自動補完/任意のまま人間裁定待ち)のどちらも実装せず据え置いた状態から変化なし(apps/api/src/settings-routes.ts:84の country:"" 既定のまま)。二者択一の設計判断のため推測で実装せず持ち越す。 |
 | V3-SEC-03 | SwitchBot等の外部サービスAPIキー・秘密はサーバー側に一切保持・使用せ… | L4-gov | 前任のnoteを維持(据置)。device-routes.ts(w1-obs所有)がAES-GCMでサーバー側にAPIキーを暗号化保管しており要件『サーバー側に一切保持・使用せず』と直接矛盾。修正には自分のglob外のファイル書込が必要なため今回は変更していない。HQ裁定待ち。 |
+| V3-AUT-31 | メールアドレス乗っ取り時はアカウントを即時凍結(freeze=true)し、元の… | L3/L4-auth | 要件文の前提「ver3で確定する認証方式に合わせて実装」の対象(復旧トークンの認証方式)自体が未確定。human_confirm=true・philosophy=人間ゲート。推測実装はせず設計判断待ちで持ち越す(w2-aut・2026-07-31)。 |
+| V3-IND-09 | マチアプに、価値観の精度を上げるPairwise比較画面(記載済み②)の前段とし… | L4-obs | (w2-ind Wave2持ち越し) 実装先(おすすめ個体画面のバックエンド)はmatch-routes.ts=MODULE-MAP上w1-mkt所有。w2-indのglob(apps/api/src/{individual-routes,clutch-routes,paper-match*,research*}*)の外のため越境せず不着手。次波でw1-mkt担当としての再割当が必要。 |
+| V3-IND-11 | 色などの見た目を画像解析しユーザーの好みを統計学習して「理想個体に近づくにはどの… | L4-obs | (w2-ind Wave2持ち越し) 画像解析によるAI鑑定・機械学習ベースの好み統計は決定論バックエンドコードの範囲を超え、実モデル配線は§6人間ゲート対象。今回は新規実装せず。 |
+| V3-IND-26 | 成体の成長を追う4D Viewerは3D(体重X/体長Y/成長速度Z)+時間(s… | L4-obs | (w2-ind Wave2持ち越し) 4D Viewer(3D+時間再生)・誇張要素の削除はUI(screen-defs/**、全艦不可侵)側の話でバックエンドに該当コードが無い。今回は不着手。 |
+| V3-IND-29 | 棚の揺れイベント(ジャイロ閾値超過)を検出し、その時棚にいた個体に自動で紐づけて… | L4-obs | (w2-ind Wave2持ち越し) ジャイロセンサー検出+ルンバ図面取込の空間UIはハードウェア連携+UIが前提でバックエンドのみでは完結しない。今回は不着手。 |
+| V3-PPR-25 | 研究循環レイヤー(paper/review/hypothesis/replica… | L4-knowledge | (w2-ind Wave2持ち越し) review/hypothesis/replication_proposal/replication_result/research_gap/comment/correction_noteの新規Truthノード型はcontent_type enum拡張(schemas/events/content.schema.json変更)を要し本艦glob外。「全投稿型を/node/:nodeIdの統一ビューで表示」もこのノード型が前提のため未着手。 |
 | V3-AUT-14 | 観測配下はREAD既定・WRITE列挙のdeny-listとし、新WRITEルー… | L3/L4-auth | OBSERVATION_WRITE_PREFIXESはapps/api/src配下に0件(grep実測・未実装)。実装箇所はobservation-routes.ts(w1-obs所有・w1-autのglob外)。かつ前提となるV3-AUT-15(観測READのScope A公開化)自体がCL-04契約と矛盾しblocked中のため、本波では着手不能と判断し持ち越し。 |
 | V3-AUT-16 | 観測検索スコープはScope A（コミュニティ）とし、ログイン済ユーザーは全観測… | L3/L4-auth | 全観測カタログ横断検索(owner_user_idで絞り込まない)の実装箇所はobservation-routes.ts(w1-obs所有・w1-autのglob外)。V3-AUT-14と同一の前提(V3-AUT-15 blocked)により本波では着手不能と判断し持ち越し。 |
+| V3-AUT-24 | 創世アカウント IT.Hercules.Laboratory(role:admi… | L3/L4-auth | role:adminの値はV3-AUT-22(ロール語彙・ユーザー追認カード回答待ち・本波対象外)に依存し確定できない。genesis account自体もbootstrap未実装(grep実測: apps/api/src配下にIT.Hercules.Laboratory/genesis/創世に一致するコード0件)。AUT-22決着後に着手を推奨(w2-aut・2026-07-31)。 |
 | V3-OBS-29 | SwitchBot等IoTの秘密鍵(TOKEN/SECRET)をIHLサーバ/V… | L4-obs | collector-routes.ts:1-96はサーバに公開鍵のみ保持し秘密鍵を一切保持しない設計(Ed25519署名検証)。device-routes.tsの暗号化鍵保存は別画面(OBS-31)向けで実プロバイダ鍵は人間ゲート未解放(コメント実測)。本ラウンドはコード変更なし・評価のみ。 ★[n61検収・n61obscritic重大2是正] done撤回→blocked。V3-SEC-03と同一論点(device-routes.tsのAES-GCM暗号化サーバ保持が『秘密鍵を一切保持せず』を満たすか)で艦間判定が割れており(w1-sec=blocked/w1-obs=done)、単独確定させず1件の裁定に束ねる(裁定カード起票待ち)。 |
+| V3-PPR-24 | 研究コミュニティをSNS/掲示板/Wikiではなく、個体(Individual)… | L4-knowledge | (w2-ind Wave2持ち越し) Evidence型Knowledgeノード(概要/現在の理解/主な説/根拠/反論/未解決/履歴)専用フィールドはcontent.schema.json(additionalProperties:false)への追加が必要で本艦glob外。既存汎用contentのsections(PaperSectionsV1 6節固定)では代替不可のため不着手。 |
 
 ## lane 別内訳
 
 | lane | 進捗 |
 |---|---|
 | CSV | ████████████████████ 100%（1/1） |
-| L1/PAY | █████████████░░░░░░░ 63%（56/89） |
-| L3/L4-auth | ██████████░░░░░░░░░░ 52%（22/42） |
-| L4 | ██████████████░░░░░░ 71%（92/130） |
-| L4-gov | ████████░░░░░░░░░░░░ 41%（31/75） |
-| L4-knowledge | ██████████░░░░░░░░░░ 51%（39/76） |
-| L4-obs | ███████████░░░░░░░░░ 53%（49/92） |
+| L1/PAY | ██████████████░░░░░░ 72%（64/89） |
+| L3/L4-auth | █████████████░░░░░░░ 67%（28/42） |
+| L4 | █████████████████░░░ 83%（108/130） |
+| L4-gov | █████████████░░░░░░░ 63%（47/75） |
+| L4-knowledge | ██████████████░░░░░░ 70%（53/76） |
+| L4-obs | ███████████████░░░░░ 74%（68/92） |
 | L5-video | ░░░░░░░░░░░░░░░░░░░░ 0%（0/24） |
 | L6-ui | ████░░░░░░░░░░░░░░░░ 19%（11/58） |
 
@@ -122,35 +130,35 @@
 | V3-OTH-10 | 好みモデルは離散モデルとし連続数値の合計スコアを定義しない。検索スコア順序はRA… | required | done | — |
 | V3-OTH-12 | 生成物の再現性を保証: 同じ入力からは必ず同じ結果を返し、乱数など非決定的処理を… | required | in_progress | — |
 | V3-OTH-27 | 根本ビジョン: 単なる甲虫飼育管理アプリではなく『ユーザーが自分の文明を作り育て… | required | done | — |
-| V3-KRM-08 | カルマが下がるのは問題行為(詐欺・故意の未発送/未入金・誹謗中傷・虚偽レビュー・… | best-effort | todo | — |
-| V3-KRM-09 | 指摘の二者が1ヶ月以内に合意しなければ強制クローズとし、未解決強制クローズをユー… | best-effort | todo | — |
-| V3-KRM-14 | 貢献度を『直接貢献』(論文投稿・生体登録・記事・アフィリエイト等、例paper5… | best-effort | todo | — |
+| V3-KRM-08 | カルマが下がるのは問題行為(詐欺・故意の未発送/未入金・誹謗中傷・虚偽レビュー・… | best-effort | in_progress | — |
+| V3-KRM-09 | 指摘の二者が1ヶ月以内に合意しなければ強制クローズとし、未解決強制クローズをユー… | best-effort | in_progress | — |
+| V3-KRM-14 | 貢献度を『直接貢献』(論文投稿・生体登録・記事・アフィリエイト等、例paper5… | best-effort | done | — |
 | V3-KRM-15 | embedding空間の密度や視点タグ(failure_case/ethics/… | best-effort | todo | — |
 | V3-KRM-17 | 称号システムを実装しカルマ・貢献度・投票など行動条件/貢献パターンに応じて自動付… | best-effort | todo | — |
 | V3-KRM-22 | 評価/フィードバックのモデルを定義する: 取引評価はカルマ制で『相手が悪いと言っ… | best-effort | todo | — |
 | V3-KRM-29 | 参加者を『プロ研究者(承認権限)』『市民科学者/ブリーダー(データ提供・PR)』… | best-effort | todo | — |
-| V3-MKT-07 | 抽選出品(TX-LOTTERY)は締切後にCSPRNG均等乱数で当選者1名を確定… | best-effort | todo | — |
-| V3-MKT-08 | プラチナコイン優先(TX-PLATINUM-PRIORITY)は定員超過時に累計… | best-effort | todo | — |
-| V3-MKT-09 | マーケット既定ソートは好みを反映した『好み新着順』とし、価値観スコア score… | best-effort | todo | — |
+| V3-MKT-07 | 抽選出品(TX-LOTTERY)CSPRNG均等乱数1名当選 | best-effort | done | — |
+| V3-MKT-08 | プラチナコイン優先(TX-PLATINUM-PRIORITY)累計Coin降順割当 | best-effort | done | — |
+| V3-MKT-09 | マーケット既定ソート好み新着順score算出 | best-effort | in_progress | — |
 | V3-MKT-13 | 部分入金は累積未払額(残債)のみ減算し義務は全額消込まで消えない。過入金は維持費… | best-effort | done | b070403 |
-| V3-MKT-16 | 代金支払期限はマッチング後2週間とし、振込未確認なら売り手が取引をクローズできる… | best-effort | todo | — |
-| V3-MKT-17 | 双方が『合意キャンセル』を押した取引は中止・悪い・レビュー義務を一切記録しない特… | best-effort | todo | — |
-| V3-MKT-21 | 国際配送・通関は『送り国×受け国』の2次元構造(from×to)でR2 JSON… | best-effort | todo | — |
-| V3-MKT-24 | 落札されなかった出品は自動で再出品(値下げ方向のみ)を繰り返す。再出品回数(無制… | best-effort | todo | — |
-| V3-MKT-26 | 商品詳細に公開Q&A掲示板(スレッド形式・質問は即全ユーザー公開、質問ボタンでま… | best-effort | todo | — |
-| V3-MKT-28 | 取引に関する個人情報(氏名・配送先・振込口座・局留め設定)は掲示板に打ち込ませず… | best-effort | todo | — |
-| V3-MKT-34 | 年間最高傑作の標本/象徴(Symbol)や研究標本は、プラチナ100枚での『購入… | best-effort | todo | — |
-| V3-MKT-41 | 市場出品の未認証(unauthenticated)閲覧境界を明示的に定義し(マー… | best-effort | todo | — |
-| V3-MKT-42 | マーケット・掲示板・論文は独立画面/独立Featureではなく検索の『プリセット… | best-effort | todo | — |
-| V3-MKT-44 | 広告を一切表示せず(利益ゼロでも許容)、収益化目的化を避けるため行動リンクを広告… | best-effort | todo | — |
-| V3-MKT-52 | マーケット検索/フィルタAPIは複合インデックス(country+intlOnl… | best-effort | todo | — |
-| V3-MKT-56 | マーケットUIをW2で整理する: 販売方式タブを3(オークション/抽選/プラチナ… | best-effort | todo | — |
-| V3-MKT-59 | IHL 商標マーク使用許諾プログラム: 外部がシステムのデータ登録・信頼性確保を… | best-effort | todo | — |
-| V3-MKT-66 | 予約マーケットにおいて、単価固定・ラブレター形式・貢献度優先の3パターンを、並列… | best-effort | todo | — |
-| V3-MKT-67 | プラチナコインショップの商品は運営者(ユーザー本人)のみが用意し、一般ユーザーは… | best-effort | todo | — |
-| V3-OTH-09 | バージョン戦略: ver2完了基準は『.dev環境で検索でき、画像表示と可変詳細… | best-effort | todo | — |
-| V3-OTH-15 | ユーザー体験の中核循環を『観測→変換(1〜4次)→生成(画像/動画)→評価→司法… | best-effort | todo | — |
-| V3-OTH-20 | タグはsystem_tags(UI自動付与・編集不可)/ai_tags(AI自動… | best-effort | todo | — |
+| V3-MKT-16 | 代金支払期限2週間+売り手手動クローズ+カルマ罰則 | best-effort | todo | — |
+| V3-MKT-17 | 合意キャンセル特別扱い+判例(Y03-Y07)蓄積 | best-effort | todo | — |
+| V3-MKT-21 | 国際配送from×to R2 JSON+標本限定+総額表示 | best-effort | done | — |
+| V3-MKT-24 | 落札されなかった出品の自動再出品(値下げ方向) | best-effort | in_progress | — |
+| V3-MKT-26 | 公開Q&A(RAG提示)+ほめボード | best-effort | todo | — |
+| V3-MKT-28 | 取引時PII暗号化保持+完了後消去 | best-effort | todo | — |
+| V3-MKT-34 | プラチナ象徴(Symbol)二段階購入(購入権+現金実物購入) | best-effort | done | — |
+| V3-MKT-41 | 市場出品の未認証閲覧境界ADR+POST/listing-registry認証保護 | best-effort | in_progress | — |
+| V3-MKT-42 | マーケット/掲示板/論文を検索プリセット統一(専用データ構造を作らない) | best-effort | todo | — |
+| V3-MKT-44 | 広告非表示+アフィリエイトリンク選択+ProductNode評価 | best-effort | todo | — |
+| V3-MKT-52 | マーケット検索/フィルタAPI複合インデックス+cursor pagination | best-effort | in_progress | — |
+| V3-MKT-56 | マーケットUI整理(タブ統合+GMOインライン+06soc削除) | best-effort | todo | — |
+| V3-MKT-59 | IHL商標マーク使用許諾プログラム | best-effort | todo | — |
+| V3-MKT-66 | 予約マーケット3パターン(単価固定/ラブレター/貢献度優先)統合選択 | best-effort | todo | — |
+| V3-MKT-67 | プラチナコインショップ商品は運営者のみ発行 | best-effort | done | — |
+| V3-OTH-09 | バージョン戦略(ver2/ver3/ver4段階リリース) | best-effort | done | — |
+| V3-OTH-15 | 観測→変換→生成→評価→司法→OS進化の自己進化循環 | best-effort | done | — |
+| V3-OTH-20 | タグ3層構造(system_tags/ai_tags/user_tags)+RAG優先度 | best-effort | todo | — |
 
 ### L3/L4-auth
 
@@ -184,20 +192,20 @@
 | V3-I18-04 | ログインUI文言は日本語中心とし、locale設定はオンボーディ… | required | done | — |
 | V3-I18-06 | UGC(掲示板投稿・二人部屋メッセージ・出品説明・自由記述等)は作者言語の原文の… | required | done | b3cd929 |
 | V3-I18-08 | UI文言リソースをキー化({screen}.{component}.{field… | required | done | — |
-| V3-AUT-24 | 創世アカウント IT.Hercules.Laboratory(role:admi… | best-effort | todo | — |
+| V3-AUT-24 | 創世アカウント IT.Hercules.Laboratory(role:admi… | best-effort | blocked | — |
 | V3-AUT-26 | 世界全体にowner/editor/viewer等のロール(role)を定義し、… | best-effort | todo | — |
 | V3-AUT-28 | 投稿・観察記録・研究・プロフィールなど各コンテンツ種別ごとにデフォルト公開範囲(… | best-effort | todo | — |
-| V3-AUT-31 | メールアドレス乗っ取り時はアカウントを即時凍結(freeze=true)し、元の… | best-effort | todo | — |
+| V3-AUT-31 | メールアドレス乗っ取り時はアカウントを即時凍結(freeze=true)し、元の… | best-effort | blocked | — |
 | V3-AUT-32 | 乗っ取り対策として弱い秘密の質問は採用せず、バックアップメール・端末信頼・ログイ… | best-effort | todo | — |
-| V3-AUT-33 | 物理userテーブルはUUIDとメール(任意)のみの最小構成とし、状態はstat… | best-effort | todo | — |
+| V3-AUT-33 | 物理userテーブルはUUIDとメール(任意)のみの最小構成とし、状態はstat… | best-effort | done | — |
 | V3-AUT-38 | GitHubユーザー名とIHLユーザーIDの対応表(world/economy/… | best-effort | todo | — |
 | V3-AUT-40 | ログイン/認証はuserIdを全APIに伝搬でき、admin/memberロール… | best-effort | todo | — |
-| V3-AUT-41 | マイページ/サイドメニューでカルマ・プラチナコイン所持枚数・貢献度・「相手を良い… | best-effort | todo | — |
-| V3-I18-05 | 言語設定はUIと翻訳表示の基準のみを決め、国籍・居住地・タイムゾーン・法的管轄・… | best-effort | todo | — |
-| V3-I18-09 | 全UI JSONを走査して翻訳対象となるテキストキー全般(label/title… | best-effort | todo | — |
-| V3-I18-10 | 翻訳解決順を user > country > official > auto … | best-effort | todo | — |
-| V3-I18-11 | 翻訳辞書はLLMで初期自動生成(英語をハブ言語に日本語→英語→他言語)し、変な翻… | best-effort | todo | — |
-| V3-I18-17 | 国籍によってUIを分けず全ユーザー共通のデフォルトUIとし、国旗はデフォルト非表… | best-effort | todo | — |
+| V3-AUT-41 | マイページ/サイドメニューでカルマ・プラチナコイン所持枚数・貢献度・「相手を良… | best-effort | todo | — |
+| V3-I18-05 | 言語設定はUIと翻訳表示の基準のみを決め、国籍・居住地・タイムゾーン・法的管轄・… | best-effort | done | — |
+| V3-I18-09 | 全UI JSONを走査して翻訳対象となるテキストキー全般(label/title… | best-effort | done | — |
+| V3-I18-10 | 翻訳解決順を user > country > official > auto … | best-effort | done | — |
+| V3-I18-11 | 翻訳辞書はLLMで初期自動生成(英語をハブ言語に日本語→英語→他言語)し、変な翻… | best-effort | done | — |
+| V3-I18-17 | 国籍によってUIを分けず全ユーザー共通のデフォルトUIとし、国旗はデフォルト非表… | best-effort | done | — |
 
 ### L4
 
@@ -306,33 +314,33 @@
 | V3-FND-30 | MVP v1スコープを明確化する:マーケット(#06)・マチアプ(… | required | in_progress | — |
 | V3-FND-34 | バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバ… | required | done | c5ecd17 |
 | V3-FND-35 | 外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配… | required | done | 8eb8358, f3ebe59 |
-| V3-AIP-100 | 使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)が… | best-effort | todo | — |
-| V3-AIP-102 | 技術記事投稿パック: システム案・思想を複数技術サイトへ投稿できる「コピペ完結」… | best-effort | todo | — |
-| V3-AIP-103 | マルチ SNS 自動投稿オーケストレーション: 1 コンテンツを Instagr… | best-effort | todo | — |
-| V3-AIP-47 | 独自UIを発明する前に必ずOSS事例調査(ライセンス/流用範囲/効果)を設計フェ… | best-effort | todo | — |
-| V3-AIP-51 | E2E詳細化には要件定義書だけでは不足で、ユーザー入力(HQ判断/シナリオ)とP… | best-effort | todo | — |
-| V3-AIP-58 | やるべきタスクとその依存順序を00-マスター実行順.mdに集約しチャット毎に追記… | best-effort | todo | — |
-| V3-AIP-62 | 実装をフェーズ0(要件確定)→1(プロトタイプ)→2(条件リクエスト/フォーク)… | best-effort | todo | — |
-| V3-AIP-71 | 非エンジニアでも実行できるワンクリック/コピペ起動を用意する：ホストにNodeを… | best-effort | todo | — |
-| V3-AIP-73 | エージェントに実装を委ねる際はRAGに基づく思想理解に沿った改善は事前確認不要で… | best-effort | todo | — |
-| V3-AIP-75 | 生成物(画像・字幕・タイトル・タグ・台本等)はすべてユーザーのOK/NG評価と理… | best-effort | todo | — |
-| V3-AIP-79 | 段階的リリースを取り最小核(観測してデータが取れる+個体ページ閲覧+Issue風… | best-effort | todo | — |
-| V3-AIP-81 | 世界(DB+API)とUI(文化)をリポジトリレベルで分離しWorld=不変/U… | best-effort | todo | — |
-| V3-AIP-82 | AIはUIコードや世界を直接書かず(World/UIのJSON(AST)またはC… | best-effort | todo | — |
+| V3-AIP-100 | 使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)が… | best-effort | in_progress | — |
+| V3-AIP-102 | 技術記事投稿パック: システム案・思想を複数技術サイトへ投稿できる「コピペ完結」… | best-effort | in_progress | — |
+| V3-AIP-103 | マルチ SNS 自動投稿オーケストレーション: 1 コンテンツを Instagr… | best-effort | in_progress | — |
+| V3-AIP-47 | 独自UIを発明する前に必ずOSS事例調査(ライセンス/流用範囲/効果)を設計フェ… | best-effort | done | — |
+| V3-AIP-51 | E2E詳細化には要件定義書だけでは不足で、ユーザー入力(HQ判断/シナリオ)とP… | best-effort | done | — |
+| V3-AIP-58 | やるべきタスクとその依存順序を00-マスター実行順.mdに集約しチャット毎に追記… | best-effort | done | — |
+| V3-AIP-62 | 実装をフェーズ0(要件確定)→1(プロトタイプ)→2(条件リクエスト/フォーク)… | best-effort | done | — |
+| V3-AIP-71 | 非エンジニアでも実行できるワンクリック/コピペ起動を用意する：ホストにNodeを… | best-effort | in_progress | — |
+| V3-AIP-73 | エージェントに実装を委ねる際はRAGに基づく思想理解に沿った改善は事前確認不要で… | best-effort | done | — |
+| V3-AIP-75 | 生成物(画像・字幕・タイトル・タグ・台本等)はすべてユーザーのOK/NG評価と理… | best-effort | in_progress | — |
+| V3-AIP-79 | 段階的リリースを取り最小核(観測してデータが取れる+個体ページ閲覧+Issue風… | best-effort | done | — |
+| V3-AIP-81 | 世界(DB+API)とUI(文化)をリポジトリレベルで分離しWorld=不変/U… | best-effort | done | — |
+| V3-AIP-82 | AIはUIコードや世界を直接書かず(World/UIのJSON(AST)またはC… | best-effort | done | — |
 | V3-AIP-86 | コンテンツ生成AI(要約・モデレーション・司法アシスタント・判例生成等)のプロン… | best-effort | todo | — |
-| V3-AIP-87 | 現状の実装から現在の仕様書をJSONで自動生成し(実装/過去HTML→設計の逆流… | best-effort | todo | — |
-| V3-AIP-88 | 仕様統合の優先順位ルールを「現在の実装仕様<旧設計書<新アイディア<マイクロカー… | best-effort | todo | — |
-| V3-AIP-89 | コード構造をKernel(物理法則/API・データ・計算・観測)・Feature… | best-effort | todo | — |
-| V3-AIP-91 | 実装は依存関係の積み上げ順(userid→観測→そのデータを使う多機能→変換→台… | best-effort | todo | — |
-| V3-AIP-95 | AI推論の切替をAI_MODE=stub\|prod/LOCALAI_ENABLE… | best-effort | todo | — |
-| V3-CST-03 | AI運用コストを最適化する:調査タスクは上位モデルで直接回さず下位モデルで実行、… | best-effort | todo | — |
-| V3-FND-06 | 世界状態を immutable な snapshot として保存し、上書きせず版… | best-effort | todo | — |
-| V3-FND-07 | 文明全体の状態を定期(四半期等)に Era Snapshot として R2 へ保… | best-effort | todo | — |
-| V3-FND-08 | ユーザーが自分のデータ(個体・観察・研究・設定・デバイス等)を範囲選択して多形式… | best-effort | todo | — |
+| V3-AIP-87 | 現状の実装から現在の仕様書をJSONで自動生成し(実装/過去HTML→設計の逆流… | best-effort | in_progress | — |
+| V3-AIP-88 | 仕様統合の優先順位ルールを「現在の実装仕様<旧設計書<新アイディア<マイクロカー… | best-effort | done | — |
+| V3-AIP-89 | コード構造をKernel(物理法則/API・データ・計算・観測)・Feature… | best-effort | done | — |
+| V3-AIP-91 | 実装は依存関係の積み上げ順(userid→観測→そのデータを使う多機能→変換→台… | best-effort | done | — |
+| V3-AIP-95 | AI推論の切替をAI_MODE=stub\|prod/LOCALAI_ENABLE… | best-effort | in_progress | — |
+| V3-CST-03 | AI運用コストを最適化する:調査タスクは上位モデルで直接回さず下位モデルで実行、… | best-effort | done | — |
+| V3-FND-06 | 世界状態を immutable な snapshot として保存し、上書きせず版… | best-effort | done | — |
+| V3-FND-07 | 文明全体の状態を定期(四半期等)に Era Snapshot として R2 へ保… | best-effort | done | — |
+| V3-FND-08 | ユーザーが自分のデータ(個体・観察・研究・設定・デバイス等)を範囲選択して多形式… | best-effort | in_progress | — |
 | V3-FND-22 | APIは統一エンベロープ形式(data/meta{requestId,times… | best-effort | todo | — |
-| V3-FND-23 | OpenTelemetry/Prometheus によるHTTPミドルウェア計装… | best-effort | todo | — |
+| V3-FND-23 | OpenTelemetry/Prometheus によるHTTPミドルウェア計装… | best-effort | done | — |
 | V3-FND-31 | 全認証ユーザーが本番の写しから安全に試験し改善テンプレートとして昇格できる Pe… | best-effort | todo | — |
-| V3-FND-33 | 観測画面だけを先行してWeb公開し、画面のボタン等を止めずに後からシステム(掲示… | best-effort | todo | — |
+| V3-FND-33 | 観測画面だけを先行してWeb公開し、画面のボタン等を止めずに後からシステム(掲示… | best-effort | done | — |
 
 ### L4-gov
 
@@ -366,7 +374,7 @@
 | V3-SEC-24 | 利用規約の条文正本・法務文言はAIが自律的に変更してはならない(#02 HUMA… | required | done | — |
 | V3-SEC-26 | 自己ホスト版とクラウド提供版の責任分界を条文で明示し、自己ホスト利用者向けに『デ… | required | todo | — |
 | V3-SEC-30 | 文明OSはOSS前提(Apache 2.0/MIT検討)で公開し、仕様書・R2構… | required | todo | — |
-| V3-SEC-31 | 特許は取得せず、公開日をもって先使用権を主張する『公開宣言書』(MANIFEST… | required | todo | — |
+| V3-SEC-31 | 特許は取得せず、公開日をもって先使用権を主張する『公開宣言書』(MANIFEST… | required | done | — |
 | V3-SEC-34 | 外部データの取り込みは共有ボタン/認証済みAPI/OAuth(GitHub/No… | required | done | — |
 | V3-SEC-41 | ValueCheck/好みセッションは本人JWTと組み合わせた検索ブーストのみに… | required | done | ec51ada |
 | V3-SEC-42 | 画像・解析データにSHA-256(元画像・ROIマスク・解析結果JSON)/Me… | required | done | ca52bb8 |
@@ -378,16 +386,16 @@
 | V3-SEC-58 | 書込系レート制限+ユーザー別クォータ: R2書込経路にレート制限とユーザー別クォ… | required | done | c3a907e |
 | V3-GOV-02 | 争い入口を一本化し、単一のdispute-roomコンポーネントがanchor_… | best-effort | todo | — |
 | V3-GOV-03 | 指摘の仕様: 入口は指摘のみ(通報UIを置かない)、タグ+理由テキストを必須。同… | best-effort | todo | — |
-| V3-GOV-04 | 第三者の争いへの関与は閲覧のみとし投稿はさせない。 | best-effort | todo | — |
+| V3-GOV-04 | 第三者の争いへの関与は閲覧のみとし投稿はさせない。 | best-effort | done | — |
 | V3-GOV-05 | 合意時は削除せずR2 append-onlyで新版を追加し、被指摘側の修正提案→… | best-effort | todo | — |
-| V3-GOV-06 | 合意しなければ1ヶ月で強制クローズする。合意の自動検知・強制合意はスコープ外(判… | best-effort | todo | — |
-| V3-GOV-08 | 指摘カルマΔcountルール: 市場紛争カテゴリ(Y01-Y15/虚偽出品・配送… | best-effort | todo | — |
-| V3-GOV-14 | 違反対応は段階的ペナルティとする: まず警告(ミスかもしれない)→複数回続くとカ… | best-effort | todo | — |
+| V3-GOV-06 | 合意しなければ1ヶ月で強制クローズする。合意の自動検知・強制合意はスコープ外(判… | best-effort | done | — |
+| V3-GOV-08 | 指摘カルマΔcountルール: 市場紛争カテゴリ(Y01-Y15/虚偽出品・配送… | best-effort | done | — |
+| V3-GOV-14 | 違反対応は段階的ペナルティとする: まず警告(ミスかもしれない)→複数回続くとカ… | best-effort | done | — |
 | V3-GOV-15 | モデレーション/違反履歴の透明性を階層化する: 本人は全文・スコア・カテゴリ・カ… | best-effort | todo | — |
 | V3-GOV-16 | 管理者は運営者1人のみとし常駐せず『召喚型』とする(思想の純度維持)。日常は研究… | best-effort | todo | — |
 | V3-GOV-17 | 管理者は権限付与アカウントのみに管理者管理画面(A9000系)を表示し、GUIか… | best-effort | todo | — |
-| V3-GOV-18 | API追加・R2追加・テーブル追加など『壊れないためのセーフティ』が必要な危険操… | best-effort | todo | — |
-| V3-GOV-21 | 文明OSを完全構造主義(善意・信頼・人間性に依存せず、裏切りの利得<協調の割引現… | best-effort | todo | — |
+| V3-GOV-18 | API追加・R2追加・テーブル追加など『壊れないためのセーフティ』が必要な危険操… | best-effort | done | — |
+| V3-GOV-21 | 文明OSを完全構造主義(善意・信頼・人間性に依存せず、裏切りの利得<協調の割引現… | best-effort | done | — |
 | V3-GOV-24 | OSフォーク権限を文明ごとの政治制度(封建制=Creator/Adminのみ/共… | best-effort | todo | — |
 | V3-GOV-25 | 変更管理プロトコル(CMP)/AI管理官(A90)憲法: 仕様変更は『変更理由の… | best-effort | todo | — |
 | V3-GOV-26 | 世界観ガード(Worldview Guardian/G50)がAI生成物・投稿を… | best-effort | todo | — |
@@ -395,24 +403,24 @@
 | V3-GOV-34 | マーケットの不適切な出品は、ワードフィルタ等の事前防止に頼らず(抜け道が無数にあ… | best-effort | todo | — |
 | V3-GOV-35 | 違法/規約違反の疑いがある出品への指摘は、国により合法/違法の基準が異なり時代で… | best-effort | done | b070403 |
 | V3-GOV-36 | 投票制度は二層とする: ①無料のノーコスト投票(誰でも参加) ②プラチナコイン『… | best-effort | todo | — |
-| V3-SEC-01 | 観測データは原則オープンデータ(ライセンス選択可)とし、論文本文は著作権配慮のう… | best-effort | todo | — |
-| V3-SEC-08 | 公開データのユーザーIDは public_user_id=SHA256(user… | best-effort | todo | — |
-| V3-SEC-10 | サンドボックス用にユーザーIDを1,2,3...へ連番再割り当てし、変換表(ルー… | best-effort | todo | — |
-| V3-SEC-12 | 個人情報を掲示板・公開チャット・公開ボードに打ち込ませず、取引前に局留め氏名(フ… | best-effort | todo | — |
-| V3-SEC-21 | 利用規約を『法的版(binding・単一正本)』と『やさしい読み版(小学5年生向… | best-effort | todo | — |
-| V3-SEC-22 | 利用規約の各条にはその条を設けた意図を解説するYouTube動画を紐づけ、改定時… | best-effort | todo | — |
-| V3-SEC-23 | 法的版に版ID(terms_version・agreedTermsVersion… | best-effort | todo | — |
-| V3-SEC-25 | 利用規約・プライバシー・市場/プラチナコイン利用注意の法務ドラフトと人間確認チェ… | best-effort | todo | — |
-| V3-SEC-27 | IHLは civilization-os とは別の独立ToS/Privacyを … | best-effort | todo | — |
-| V3-SEC-29 | 利用規約に収集項目(メールアドレス・国・言語・行動履歴/画面遷移/AI利用履歴)… | best-effort | todo | — |
-| V3-SEC-35 | システムは外部AIモデルの再学習(学習)には使わず、取り込んだデータは推論・保存… | best-effort | todo | — |
-| V3-SEC-37 | テンプレート/OSS取り込みはオープンライセンスのものだけを選んで一括取り込みし… | best-effort | todo | — |
-| V3-SEC-39 | コンテンツ本文はMarkdownとしXSSフィルタを適用してsanitize済み… | best-effort | todo | — |
-| V3-SEC-43 | 投稿画像はhash(perceptual/difference/wavelet)… | best-effort | todo | — |
-| V3-SEC-44 | QRコードは公開用(標本・展示向け・暗号化なし・誰でも読み取り可)と観測/管理用… | best-effort | todo | — |
-| V3-SEC-47 | 価値操作をサーバー側で強制する: コイン増減はサーバー(role=system)… | best-effort | todo | — |
-| V3-SEC-48 | ストレージから読み込んだデータ・APIで受け取ったJSONはKernelに渡す前… | best-effort | todo | — |
-| V3-SEC-50 | ユーザーのブランド資産(ロゴ等)を『禁止/保護アセット(A110/protect… | best-effort | todo | — |
+| V3-SEC-01 | 観測データオープンデータ・PII匿名化必須化・貢献者同意ToS明確化 | best-effort | done | — |
+| V3-SEC-08 | public_user_id=SHA256(user_id+secret_salt)不可逆ハッシュ化 | best-effort | done | — |
+| V3-SEC-10 | サンドボックス連番ID再割当・変換表はローカルのみR2非保存 | best-effort | done | — |
+| V3-SEC-12 | PII直書き防止・局留め連絡先事前登録・取引相手限定参照 | best-effort | done | — |
+| V3-SEC-21 | 利用規約 法的版/やさしい版/動画 三形態 | best-effort | in_progress | — |
+| V3-SEC-22 | ToS条文↔動画 resolver層(terms_version+section_id+media_kind) | best-effort | in_progress | — |
+| V3-SEC-23 | terms_version版管理・再同意フロー・scroll gate・暗黙同意廃止 | best-effort | in_progress | — |
+| V3-SEC-25 | 利用規約/プライバシー法務ドラフト+人間確認チェックリスト(docs/legal) | best-effort | in_progress | — |
+| V3-SEC-27 | IHL独立ToS/Privacy新規作成(civ-os流用禁止) | best-effort | in_progress | — |
+| V3-SEC-29 | 収集項目明記・広告目的不使用・行動ログ用途限定 | best-effort | done | — |
+| V3-SEC-35 | 外部AIモデル再学習に使わない構造宣言 | best-effort | done | — |
+| V3-SEC-37 | OSS/テンプレート取り込みライセンス管理(CC-BY/no-redistribute/GPL) | best-effort | done | — |
+| V3-SEC-39 | Markdown本文XSSサニタイズ・翻訳結果もXSS入口にしない | best-effort | done | — |
+| V3-SEC-43 | 投稿画像の知覚ハッシュによる盗用・すり替え検知 | best-effort | in_progress | — |
+| V3-SEC-44 | QR2系統(公開用平文/観測管理用AES-256-GCM+Ed25519署名) | best-effort | in_progress | — |
+| V3-SEC-47 | サーバー側価値操作強制(role=system・UNIQUE制約・レート制限・DM取引禁止) | best-effort | in_progress | — |
+| V3-SEC-48 | Kernel入口JSON構造バリデーション・permissions強制・Universe物理分離 | best-effort | in_progress | — |
+| V3-SEC-50 | 保護アセット(ブランド資産)NG設定・種別明示指定・観測データ保護対象外 | best-effort | done | — |
 
 ### L4-knowledge
 
@@ -463,36 +471,36 @@
 | V3-WIK-28 | Cursor等のAIセッションを全て閲覧できるようにし、サブ脳として情報を整理・… | required | done | 36fa042 |
 | V3-WIK-29 | 論文/研究のためにanthropics/life-sciences等の外部知識(… | required | done | bc4f513 |
 | V3-WIK-30 | 仕様書のルール(例: 掲示板作成+5Pt)をJSONで全公開し、誰でも文明の『法… | required | done | — |
-| V3-BBS-02 | 製品掲示板の主入口を『愚痴・改善・論文・その他』の4つのみに限定し、独立Rese… | best-effort | todo | — |
+| V3-BBS-02 | 製品掲示板の主入口を『愚痴・改善・論文・その他』の4つのみに限定し、独立Rese… | best-effort | in_progress | — |
 | V3-BBS-04 | 全画面分の掲示板スレッド(公式説明スレ+愚痴スレ、125画面×2=250スレ)を… | best-effort | todo | — |
-| V3-BBS-06 | 掲示板の紛争解決は『通報』ではなく『指摘』ボタンとし、指摘タグ選択と理由記入を必… | best-effort | todo | — |
-| V3-BBS-08 | 指摘への合意が得られた場合、被指摘者が修正表現を提案し指摘者が了承すると元発言の… | best-effort | todo | — |
-| V3-BBS-11 | 掲示板は自然言語検索で先に既存の適合掲示板へ誘導・提案し(複数候補)、結果が十分… | best-effort | todo | — |
-| V3-BBS-12 | 掲示板作成はAIがタイトル・タグ・説明・目的のたたき台を自動記入し、ユーザーがク… | best-effort | todo | — |
-| V3-BBS-15 | 通報システムは導入せず、法律に反する言動があれば即BAN、それ以外はコミュニティ… | best-effort | todo | — |
+| V3-BBS-06 | 掲示板の紛争解決は『通報』ではなく『指摘』ボタンとし、指摘タグ選択と理由記入を必… | best-effort | done | — |
+| V3-BBS-08 | 指摘への合意が得られた場合、被指摘者が修正表現を提案し指摘者が了承すると元発言の… | best-effort | done | — |
+| V3-BBS-11 | 掲示板は自然言語検索で先に既存の適合掲示板へ誘導・提案し(複数候補)、結果が十分… | best-effort | in_progress | — |
+| V3-BBS-12 | 掲示板作成はAIがタイトル・タグ・説明・目的のたたき台を自動記入し、ユーザーがク… | best-effort | done | — |
+| V3-BBS-15 | 通報システムは導入せず、法律に反する言動があれば即BAN、それ以外はコミュニティ… | best-effort | done | — |
 | V3-BBS-16 | 開発掲示板はOS/システムのフォルダ構造・ファイル構成と同じ階層・同粒度で用意し… | best-effort | done | — |
 | V3-BBS-18 | 文明のあらゆる行動(カルマ変動・プラチナ付与・貢献度・称号・レビュー・取引・DM… | best-effort | todo | — |
-| V3-BBS-19 | DM/メッセージ機能をスレッド一覧+バブル表示で提供しR2(dm/{thread… | best-effort | todo | — |
-| V3-BBS-21 | 掲示板/コミュニティを『掲示板』ではなく『コミュニティの記憶・知識史システム』と… | best-effort | todo | — |
-| V3-BBS-25 | 掲示板(BBS)はフルDiscourse実装ではなくスレッド/投稿をJSONLイ… | best-effort | todo | — |
+| V3-BBS-19 | DM/メッセージ機能をスレッド一覧+バブル表示で提供しR2(dm/{thread… | best-effort | done | — |
+| V3-BBS-21 | 掲示板/コミュニティを『掲示板』ではなく『コミュニティの記憶・知識史システム』と… | best-effort | done | — |
+| V3-BBS-25 | 掲示板(BBS)はフルDiscourse実装ではなくスレッド/投稿をJSONLイ… | best-effort | in_progress | — |
 | V3-BBS-26 | GitHub掲示板柱は自前掲示板UIを作り込まず、GitHub Discussi… | best-effort | todo | — |
 | V3-BBS-32 | 思想・構造・哲学を公知化する技術宣言書(Technical Manifesto)… | best-effort | todo | — |
-| V3-BBS-33 | 掲示板統計(投稿数推移・アクティブユーザー・文化スコア・時間帯ヒートマップ・タグ… | best-effort | todo | — |
-| V3-PPR-05 | AI査読パイプラインの段階1〜5(構造・欠損・再現性・整合性・統計)を決定論コー… | best-effort | todo | — |
-| V3-PPR-08 | 引用(Citation)を独立エンティティとして扱い、掲示板↔論文↔観測↔論文↔… | best-effort | todo | — |
-| V3-PPR-10 | 解析エンジンをセマンティックバージョニングで凍結(Major=論文単位で固定/M… | best-effort | todo | — |
-| V3-PPR-11 | R2上の画像・解析データを研究目的でAPI経由取得可能(CC0推奨・利用制限なし… | best-effort | todo | — |
-| V3-PPR-15 | 論文/仮説の信頼度を、データ量補正f_data=1-e^(-k・n)、一貫性補正… | best-effort | todo | — |
-| V3-PPR-19 | 既存の論文商業モデル(有料・閲覧制限・取り寄せ)への不満から、情報は無料で共有さ… | best-effort | todo | — |
-| V3-PPR-21 | 個体データ蓄積の研究枠を事業内に恒常的に確保し、毎年温度・マット配合・容器サイズ… | best-effort | todo | — |
-| V3-PPR-24 | 研究コミュニティをSNS/掲示板/Wikiではなく、個体(Individual)… | best-effort | todo | — |
-| V3-PPR-25 | 研究循環レイヤー(paper/review/hypothesis/replica… | best-effort | todo | — |
+| V3-BBS-33 | 掲示板統計(投稿数推移・アクティブユーザー・文化スコア・時間帯ヒートマップ・タグ… | best-effort | in_progress | — |
+| V3-PPR-05 | AI査読パイプラインの段階1〜5(構造・欠損・再現性・整合性・統計)を決定論コー… | best-effort | done | — |
+| V3-PPR-08 | 引用(Citation)を独立エンティティとして扱い、掲示板↔論文↔観測↔論文↔… | best-effort | in_progress | — |
+| V3-PPR-10 | 解析エンジンをセマンティックバージョニングで凍結(Major=論文単位で固定/M… | best-effort | done | — |
+| V3-PPR-11 | R2上の画像・解析データを研究目的でAPI経由取得可能(CC0推奨・利用制限なし… | best-effort | done | — |
+| V3-PPR-15 | 論文/仮説の信頼度を、データ量補正f_data=1-e^(-k・n)、一貫性補正… | best-effort | done | — |
+| V3-PPR-19 | 既存の論文商業モデル(有料・閲覧制限・取り寄せ)への不満から、情報は無料で共有さ… | best-effort | done | — |
+| V3-PPR-21 | 個体データ蓄積の研究枠を事業内に恒常的に確保し、毎年温度・マット配合・容器サイズ… | best-effort | done | — |
+| V3-PPR-24 | 研究コミュニティをSNS/掲示板/Wikiではなく、個体(Individual)… | best-effort | blocked | — |
+| V3-PPR-25 | 研究循環レイヤー(paper/review/hypothesis/replica… | best-effort | blocked | — |
 | V3-WIK-08 | サブブレインの自己検証(同じ質問セットをwiki経由vsベタ読みでトークン・時間… | best-effort | todo | — |
-| V3-WIK-18 | 会話ログ・掲示板・R2ログ・観測データを、mini_chunk(1〜2往復・思考… | best-effort | todo | — |
+| V3-WIK-18 | 会話ログ・掲示板・R2ログ・観測データを、mini_chunk(1〜2往復・思考… | best-effort | done | — |
 | V3-WIK-21 | すべての進化・変更・判断を時系列で保存し、いつでも読み返せる記録庫(アーカイブ)… | best-effort | todo | — |
 | V3-WIK-23 | 検索・embedding計算をユーザー端末上でローカル実行する。テキスト用(Mi… | best-effort | todo | — |
-| V3-WIK-24 | RAGをBase Index(全ノード検索・MVP必須)/Culture Ind… | best-effort | todo | — |
-| V3-WIK-32 | テンプレート(スケール紙・QRラベル・研究ノート・生体カード・UIテンプレ・台本… | best-effort | todo | — |
+| V3-WIK-24 | RAGをBase Index(全ノード検索・MVP必須)/Culture Ind… | best-effort | in_progress | — |
+| V3-WIK-32 | テンプレート(スケール紙・QRラベル・研究ノート・生体カード・UIテンプレ・台本… | best-effort | done | — |
 | V3-WIK-35 | 論文データ・観測データ・種族/市場文化から初心者向け情報(買う場所・種族名の読み… | best-effort | todo | — |
 
 ### L4-obs
@@ -559,38 +567,38 @@
 | V3-OBS-63 | タグは真実でなく解釈のため固定列の現在値でなくappend-onlyなtag e… | required | done | — |
 | V3-OBS-72 | 研究室環境コンテキストの紐付け: 部屋・棚の配置、エアコン等の空調環境、センサー… | required | done | 23a4064 |
 | V3-OBS-73 | データエクスポート二層+要件CRフロー: ユーザーデータを二層(事実CSV/画像… | required | done | 65d7a00, cc21229 |
-| V3-IND-03 | 観測登録時に個体をindividual_id+display_nameで扱い、ユ… | best-effort | todo | — |
-| V3-IND-05 | 血統(親子)表示で最良個体のみ次世代シリーズ名(例「玉」→「王」)へ昇格させる仕… | best-effort | todo | — |
-| V3-IND-06 | 親表示はハイブリッド(Q7 C): truthはADR-H-11のparent_… | best-effort | todo | — |
-| V3-IND-09 | マチアプに、価値観の精度を上げるPairwise比較画面(記載済み②)の前段とし… | best-effort | todo | — |
-| V3-IND-11 | 色などの見た目を画像解析しユーザーの好みを統計学習して「理想個体に近づくにはどの… | best-effort | todo | — |
+| V3-IND-03 | 観測登録時に個体をindividual_id+display_nameで扱い、ユ… | best-effort | done | — |
+| V3-IND-05 | 血統(親子)表示で最良個体のみ次世代シリーズ名(例「玉」→「王」)へ昇格させる仕… | best-effort | in_progress | — |
+| V3-IND-06 | 親表示はハイブリッド(Q7 C): truthはADR-H-11のparent_… | best-effort | done | — |
+| V3-IND-09 | マチアプに、価値観の精度を上げるPairwise比較画面(記載済み②)の前段とし… | best-effort | blocked | — |
+| V3-IND-11 | 色などの見た目を画像解析しユーザーの好みを統計学習して「理想個体に近づくにはどの… | best-effort | blocked | — |
 | V3-IND-14 | 個体一覧(A1)はキーワード・種族・形態・状態(生体/蛹/幼虫/死亡/標本)・テ… | best-effort | done | 65d7a00 |
-| V3-IND-16 | 生体の一生をイベントログ(bio.created/moved/scheduled… | best-effort | todo | — |
-| V3-IND-17 | 個体観測データは死亡・失敗も正式ステータス(alive/dead/failed、… | best-effort | todo | — |
-| V3-IND-23 | 研究プロジェクト(projectId/P100)を中心に論文・個体・マット・製造… | best-effort | todo | — |
-| V3-IND-26 | 成体の成長を追う4D Viewerは3D(体重X/体長Y/成長速度Z)+時間(s… | best-effort | todo | — |
-| V3-IND-28 | 個体にlocation_history(場所×期間)を持たせ、Workerが期間… | best-effort | todo | — |
-| V3-IND-29 | 棚の揺れイベント(ジャイロ閾値超過)を検出し、その時棚にいた個体に自動で紐づけて… | best-effort | todo | — |
-| V3-IND-31 | ヘラクレスオオカブトの成長研究を環境・容器/空間・栄養・遺伝・成長プロセス・外乱… | best-effort | todo | — |
-| V3-OBS-12 | ヘラクレス標準撮影チャンバー(40×40cm級マットグレー箱・CRI/Ra95以… | best-effort | todo | — |
-| V3-OBS-13 | 甲虫色彩計測標準規格BPCMS v1.0を凍結制定する。ただし観測の生画像は無補… | best-effort | todo | — |
-| V3-OBS-30 | デバイスのデータ取得間隔をデフォルト/一括上書き/複数選択/個別デバイスの4階層… | best-effort | todo | — |
+| V3-IND-16 | 生体の一生をイベントログ(bio.created/moved/scheduled… | best-effort | in_progress | — |
+| V3-IND-17 | 個体観測データは死亡・失敗も正式ステータス(alive/dead/failed、… | best-effort | done | — |
+| V3-IND-23 | 研究プロジェクト(projectId/P100)を中心に論文・個体・マット・製造… | best-effort | in_progress | — |
+| V3-IND-26 | 成体の成長を追う4D Viewerは3D(体重X/体長Y/成長速度Z)+時間(s… | best-effort | blocked | — |
+| V3-IND-28 | 個体にlocation_history(場所×期間)を持たせ、Workerが期間… | best-effort | done | — |
+| V3-IND-29 | 棚の揺れイベント(ジャイロ閾値超過)を検出し、その時棚にいた個体に自動で紐づけて… | best-effort | blocked | — |
+| V3-IND-31 | ヘラクレスオオカブトの成長研究を環境・容器/空間・栄養・遺伝・成長プロセス・外乱… | best-effort | done | — |
+| V3-OBS-12 | ヘラクレス標準撮影チャンバー(40×40cm級マットグレー箱・CRI/Ra95以上6500K固定LED…) | best-effort | done | — |
+| V3-OBS-13 | 甲虫色彩計測標準規格BPCMS v1.0を凍結制定する。ただし観測の生画像は無補正で保存し… | best-effort | done | — |
+| V3-OBS-30 | デバイスのデータ取得間隔をデフォルト/一括上書き/複数選択/個別デバイスの4階層… | best-effort | done | — |
 | V3-OBS-33 | 環境観測は2層とし、Tier A(ガバナンスイベント)はINSERT ONLYを… | best-effort | todo | — |
-| V3-OBS-34 | 占有(Occupancy)参照モデルとして個体・観測対象ごとに環境ファイルを増殖… | best-effort | todo | — |
-| V3-OBS-38 | 画像表示のパフォーマンス・コストを段階的に最適化する。まず低コスト改善(サムネイ… | best-effort | todo | — |
-| V3-OBS-40 | 観測登録APIはフロントの偽sessionId生成でなく、バックエンドが実際のs… | best-effort | todo | — |
-| V3-OBS-42 | 検索/好み学習を連携する。好み学習(pairwise投票)で得た数値prefer… | best-effort | todo | — |
-| V3-OBS-50 | 観測データ構造をSpecies(種)→Form(形態)→Individual(個… | best-effort | todo | — |
+| V3-OBS-34 | 占有(Occupancy)参照モデルとして個体・観測対象ごとに環境ファイルを増殖… | best-effort | done | — |
+| V3-OBS-38 | 画像表示のパフォーマンス・コストを段階的に最適化する。まず低コスト改善(サムネイ… | best-effort | done | — |
+| V3-OBS-40 | 観測登録APIはフロントの偽sessionId生成でなく、バックエンドが実際のs… | best-effort | done | — |
+| V3-OBS-42 | 検索/好み学習を連携する。好み学習(pairwise投票)で得た数値prefer… | best-effort | done | — |
+| V3-OBS-50 | 観測データ構造をSpecies(種)→Form(形態)→Individual(個… | best-effort | done | — |
 | V3-OBS-51 | 観測データを1次〜4次変換で再利用する層構造(0次=そのまま/1次=構造化・マー… | best-effort | todo | — |
-| V3-OBS-55 | 観測データの物理基盤として、生活空間と分離した非居室の研究室(第三種24h換気・… | best-effort | todo | — |
-| V3-OBS-58 | QC builderがblur/exposure/scale/backgroun… | best-effort | todo | — |
+| V3-OBS-55 | 観測データの物理基盤として、生活空間と分離した非居室の研究室(第三種24h換気・… | best-effort | done | — |
+| V3-OBS-58 | QC builderがblur/exposure/scale/backgroun… | best-effort | done | — |
 | V3-OBS-64 | 外部API/センサーを domain=datasource のDataSourc… | best-effort | todo | — |
-| V3-OBS-65 | 取り込みは自分自身のもの・自分で証明できるデータに限定する。生体登録の親画像も本… | best-effort | todo | — |
-| V3-OBS-66 | 変化の理由を残す観測ログレイヤー(logs/{timestamp}.json: … | best-effort | todo | — |
-| V3-OBS-67 | 観測はライトユーザーが撮影だけで完結でき、研究者は観測項目を自由に追加できる二層… | best-effort | todo | — |
+| V3-OBS-65 | 取り込みは自分自身のもの・自分で証明できるデータに限定する。生体登録の親画像も本… | best-effort | done | — |
+| V3-OBS-66 | 変化の理由を残す観測ログレイヤー(logs/{timestamp}.json: … | best-effort | done | — |
+| V3-OBS-67 | 観測はライトユーザーが撮影だけで完結でき、研究者は観測項目を自由に追加できる二層… | best-effort | done | — |
 | V3-OBS-69 | 観測データを自動で統計化(成長率・生存率・湿度/温度相関・Ver別/ロット別比較… | best-effort | todo | — |
 | V3-OBS-70 | Docker 中間層(C-USB 観測拡張)を介した外部ゲーム等からの観測データ… | best-effort | todo | — |
-| V3-OBS-71 | 観測データ印刷: 個体詳細から、欲しいデータ項目(チェックボックス)と期間指定で… | best-effort | todo | — |
+| V3-OBS-71 | 観測データ印刷: 個体詳細から、欲しいデータ項目(チェックボックス)と期間指定で… | best-effort | done | — |
 
 ### L5-video
 

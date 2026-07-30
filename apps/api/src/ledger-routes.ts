@@ -157,7 +157,7 @@ export async function grantKarmaCountIncrease(
   await appendKarma(s, actorId, "count", steps, reason_code);
   await appendKarma(s, actorId, "value", -penalty, reason_code);
   if (kv && (await isBanned(s, actorId))) {
-    await revokeActor(kv, actorId);
+    await revokeActor(kv, actorId, undefined, "karma_ban");
   }
 }
 

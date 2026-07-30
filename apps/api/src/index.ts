@@ -8,7 +8,7 @@ import { aiRoutes } from "./ai-kernel";
 import { aiDigestRoutes } from "./ai-digest-routes";
 import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
-import { isDenylisted } from "./denylist";
+import { revocationOf, type RevokeReason } from "./denylist";
 import { obsRoutes } from "./observation-routes";
 import { collectorRoutes } from "./collector-routes";
 import { envImportRoutes } from "./env-import-routes";
@@ -150,9 +150,17 @@ app.onError((err, c) => {
 // V3-AUT-19: 無Bearer/認識できない形式は AUTH_REQUIRED(既存契約・CL-04/CL-03 等が
 // 逐語 assert 済みにつき維持)、v1.形式のトークンが提示されたが署名・期限で失敗した
 // ケースだけ INVALID_TOKEN に区別する(「無効/期限切れ/改ざん」の機械可読化)。
-// USER_NOT_FOUND/KARMA_SUSPENDED は本波非対象(前者はアカウント行の存在概念が無く
-// V3-AUT-09 側の設計、後者は KRM-04 の「BAN はログイン時のみ判定・毎リクエスト走査
-// 回避」という既存コスト裁定と衝突するため不変条項①との整合を崩さず見送る)。
+// V3-AUT-19是正(2026-07-31・lane-think裁定): denylist値の理由コード(karma_ban/
+// account_deleted/gov_flag/manual)を revocationOf で読み、karma_ban のみ403
+// KARMA_SUSPENDED、account_deleted(現行到達不能・予約のみ)は401 USER_NOT_FOUND、
+// それ以外/理由なし/旧形式は既存契約のまま401 SESSION_REVOKED を返す(追加コスト0
+// ・毎リクエストのKV読み取り回数は変わらない)。
+function revokedResponse(c: { json: (body: unknown, status: number) => Response }, reason: RevokeReason | null) {
+  if (reason === "karma_ban") return c.json({ error: "KARMA_SUSPENDED" }, 403);
+  if (reason === "account_deleted") return c.json({ error: "USER_NOT_FOUND" }, 401);
+  return c.json({ error: "SESSION_REVOKED" }, 401);
+}
+
 app.use("*", async (c, next) => {
   if (PUBLIC_ROUTES.includes(c.req.path)) return next();
 
@@ -173,9 +181,8 @@ app.use("*", async (c, next) => {
     presentedV1Token = presentedV1Token || cookieTok.startsWith("v1.");
     const p = await verifySessionToken(cookieTok, secret);
     if (p) {
-      if (await isDenylisted(c.env.AUTH_DENYLIST, p.sub, p.iat)) {
-        return c.json({ error: "SESSION_REVOKED" }, 401);
-      }
+      const rv = await revocationOf(c.env.AUTH_DENYLIST, p.sub, p.iat);
+      if (rv.revoked) return revokedResponse(c, rv.reason);
       c.set("actorId", p.sub);
       c.set("roles", rolesOf(p));
       return next();
@@ -190,9 +197,8 @@ app.use("*", async (c, next) => {
       presentedV1Token = true;
       const p = await verifySessionToken(bearer, secret);
       if (p) {
-        if (await isDenylisted(c.env.AUTH_DENYLIST, p.sub, p.iat)) {
-          return c.json({ error: "SESSION_REVOKED" }, 401);
-        }
+        const rv = await revocationOf(c.env.AUTH_DENYLIST, p.sub, p.iat);
+        if (rv.revoked) return revokedResponse(c, rv.reason);
         c.set("actorId", p.sub);
         c.set("roles", rolesOf(p));
         return next();
