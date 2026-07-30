@@ -11,9 +11,11 @@
 //   4. 凍結違反grep(package.json差分・redux/zustand/mui/antd import)
 //   5. 秘密混入grep(sk_live/api_key=/BEGIN...PRIVATE/D:\env)
 //
-// worktree残骸(.claude/worktrees/**)とnode_modules/**はgit ls-filesが親リポジトリの
-// 追跡ファイルしか返さない性質を利用して自然に除外する(git worktreeは別リポジトリのため
-// 親の`git ls-files`には現れない。手動exclude不要=計画書批評指摘の対策)。
+// worktree残骸(.claude/worktrees/**)とnode_modules/**は.gitignoreの記載により
+// `git diff`/`git ls-files --others --exclude-standard` の対象から自動的に除外される
+// (--exclude-standard が .gitignore を尊重するため。手動exclude不要=計画書批評指摘の対策。
+// 2026-07-31訂正: 本ファイルは `git ls-files` 単独ではなく `--others --exclude-standard`
+// 付きで新規ファイルの補足に使っている。批評R0731-c70cca 軽微1)。
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -535,10 +537,17 @@ function stripAnsi(s) {
   return s.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
+// 着手前実測(2026-07-31)のテスト総数。`npm test` 実行後の合算件数がこれを下回ったら
+// 「テストを消して総合判定を誤魔化す」ことになるため failed 判定に加える(批評R0731-c70cca 重大2)。
+// `--baseline <n>` 引数で上書き可能。
+const DEFAULT_BASELINE_TESTS = 1806;
+
 function sumTestCounts(out) {
-  // vitestの " Tests  N passed (N)" 行をワークスペースごとに合算する。
-  const matches = [...stripAnsi(out).matchAll(/Tests\s+(\d+)\s+passed/g)];
-  return matches.reduce((sum, m) => sum + Number(m[1]), 0);
+  // vitestの " Tests  N passed (N)" 行(全pass時)と " Tests  N failed | M passed (N+M)"
+  // 行(失敗混在時)の両方をワークスペースごとに合算する(批評R0731-c70cca 重大2)。
+  const stripped = stripAnsi(out);
+  const matches = [...stripped.matchAll(/Tests\s+(?:(\d+)\s+failed\s+\|\s+)?(\d+)\s+passed/g)];
+  return matches.reduce((sum, m) => sum + Number(m[1] ?? 0) + Number(m[2]), 0);
 }
 
 // ---- 検査4/5共通: git diff の追加行だけを対象にする ----
@@ -551,7 +560,7 @@ function addedLinesFromDiff() {
   try {
     diff = execSync("git diff HEAD", { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   } catch {
-    return [];
+    diff = "";
   }
   const out = [];
   let currentFile = null;
@@ -564,6 +573,28 @@ function addedLinesFromDiff() {
     if (/^(\+\+\+|---|@@|diff |index )/.test(raw)) continue;
     if (!raw.startsWith("+")) continue;
     out.push({ file: currentFile ?? "(unknown)", line: raw.slice(1) });
+  }
+  // `git diff HEAD` は未追跡(新規作成)ファイルを一切出力しない(批評R0731-c70cca 重大1)。
+  // `git ls-files --others --exclude-standard` で新規ファイルを補い、全行を「追加行」として合流する。
+  // .gitignore により node_modules/・.claude/(worktree残骸)は自動的に除外される。
+  let untracked = [];
+  try {
+    untracked = execSync("git ls-files --others --exclude-standard", { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+      .split(/\r?\n/)
+      .filter(Boolean);
+  } catch {
+    untracked = [];
+  }
+  for (const file of untracked) {
+    let content = "";
+    try {
+      content = readFileSync(file, "utf8");
+    } catch {
+      continue; // バイナリ等の読み取り失敗はスキップ(削除済み等の一過性も含む)
+    }
+    for (const line of content.split(/\r?\n/)) {
+      out.push({ file, line });
+    }
   }
   return out;
 }
@@ -619,19 +650,29 @@ function selftest() {
   );
   console.assert(fake.denominator === 3, `denominator should be 3, got ${fake.denominator}`);
   console.assert(fake.numerator === 2, `numerator should be 2 (X-1,X-2 complete; X-3 lacks tc), got ${fake.numerator}`);
-  console.log("wave-verify selftest: OK (roster parse + apply-rate logic verified)");
+
+  // T2(批評R0731-c70cca 重大2): sumTestCounts が全pass出力と失敗混在出力の両方をパースできること。
+  const allPassOut = "Tests  18 passed (18)\nTests  1536 passed (1536)\nTests  252 passed (252)";
+  console.assert(sumTestCounts(allPassOut) === 1806, `all-pass total should be 1806, got ${sumTestCounts(allPassOut)}`);
+  const mixedOut = "Tests  2 failed | 1534 passed (1536)\nTests  18 passed (18)\nTests  252 passed (252)";
+  console.assert(sumTestCounts(mixedOut) === 1806, `mixed pass/failed total should be 1806, got ${sumTestCounts(mixedOut)}`);
+
+  console.log("wave-verify selftest: OK (roster parse + apply-rate logic + test-count parsing verified)");
 }
 
 function main() {
-  const shipArg = process.argv[2];
+  const argv = process.argv.slice(2);
+  const shipArg = argv[0];
   if (shipArg === "--selftest") {
     selftest();
     return;
   }
   if (!shipArg) {
-    console.error(`usage: node scripts/wave-verify.mjs <ship>  (ships: ${listShips().join(", ")})`);
+    console.error(`usage: node scripts/wave-verify.mjs <ship> [--baseline <n>]  (ships: ${listShips().join(", ")})`);
     process.exit(2);
   }
+  const baselineIdx = argv.indexOf("--baseline");
+  const baseline = baselineIdx !== -1 && argv[baselineIdx + 1] ? Number(argv[baselineIdx + 1]) : DEFAULT_BASELINE_TESTS;
   const roster = parseRoster(shipArg);
   if (!roster) {
     console.error(`unknown ship "${shipArg}". known ships: ${listShips().join(", ")}`);
@@ -647,7 +688,8 @@ function main() {
 
   console.log("\n--- 検査2: npm test -w apps/api -w tests -w apps/web ---");
   const test = runTest();
-  console.log(`test EXIT=${test.exit} / 合算件数=${test.total}`);
+  const testBelowBaseline = test.total < baseline;
+  console.log(`test EXIT=${test.exit} / 合算件数=${test.total}(基準=${baseline}) / 非減=${testBelowBaseline ? "NG(減少)" : "OK"}`);
   if (test.exit !== 0) console.log(test.out.slice(-4000));
 
   console.log("\n--- 検査3: progress.json 分母/分子(適用率) ---");
@@ -658,9 +700,19 @@ function main() {
   for (const row of applyRate.rows) {
     console.log(`  ${row.complete ? "[x]" : "[ ]"} ${row.id} (${row.kind}) status=${row.status}`);
   }
+  console.log("★適用率の分子は自己申告(tc中身は未検証)。file:line実在は批評ゲートが確認する。");
+  const unlisted = applyRate.rows.filter((r) => r.status === "(未掲載)");
+  if (unlisted.length) {
+    console.log(`分母チェック FAILED: 担当ID ${unlisted.length}件が progress.json に未掲載: ${unlisted.map((r) => r.id).join(", ")}`);
+  } else {
+    console.log("分母チェック OK(担当ID全件がprogress.jsonに掲載済み)");
+  }
 
   console.log("\n--- 検査4: 凍結違反grep ---");
-  const freezeViolations = [...checkFreezeViolations(), ...checkPackageJsonDiff(["apps/web/package.json"])];
+  // apps/web/package.json 変更の無条件許可はw0-found専用(posthog-js追加のため)。
+  // w1以降の艦に対しては全package.json差分を違反として報告する(批評R0731-c70cca 中2)。
+  const allowedPackageJsonPaths = shipArg === "w0-found" ? ["apps/web/package.json"] : [];
+  const freezeViolations = [...checkFreezeViolations(), ...checkPackageJsonDiff(allowedPackageJsonPaths)];
   if (freezeViolations.length) {
     console.log("凍結違反GATE FAILED:");
     for (const v of freezeViolations) console.log(`  - ${v}`);
@@ -677,7 +729,7 @@ function main() {
     console.log("秘密混入GATE OK(0件)");
   }
 
-  const failed = lint.exit !== 0 || test.exit !== 0 || freezeViolations.length > 0 || secretViolations.length > 0;
+  const failed = lint.exit !== 0 || test.exit !== 0 || testBelowBaseline || unlisted.length > 0 || freezeViolations.length > 0 || secretViolations.length > 0;
   console.log(`\n=== 総合判定: ${failed ? "FAILED" : "OK"} ===`);
   process.exit(failed ? 1 : 0);
 }

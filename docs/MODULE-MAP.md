@@ -1,5 +1,7 @@
 # MODULE-MAP — 住所帳
 
+**このファイルが艦別globの唯一の正本**(計画§7・draftsと食い違ったらこのファイルが正・食い違い自体をHQへ報告する。2026-07-31 n60w0fix T3・批評R0731-c70cca 中1是正)。
+
 このモジュールがどこにあり、誰の担当かを1枚で引くための正本。
 出典: `D:\claude\00-hq\R0730-ad0c0b-PLAN-ihl3-core-2026-07-31.md` §4(命名規則)・§7(艦別分割)。
 
@@ -31,17 +33,21 @@
 |---|---|---|
 | `w1-fnd` | fnd+cst+i18(13+13) | `apps/api/src/{env.ts,kv,batch*,truth-backup-connector,telemetry-merge,costs-routes,i18n*}*`, `libs/datalake/**`, `tests/{fnd,cst,i18,foundation,costs,datalake}*`(★批評致命2反映: `env`→`env.ts`。`env-import-routes.ts`はw1-obsの明示所有) |
 | `w1-aut` | aut(12+9) | `apps/api/src/{auth-routes,session,mail,account,consent-routes,handle-routes,profile-routes,settings-routes}*`, `tests/{auth.test,auth-,aut-,account,session,consent,profile,settings,handle}*`(★批評致命2反映: `auth`前方一致が`authz.test.ts`(w1-sec所有)を飲むため限定化) |
-| `w1-sec` | sec(20+18) | `apps/api/src/{authz,denylist,rate-limit,policy,pii*,hmac,key-bundle-routes}*`, `tests/{sec,authz,rate-limit,pii,policy}*` |
-| `w1-obs` | obs(21+19) | `apps/api/src/{observation*,collector-routes,device-routes,env-import-routes,csv-import,freetext-parser,taxon-routes,thumbnail*}*`, `components/collector-switchbot/**`, `components/obs-manifest/**`, `tests/{obs,observation,collector,device,taxon}*` |
-| `w1-mkt` | mkt+oth(19+21) | `apps/api/src/{market*,shop-routes,fee-routes,payjp-connector,gmo*,economy-constants,ledger*,match-routes,github-*}*`, `tests/{mkt,market,shop,fee,payjp,gmo,ledger}*` |
-| `w1-plaza` | bbs+wik(17+19) | `apps/api/src/{plaza*,social-routes,engagement-routes,knowledge*,source-routes,tag-routes,reference-counter}*`, `components/wiki-ingest/**`, `tests/{plaza,bbs,wik,knowledge,social,tag}*` |
-| `w1-gov` | gov+krm(16+24) | `apps/api/src/{gov-routes,proposal-routes,contribution*}*`, `tests/{gov,krm,contribution,proposal,dispute}*` |
+| `w1-sec` | sec(20+18) | `apps/api/src/{authz,denylist,rate-limit,policy,pii*,hmac,key-bundle-routes}*`, `tests/{sec,authz,rate-limit,pii,policy,denylist,hmac}*` |
+| `w1-obs` | obs(21+19) | `apps/api/src/{observation*,collector-routes,device-routes,env-import-routes,csv-import,freetext-parser,taxon-routes,thumbnail*}*`, `components/collector-switchbot/**`, `components/obs-manifest/**`, `tests/{obs,observation,collector,device,taxon,csv,thumbnail}*` |
+| `w1-mkt` | mkt+oth(19+21) | `apps/api/src/{market*,shop-routes,fee-routes,payjp-connector,gmo*,economy-constants,ledger*,match-routes,github-issues-connector,github-webhook-routes}*`, `tests/{mkt,market,shop,fee,payjp,gmo,ledger,match}*` |
+| `w1-plaza` | bbs+wik(17+19) | `apps/api/src/{plaza*,social-routes,engagement-routes,knowledge*,source-routes,tag-routes,reference-counter}*`, `components/wiki-ingest/**`, `tests/{plaza,bbs,wik,knowledge,social,tag,source,engagement}*` |
+| `w1-gov` | gov+krm(16+24) | `apps/api/src/{gov-routes,proposal-routes,contribution*}*`, `tests/{gov,krm,contribution,proposal,dispute,vote}*` |
 | `w1-ind` | ind+ppr(11+21) | `apps/api/src/{individual-routes,clutch-routes,paper-match*,research*}*`, `tests/{ind,individual,clutch,ppr,paper,research}*` |
 | `w1-aip` | aip対応表(63+18) | 報告書のみ(コード0行) |
 
 **全艦共通の不可侵**(§7): `apps/api/src/index.ts`・`package.json`(全階層)・`packages/schema-types/src/generated/**`・他艦のglob・`screen-defs/**`(UIは後回し)・`01-requirements/**`(読むのは自由)。
 
 新しいルートファイルを作った場合、`index.ts` への mount 行は艦が直接書かず、報告書に「追加すべき行と挿入位置」を明記してHQが検収時に適用する(mount順は `index.ts` の実装順に意味があるため。実在例: `homeRoutes`(index.ts:256)は `obsRoutes`(index.ts:269)より先にmountされている)。
+
+## tests/ の未帰属ファイルについて(2026-07-31追記・批評R0731-c70cca 重大3是正)
+
+上記の艦別globは既存の `tests/` 全183本のうち約61本(`cl-01`〜`cl-13`系・`check-*`系・`ai-*`系など)をどの艦にも割り当てていない。これらは既存テストの共有編集にあたるため、**触る必要が出た艦は書き換えず手を止め、レビューキュー経由でHQへ差し戻すこと**(計画§175の緩和策に準拠)。同様に `apps/api/src` 側にも `index.ts` を除く11本の未帰属ファイル(`ai-digest-routes.ts`・`ai-kernel.ts`・`culture.ts`・`cusb-routes.ts`・`home-routes.ts`・`index.test.ts`・`intent.ts`・`project-routes.ts`・`sandbox-routes.ts`・`theme-routes.ts`・`ui-constants.ts`)がある。これらの担当を新設・拡張するかどうかはHQの運用裁定事項であり、本ファイルは意図的に未確定のまま記録する(推測で艦を割り当てない)。
 
 ## 新設モジュールの標準構造(既存97ファイルはリネームしない・新設のみ適用)
 
