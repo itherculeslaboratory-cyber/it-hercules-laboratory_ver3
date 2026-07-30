@@ -21,6 +21,14 @@ import {
   GOV_DISPUTE_VOTE_WINDOW_DAYS,
   GOV_DISPUTE_LOSER_KARMA_STEPS,
 } from "./plaza-constants";
+import {
+  GOV06_FORCE_CLOSE_DAYS,
+  KRM09_MILESTONE_STEP,
+  KRM09_MILESTONE_KARMA_STEPS,
+  GOV08_STAGE_KARMA_STEPS,
+  GOV08_CATEGORY_KARMA_STEPS,
+  GOV08_DEFAULT_CATEGORY_KARMA_STEPS,
+} from "./gov-routes-constants";
 
 const VOTE_TYPE = "ihl.gov.vote.v1";
 const VOTE_SCHEMA = "schemas/events/gov-vote.schema.json";
@@ -34,6 +42,7 @@ const PT_SCHEMA = "schemas/events/economy-pt-event.schema.json";
 const SCHEMA_VERSION = "1";
 const TTL_MS = DISPUTE_TTL_DAYS * 24 * 60 * 60 * 1000;
 const GOV_DISPUTE_VOTE_WINDOW_MS = GOV_DISPUTE_VOTE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+const GOV06_FORCE_CLOSE_MS = GOV06_FORCE_CLOSE_DAYS * 24 * 60 * 60 * 1000;
 
 export const govRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -319,6 +328,99 @@ govRoutes.post("/gov/disputes/:dispute_id/close", async (c) => {
   });
   if (res.status === "invalid") return c.json({ error: "INVALID_PRECEDENT", details: res.errors }, 400);
   return c.json({ dispute_id: disputeId, precedent_id: precedentId, resolution }, 201);
+});
+
+// ── V3-GOV-06 未合意紛争の強制クローズ + V3-KRM-09 累計マイルストーン ───────────
+// countForceClosedDisputesForActor(s, actorId) — actor が当事者(opener/respondent)
+// だった紛争のうち resolution=force_closed で決着した件数を累計する(projectMyDisputes
+// と同型の全走査+dispute_idグルーピング。専用投影 index は別波)。
+export async function countForceClosedDisputesForActor(s: TruthStore, actorId: string): Promise<number> {
+  const all = (await s.listEvents(`truth/${DISPUTE_TYPE}/`)).map(dataOf);
+  const byDispute = new Map<string, Record<string, unknown>[]>();
+  for (const e of all) {
+    const id = str(e.dispute_id);
+    if (!id) continue;
+    const arr = byDispute.get(id) ?? [];
+    arr.push(e);
+    byDispute.set(id, arr);
+  }
+  let count = 0;
+  for (const events of byDispute.values()) {
+    const sorted = events.slice().sort((a, b) => (str(a.created_at) < str(b.created_at) ? -1 : 1));
+    const open = sorted.find((e) => e.action === "open");
+    if (!open) continue;
+    const opener = str(open.actor_id);
+    const respondent = str(open.respondent_id);
+    if (actorId !== opener && actorId !== respondent) continue;
+    const close = sorted.find((e) => e.action === "close");
+    if (close?.resolution === "force_closed") count += 1;
+  }
+  return count;
+}
+
+// V3-KRM-09: 累計が KRM09_MILESTONE_STEP(=5)の倍数に到達した回だけ Δcount を課す
+// (倍数以外はΔcountなし)。純関数として抽出し境界値をテストで固定する。
+export function milestoneKarmaSteps(cumulativeCount: number): number {
+  if (cumulativeCount > 0 && cumulativeCount % KRM09_MILESTONE_STEP === 0) return KRM09_MILESTONE_KARMA_STEPS;
+  return 0;
+}
+
+// POST /gov/disputes/:dispute_id/force-close — GOV-06「合意しなければ1ヶ月で強制
+// クローズ」の実行route(vote-resolveと同型:誰でも呼べる・実質の認可はTTL経過ゲート)。
+// deterministic key(force-close.json)のput-if-absentで二重実行を防ぐ(先勝ちで十分)。
+// 自動合意検知・強制合意はスコープ外(要件原文どおり判別しない)。判例は人間closerが
+// title/summaryを供給できないため作らない(GOV-12と同じくLLMで埋めない=appendPrecedent
+// を呼ばない)。
+govRoutes.post("/gov/disputes/:dispute_id/force-close", async (c) => {
+  const disputeId = c.req.param("dispute_id");
+  const s = store(c);
+  const view = await projectDispute(s, disputeId);
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  if (view.status !== "open") return c.json({ dispute_id: disputeId, already_closed: true, status: view.status }, 200);
+  const elapsedMs = Date.now() - Date.parse(view.opened_at);
+  if (elapsedMs < GOV06_FORCE_CLOSE_MS) {
+    const eligibleAt = new Date(Date.parse(view.opened_at) + GOV06_FORCE_CLOSE_MS).toISOString();
+    return c.json({ error: "NOT_YET_ELIGIBLE", eligible_at: eligibleAt }, 409);
+  }
+  const actorId = c.get("actorId");
+  const eventId = ulid();
+  const closeData: Record<string, unknown> = {
+    dispute_id: disputeId,
+    actor_id: actorId,
+    action: "close",
+    resolution: "force_closed",
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  // deterministic key(1 dispute につき1回)。conflict は既に他 caller が force-close 済み。
+  const markerKey = `truth/${DISPUTE_TYPE}/${disputeId}/force-close.json`;
+  const markerRes = await s.putEventAt(markerKey, envelope(DISPUTE_TYPE, DISPUTE_SCHEMA, eventId, actorId, closeData));
+  if (markerRes.status === "invalid") return c.json({ error: "INVALID_DISPUTE", details: markerRes.errors }, 400);
+  if (markerRes.status === "conflict") return c.json({ dispute_id: disputeId, already_closed: true }, 200);
+
+  for (const participant of [view.participants.opener, view.participants.respondent]) {
+    const cumulative = await countForceClosedDisputesForActor(s, participant);
+    const steps = milestoneKarmaSteps(cumulative);
+    if (steps > 0) await grantKarmaCountIncrease(s, participant, steps, "dispute", c.env.AUTH_DENYLIST);
+  }
+  return c.json({ dispute_id: disputeId, resolution: "force_closed" }, 201);
+});
+
+// GET /gov/indictment-karma?category=&stage= — V3-GOV-08 カテゴリ別/段階別Δcountの
+// 参照(副作用なし・純算出)。stage は public_qa|pre_payment|post_payment 必須。
+// category は任意(未指定/未知は default=1)。★正直な部分実装: 2つの内訳を独立に返す
+// だけで合算式は定義していない(要件原文はカテゴリ表と段階表を並記するのみで合算方法を
+// 明示していないため、一次資料に無い式を推測で作らない=全艦共通規律)。実際の
+// /gov/flags 等への配線・合算式の確定はHQ/考える役の判断が要る。
+govRoutes.get("/gov/indictment-karma", async (c) => {
+  const stage = c.req.query("stage") || "";
+  if (stage !== "public_qa" && stage !== "pre_payment" && stage !== "post_payment") {
+    return c.json({ error: "INVALID_QUERY", details: ["stage must be public_qa|pre_payment|post_payment"] }, 400);
+  }
+  const category = c.req.query("category") || null;
+  const stageSteps = GOV08_STAGE_KARMA_STEPS[stage];
+  const categorySteps = category ? (GOV08_CATEGORY_KARMA_STEPS[category] ?? GOV08_DEFAULT_CATEGORY_KARMA_STEPS) : null;
+  return c.json({ stage, stage_steps: stageSteps, category, category_steps: categorySteps });
 });
 
 // ── V3-GOV-07 プラチナ投票による紛争裁定(公開して投票)─────────────────────────
@@ -702,6 +804,6 @@ govRoutes.post("/gov/flags", requireRole("operator", "admin"), async (c) => {
   // V3-AUT-03(round-16 Q-REQ-03)「行政命令(V3-GOV-09)から denylist 登録を配線」: 行政指摘
   // による不使用フラグは閾値を跨がなくても無条件で即時失効させる(「開発者は裁判官には
   // ならないが行政命令には従う」= 人間ゲート裁定済みの既存方針・GOV-09 statement)。
-  await revokeActor(c.env.AUTH_DENYLIST, targetOwner);
+  await revokeActor(c.env.AUTH_DENYLIST, targetOwner, undefined, "gov_flag");
   return c.json({ flag_id: flagId, target_owner: targetOwner }, 201);
 });
