@@ -346,6 +346,7 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
   let births = 0;
   let males = 0;
   let females = 0;
+  const failureData: FailureDataNode[] = []; // V3-IND-17 反脆弱性データ(死亡/羽化不全の構造化)
   for (const cid of children) {
     const les = (await s.listEvents(`truth/${LIFE_TYPE}/${cid}-`))
       .map(dataOf)
@@ -362,6 +363,12 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
       if (sx === "male") males++;
       else if (sx === "female") females++;
     }
+    failureData.push(...reduceFailureData(cid, les));
+  }
+  const failByStage: Record<string, number> = {};
+  for (const n of failureData) {
+    const key = n.fail_stage ?? "unknown";
+    failByStage[key] = (failByStage[key] ?? 0) + 1;
   }
 
   // cohort captures → weight by instar / size extremes.
@@ -421,7 +428,44 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
       min_length: lengths.length ? Math.min(...lengths) : null,
     },
     rates,
+    // V3-IND-17: 失敗データ(死亡・羽化不全)は「成功より価値が高い反脆弱性データ」として
+    // 削除せず正式集計に含める(誇張ゼロ・fail_stage/fail_reason は入力があれば構造化、
+    // 無ければ null のまま=機械が推測しない)。
+    fail_by_stage: failByStage,
+    failure_data: failureData,
   };
+}
+
+// ── V3-IND-17 反脆弱性データ(FailureDataNode)────────────────────────────────
+// 死亡・失敗も alive/dead と同格の正式ステータスとして記録し(既存アーキテクチャは
+// life_event を削除・編集禁止で R2 に INSERT ONLY 保存済み=不変条項③で既に充足)、
+// fail_stage/fail_reason は ind-life-event.schema.json の detail(additionalProperties:true・
+// スキーマ変更不要)へ自由入力できる。本関数はそれを構造化して読み出す投影のみ(書込側は
+// 既存 POST /individuals/{id}/life-events(writeLifeEvent)がそのまま受け付ける・新規route不要)。
+export interface FailureDataNode {
+  individual_id: string;
+  kind: string; // "death" | "eclosion"(羽化不全時)
+  fail_stage: string | null; // detail.fail_stage(任意入力)
+  fail_reason: string | null; // detail.fail_reason(任意入力)
+  at: string;
+}
+
+export function reduceFailureData(individualId: string, life: Record<string, unknown>[]): FailureDataNode[] {
+  const nodes: FailureDataNode[] = [];
+  for (const e of life) {
+    const detail = (e.detail ?? {}) as Record<string, unknown>;
+    const isDeath = e.kind === "death";
+    const isEclosionFailure = e.kind === "eclosion" && detail.success === false;
+    if (!isDeath && !isEclosionFailure) continue;
+    nodes.push({
+      individual_id: individualId,
+      kind: String(e.kind ?? ""),
+      fail_stage: typeof detail.fail_stage === "string" ? detail.fail_stage : null,
+      fail_reason: typeof detail.fail_reason === "string" ? detail.fail_reason : null,
+      at: String(e.at ?? ""),
+    });
+  }
+  return nodes.sort((a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind));
 }
 
 /** Name-card facts: species / morph / latest size / feature tags / QR URL (IND-15). */
@@ -681,6 +725,69 @@ async function projectEnvironment(s: TruthStore, placementId: string | null): Pr
     });
   }
   return readings.sort((a, b) => a.bucket_start_ms - b.bucket_start_ms || a.metric.localeCompare(b.metric));
+}
+
+// ── V3-IND-28 location_history × 自動環境集計 ───────────────────────────────
+// 「個体にlocation_history(場所×期間)を持たせ、期間内のセンサー値を自動で紐づけ
+// 管理環境(平均温度等)を自動集計する」の投影。既存の environment_history(占有期間・
+// projectIndividual)と projectEnvironment(現在openなdeviceの全期間テレメトリ)を
+// そのまま再利用し、各期間の [effective_at, 次の期間の effective_at) 窓へテレメトリを
+// 絞って集計するだけ(新規Truth型は増やさない・都度再計算・不変条項①)。
+export interface EnvironmentPeriodSummary {
+  placement_id: string;
+  effective_at: string;
+  ended_at: string | null; // 次の移動時刻(現在地=進行中なら null)
+  metrics: Record<string, { mean: number; min: number; max: number; count: number }>;
+}
+
+/** summarizeEnvironmentReadings — metric ごとに count 重み付き平均/min/max を決定論集計
+ * (V3-IND-28「管理環境(平均温度等)を自動集計」の純関数本体)。 */
+export function summarizeEnvironmentReadings(
+  readings: EnvironmentReading[],
+): Record<string, { mean: number; min: number; max: number; count: number }> {
+  const byMetric = new Map<string, EnvironmentReading[]>();
+  for (const r of readings) (byMetric.get(r.metric) ?? byMetric.set(r.metric, []).get(r.metric)!).push(r);
+  const out: Record<string, { mean: number; min: number; max: number; count: number }> = {};
+  for (const [metric, rows] of byMetric) {
+    const totalCount = rows.reduce((a, r) => a + r.count, 0);
+    const weightedSum = rows.reduce((a, r) => a + r.mean * r.count, 0);
+    out[metric] = {
+      mean: totalCount > 0 ? weightedSum / totalCount : rows.reduce((a, r) => a + r.mean, 0) / rows.length,
+      min: Math.min(...rows.map((r) => r.mean)),
+      max: Math.max(...rows.map((r) => r.mean)),
+      count: totalCount,
+    };
+  }
+  return out;
+}
+
+export async function projectLocationHistoryEnvironment(
+  s: TruthStore,
+  individualId: string,
+): Promise<EnvironmentPeriodSummary[]> {
+  const ref = `individual/${individualId}`;
+  const occ = (await s.listEvents(`truth/${OCCUPANCY_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.subject_ref === ref && d.phase !== "end")
+    .sort((a, b) => String(a.effective_at ?? "").localeCompare(String(b.effective_at ?? "")));
+  const out: EnvironmentPeriodSummary[] = [];
+  for (let i = 0; i < occ.length; i++) {
+    const placementId = String(occ[i].placement_id ?? "");
+    if (!placementId) continue;
+    const effectiveAt = String(occ[i].effective_at ?? "");
+    const endedAt = i + 1 < occ.length ? String(occ[i + 1].effective_at ?? "") : null;
+    const readings = (await projectEnvironment(s, placementId)).filter((r) => {
+      const t = new Date(r.bucket_start_ms).toISOString();
+      return t >= effectiveAt && (endedAt === null || t < endedAt);
+    });
+    out.push({
+      placement_id: placementId,
+      effective_at: effectiveAt,
+      ended_at: endedAt,
+      metrics: summarizeEnvironmentReadings(readings),
+    });
+  }
+  return out;
 }
 
 export async function projectIndividualProfile(s: TruthStore, id: string) {
@@ -1311,6 +1418,13 @@ individualRoutes.get("/individuals/:id/cross", async (c) => {
   return c.json(await projectCross(store(c), c.req.param("id"), metric));
 });
 
+// GET /individuals/{id}/environment-history — location_history(場所×期間)ごとの
+// 自動集計環境(平均温度等)(V3-IND-28)。
+individualRoutes.get("/individuals/:id/environment-history", async (c) => {
+  const periods = await projectLocationHistoryEnvironment(store(c), c.req.param("id"));
+  return c.json({ individual_id: c.req.param("id"), periods });
+});
+
 // POST /individuals/{id}/name — append a rename (IND-04). created_at optional
 // (back-dating a historical name); default now.
 individualRoutes.post("/individuals/:id/name", async (c) => {
@@ -1342,6 +1456,129 @@ individualRoutes.get("/individuals/:id/name", async (c) => {
   const id = c.req.param("id");
   const at = c.req.query("at");
   return c.json({ individual_id: id, name: await projectName(store(c), id, at), at: at ?? null });
+});
+
+// ── V3-IND-03 ブランド命名(series-year-seq 自動採番)─────────────────────────
+// individual_id は不変の正本キーのまま(既存アーキテクチャ・変更不要)、display_name は
+// 既存の name_event(可変ラベル・created_at 昇順 reduce=projectName)へそのまま append する。
+// 新規スキーマは増やさない — pattern の {series}/{year}/{seq} を name 文字列そのものへ
+// 展開し、既存 name(過去の全 rename 込み)を同じ pattern で逆解析して次の seq を
+// 決定論算出する(ind-name-event.schema.json は additionalProperties:false のため
+// series/year 専用フィールドを新設できない=本艦の書いてよい場所の外)。
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** pattern(例 "{series}-{year}-{seq}") を named-group 正規表現へコンパイル。 */
+function brandPatternRegex(pattern: string): RegExp {
+  const parts = pattern.split(/(\{series\}|\{year\}|\{seq\})/);
+  const src = parts
+    .map((p) => {
+      if (p === "{series}") return "(?<series>.+?)";
+      if (p === "{year}") return "(?<year>\\d+)";
+      if (p === "{seq}") return "(?<seq>\\d+)";
+      return escapeRegExp(p);
+    })
+    .join("");
+  return new RegExp(`^${src}$`);
+}
+
+/** renderBrandName — pattern へ series/year/seq を機械展開(表示名の合成のみ・LLM不使用)。 */
+export function renderBrandName(pattern: string, series: string, year: number, seq: number): string {
+  return pattern.replace("{series}", series).replace("{year}", String(year)).replace("{seq}", String(seq));
+}
+
+/** nextBrandSeq — owner_user_id(呼び手が existingNames を owner スコープへ絞って渡す)×series×year
+ * 粒度の次の seq(1始まり)。既存名を pattern で逆解析し、同一 series×year の最大 seq+1 を返す
+ * (該当が無ければ 1)。決定論(入力配列順に依存しない・max 集約)。 */
+export function nextBrandSeq(pattern: string, series: string, year: number, existingNames: string[]): number {
+  const re = brandPatternRegex(pattern);
+  let maxSeq = 0;
+  for (const n of existingNames) {
+    const m = re.exec(n);
+    if (!m?.groups || m.groups.series !== series || Number(m.groups.year) !== year) continue;
+    const seq = Number(m.groups.seq);
+    if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+  }
+  return maxSeq + 1;
+}
+
+/** hasSeriesNameConflict — 「現行名重複は同一ユーザー×同一series内のみ禁止(seriesが違えば同名可)」
+ * の判定(V3-IND-03)。existingNames は同一 owner の現行名一覧(呼び手がスコープを絞って渡す)。
+ * pattern で series を復元できない既存名は series 不明として比較対象から除外する(誤検知回避)。 */
+export function hasSeriesNameConflict(
+  pattern: string,
+  series: string,
+  candidateName: string,
+  existingNames: string[],
+): boolean {
+  const re = brandPatternRegex(pattern);
+  for (const n of existingNames) {
+    const m = re.exec(n);
+    if (m?.groups?.series === series && n === candidateName) return true;
+  }
+  return false;
+}
+
+/** owner の現行表示名一覧(projectName の現行値のみ・self は除外可)。IND-03 の
+ * seq/重複チェックの母集団(既存 masters 全走査パターンの再利用・export/facts.csv と同型)。 */
+async function ownerCurrentNames(s: TruthStore, actorId: string, excludeId?: string): Promise<string[]> {
+  const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
+    .map(dataOf)
+    .filter((m) => m.actor_id === actorId)
+    .map((m) => String(m.individual_id ?? ""))
+    .filter((id) => id && id !== excludeId);
+  const names: string[] = [];
+  for (const id of masters) {
+    const n = await projectName(s, id);
+    if (n) names.push(n);
+  }
+  return names;
+}
+
+// POST /individuals/{id}/name/brand — series-year 自動採番で display_name を生成し append する
+// (V3-IND-03)。body: {brand_template_id, series, year}。生成名が同一ユーザー×同一series内で
+// 衝突すれば 409(理論上は seq 自動採番のため通常発生しない・レース/手動 series 変更の防御)。
+individualRoutes.post("/individuals/:id/name/brand", async (c) => {
+  const id = c.req.param("id");
+  const actorId = c.get("actorId");
+  const owner = await projectCurrentOwner(c.env.TRUTH, id);
+  if (owner !== actorId) return c.json({ error: "NOT_OWNER" }, 403);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const brandTemplateId = typeof body.brand_template_id === "string" ? body.brand_template_id : "";
+  const series = typeof body.series === "string" ? body.series : "";
+  const year = Number(body.year);
+  if (!brandTemplateId || !series || !Number.isInteger(year)) {
+    return c.json({ error: "INVALID_BRAND_NAME", details: ["brand_template_id, series, year(int) required"] }, 400);
+  }
+  const s = store(c);
+  const templateRows = (await s.listEvents(`truth/${BRAND_TYPE}/${brandTemplateId}-`))
+    .map(dataOf)
+    .filter((d) => d.brand_template_id === brandTemplateId)
+    .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+  const template = templateRows[templateRows.length - 1];
+  if (!template || template.active === false) return c.json({ error: "BRAND_TEMPLATE_NOT_FOUND" }, 404);
+  const pattern = String(template.pattern ?? "");
+  const existingNames = await ownerCurrentNames(s, actorId, id);
+  const seq = nextBrandSeq(pattern, series, year, existingNames);
+  const name = renderBrandName(pattern, series, year, seq);
+  if (hasSeriesNameConflict(pattern, series, name, existingNames)) {
+    return c.json({ error: "DUPLICATE_BRAND_NAME", details: [name] }, 409);
+  }
+  const data: Record<string, unknown> = {
+    individual_id: id,
+    name,
+    brand_template_id: brandTemplateId,
+    actor_id: actorId,
+    created_at: nowIso(),
+  };
+  const res = await s.putEventAt(
+    `truth/${NAME_TYPE}/${id}-${ulid()}.json`,
+    envelope(NAME_TYPE, SCHEMA.name, actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_NAME", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_NAME", key: res.key }, 409);
+  return c.json({ individual_id: id, name, series, year, seq }, 201);
 });
 
 // POST /brand-templates — append a naming template (active=false = logical delete

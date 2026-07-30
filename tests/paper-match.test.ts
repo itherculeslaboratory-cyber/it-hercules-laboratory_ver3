@@ -5,7 +5,20 @@
 // gapAnalysis: injected fixed vectors -> neighbour diff axis -> stable missing_perspectives
 // (all-species, no species filter) + data_gap key diff, vector-absent -> data_gap only.
 import { describe, expect, it } from "vitest";
-import { matchConditions, autoFillDescriptor, gapAnalysis, hintsForMissing, computeSectionsCompleteness, conditionVector, computeLivingPaperGraph } from "../apps/api/src/paper-match";
+import {
+  matchConditions,
+  autoFillDescriptor,
+  gapAnalysis,
+  hintsForMissing,
+  computeSectionsCompleteness,
+  conditionVector,
+  computeLivingPaperGraph,
+  reviewPipeline,
+  computeConfidence,
+  canTransitionHypothesis,
+  promoteRepresentativeHypothesis,
+  buildCitationEdges,
+} from "../apps/api/src/paper-match";
 import app from "../apps/api/src/index";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
 
@@ -404,5 +417,172 @@ describe("V3-PPR-14 computeLivingPaperGraph (pure fn)", () => {
     );
     expect(g.match.satisfied).toEqual(["temp"]); // first-seen 27 wins, not overwritten by 999
     expect(g.confidence).toBe(1);
+  });
+
+  // ★2026-07-31 追加(V3-PPR-14 順序依存バグ修正の合格ライン・逆順): 外れ値が先・正常値が後
+  // でも、同じ観測集合なら confidence が変わってはいけない(要件は投入順に非依存)。
+  it("order-independence: an out-of-range observation followed by an in-range one still satisfies (reverse order)", () => {
+    const g = computeLivingPaperGraph(
+      { conditions: { temp: { min: 25, max: 30, required: true } } },
+      [{ temp: 999 }, { temp: 27 }],
+    );
+    expect(g.match.satisfied).toEqual(["temp"]);
+    expect(g.match.violated).toEqual([]);
+    expect(g.confidence).toBe(1);
+  });
+});
+
+describe("V3-PPR-05 reviewPipeline (段階1-5・決定論・pure fn)", () => {
+  it("完全な入力: 構造100・欠損なし・再現性/整合性issueなし", () => {
+    const r = reviewPipeline({
+      sections: {
+        purpose: { filled: true, text: "x" },
+        hypothesis: { filled: true, text: "x" },
+        conditions: { filled: true, text: "x" },
+        verification: { filled: true, text: "x" },
+        phase: { filled: true, text: "x" },
+        gap: { filled: true, text: "x" },
+      },
+      conditions: { temp: { min: 25, max: 30, required: true } },
+      observation: { temp: 27 },
+      measurements: [
+        { item: "temp", value: 27, unit: "C" },
+        { item: "temp", value: 28, unit: "C" },
+      ],
+    });
+    expect(r.structural_score).toBe(100);
+    expect(r.missing_observations).toEqual([]);
+    expect(r.reproducibility_issues).toEqual([]);
+    expect(r.consistency_issues).toEqual([]);
+    expect(r.condition_request_recommended).toBe(false);
+  });
+
+  it("欠損・unit未記載・n=1・conditions未計測 を段階2-4で検出する", () => {
+    const r = reviewPipeline({
+      sections: {},
+      conditions: { temp: { min: 25, max: 30, required: true }, humidity: { required: true } },
+      observation: {},
+      measurements: [{ item: "weight", value: 5 }], // unit無し・n=1・conditionsに無い項目
+    });
+    expect(r.structural_score).toBe(0);
+    expect(r.missing_observations.map((m) => m.key)).toEqual(["humidity", "temp"]);
+    expect(r.reproducibility_issues).toContain("weight: unit未記載(再現性を損なう)");
+    expect(r.reproducibility_issues).toContain("weight: n=1(反復不足・再現性の主張には最低2点が必要)");
+    expect(r.consistency_issues).toEqual([
+      "humidity: conditions に定義されているが measurements が無い",
+      "temp: conditions に定義されているが measurements が無い",
+    ]);
+    expect(r.condition_request_recommended).toBe(true);
+  });
+});
+
+describe("V3-PPR-15 confidence formula + hypothesis state machine (pure fn)", () => {
+  it("computeConfidence は f_data/f_consistency/f_votes の既定重み(0.3/0.4/0.3)で合成する", () => {
+    // n=100 -> f_data=1-e^(-0.02*100)=1-e^-2≈0.8647。n11=8,n10=2 -> f_consistency=0.8。votes 8up/2down -> f_votes=8/11≈0.7273。
+    const c = computeConfidence(100, 8, 2, 8, 2);
+    const f_data = 1 - Math.exp(-0.02 * 100);
+    const expected = 0.3 * f_data + 0.4 * 0.8 + 0.3 * (8 / 11);
+    expect(c).toBeCloseTo(expected, 10);
+  });
+
+  it("n=0/votes=0 でも 0 除算せず安全に 0 付近を返す", () => {
+    const c = computeConfidence(0, 0, 0, 0, 0);
+    expect(Number.isFinite(c)).toBe(true);
+    expect(c).toBeGreaterThanOrEqual(0);
+  });
+
+  it("draft→hypothesis→supported→archived は許可、draft→supported の飛び越しは禁止", () => {
+    expect(canTransitionHypothesis("draft", "hypothesis")).toBe(true);
+    expect(canTransitionHypothesis("hypothesis", "supported")).toBe(true);
+    expect(canTransitionHypothesis("hypothesis", "rejected")).toBe(true);
+    expect(canTransitionHypothesis("supported", "archived")).toBe(true);
+    expect(canTransitionHypothesis("draft", "supported")).toBe(false);
+    expect(canTransitionHypothesis("archived", "hypothesis")).toBe(false);
+  });
+
+  it("promoteRepresentativeHypothesis は supported の中から confidence 最大の1件を選ぶ(同点はid昇順)", () => {
+    const best = promoteRepresentativeHypothesis([
+      { id: "b", state: "supported", confidence: 0.9 },
+      { id: "a", state: "supported", confidence: 0.9 },
+      { id: "c", state: "hypothesis", confidence: 0.99 }, // supported でないので除外
+    ]);
+    expect(best).toEqual({ id: "a", state: "supported", confidence: 0.9 });
+  });
+
+  it("supported が1件も無ければ null(誇張ゼロ)", () => {
+    expect(promoteRepresentativeHypothesis([{ id: "a", state: "hypothesis", confidence: 0.9 }])).toBeNull();
+    expect(promoteRepresentativeHypothesis([])).toBeNull();
+  });
+});
+
+describe("V3-PPR-08 buildCitationEdges (双方向リンク + tombstone・pure fn)", () => {
+  it("実在するtarget_idはtombstone:false、非公開/削除済みはtombstone:true", () => {
+    const edges = buildCitationEdges(
+      "paper-1",
+      [
+        { type: "paper", id: "paper-2", label: "他論文" },
+        { type: "paper", id: "paper-deleted" },
+        { type: "url", id: "https://example.com" },
+      ],
+      // paper-deleted は実在確認できなかった想定。url/book は自ホストTruth外の参照のため
+      // route側が常に existing へ加える(呼び手責務・関数自体は集合演算のみ)。
+      new Set(["paper-2", "https://example.com"]),
+    );
+    expect(edges).toEqual([
+      { source_id: "paper-1", target_id: "https://example.com", type: "url", tombstone: false },
+      { source_id: "paper-1", target_id: "paper-2", type: "paper", label: "他論文", tombstone: false },
+      { source_id: "paper-1", target_id: "paper-deleted", type: "paper", tombstone: true },
+    ]);
+  });
+});
+
+describe("thin routes: /research/review, /research/confidence, /research/hypothesis/*, /research/content/:id/citation-graph", () => {
+  function post(bucket: FakeR2Bucket, path: string, body: unknown, headers = AUTH_HEADERS): Promise<Response> {
+    return app.request(path, { method: "POST", headers, body: JSON.stringify(body) }, makeEnv(bucket));
+  }
+
+  it("POST /research/review returns the 5-stage decision output", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/review", {
+      conditions: { temp: { required: true } },
+      observation: {},
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { structural_score: number; condition_request_recommended: boolean };
+    expect(body.structural_score).toBe(0);
+    expect(body.condition_request_recommended).toBe(true);
+  });
+
+  it("POST /research/confidence returns a 0..1 confidence with default weights echoed", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/confidence", { n: 50, n11: 5, n10: 0, votes_up: 3, votes_down: 0 });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { confidence: number; weights: { data: number; consistency: number; votes: number; k: number } };
+    expect(body.confidence).toBeGreaterThan(0);
+    expect(body.confidence).toBeLessThanOrEqual(1);
+    expect(body.weights).toEqual({ data: 0.3, consistency: 0.4, votes: 0.3, k: 0.02 });
+  });
+
+  it("POST /research/hypothesis/transition rejects an illegal jump", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/hypothesis/transition", { from: "draft", to: "archived" });
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { allowed: boolean }).toMatchObject({ allowed: false });
+  });
+
+  it("GET /research/content/:id/citation-graph 404s for an unknown content id", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await app.request(
+      "/api/v1/research/content/unknown-id/citation-graph",
+      { headers: AUTH_HEADERS },
+      makeEnv(bucket),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /research/content/:id/citation-graph 401s unauthenticated (protected route)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await app.request("/api/v1/research/content/unknown-id/citation-graph", {}, makeEnv(bucket));
+    expect(res.status).toBe(401);
   });
 });

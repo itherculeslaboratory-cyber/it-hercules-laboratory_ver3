@@ -242,3 +242,57 @@ describe("WIK-17 share -> chat_log -> chat-index projection", () => {
     expect(res.status).toBe(201); // sanitized body_markdown passes content.schema pattern
   });
 });
+
+describe("V3-PPR-11 GET /research/dataset (公開データセット・匿名化・画像バイナリ非含有)", () => {
+  async function seedObs(bucket: FakeR2Bucket, type: string, key: string, data: Record<string, unknown>): Promise<void> {
+    const env = makeEnvelope({
+      type,
+      dataschema: `schemas/events/${type.replace("ihl.", "").replace(/\./g, "-").replace("-v1", "")}.schema.json`,
+      data,
+    });
+    const res = await new TruthStore(bucket).putEventAt(key, env);
+    expect(res.status).toBe("inserted");
+  }
+
+  it("engine_version でフィルタし、画像バイナリを含めず public_user_id=actor_id で匿名化する", async () => {
+    const bucket = new FakeR2Bucket();
+    await seedObs(bucket, "ihl.obs.capture.v1", "truth/ihl.obs.capture.v1/cap-1.json", {
+      capture_id: "cap-1", actor_id: "actor-x", domain: "biology", subject_ref: "individual/ind-1",
+    });
+    await seedObs(bucket, "ihl.obs.photo.v1", "truth/ihl.obs.photo.v1/cap-1-p1.json", {
+      photo_id: "p1", capture_id: "cap-1", actor_id: "actor-x",
+      media_key: "media/photo/p1", content_type: "image/jpeg", size_bytes: 100, sha256: "a".repeat(64),
+    });
+    await seedObs(bucket, "ihl.obs.analysis.v1", "truth/ihl.obs.analysis.v1/cap-1-a1.json", {
+      analysis_id: "run-1", capture_id: "cap-1", correction_semver: "1.2.0", is_manual_edit: false, actor_id: "actor-x",
+      results: { deltaE: 1.5, D2: 0.02 },
+    });
+    await seedObs(bucket, "ihl.obs.analysis.v1", "truth/ihl.obs.analysis.v1/cap-1-a2.json", {
+      analysis_id: "run-2", capture_id: "cap-1", correction_semver: "0.9.0", is_manual_edit: false, actor_id: "actor-x",
+      results: { deltaE: 9.9 },
+    });
+
+    const all = (await (await get(bucket, "/api/v1/research/dataset")).json()) as {
+      count: number; items: Array<{ individual_uuid: string | null; public_user_id: string; engine_version: string | null; image_sha256: string | null; metrics: Record<string, unknown> }>;
+    };
+    expect(all.count).toBe(2);
+
+    const filtered = (await (await get(bucket, "/api/v1/research/dataset?engine_version=1.2.0")).json()) as { count: number; items: unknown[] };
+    expect(filtered.count).toBe(1);
+    const row = filtered.items[0] as { individual_uuid: string | null; public_user_id: string; engine_version: string | null; image_sha256: string | null; metrics: Record<string, unknown> };
+    expect(row.individual_uuid).toBe("ind-1");
+    expect(row.public_user_id).toBe("actor-x"); // 匿名化=既存actor_id(生メール等は含まれない)
+    expect(row.engine_version).toBe("1.2.0");
+    expect(row.image_sha256).toBe("a".repeat(64));
+    expect(row.metrics).toEqual({ deltaE: 1.5, D2: 0.02 });
+    // R2 画像バイナリ本体(media_key等)は含めない(事実キーのみ・PPR-11)。
+    expect(JSON.stringify(row)).not.toContain("media/photo");
+  });
+
+  it("データが無ければ count=0 の空データセットを返す(誇張ゼロ)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await get(bucket, "/api/v1/research/dataset");
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { count: number; items: unknown[] }).toEqual({ engine_version: null, license: "CC0", count: 0, items: [] });
+  });
+});

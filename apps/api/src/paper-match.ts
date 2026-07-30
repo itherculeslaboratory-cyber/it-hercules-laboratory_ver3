@@ -386,6 +386,32 @@ export function hypothesisDraftsForGaps(gaps: Quadrant[], pLabel: string, qLabel
 // 複数観測の合成則: 各 required キーは「いずれかの観測で充足していれば充足」
 // (append-only に観測が積み上がるほど条件充足が進む、という要件の性質に対応する
 // 決定論的な畳み込み — 後着の観測が既に充足したキーを未充足に戻すことはない)。
+//
+// ★2026-07-31 修正(V3-PPR-14 順序依存バグ・批評家指摘=n60indcritic重大2): 旧実装は
+// 観測の生値を「最初に現れたキーの値が勝つ」で1個の merged オブジェクトへ畳み込んでから
+// matchConditions を1回だけ呼んでいたため、外れ値が先に来た観測順だと満たしていても
+// satisfied にならない(順序依存)。matchConditions を観測ごとに個別に適用し、
+// 「required キーごとに1件でも satisfied な観測があれば satisfied」という
+// キー単位の集合演算に変える(生値の畳み込みをやめる)。
+function mergeMatchAcrossObservations(conditions: ConditionsP, observations: ObservationJson[]): MatchResult {
+  const requiredKeys = Object.keys(conditions ?? {})
+    .filter((k) => conditions[k]?.required === true)
+    .sort();
+  const satisfiedSet = new Set<string>();
+  const presentSet = new Set<string>(); // required-key が観測に存在したが充足しなかった(=violated候補)
+  for (const obs of observations) {
+    const m = matchConditions(conditions, obs ?? {});
+    for (const k of m.satisfied) satisfiedSet.add(k);
+    for (const k of m.violated) presentSet.add(k);
+  }
+  const satisfied = requiredKeys.filter((k) => satisfiedSet.has(k));
+  const violated = requiredKeys.filter((k) => !satisfiedSet.has(k) && presentSet.has(k));
+  const missing = requiredKeys.filter((k) => !satisfiedSet.has(k) && !presentSet.has(k));
+  const required_count = requiredKeys.length;
+  const match_rate = required_count === 0 ? 1 : satisfied.length / required_count;
+  return { satisfied, missing, violated, required_count, match_rate };
+}
+
 export interface LivingPaperGraphState {
   conditions: ConditionsP;
   sections: Record<string, SectionState>;
@@ -403,11 +429,29 @@ export function computeLivingPaperGraph(
 ): LivingPaperGraphState {
   const conditions = template.conditions ?? {};
   const claim = (template.claims ?? [])[0];
-  const merged: ObservationJson = {};
-  for (const obs of observations) {
-    for (const [k, v] of Object.entries(obs ?? {})) if (!(k in merged)) merged[k] = v;
-  }
-  const { sections, claims, match } = autoFillDescriptor(template, merged);
+  const match =
+    observations.length > 0
+      ? mergeMatchAcrossObservations(conditions, observations)
+      : matchConditions(conditions, {});
+  const satisfiedSet = new Set(match.satisfied);
+
+  const sections: Record<string, SectionState> = { ...(template.sections ?? {}) };
+  const allRequiredMet = match.required_count > 0 && match.satisfied.length === match.required_count;
+  sections.verification = {
+    filled: allRequiredMet,
+    text: match.satisfied.length ? `verified: ${match.satisfied.join(", ")}` : "",
+  };
+  const claims: FilledClaim[] = (template.claims ?? []).map((cl) => {
+    const keys = (cl.evidence_keys ?? []).slice().sort();
+    const evidenced = keys.length > 0 && keys.every((k) => satisfiedSet.has(k));
+    return {
+      claim_id: cl.claim_id,
+      statement: cl.statement,
+      status: evidenced ? "evidenced" : "hypothesis",
+      evidence_refs: evidenced ? keys : [],
+    };
+  });
+
   const quadrant: QuadrantDensity = claim
     ? quadrantAnalysis(conditions, claim, observations, opts?.threshold)
     : {
@@ -416,6 +460,114 @@ export function computeLivingPaperGraph(
         gaps: [],
       };
   return { conditions, sections, match, claims, quadrant, confidence: match.match_rate, observation_count: observations.length };
+}
+
+// ── reviewPipeline(V3-PPR-05 AI査読パイプライン 段階1-5・決定論のみ・LLM不使用)──────
+// 「段階1〜5(構造・欠損・再現性・整合性・統計)を決定論コードで実装し、LLM必須は
+// 段階6(要約・改善提案)のみに限定する」の1-5本体。新規判定ロジックを増やさず既存の
+// computeSectionsCompleteness/matchConditions/hintsForMissing/summarizeUnifiedMeasurements
+// をそのまま合成する(車輪の再発明をしない)。段階6(LLM要約)は既存 llm_advice トグル
+// (POST /research/paper-match)の管轄のままここには含めない。
+export interface ReviewInput {
+  sections?: Record<string, SectionState>;
+  conditions?: ConditionsP;
+  measurements?: UnifiedMeasurement[];
+  observation?: ObservationJson;
+}
+export interface ReviewResult {
+  structural_score: number; // 段階1: 構造スコア(0-100)
+  missing_observations: MissingKeyHint[]; // 段階2: 優先度付き欠損観点リスト(必須条件の未充足順)
+  reproducibility_issues: string[]; // 段階3: 再現性問題箇所の箇条書き
+  consistency_issues: string[]; // 段階4: conditions と measurements の不整合箇所
+  statistical_summary: Record<string, UnifiedMeasurementSummary>; // 段階5: 統計
+  condition_request_recommended: boolean; // 欠損があれば追加観測(条件リクエスト)を推奨
+}
+
+export function reviewPipeline(input: ReviewInput): ReviewResult {
+  const sections = input.sections ?? {};
+  const conditions = input.conditions ?? {};
+  const measurements = input.measurements ?? [];
+  const observation = input.observation ?? {};
+
+  const structural_score = computeSectionsCompleteness(sections);
+  const match = matchConditions(conditions, observation);
+  const missing_observations = hintsForMissing(conditions, match.missing);
+
+  const reproducibility_issues: string[] = [];
+  const countByItem = new Map<string, number>();
+  for (const m of measurements) {
+    if (!m.unit) reproducibility_issues.push(`${m.item}: unit未記載(再現性を損なう)`);
+    countByItem.set(m.item, (countByItem.get(m.item) ?? 0) + 1);
+  }
+  for (const [item, n] of [...countByItem].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (n < 2) reproducibility_issues.push(`${item}: n=${n}(反復不足・再現性の主張には最低2点が必要)`);
+  }
+
+  const measurementItems = new Set(measurements.map((m) => m.item));
+  const consistency_issues = Object.keys(conditions)
+    .filter((k) => !measurementItems.has(k))
+    .sort()
+    .map((k) => `${k}: conditions に定義されているが measurements が無い`);
+
+  const statistical_summary = summarizeUnifiedMeasurements(measurements.length ? [{ measurements }] : []);
+
+  return {
+    structural_score,
+    missing_observations,
+    reproducibility_issues,
+    consistency_issues,
+    statistical_summary,
+    condition_request_recommended: missing_observations.length > 0,
+  };
+}
+
+// ── PPR-15 論文/仮説の信頼度自動算出 + 状態遷移 ─────────────────────────────────
+// 「f_data=1-e^(-k・n)・f_consistency=n11/(n11+n10+ε)・f_votes=v+/(v+ +v- +α) の
+// 重み付き和(既定w=0.3/0.4/0.3、k=0.02)」をそのまま実装(決定論・LLM不使用)。
+export interface ConfidenceWeights { data: number; consistency: number; votes: number; k: number }
+export const CONFIDENCE_WEIGHTS_DEFAULT: ConfidenceWeights = { data: 0.3, consistency: 0.4, votes: 0.3, k: 0.02 };
+// 要件本文に既定値の明示が無いため、0除算回避のためだけの最小平滑化定数として1を採用
+// (較正が要るなら research-constants.ts へ昇格が上げ道・ponytail)。
+const CONFIDENCE_VOTE_ALPHA = 1;
+const CONFIDENCE_EPS = 1e-9;
+
+export function computeConfidence(
+  n: number,
+  n11: number,
+  n10: number,
+  votesUp: number,
+  votesDown: number,
+  weights: ConfidenceWeights = CONFIDENCE_WEIGHTS_DEFAULT,
+): number {
+  const f_data = 1 - Math.exp(-weights.k * n);
+  const f_consistency = n11 / (n11 + n10 + CONFIDENCE_EPS);
+  const f_votes = votesUp / (votesUp + votesDown + CONFIDENCE_VOTE_ALPHA);
+  return weights.data * f_data + weights.consistency * f_consistency + weights.votes * f_votes;
+}
+
+// 「draft→hypothesis→supported/rejected→archived の状態遷移」(PPR-15)。
+export type HypothesisState = "draft" | "hypothesis" | "supported" | "rejected" | "archived";
+const HYPOTHESIS_TRANSITIONS: Record<HypothesisState, readonly HypothesisState[]> = {
+  draft: ["hypothesis"],
+  hypothesis: ["supported", "rejected"],
+  supported: ["archived"],
+  rejected: ["archived"],
+  archived: [],
+};
+
+export function canTransitionHypothesis(from: HypothesisState, to: HypothesisState): boolean {
+  return HYPOTHESIS_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export interface HypothesisCandidate { id: string; state: HypothesisState; confidence: number }
+
+/** promoteRepresentativeHypothesis — 「代表仮説昇格(上位1つ)で分岐を収束させる」
+ * (PPR-15)。supported 状態の中から confidence 最大の1件を選ぶ(同点は id 昇順・決定論)。
+ * supported が無ければ null(誇張ゼロ・機械が推測しない)。 */
+export function promoteRepresentativeHypothesis(candidates: HypothesisCandidate[]): HypothesisCandidate | null {
+  const supported = candidates.filter((c) => c.state === "supported");
+  if (!supported.length) return null;
+  return supported.slice().sort((a, b) => b.confidence - a.confidence || a.id.localeCompare(b.id))[0];
 }
 
 export interface NeighborPaper {
@@ -463,4 +615,25 @@ export function gapAnalysis(paper: GapPaper, neighbors: NeighborPaper[], observa
 
   const missing_perspectives = [...new Set([...data_gap, ...semantic_gap])].sort();
   return { data_gap, semantic_gap, missing_perspectives };
+}
+
+// ── buildCitationEdges(V3-PPR-08 引用の双方向リンク + tombstone・純関数)────────────
+// 「引用先が非公開・削除済みでも本文を壊さずtombstone mini-cardを表示し、Citation
+// イベント自体は削除しない(INSERT ONLY)」の判定本体。既存 content.citations(CiteRef[]・
+// PPR-23で既に永続化済み)をそのまま入力にし、新規 Truth 型は増やさない。存在確認
+// (target_id が今も読めるか)は呼び手(route側)が担い、この関数は純粋な集合演算のみ
+// (テスト容易性・決定論)。
+export interface CiteRefLike { type: string; id: string; label?: string }
+export interface CitationGraphEdge { source_id: string; target_id: string; type: string; label?: string; tombstone: boolean }
+
+export function buildCitationEdges(sourceId: string, citations: CiteRefLike[], existingTargetIds: Set<string>): CitationGraphEdge[] {
+  return citations
+    .map((ref) => ({
+      source_id: sourceId,
+      target_id: ref.id,
+      type: ref.type,
+      ...(ref.label ? { label: ref.label } : {}),
+      tombstone: !existingTargetIds.has(ref.id),
+    }))
+    .sort((a, b) => a.target_id.localeCompare(b.target_id) || a.type.localeCompare(b.type));
 }

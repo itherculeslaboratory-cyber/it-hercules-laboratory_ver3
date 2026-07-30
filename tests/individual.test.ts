@@ -10,6 +10,11 @@ import {
   projectName,
   projectCross,
   projectAuthenticity,
+  renderBrandName,
+  nextBrandSeq,
+  hasSeriesNameConflict,
+  reduceFailureData,
+  summarizeEnvironmentReadings,
 } from "../apps/api/src/individual-routes";
 import { issueSessionToken } from "../apps/api/src/session";
 import { DEV_TOKEN, FakeR2Bucket, SESSION_SECRET, makeEnv } from "./helpers";
@@ -1282,5 +1287,103 @@ describe("T-66 GET /individuals/pedigree-links(宇宙面用・全個体血統エ
     const res = await get(`/api/v1/individuals/pedigree-links?lineage_id=${encodeURIComponent("王シリーズ")}`, env);
     const body = (await res.json()) as { links: { child_id: string; parent_id: string; parent_role: string }[] };
     expect(body.links).toEqual([{ child_id: child, parent_id: sire, parent_role: "sire" }]);
+  });
+});
+
+describe("V3-IND-03 ブランド命名(series-year-seq 自動採番・pure fn)", () => {
+  it("renderBrandName は {series}/{year}/{seq} を機械展開する", () => {
+    expect(renderBrandName("{series}-{year}-{seq}", "王", 2026, 1)).toBe("王-2026-1");
+  });
+
+  it("nextBrandSeq は同一 series×year の既存名から最大 seq+1 を返す(該当なしは1)", () => {
+    const existing = ["王-2026-1", "王-2026-2", "王-2025-9", "玉-2026-1"];
+    expect(nextBrandSeq("{series}-{year}-{seq}", "王", 2026, existing)).toBe(3);
+    expect(nextBrandSeq("{series}-{year}-{seq}", "王", 2025, existing)).toBe(10);
+    expect(nextBrandSeq("{series}-{year}-{seq}", "新シリーズ", 2026, existing)).toBe(1);
+  });
+
+  it("hasSeriesNameConflict は同一series内の重複のみ検出し、series違いの同名は許可する", () => {
+    const existing = ["王-2026-1"];
+    // 同一 series 内で同じ名前を再度使おうとすると衝突。
+    expect(hasSeriesNameConflict("{series}-{year}-{seq}", "王", "王-2026-1", existing)).toBe(true);
+    // series が違えば同名文字列でも衝突しない(要件どおり)。
+    expect(hasSeriesNameConflict("{series}-{year}-{seq}", "玉", "王-2026-1", existing)).toBe(false);
+  });
+
+  it("POST /individuals/{id}/name/brand は series-year-seq を自動採番して名前を append する", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "brand-test" });
+    const brandRes = await post("/api/v1/brand-templates", { pattern: "{series}-{year}-{seq}" }, env);
+    const { brand_template_id: brandTemplateId } = (await brandRes.json()) as { brand_template_id: string };
+
+    const first = await post(`/api/v1/individuals/${id}/name/brand`, { brand_template_id: brandTemplateId, series: "王", year: 2026 }, env);
+    expect(first.status).toBe(201);
+    expect((await first.json()) as { name: string; seq: number }).toMatchObject({ name: "王-2026-1", seq: 1 });
+
+    const id2 = await createInd(env, { local_label_text: "brand-test-2" });
+    const second = await post(`/api/v1/individuals/${id2}/name/brand`, { brand_template_id: brandTemplateId, series: "王", year: 2026 }, env);
+    // 同一ユーザー×同一series×同一year内なので seq が 2 へ進む(採番はowner全体スコープ)。
+    expect((await second.json()) as { name: string; seq: number }).toMatchObject({ name: "王-2026-2", seq: 2 });
+  });
+
+  it("POST /individuals/{id}/name/brand は未知の brand_template_id を 404 で拒否する", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "brand-404" });
+    const res = await post(`/api/v1/individuals/${id}/name/brand`, { brand_template_id: "nope", series: "王", year: 2026 }, env);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("V3-IND-17 失敗データ(FailureDataNode・反脆弱性データ・pure fn)", () => {
+  it("reduceFailureData は死亡/羽化不全のみを抽出し fail_stage/fail_reason を detail から拾う", () => {
+    const life = [
+      { kind: "birth", at: "2026-01-01T00:00:00Z" },
+      { kind: "death", at: "2026-02-01T00:00:00Z", detail: { fail_stage: "larva", fail_reason: "温度管理ミス" } },
+      { kind: "eclosion", at: "2026-03-01T00:00:00Z", detail: { success: false, fail_stage: "pupa" } },
+      { kind: "eclosion", at: "2026-04-01T00:00:00Z", detail: { success: true } }, // 成功は対象外
+      { kind: "death", at: "2026-05-01T00:00:00Z" }, // detail 無し(fail_stage/reasonはnullのまま=推測しない)
+    ];
+    const nodes = reduceFailureData("ind-1", life);
+    expect(nodes).toHaveLength(3);
+    expect(nodes[0]).toMatchObject({ kind: "death", fail_stage: "larva", fail_reason: "温度管理ミス" });
+    expect(nodes[1]).toMatchObject({ kind: "eclosion", fail_stage: "pupa", fail_reason: null });
+    expect(nodes[2]).toMatchObject({ kind: "death", fail_stage: null, fail_reason: null });
+  });
+
+  it("GET /individuals/{id}/cross は fail_by_stage/failure_data を含む(削除・編集されず正式集計に入る)", async () => {
+    const { env } = ctx();
+    const parent = await createInd(env, { local_label_text: "fail-parent" });
+    const child = await createInd(env, { local_label_text: "fail-child" });
+    await post(`/api/v1/individuals/${child}/parents`, { parent_id: parent, parent_role: "sire" }, env);
+    await post(`/api/v1/individuals/${child}/life-events`, { kind: "death", at: "2026-02-01T00:00:00Z", detail: { fail_stage: "larva", fail_reason: "test" } }, env);
+
+    const res = await get(`/api/v1/individuals/${parent}/cross`, env);
+    const body = (await res.json()) as { fail_by_stage: Record<string, number>; failure_data: { fail_stage: string | null }[] };
+    expect(body.fail_by_stage).toEqual({ larva: 1 });
+    expect(body.failure_data).toHaveLength(1);
+    expect(body.failure_data[0].fail_stage).toBe("larva");
+  });
+});
+
+describe("V3-IND-28 location_history × 自動環境集計(pure fn)", () => {
+  it("summarizeEnvironmentReadings は metric ごとに count 重み付き平均/min/max を出す", () => {
+    const readings = [
+      { device_id: "d1", metric: "temp", bucket_start_ms: 0, mean: 25, count: 10 },
+      { device_id: "d1", metric: "temp", bucket_start_ms: 60000, mean: 27, count: 10 },
+      { device_id: "d1", metric: "humidity", bucket_start_ms: 0, mean: 60, count: 5 },
+    ];
+    const summary = summarizeEnvironmentReadings(readings);
+    expect(summary.temp).toEqual({ mean: 26, min: 25, max: 27, count: 20 });
+    expect(summary.humidity).toEqual({ mean: 60, min: 60, max: 60, count: 5 });
+  });
+
+  it("GET /individuals/{id}/environment-history は空でも200・periods配列を返す(未配線でも壊れない)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "env-hist" });
+    const res = await get(`/api/v1/individuals/${id}/environment-history`, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { individual_id: string; periods: unknown[] };
+    expect(body.individual_id).toBe(id);
+    expect(body.periods).toEqual([]);
   });
 });

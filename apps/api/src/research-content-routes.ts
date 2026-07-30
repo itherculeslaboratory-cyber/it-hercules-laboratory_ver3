@@ -383,6 +383,66 @@ researchContentRoutes.post("/research/shared", async (c) => {
   return c.json({ content_id: contentId }, 201);
 });
 
+// ── V3-PPR-11 公開データセットAPI(研究向けオープンデータ)────────────────────
+// 「IDをマスクして無料公開する研究者向けAPIを運営負担ゼロで提供する」— 常駐フェッチ・
+// 常駐DBを追加せず都度 Truth 投影のみ(不変条項①)。R2 画像バイナリ本体は一切返さない
+// (project-routes.ts の reanalysisManifest と同じ「事実キーのみ」規約)。public_user_id
+// は既存 actor_id(deriveActorId・不可逆ハッシュ導出・@ihl/truth・V3-IND-30と同型の
+// 匿名化)をそのまま採用する — 新たな secret_salt を発明すると鍵管理(w1-sec 所有領域)
+// を越境するため、既存の匿名化識別子を再利用する(reuse-first)。observation 系
+// Truth(capture/photo/analysis)は w1-obs 所有だが読取専用アクセスは project-routes.ts
+// の reanalysisManifest/bundle と同じ既存パターン(cross-domain read-only)。
+const DS_ANALYSIS_TYPE = "ihl.obs.analysis.v1";
+const DS_PHOTO_TYPE = "ihl.obs.photo.v1";
+const DS_CAPTURE_TYPE = "ihl.obs.capture.v1";
+
+export interface DatasetRow {
+  individual_uuid: string | null;
+  public_user_id: string;
+  engine_version: string | null;
+  image_sha256: string | null;
+  metrics: Record<string, unknown>;
+}
+
+export async function buildPublicDataset(s: TruthStore, engineVersion?: string): Promise<DatasetRow[]> {
+  const captures = new Map<string, Record<string, unknown>>();
+  for (const e of await s.listEvents(`truth/${DS_CAPTURE_TYPE}/`)) {
+    const d = dataOf(e);
+    captures.set(String(d.capture_id ?? ""), d);
+  }
+  const rows: DatasetRow[] = [];
+  for (const e of await s.listEvents(`truth/${DS_ANALYSIS_TYPE}/`)) {
+    const a = dataOf(e);
+    const ver = typeof a.correction_semver === "string" ? a.correction_semver : null;
+    if (engineVersion && ver !== engineVersion) continue;
+    const captureId = String(a.capture_id ?? "");
+    const cap = captures.get(captureId);
+    const ref = cap && typeof cap.subject_ref === "string" ? cap.subject_ref : "";
+    const individual_uuid = ref.startsWith("individual/") ? ref.slice("individual/".length) : null;
+    const photos = (await s.listEvents(`truth/${DS_PHOTO_TYPE}/${captureId}-`)).map(dataOf);
+    const image_sha256 = typeof photos[0]?.sha256 === "string" ? (photos[0].sha256 as string) : null;
+    rows.push({
+      individual_uuid,
+      public_user_id: String(a.actor_id ?? ""),
+      engine_version: ver,
+      image_sha256,
+      metrics: (a.results ?? {}) as Record<string, unknown>,
+    });
+  }
+  return rows.sort(
+    (a, b) => (a.individual_uuid ?? "").localeCompare(b.individual_uuid ?? "") || a.public_user_id.localeCompare(b.public_user_id),
+  );
+}
+
+// GET /research/dataset?engine_version=... — 公開データセット(V3-PPR-11)。CC0推奨・
+// 利用制限なし・誰でも取得可能(既存 index.ts §1.5 gate は認証必須のため「完全な誰でも」は
+// 未接続=正直に注記。認証済み利用者への公開はこの route で満たす)。
+researchContentRoutes.get("/research/dataset", async (c) => {
+  const engineVersion = c.req.query("engine_version") || undefined;
+  const items = await buildPublicDataset(store(c), engineVersion);
+  return c.json({ engine_version: engineVersion ?? null, license: "CC0", count: items.length, items });
+});
+
 // GET /research/chat-index — chat_log 時系列索引投影（WIK-17）。
 researchContentRoutes.get("/research/chat-index", async (c) => {
   return c.json({ items: await chatIndex(store(c)) });

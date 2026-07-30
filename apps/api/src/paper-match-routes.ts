@@ -17,12 +17,22 @@ import {
   hypothesisDraftsForGaps,
   autoGeneratePaperDraft,
   computeLivingPaperGraph,
+  reviewPipeline,
+  computeConfidence,
+  canTransitionHypothesis,
+  promoteRepresentativeHypothesis,
+  buildCitationEdges,
+  CONFIDENCE_WEIGHTS_DEFAULT,
   type ConditionsP,
   type ObservationJson,
   type NeighborPaper,
   type GapPaper,
   type TemplateClaim,
   type UnifiedMeasurement,
+  type ConfidenceWeights,
+  type HypothesisState,
+  type HypothesisCandidate,
+  type CiteRefLike,
 } from "./paper-match";
 
 export const paperMatchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -188,6 +198,70 @@ paperMatchRoutes.post("/research/graph/update", async (c) => {
   const threshold = typeof body.threshold === "number" ? body.threshold : undefined;
   const graph = computeLivingPaperGraph({ sections, conditions, claims }, observations, { threshold });
   return c.json({ ...graph, persisted: false });
+});
+
+// POST /research/review — AI査読パイプライン段階1-5(構造/欠損/再現性/整合性/統計)を
+// 決定論算出する(V3-PPR-05)。段階6(LLM要約・改善提案)は含めない(既存 llm_advice
+// トグル=POST /research/paper-match の管轄のまま・§6人間ゲート)。
+paperMatchRoutes.post("/research/review", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const sections = body.sections as Record<string, { filled: boolean; text: string }> | undefined;
+  const conditions = (body.conditions ?? {}) as ConditionsP;
+  const measurements = Array.isArray(body.measurements) ? (body.measurements as UnifiedMeasurement[]) : [];
+  const observation = (body.observation ?? {}) as ObservationJson;
+  return c.json(reviewPipeline({ sections, conditions, measurements, observation }));
+});
+
+// POST /research/confidence — 論文/仮説の信頼度自動算出(V3-PPR-15)。
+// f_data=1-e^(-k・n)/f_consistency=n11/(n11+n10+ε)/f_votes=v+/(v+ +v- +α) の重み付き和。
+paperMatchRoutes.post("/research/confidence", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const n = Number(body.n ?? 0);
+  const n11 = Number(body.n11 ?? 0);
+  const n10 = Number(body.n10 ?? 0);
+  const votesUp = Number(body.votes_up ?? 0);
+  const votesDown = Number(body.votes_down ?? 0);
+  const weights = (body.weights ?? CONFIDENCE_WEIGHTS_DEFAULT) as ConfidenceWeights;
+  const confidence = computeConfidence(n, n11, n10, votesUp, votesDown, weights);
+  return c.json({ confidence, weights });
+});
+
+// POST /research/hypothesis/transition — draft→hypothesis→supported/rejected→archived
+// の許可判定(V3-PPR-15)。
+paperMatchRoutes.post("/research/hypothesis/transition", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const from = body.from as HypothesisState;
+  const to = body.to as HypothesisState;
+  return c.json({ from, to, allowed: canTransitionHypothesis(from, to) });
+});
+
+// POST /research/hypothesis/promote — 代表仮説昇格(上位1つ・supported の中から
+// confidence 最大)で分岐を収束させる(V3-PPR-15)。
+paperMatchRoutes.post("/research/hypothesis/promote", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const candidates = Array.isArray(body.candidates) ? (body.candidates as HypothesisCandidate[]) : [];
+  return c.json({ representative: promoteRepresentativeHypothesis(candidates) });
+});
+
+// GET /research/content/:id/citation-graph — 引用の双方向リンク + tombstone 判定
+// (V3-PPR-08)。既存 content.citations(PPR-23で永続化済みのCiteRef[])を入力にし、
+// paper 種別の引用先のみ実在確認(url/book/observationは自ホストTruth外の参照のため
+// tombstone 判定の対象外=常に実在扱い)。Citationイベント自体は削除しない(INSERT ONLY)。
+paperMatchRoutes.get("/research/content/:id/citation-graph", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const ev = await s.readEvent(contentKey(id));
+  if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const citations = (dataOf(ev).citations ?? []) as CiteRefLike[];
+  const existing = new Set<string>();
+  for (const ref of citations) {
+    if (ref.type === "paper") {
+      if (await s.readEvent(contentKey(ref.id))) existing.add(ref.id);
+    } else {
+      existing.add(ref.id); // url/book/observation: 自ホストTruth外の参照はtombstone対象外
+    }
+  }
+  return c.json({ content_id: id, edges: buildCitationEdges(id, citations, existing) });
 });
 
 // POST /research/content/:id/hypothesis — 仮説を別イベントとして append（PPR-01）。
