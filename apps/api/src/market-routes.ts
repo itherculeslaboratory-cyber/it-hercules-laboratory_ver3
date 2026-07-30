@@ -19,6 +19,12 @@ import {
   isOfferExpired,
   isAuctionSettleDue,
   highestBid,
+  isLotteryDrawDue,
+  isPlatinumPriorityDue,
+  pickLotteryWinner,
+  rankPlatinumPriority,
+  nextRelistPrice,
+  type RelistDiscountMode,
   type MarketKind,
   type MarketState,
   type TxnEvent,
@@ -199,16 +205,28 @@ marketRoutes.post("/market/listings", async (c) => {
 // 知る当事者は GET /market/listings/{id} で参照可能・全消去はしない=safety側だが
 // 当事者への説明可能性は残す)。?species= は個体一覧(individual-routes.ts
 // listIndividualsFor)と同じ完全一致(大小無視)フィルタ(HDR-1・A1#4)。
-// ponytail: listing-type prefix scan = O(n) 全走査。MVP 量なら十分。投影 index は
-// 別波(design-c2 §3.1「一覧系投影は R2 prefix scan」)。
+// V3-MKT-52(w2-mkt): ?lang= 文化タグの配列検索(完全一致)+ ?cursor=/?limit=(既定50)
+// の cursor-based ページネーション(listing_id=ULID は生成順で単調増加するため、
+// listing_id 自体を並べ替えキー兼カーソルとして使う=複合インデックスの GUI 管理は
+// 別波・R2 に真の複合 index は無いため in-memory フィルタ→ID順ソート→スライス)。
+// ponytail: listing-type prefix scan = O(n) 全走査。MVP 量なら十分。R2 側の真の
+// 複合 index(投影 index)は別波(design-c2 §3.1「一覧系投影は R2 prefix scan」)。
 marketRoutes.get("/market/listings", async (c) => {
   const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
+  const langFilter = (c.req.query("lang") ?? "").trim().toLowerCase();
+  const cursor = (c.req.query("cursor") ?? "").trim();
+  const limitRaw = Number(c.req.query("limit"));
+  const limit = Number.isInteger(limitRaw) && limitRaw > 0 && limitRaw <= 200 ? limitRaw : 50;
   const s = store(c);
   const all = (await s.listEvents(`truth/${LISTING_TYPE}/`))
     .map(dataOf)
-    .filter((l) => !speciesFilter || (typeof l.species_id === "string" && l.species_id.toLowerCase() === speciesFilter));
+    .filter((l) => !speciesFilter || (typeof l.species_id === "string" && l.species_id.toLowerCase() === speciesFilter))
+    .filter((l) => !langFilter || (typeof l.lang === "string" && l.lang.toLowerCase() === langFilter))
+    .sort((a, b) => String(a.listing_id).localeCompare(String(b.listing_id)))
+    .filter((l) => !cursor || String(l.listing_id) > cursor);
+  const page = all.slice(0, limit);
   const listings = [];
-  for (const l of all) {
+  for (const l of page) {
     const moderation = await projectListingModeration(s, String(l.listing_id), String(l.actor_id));
     if (!moderation.hidden) {
       // c8#2: browse card cover image — first uploaded photo only (full photos[]
@@ -217,7 +235,8 @@ marketRoutes.get("/market/listings", async (c) => {
       listings.push({ ...l, cover_photo_id: photos[0]?.photo_id });
     }
   }
-  return c.json({ listings });
+  const nextCursor = page.length === limit ? String(page[page.length - 1].listing_id) : undefined;
+  return c.json({ listings, next_cursor: nextCursor });
 });
 
 // GET /market/transactions/mine — 観測者が当事者の「取引中」一覧(round-16裁定②=取引中は
@@ -539,6 +558,101 @@ async function settleDueAuctions(
   return [...events, data as unknown as TxnEvent];
 }
 
+// V3-MKT-07: 抽選(listed_lottery)締切経過の read-time 自己修復。settleDueAuctions と
+// 同型パターン。応募(bid)が1件も無ければ delist(入札なし決着と同じ扱い)、1件以上
+// なら CSPRNG(crypto.getRandomValues)で応募者(重複除去済み)から均等に1名を選び
+// match する。当選判定に amount は一切使わない(Coin/PTで当選率を上げられない=MKT-07)。
+const SYSTEM_LOTTERY_ACTOR = "system:lottery-draw";
+
+async function settleDueLottery(
+  s: TruthStore,
+  listingId: string,
+  events: TxnEvent[],
+  now: Date,
+): Promise<TxnEvent[]> {
+  const cur = reduceMarket(listingId, events);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const endsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+  if (!isLotteryDrawDue(cur.state, typeof endsAt === "string" ? endsAt : undefined, now)) return events;
+
+  const applicants = [...new Set(cur.bids.map((b) => b.bidder))];
+  const id = ulid();
+  let data: Record<string, unknown>;
+  if (applicants.length === 0) {
+    data = {
+      transaction_event_id: id,
+      listing_id: listingId,
+      actor_id: SYSTEM_LOTTERY_ACTOR,
+      kind: "delist",
+      payload: { lottery_draw: "no_applicants" },
+      created_at: now.toISOString(),
+      schema_version: TXN_SCHEMA_VERSION,
+    };
+  } else {
+    const randomUint32 = crypto.getRandomValues(new Uint32Array(1))[0];
+    const winner = pickLotteryWinner(applicants, randomUint32);
+    data = {
+      transaction_event_id: id,
+      listing_id: listingId,
+      actor_id: SYSTEM_LOTTERY_ACTOR,
+      kind: "match",
+      counterparty: winner,
+      payload: { lottery_draw: "csprng", applicant_count: applicants.length },
+      created_at: now.toISOString(),
+      schema_version: TXN_SCHEMA_VERSION,
+    };
+  }
+  const res = await s.putEventAt(`truth/${TXN_TYPE}/lottery-draw-${listingId}.json`, systemTxnEnvelope(id, data));
+  if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
+  return [...events, data as unknown as TxnEvent];
+}
+
+// V3-MKT-08: プラチナコイン優先(listed_platinum)締切経過の read-time 自己修復。
+// 累計PT自己申告(bid.amount)降順(同数は入札の早い順)で上位1名に割当てる(K=1・
+// 1 listing = 1 買い手の既存単発取引状態機械の範囲内。複数枠(K>1)の分割割当は
+// 本波スコープ外=ponytail・別途裁定要)。応募が無ければ delist。
+const SYSTEM_PLATINUM_ACTOR = "system:platinum-priority";
+
+async function settleDuePlatinum(
+  s: TruthStore,
+  listingId: string,
+  events: TxnEvent[],
+  now: Date,
+): Promise<TxnEvent[]> {
+  const cur = reduceMarket(listingId, events);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const endsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+  if (!isPlatinumPriorityDue(cur.state, typeof endsAt === "string" ? endsAt : undefined, now)) return events;
+
+  const ranked = rankPlatinumPriority(cur.bids);
+  const top = ranked[0];
+  const id = ulid();
+  const data: Record<string, unknown> = top
+    ? {
+        transaction_event_id: id,
+        listing_id: listingId,
+        actor_id: SYSTEM_PLATINUM_ACTOR,
+        kind: "match",
+        counterparty: top.bidder,
+        amount: top.amount,
+        payload: { platinum_priority: "cumulative_pt_desc", applicant_count: ranked.length },
+        created_at: now.toISOString(),
+        schema_version: TXN_SCHEMA_VERSION,
+      }
+    : {
+        transaction_event_id: id,
+        listing_id: listingId,
+        actor_id: SYSTEM_PLATINUM_ACTOR,
+        kind: "delist",
+        payload: { platinum_priority: "no_applicants" },
+        created_at: now.toISOString(),
+        schema_version: TXN_SCHEMA_VERSION,
+      };
+  const res = await s.putEventAt(`truth/${TXN_TYPE}/platinum-priority-${listingId}.json`, systemTxnEnvelope(id, data));
+  if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
+  return [...events, data as unknown as TxnEvent];
+}
+
 // V3-MKT-10: 取引成立(receive∧rate 揃う=MKT-04)時に 5% 維持費税を義務台帳へ自動計上
 // (「取引成立からの義務自動計上」=これまでの partial の残り)。fee-routes.ts(PAY.JP
 // ゆる請求フロー)が読む既存義務台帳(OBLIGATION_TYPE)をそのまま継承する(型リネーム禁止・
@@ -653,6 +767,8 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   let events = await loadTxns(c, listingId);
   events = await settleNoPayCancel(s, listingId, events, now); // 状態機械5脚③(自己修復)
   events = await settleDueAuctions(s, listingId, events, now); // V3-MKT-05(自己修復)
+  events = await settleDueLottery(s, listingId, events, now); // V3-MKT-07(自己修復)
+  events = await settleDuePlatinum(s, listingId, events, now); // V3-MKT-08(自己修復)
 
   const cur = reduceMarket(listingId, events);
   if (!isAllowedEdge(cur.state, kind)) {
@@ -703,6 +819,26 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   }
   if (kind === "bid" && cur.seller_id && (await isBlockedPair(s, actorId, cur.seller_id))) {
     return c.json({ error: "BLOCKED" }, 403);
+  }
+  // V3-MKT-07: 抽選応募は 1 応募/actor・価格 UI を出さない(応募に amount を付けさせない
+  // = Coin/PT で当選率を上げられない設計をリクエスト側でも強制)。
+  if (kind === "bid" && cur.state === "listed_lottery") {
+    if (cur.bids.some((b) => b.bidder === actorId)) {
+      return c.json({ error: "ALREADY_APPLIED", details: ["1 application per listing"] }, 409);
+    }
+    if (extra.amount !== undefined) {
+      return c.json({ error: "INVALID_TRANSITION", details: ["lottery entries carry no price"] }, 400);
+    }
+  }
+  // V3-MKT-08: プラチナ優先の申込は累計PT(amount)必須・最低=現在の最高累計PT(1PT刻み)。
+  if (kind === "bid" && cur.state === "listed_platinum") {
+    if (typeof extra.amount !== "number" || !Number.isInteger(extra.amount) || extra.amount <= 0) {
+      return c.json({ error: "INVALID_TRANSITION", details: ["payload amount (cumulative PT) required"] }, 400);
+    }
+    const currentTop = rankPlatinumPriority(cur.bids)[0];
+    if (currentTop && (extra.amount as number) < (currentTop.amount as number)) {
+      return c.json({ error: "BID_TOO_LOW", current_top: currentTop.amount }, 409);
+    }
   }
   if (kind === "cancel" && cur.state === "matched" && actorId === cur.matched_with) {
     // 猶予キャンセル(成立後60分・買い手無条件)。窓が閉じた後は cancel_request/
@@ -776,6 +912,8 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
   let events = await loadTxns(c, listingId);
   events = await settleNoPayCancel(s, listingId, events, now);
   events = await settleDueAuctions(s, listingId, events, now); // V3-MKT-05(自己修復)
+  events = await settleDueLottery(s, listingId, events, now); // V3-MKT-07(自己修復)
+  events = await settleDuePlatinum(s, listingId, events, now); // V3-MKT-08(自己修復)
   const cur = reduceMarket(listingId, events);
   return c.json({
     ...cur,
@@ -853,4 +991,118 @@ marketRoutes.post("/market/offers", async (c) => {
   if (res.status === "invalid") return c.json({ error: "INVALID_OFFER", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_OFFER", key: res.key }, 409);
   return c.json({ listing_id: listingId, transaction_event_id: data.transaction_event_id, kind }, 201);
+});
+
+// ── V3-MKT-24: 落札されなかった出品の自動再出品(値下げ方向のみ)────────────────
+// 未登録イベント型(codegen 対象外・envelope.ts の schema 検証をバイパスする既存
+// パターン=market-intl-shipping-routes.ts の listing_intl と同型。mkt-listing.schema
+// を additionalProperties:false のまま直接拡張すると precompile 済み validator の
+// 再生成(packages/truth/src/generated/validators.cjs・全ドメイン共通の生成物)が
+// 要り本波の glob 外になるため、この設計を踏襲した)。
+// [残作業として正直に明記]: ここまでの実装は「再出品ルールを宣言する」
+// (POST .../relist-policy)と「次回価格を純関数で計算する」(nextRelistPrice)まで。
+// settleDueAuctions の「入札なし→delist」枝から実際に新しい listing を自動生成する
+// 配線(再出品の自動発火そのもの)は本波の残り時間内に安全に検証しきれなかったため
+// 未接続(次回価格計算は動くが、呼び出す cron/自己修復トリガーが無い=手動で
+// relist-policy を読み、next-price を使って POST /market/listings を呼べば同じ結果に
+// 到達できるが「自動」ではない)。持ち越しとして報告書に明記する。
+const RELIST_POLICY_TYPE = "ihl.mkt.relist_policy.v1";
+const RELIST_POLICY_SCHEMA = "schemas/events/mkt-relist-policy.schema.json";
+
+async function readRelistPolicy(s: TruthStore, listingId: string): Promise<
+  { maxRelistCount: number | null; discountMode: RelistDiscountMode; discountValue: number; floorPrice: number | null } | null
+> {
+  const ev = await s.readEvent(`truth/${RELIST_POLICY_TYPE}/${listingId}.json`);
+  if (!ev) return null;
+  const d = dataOf(ev);
+  return {
+    maxRelistCount: typeof d.max_relist_count === "number" ? d.max_relist_count : null,
+    discountMode: (d.discount_mode as RelistDiscountMode) ?? "none",
+    discountValue: typeof d.discount_value === "number" ? d.discount_value : 0,
+    floorPrice: typeof d.floor_price === "number" ? d.floor_price : null,
+  };
+}
+
+// POST /market/listings/{id}/relist-policy — 出品者が再出品回数(無制限=省略/1/3/5等
+// 任意の正整数)・値下げルール(percent/fixed/none)・下限価格を宣言する(出品者本人
+// のみ・1出品につき1回=既存宣言があれば409。訂正は本波スコープ外)。
+marketRoutes.post("/market/listings/:listing_id/relist-policy", async (c) => {
+  const listingId = c.req.param("listing_id");
+  const s = store(c);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  if (!listingEv) return c.json({ error: "NOT_FOUND" }, 404);
+  const actorId = c.get("actorId");
+  if (dataOf(listingEv).actor_id !== actorId) return c.json({ error: "FORBIDDEN", details: ["seller only"] }, 403);
+
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const discountMode = body?.discount_mode;
+  if (discountMode !== "percent" && discountMode !== "fixed" && discountMode !== "none") {
+    return c.json({ error: "INVALID_RELIST_POLICY", details: ["discount_mode must be percent|fixed|none"] }, 400);
+  }
+  const discountValue = discountMode === "none" ? 0 : Number(body?.discount_value);
+  if (discountMode !== "none" && (!Number.isFinite(discountValue) || discountValue < 0)) {
+    return c.json({ error: "INVALID_RELIST_POLICY", details: ["discount_value required for percent/fixed"] }, 400);
+  }
+  const maxRelistCountRaw = body?.max_relist_count;
+  const maxRelistCount =
+    maxRelistCountRaw === undefined || maxRelistCountRaw === null ? null : Number(maxRelistCountRaw);
+  if (maxRelistCount !== null && (!Number.isInteger(maxRelistCount) || maxRelistCount < 1)) {
+    return c.json({ error: "INVALID_RELIST_POLICY", details: ["max_relist_count must be a positive integer or omitted (unlimited)"] }, 400);
+  }
+  const floorPriceRaw = body?.floor_price;
+  const floorPrice = floorPriceRaw === undefined || floorPriceRaw === null ? null : Number(floorPriceRaw);
+  if (floorPrice !== null && (!Number.isInteger(floorPrice) || floorPrice < 0)) {
+    return c.json({ error: "INVALID_RELIST_POLICY", details: ["floor_price must be a non-negative integer or omitted"] }, 400);
+  }
+
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    relist_policy_id: id,
+    listing_id: listingId,
+    actor_id: actorId,
+    max_relist_count: maxRelistCount,
+    discount_mode: discountMode,
+    discount_value: discountValue,
+    floor_price: floorPrice,
+    created_at: new Date().toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  const res = await s.putEventAt(`truth/${RELIST_POLICY_TYPE}/${listingId}.json`, {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: RELIST_POLICY_TYPE,
+    time: new Date().toISOString(),
+    dataschema: RELIST_POLICY_SCHEMA,
+    provenance: { generator_kind: "human", actor_id: actorId },
+    data,
+  });
+  if (res.status === "conflict") return c.json({ error: "ALREADY_SET" }, 409);
+  return c.json({ listing_id: listingId, max_relist_count: maxRelistCount, discount_mode: discountMode, floor_price: floorPrice }, 201);
+});
+
+// GET /market/listings/{id}/relist-policy — 宣言済みルール + 現在価格から算出した
+// 次回再出品価格プレビュー(null=下限到達=最低額で取り下げ)。
+marketRoutes.get("/market/listings/:listing_id/relist-policy", async (c) => {
+  const listingId = c.req.param("listing_id");
+  const s = store(c);
+  const policy = await readRelistPolicy(s, listingId);
+  if (!policy) return c.json({ error: "NOT_FOUND" }, 404);
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const currentPrice = listingEv && typeof dataOf(listingEv).price === "number" ? Number(dataOf(listingEv).price) : 0;
+  const next = nextRelistPrice(currentPrice, {
+    maxRelistCount: policy.maxRelistCount,
+    discountMode: policy.discountMode,
+    discountValue: policy.discountValue,
+    floorPrice: policy.floorPrice,
+  });
+  return c.json({
+    listing_id: listingId,
+    max_relist_count: policy.maxRelistCount,
+    discount_mode: policy.discountMode,
+    discount_value: policy.discountValue,
+    floor_price: policy.floorPrice,
+    current_price: currentPrice,
+    next_relist_price: next,
+  });
 });

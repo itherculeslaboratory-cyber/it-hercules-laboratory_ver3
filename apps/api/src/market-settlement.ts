@@ -45,8 +45,11 @@ export const MARKET_EDGES: Record<string, Partial<Record<MarketKind, string>>> =
   },
   listed_fixed: { offer: "offer_pending", love_letter: "offer_pending", match: "matched", delist: "delisted" },
   listed_auction: { bid: "listed_auction", match: "matched", delist: "delisted" },
-  listed_lottery: { match: "matched", delist: "delisted" },
-  listed_platinum: { match: "matched", delist: "delisted" },
+  // V3-MKT-07/08(w2-mkt): 抽選/プラチナ優先は締切までの応募受付が要る。auction の
+  // bid 自己ループと同型(bid は状態を動かさない=経済副次イベントではなく応募の
+  // 蓄積のみ)。1 応募/actor の強制は route 側(POST /transition の重複チェック)。
+  listed_lottery: { bid: "listed_lottery", match: "matched", delist: "delisted" },
+  listed_platinum: { bid: "listed_platinum", match: "matched", delist: "delisted" },
   offer_pending: { offer: "offer_pending", love_letter: "offer_pending", match: "matched", delist: "delisted" },
   // round-16 決済裁定(受領7): 銀行振込既定・IHL非関与。pay_declare/pay_confirm は
   // tax_* と同型の経済副次イベント。listing state を動かさない意図だが isAllowedEdge
@@ -159,6 +162,63 @@ export function highestBid(bids: MarketState["bids"]): MarketState["bids"][numbe
     if (!best || b.amount > (best.amount as number) || (b.amount === best.amount && b.at < best.at)) best = b;
   }
   return best;
+}
+
+/** V3-MKT-07: 抽選(listed_lottery)締切(ends_at)経過時に決着すべきか。auction と
+ * 同じ read-time 判定(ends_at 未設定なら締切なし=due にならない)。 */
+export function isLotteryDrawDue(state: string, endsAt: string | undefined, now: Date): boolean {
+  if (state !== "listed_lottery" || !endsAt) return false;
+  return now.getTime() >= new Date(endsAt).getTime();
+}
+
+/** V3-MKT-08: プラチナ優先(listed_platinum)締切(ends_at)経過時に決着すべきか。 */
+export function isPlatinumPriorityDue(state: string, endsAt: string | undefined, now: Date): boolean {
+  if (state !== "listed_platinum" || !endsAt) return false;
+  return now.getTime() >= new Date(endsAt).getTime();
+}
+
+/** V3-MKT-07: 応募者(重複除去済み・route 側が 1 応募/actor を強制)から CSPRNG
+ * 均等乱数で 1 名を選ぶ純関数。randomUint32 は呼び出し側が crypto.getRandomValues
+ * で都度生成し注入する(純関数としてテスト可能にするため・Coin/PTで当選率を上げ
+ * られない=amount を一切見ない設計そのものが「操作不可」を保証する)。 */
+export function pickLotteryWinner(applicants: string[], randomUint32: number): string | undefined {
+  if (applicants.length === 0) return undefined;
+  const idx = randomUint32 % applicants.length;
+  return applicants[idx];
+}
+
+// V3-MKT-24: 落札されなかった出品の自動再出品(値下げ方向のみ・価格を上げる自動
+// 調整はしない)。
+export type RelistDiscountMode = "percent" | "fixed" | "none";
+export interface RelistPolicy {
+  maxRelistCount: number | null; // null=無制限
+  discountMode: RelistDiscountMode;
+  discountValue: number; // percent=0-100 / fixed=円額 / none時は無視
+  floorPrice: number | null; // null=下限なし
+}
+
+/** 次回出品価格を算出する純関数。floor_price を下回る(または割れる)場合は null を
+ * 返し、呼び出し側はこれを「最低額で取り下げ」(再出品を止める)と解釈する。 */
+export function nextRelistPrice(currentPrice: number, policy: RelistPolicy): number | null {
+  let next = currentPrice;
+  if (policy.discountMode === "percent") {
+    next = Math.floor(currentPrice * (1 - policy.discountValue / 100));
+  } else if (policy.discountMode === "fixed") {
+    next = currentPrice - policy.discountValue;
+  } // "none" = 値下げしない(同額で再出品)
+  if (next < 0) next = 0;
+  if (policy.floorPrice !== null && next < policy.floorPrice) return null;
+  return next;
+}
+
+/** V3-MKT-08: プラチナ優先の応募(bid.amount=累計PT自己申告)を累計Coin降順・
+ * 同数は入札の早い順(created_at 昇順)でランク付けする。Pay To Win 禁止(PT消費や
+ * Coin購入で順位操作しない)= ここは申告額の比較のみで、後から金額を書き換える
+ * 経路を持たない(append-only の bid イベントを畳むだけ)。 */
+export function rankPlatinumPriority(bids: MarketState["bids"]): MarketState["bids"] {
+  return [...bids]
+    .filter((b) => typeof b.amount === "number")
+    .sort((a, b) => (b.amount as number) - (a.amount as number) || (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -349,6 +409,75 @@ export function projectOwnershipLineage(events: TxnEvent[]): { chain: LineageLin
     carried_observations: e.payload?.external === true ? [] : (e.individual_ids ?? []),
   }));
   return { chain };
+}
+
+// ── V3-MKT-09(w2-mkt): マーケット既定ソート「好み新着順」───────────────────
+// score = Σ(weight[tag] × normalizedValue[tag])。数値タグは (value-min)/(max-min)、
+// カテゴリタグは一致度 1/0.5/0、価格タグは 1-(price/maxPrice)。weight は「重み」の
+// 実数値であり本要件が求める『係数』そのもの — round-19裁定は算式を承認しただけで
+// 具体的な重み値は確定していない(「将来的にはユーザーがこの計算式もフォークで
+// 作ったりする」=可変であることが仕様)ため、ここでは重みをハードコードせず呼び
+// 出し側(将来の GUI/フォーク)からの入力として受け取る純関数にする(MKT-25/36と
+// 同種の「係数は決め打ちしない」判断)。
+export type PreferenceTagKind = "numeric" | "category" | "price";
+export interface PreferenceTagSpec {
+  kind: PreferenceTagKind;
+  weight: number;
+  min?: number; // numeric/price 用
+  max?: number; // numeric/price 用
+  categoryMatch?: 1 | 0.5 | 0; // category 用(呼び出し側が一致度を算出済みで渡す)
+}
+
+function normalizedTagValue(spec: PreferenceTagSpec, rawValue: number | undefined): number {
+  if (spec.kind === "category") return spec.categoryMatch ?? 0;
+  if (rawValue === undefined) return 0;
+  if (spec.kind === "price") {
+    const maxPrice = spec.max ?? 0;
+    return maxPrice > 0 ? Math.max(0, 1 - rawValue / maxPrice) : 0;
+  }
+  // numeric
+  const min = spec.min ?? 0;
+  const max = spec.max ?? 0;
+  return max > min ? (rawValue - min) / (max - min) : 0;
+}
+
+export interface PreferenceScoreResult {
+  score: number;
+  matchPercent: number; // 0-100(スコアを % 表示に丸めた一致度)
+  tagContributions: Record<string, number>;
+}
+
+/** V3-MKT-09: 出品1件のタグ値(rawValues)と重み設定(specs)から score/一致度%を
+ * 算出する純関数。weight はゼロなら寄与しない(重み未設定タグは自動的に無視)。 */
+export function computePreferenceScore(
+  specs: Record<string, PreferenceTagSpec>,
+  rawValues: Record<string, number | undefined>,
+): PreferenceScoreResult {
+  let score = 0;
+  let weightSum = 0;
+  const tagContributions: Record<string, number> = {};
+  for (const [tag, spec] of Object.entries(specs)) {
+    const normalized = normalizedTagValue(spec, rawValues[tag]);
+    const contribution = spec.weight * normalized;
+    tagContributions[tag] = contribution;
+    score += contribution;
+    weightSum += spec.weight;
+  }
+  const matchPercent = weightSum > 0 ? Math.round((score / weightSum) * 100) : 0;
+  return { score, matchPercent, tagContributions };
+}
+
+/** V3-MKT-09: 「良い点/惜しい点」自動生成テキスト。寄与度上位1件を良い点、
+ * 下位1件(スコア>0のタグの中で最小)を惜しい点として返す(単純な最大/最小選出・
+ * 文言テンプレは呼び出し側 UI が翻訳/整形する前提の tag 名のみ返す=I18-06 不変
+ * 条項①=常駐サーバ翻訳を持たない)。 */
+export function preferenceHighlights(
+  tagContributions: Record<string, number>,
+): { strongestTag?: string; weakestTag?: string } {
+  const entries = Object.entries(tagContributions);
+  if (entries.length === 0) return {};
+  const sorted = [...entries].sort((a, b) => b[1] - a[1]);
+  return { strongestTag: sorted[0]?.[0], weakestTag: sorted[sorted.length - 1]?.[0] };
 }
 
 export interface Fees {
