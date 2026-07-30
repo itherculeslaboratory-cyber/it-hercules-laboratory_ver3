@@ -14,8 +14,14 @@ import {
   PERSONALIZE_WEIGHT,
   NAVIGATOR_TARGET_QUESTIONS,
   CONFIDENCE_ORDER,
+  BOOTH_TYPES,
+  CAPTURE_VIEWS,
+  computeQcFlag,
+  QC_FLAGS,
+  MEDIA_CACHE_MAX_AGE_SEC,
+  PRINT_ALLOWED_FIELDS,
 } from "./observation-constants";
-import { ENV_QR_TYPE, projectOccupantsAt, projectOpenOccupancy, projectLabEnvironmentAt, projectCurrentOwner } from "./source-routes";
+import { ENV_QR_TYPE, projectOccupantsAt, projectOpenOccupancy, projectLabEnvironmentAt, projectCurrentOwner, projectTelemetryLatest } from "./source-routes";
 import { projectIndividualSummary } from "./individual-routes";
 import { parseObservationFreetext } from "./freetext-parser";
 import { projectPreferenceWeights, dot } from "./match-routes";
@@ -62,6 +68,11 @@ const PHOTO_TYPE = "ihl.obs.photo.v1";
 const THUMBNAIL_TYPE = "ihl.obs.thumbnail.v1";
 const TEMPLATE_TYPE = "ihl.obs.template.v1";
 const QR_TYPE = "ihl.ind.qr.v1";
+// OBS-12(view/file_kind)・OBS-58(qc_flag/qc_score) は既存の obs-photo frozen
+// schema(additionalProperties:false)を拡張せず(=schema変更+ajv再生成は全艦
+// 不可侵・packages/truthはw2-obsのglob外)、同じ capture-prefix キー規約の別
+// レイヤーとして追記する(source-routes.ts projectLabEnvironmentAt と同型)。
+const PHOTO_META_TYPE = "ihl.obs.photo_meta.v1";
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -135,6 +146,36 @@ export async function loadVector(
   return new Float32Array(buf.slice(offset, offset + dim * 4));
 }
 
+// V3-OBS-42: 数値条件(信頼性=ハードな除外ゲート)。以上(gte)/以下(lte)/付近(near)の
+// 3方向を全次元で統一する — item ごとに異なるUI語彙を持たせない(要件文どおり)。
+// near は許容誤差 tolerance(未指定なら target の10%)以内かで判定する。好み
+// (ソフトなランキング=preferenceScore/personalize)とは別レイヤーとして分離。
+export interface PreferenceFilter {
+  item: string;
+  target: number;
+  direction: "gte" | "lte" | "near";
+  tolerance?: number;
+  [key: string]: unknown;
+}
+
+export function passesPreferenceFilters(
+  cap: Record<string, unknown>,
+  filters: PreferenceFilter[],
+  measure: (cap: Record<string, unknown>, item: string) => number | null,
+): boolean {
+  for (const f of filters) {
+    const v = measure(cap, f.item);
+    if (v === null) return false; // 欠測は不確実性=除外(ハードゲートは推測しない)
+    if (f.direction === "gte" && v < f.target) return false;
+    if (f.direction === "lte" && v > f.target) return false;
+    if (f.direction === "near") {
+      const tol = f.tolerance ?? Math.abs(f.target) * 0.1;
+      if (Math.abs(v - f.target) > tol) return false;
+    }
+  }
+  return true;
+}
+
 // A measurement's numeric value, or null if not numeric/absent.
 function measureValue(cap: Record<string, unknown>, item: string): number | null {
   const ms = Array.isArray(cap.measurements) ? cap.measurements : [];
@@ -161,6 +202,17 @@ const CAPTURE_FIELDS = [
   "note",
   "devices", // OBS-17: DeviceBinding/Occupancy自動派生のトリガー(commit1回で完結)
 ] as const;
+
+/** OBS-12: booth_type は BOOTH_TYPES(fixed/portable)以外を許さない。未指定は許容。
+ *  frozen obs-capture schema(additionalProperties:false)は拡張せず(schema変更+
+ *  ajv再生成は全艦不可侵)、booth記録はPHOTO_META_TYPE側(upload時)に持たせる。 */
+function boothTypeError(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string" || !(BOOTH_TYPES as readonly string[]).includes(value)) {
+    return "INVALID_BOOTH_TYPE";
+  }
+  return null;
+}
 
 // ── OBS-11 rerank math (pure, deterministic; weights/defaults from constants) ──
 
@@ -366,12 +418,40 @@ obsRoutes.post("/observation/upload", async (c) => {
     conditions = { normalized: v.normalized, alerts: v.alerts };
   }
 
+  // OBS-12: 標準撮影チャンバーの5視点(上面/正面/背面/左右)+RAW(dng・正)/JPG(確認用)
+  // の対応づけ。未指定は許容(既存の単純アップロード経路を壊さない=OBS-12は既存
+  // フローへの追加情報)。
+  const viewRaw = form?.get("view");
+  if (viewRaw !== null && viewRaw !== undefined) {
+    if (typeof viewRaw !== "string" || !(CAPTURE_VIEWS as readonly string[]).includes(viewRaw)) {
+      return c.json({ error: "INVALID_VIEW" }, 400);
+    }
+  }
+  const fileKindRaw = form?.get("file_kind");
+  if (fileKindRaw !== null && fileKindRaw !== undefined && fileKindRaw !== "raw" && fileKindRaw !== "jpg") {
+    return c.json({ error: "INVALID_FILE_KIND" }, 400);
+  }
+  const boothIdRaw = form?.get("booth_id");
+  const boothTypeRaw = form?.get("booth_type");
+  const boothErr = boothTypeError(boothTypeRaw);
+  if (boothErr) return c.json({ error: boothErr }, 400);
+
   const bytes = new Uint8Array(await file.arrayBuffer());
   const contentType = file.type || "application/octet-stream";
   const photoId = ulid();
   const mediaKey = `media/photo/${photoId}`;
 
   await store(c).putBlob(mediaKey, bytes, contentType);
+
+  const sha256 = await sha256Hex(bytes);
+
+  // V3-OBS-65: 「取り込みは自分自身のもの」— 他ユーザーが既にアップロード済みの
+  // 同一sha256(=同じバイト列)を検出する(親画像が偶然被るのは許容=拒否せず
+  // 検出のみ)。自分自身の再アップロードは対象外(同一actor_idは除外)。
+  const priorSameHash = (await store(c).listEvents(`truth/${PHOTO_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.sha256 === sha256 && d.actor_id !== actorId);
+  const reuseDetected = priorSameHash.length > 0;
 
   const data = {
     photo_id: photoId,
@@ -380,7 +460,7 @@ obsRoutes.post("/observation/upload", async (c) => {
     media_key: mediaKey,
     content_type: contentType,
     size_bytes: bytes.length,
-    sha256: await sha256Hex(bytes),
+    sha256,
   };
   // Truth key = truth/ihl.obs.photo.v1/<capture_id>-<photo_ulid>.json —
   // capture-prefix enables the detail-view list (design-c2 §3.1). envelope.id
@@ -431,8 +511,28 @@ obsRoutes.post("/observation/upload", async (c) => {
         input_event_ids: [photoId],
       }),
     );
+
+    // OBS-58: QC builder — decoded dimensions become available only once the
+    // thumbnail succeeds (blur/occlusion 判定は client-side WASM 拡張の余地・
+    // 誇張ゼロのため中立値0.5に留める。既定はLLM/Vision OFF=不変条項①)。
+    const qc = computeQcFlag(thumb.width, thumb.height, bytes.length);
+    const metaData: Record<string, unknown> = {
+      photo_id: photoId,
+      capture_id: captureId,
+      qc_flag: qc.qc_flag,
+      qc_score: qc.qc_score,
+      qc_reasons: qc.reasons,
+    };
+    if (typeof viewRaw === "string") metaData.view = viewRaw;
+    if (fileKindRaw === "raw" || fileKindRaw === "jpg") metaData.file_kind = fileKindRaw;
+    if (typeof boothIdRaw === "string" && boothIdRaw) metaData.booth_id = boothIdRaw;
+    if (typeof boothTypeRaw === "string") metaData.booth_type = boothTypeRaw;
+    await store(c).putEventAt(
+      `truth/${PHOTO_META_TYPE}/${captureId}-${photoId}.json`,
+      envelope(PHOTO_META_TYPE, photoId, "schemas/events/obs-photo-meta.schema.json", actorId, metaData),
+    );
   } catch {
-    // non-image / codec failure → skip thumbnail; the upload already succeeded.
+    // non-image / codec failure → skip thumbnail/QC; the upload already succeeded.
   }
 
   return c.json({
@@ -440,7 +540,16 @@ obsRoutes.post("/observation/upload", async (c) => {
     sha256: data.sha256,
     photo_conditions: conditions?.normalized ?? null,
     condition_alerts: conditions?.alerts ?? [],
+    possible_reuse: reuseDetected, // OBS-65: 検出のみ・ブロックしない
   }, 202);
+});
+
+// GET /observation/{capture_id}/qc — QC flags for every photo of a capture
+// (OBS-58: 検索UIでQCフィルタ可能にする土台の read 側)。
+obsRoutes.get("/observation/:capture_id/qc", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const rows = (await store(c).listEvents(`truth/${PHOTO_META_TYPE}/${captureId}-`)).map(dataOf);
+  return c.json({ capture_id: captureId, photos: rows });
 });
 
 // GET /observation/templates — list projection (all templates).
@@ -502,6 +611,28 @@ obsRoutes.post("/observation/search", async (c) => {
   if (typeof body.domain === "string") candidates = candidates.filter((x) => x.domain === body.domain);
   if (typeof body.species === "string") candidates = candidates.filter((x) => x.species_candidate === body.species);
   if (typeof body.subject_ref === "string") candidates = candidates.filter((x) => x.subject_ref === body.subject_ref);
+  // OBS-58: QCフィルタ — 少なくとも1枚の写真が指定qc_flagを持つcaptureのみ残す。
+  if (typeof body.qc_flag === "string" && (QC_FLAGS as readonly string[]).includes(body.qc_flag)) {
+    const kept: typeof candidates = [];
+    for (const cand of candidates) {
+      const metas = (await store(c).listEvents(`truth/${PHOTO_META_TYPE}/${String(cand.capture_id)}-`)).map(dataOf);
+      if (metas.some((m) => m.qc_flag === body.qc_flag)) kept.push(cand);
+    }
+    candidates = kept;
+  }
+  // OBS-42: pref_filters — 以上/以下/付近の統一方向指定によるハードゲート
+  // (好み(ソフトランキング)とは別レイヤー・§本文どおり信頼性=除外ゲート)。
+  if (Array.isArray(body.pref_filters) && body.pref_filters.length > 0) {
+    const filters = (body.pref_filters as Record<string, unknown>[])
+      .filter(
+        (f): f is PreferenceFilter =>
+          typeof f.item === "string" &&
+          typeof f.target === "number" &&
+          (f.direction === "gte" || f.direction === "lte" || f.direction === "near"),
+      )
+      .map((f) => ({ ...f, tolerance: typeof f.tolerance === "number" ? f.tolerance : undefined }));
+    candidates = candidates.filter((cand) => passesPreferenceFilters(cand, filters, measureValue));
+  }
   let stage = "whitelist";
 
   // ② subset — deterministic measurement range filter.
@@ -753,6 +884,85 @@ obsRoutes.get("/observation/export", async (c) => {
   return new Response(capturesToCsv(captures), {
     headers: { "content-type": "text/csv", "content-disposition": 'attachment; filename="observations.csv"' },
   });
+});
+
+// V3-OBS-71: 観測データ印刷 — 個体詳細から欲しいデータ項目(チェックボックス)と
+// 期間指定で範囲選択する。実際の印刷はブラウザ print で足りる(ds_why実装方針)
+// ため、本 route はフィールド選択+期間フィルタ済みの構造化データを返すのみ
+// (PDF生成等の重処理は行わない=不変条項①)。
+export function selectObservationFieldsInRange(
+  captures: Record<string, unknown>[],
+  fields: string[],
+  range?: { from?: string; to?: string },
+): Record<string, unknown>[] {
+  const allowed = fields.filter((f) => (PRINT_ALLOWED_FIELDS as readonly string[]).includes(f));
+  return captures
+    .filter((cap) => {
+      if (!range?.from && !range?.to) return true;
+      const pc = cap.photo_conditions as Record<string, unknown> | undefined;
+      const observedAt = typeof pc?.captured_at === "string" ? pc.captured_at : null;
+      if (!observedAt) return false; // 期間指定時、日付が特定できないcaptureは範囲選択に含めない(誇張ゼロ)
+      if (range.from && observedAt < range.from) return false;
+      if (range.to && observedAt > range.to) return false;
+      return true;
+    })
+    .map((cap) => {
+      const row: Record<string, unknown> = {};
+      for (const f of allowed) {
+        if (f === "observed_at") {
+          const pc = cap.photo_conditions as Record<string, unknown> | undefined;
+          row.observed_at = typeof pc?.captured_at === "string" ? pc.captured_at : null;
+        } else {
+          row[f] = cap[f] ?? null;
+        }
+      }
+      return row;
+    });
+}
+
+// GET /individuals/{individual_id}/observations/print?fields=a,b&from=&to=
+obsRoutes.get("/individuals/:individual_id/observations/print", async (c) => {
+  const individualId = c.req.param("individual_id");
+  const ref = `individual/${individualId}`;
+  const fieldsParam = c.req.query("fields");
+  const fields = fieldsParam ? fieldsParam.split(",").map((f) => f.trim()).filter(Boolean) : [...PRINT_ALLOWED_FIELDS];
+  const from = c.req.query("from");
+  const to = c.req.query("to");
+  const captures = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.subject_ref === ref);
+  const rows = selectObservationFieldsInRange(captures, fields, { from, to });
+  return c.json({ individual_id: individualId, fields, range: { from: from ?? null, to: to ?? null }, rows });
+});
+
+// V3-OBS-66: 変化の理由を残す観測ログレイヤー — 観測ドメイン(w2-obs glob)内の
+// 全操作(capture/photo/analysis/annotation/device)を誰が・いつ・何をしたかで
+// 一覧する。プラチナ/貢献度/カルマの履歴(economy/contribution domain)は
+// w1-mkt/w1-gov glob側の責務のため対象外(誇張せず明記)。actor本人スコープ。
+obsRoutes.get("/observation/activity-log", async (c) => {
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const entries: { type: string; id: string; actor_id: string; at: string; capture_id?: string }[] = [];
+  for (const d of (await s.listEvents(`truth/${CAPTURE_TYPE}/`)).map(dataOf)) {
+    if (d.actor_id !== actorId) continue;
+    entries.push({ type: "capture", id: String(d.capture_id), actor_id: String(d.actor_id), at: String(d.capture_id) });
+  }
+  for (const d of (await s.listEvents(`truth/${PHOTO_TYPE}/`)).map(dataOf)) {
+    if (d.actor_id !== actorId) continue;
+    entries.push({ type: "photo", id: String(d.photo_id), actor_id: String(d.actor_id), at: String(d.photo_id), capture_id: String(d.capture_id) });
+  }
+  for (const d of (await s.listEvents(`truth/${ANALYSIS_TYPE}/`)).map(dataOf)) {
+    if (d.actor_id !== actorId) continue;
+    entries.push({ type: "analysis", id: String(d.analysis_id), actor_id: String(d.actor_id), at: String(d.created_at ?? d.analysis_id), capture_id: String(d.capture_id) });
+  }
+  for (const d of (await s.listEvents(`truth/${ANNOTATION_TYPE}/`)).map(dataOf)) {
+    if (d.actor_id !== actorId) continue;
+    entries.push({ type: "annotation", id: String(d.annotation_id), actor_id: String(d.actor_id), at: String(d.created_at ?? d.annotation_id), capture_id: String(d.capture_id) });
+  }
+  // ULID の字句順は生成時刻順(design-c2既定の前提)。created_at を持たないevent型は
+  // その id(ULID)自体で時系列にソートする。
+  entries.sort((a, b) => a.at.localeCompare(b.at));
+  return c.json({ actor_id: actorId, entries, note: "economy/contribution(プラチナ・カルマ)履歴はw1-mkt/w1-gov glob側の責務のため対象外" });
 });
 
 // POST /observation/dictionary-extensions — register an unregistered item
@@ -1031,7 +1241,11 @@ obsRoutes.get("/observation/:capture_id/thumbnail/:photo_id", async (c) => {
   const photoId = c.req.param("photo_id");
   const obj = await c.env.TRUTH.get(`media/thumbnail/${photoId}`);
   if (!obj) return c.json({ error: "NOT_FOUND" }, 404);
-  return new Response(await obj.arrayBuffer(), { headers: { "content-type": "image/jpeg" } });
+  // OBS-38 低コスト改善①: サムネイルは photo_id 毎に不変(再生成しない限り再利用
+  // 可能) — ブラウザ/中間キャッシュでの重複fetchを避けるcache-control。
+  return new Response(await obj.arrayBuffer(), {
+    headers: { "content-type": "image/jpeg", "cache-control": `public, max-age=${MEDIA_CACHE_MAX_AGE_SEC}` },
+  });
 });
 
 // Shared commit-path capture write (OBS-25/62/03), reused by
@@ -1137,8 +1351,12 @@ obsRoutes.get("/observation/:capture_id/image/:photo_id", async (c) => {
   const photoId = c.req.param("photo_id");
   const obj = await c.env.TRUTH.get(`media/photo/${photoId}`);
   if (!obj) return c.json({ error: "NOT_FOUND" }, 404);
+  // OBS-38 低コスト改善①: 元画像も photo_id 毎に不変・URL再利用可能(重複fetch削減)。
   return new Response(await obj.arrayBuffer(), {
-    headers: { "content-type": obj.httpMetadata?.contentType ?? "application/octet-stream" },
+    headers: {
+      "content-type": obj.httpMetadata?.contentType ?? "application/octet-stream",
+      "cache-control": `public, max-age=${MEDIA_CACHE_MAX_AGE_SEC}`,
+    },
   });
 });
 
@@ -1166,6 +1384,42 @@ obsRoutes.get("/individuals/:individual_id/lab-environment", async (c) => {
   if (!open) return c.json({ individual_id: individualId, placement_id: null, lab_environment: null });
   const lab = await projectLabEnvironmentAt(c.env.TRUTH, open.placement_id);
   return c.json({ individual_id: individualId, placement_id: open.placement_id, lab_environment: lab });
+});
+
+// V3-OBS-34: 占有(Occupancy)参照モデル — 個体ごとに環境ファイルを増殖させず、
+// Specimen→Occupancy→Placement→(DeviceBinding→)Device→telemetry を結合クエリで
+// 引き当てる。DeviceBinding段はOBS-17の既存の紐づけ経路(commit時body.devices・
+// deriveDeviceBindingsForCapture)をそのまま再利用し、呼び出し側がdeviceIdsを渡す
+// 形にする — placement→devices逆引きの新規writeパスは追加しない(既存chainの
+// 読み取り再構成のみ・ファイル増殖なし)。
+export async function projectEnvironmentForObservation(
+  bucket: Bindings["TRUTH"],
+  subjectRef: string,
+  deviceIds: string[],
+): Promise<{
+  placement_id: string | null;
+  lab_environment: Awaited<ReturnType<typeof projectLabEnvironmentAt>>;
+  telemetry: Awaited<ReturnType<typeof projectTelemetryLatest>>[];
+}> {
+  const open = await projectOpenOccupancy(bucket, subjectRef);
+  const placementId = open?.placement_id ?? null;
+  const labEnvironment = placementId ? await projectLabEnvironmentAt(bucket, placementId) : null;
+  const telemetry = await Promise.all(deviceIds.map((id) => projectTelemetryLatest(bucket, id)));
+  return { placement_id: placementId, lab_environment: labEnvironment, telemetry };
+}
+
+// GET /observation/{capture_id}/environment — OBS-34結合投影。commit時に
+// derives済みのdevices[]をcaptureから読み直し、占有→設置場所→環境+テレメトリを
+// 1回のクエリで返す(個体別環境ファイルを作らない)。
+obsRoutes.get("/observation/:capture_id/environment", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const capture = await store(c).readEvent(`truth/${CAPTURE_TYPE}/${captureId}.json`);
+  if (!capture) return c.json({ error: "NOT_FOUND" }, 404);
+  const cap = dataOf(capture);
+  const subjectRef = typeof cap.subject_ref === "string" ? cap.subject_ref : "";
+  const deviceIds = Array.isArray(cap.devices) ? (cap.devices as unknown[]).filter((x): x is string => typeof x === "string") : [];
+  const env = await projectEnvironmentForObservation(c.env.TRUTH, subjectRef, deviceIds);
+  return c.json({ capture_id: captureId, ...env });
 });
 
 // POST /individuals/{individual_id}/qr — issue an ind.qr.v1 token.

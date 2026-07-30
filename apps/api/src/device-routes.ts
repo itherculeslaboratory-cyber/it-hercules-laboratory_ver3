@@ -10,6 +10,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { CLOUD_POLL_PROVIDERS, DEFAULT_POLL_INTERVAL_SEC, CUSTOM_MIN_POLL_INTERVAL_SEC } from "./observation-constants";
 
 export const deviceRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -137,6 +138,113 @@ deviceRoutes.get("/devices", async (c) => {
       has_api_key: typeof d.api_key_ciphertext === "string",
     }));
   return c.json({ devices: rows });
+});
+
+// ── V3-OBS-30: データ取得間隔4階層(既定/一括上書き/複数選択/個別) ─────────
+// クラウド最新値取得系(SwitchBot等)は「間隔設定は無意味/DB格納値を取るだけで
+// リアルタイムでない」ため常に null(設定不可)。自作デバイスは秒単位。優先順位:
+// 個別device override(最新) > 直近の一括上書き(scope="global"・最新) >
+// 既定(DEFAULT_POLL_INTERVAL_SEC)。不変条項①(append-only)に合わせ、上書きは
+// device record を直接書き換えず「設定イベントの追記+最新を投影」で表現する
+// (source-routes.ts projectLabEnvironmentAt と同じ append-only history 型)。
+const POLL_INTERVAL_TYPE = "ihl.obs.poll_interval.v1";
+
+function isCloudProvider(provider: unknown): boolean {
+  return typeof provider === "string" && CLOUD_POLL_PROVIDERS.has(provider.toLowerCase());
+}
+
+/** 4階層の解決(純関数・OBS-30)。 */
+export function resolvePollIntervalSec(
+  provider: unknown,
+  deviceOverrideSec: number | null,
+  globalOverrideSec: number | null,
+): { interval_sec: number | null; reason: string } {
+  if (isCloudProvider(provider)) {
+    return { interval_sec: null, reason: "CLOUD_POLL_INTERVAL_MEANINGLESS" };
+  }
+  if (deviceOverrideSec !== null) return { interval_sec: deviceOverrideSec, reason: "individual" };
+  if (globalOverrideSec !== null) return { interval_sec: globalOverrideSec, reason: "global_override" };
+  return { interval_sec: DEFAULT_POLL_INTERVAL_SEC, reason: "default" };
+}
+
+/** scope="global" または device_id プレフィックスの最新設定イベントを投影する。 */
+async function latestPollIntervalFor(s: TruthStore, scope: string): Promise<number | null> {
+  const seg = encodeURIComponent(scope);
+  const events = (await s.listEvents(`truth/${POLL_INTERVAL_TYPE}/${seg}-`)).map(dataOf);
+  let latest: Record<string, unknown> | null = null;
+  for (const d of events) {
+    if (!latest || String(d.created_at) > String(latest.created_at)) latest = d;
+  }
+  const v = latest?.interval_sec;
+  return typeof v === "number" ? v : null;
+}
+
+async function appendPollIntervalEvent(
+  s: TruthStore,
+  actorId: string,
+  scope: string,
+  intervalSec: number,
+): Promise<void> {
+  const id = ulid();
+  const seg = encodeURIComponent(scope);
+  await s.putEventAt(`truth/${POLL_INTERVAL_TYPE}/${seg}-${id}.json`, {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: POLL_INTERVAL_TYPE,
+    time: new Date().toISOString(),
+    dataschema: "schemas/events/obs-poll-interval.schema.json",
+    provenance: { generator_kind: "human", actor_id: actorId },
+    data: { scope, interval_sec: intervalSec, actor_id: actorId, created_at: new Date().toISOString() },
+  });
+}
+
+// PUT /devices/poll-interval — 一括上書き(device_ids省略=既定を差し替える
+// scope="global")または複数選択/個別(device_ids指定・1件でも複数件でも同じ
+// 経路=OBS-30「複数選択と個別」の統一)。interval_sec は自作デバイス向けに
+// 秒単位で細かく指定可能(CUSTOM_MIN_POLL_INTERVAL_SEC以上)。
+deviceRoutes.put("/devices/poll-interval", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const intervalSec = body.interval_sec;
+  if (typeof intervalSec !== "number" || !Number.isFinite(intervalSec) || intervalSec < CUSTOM_MIN_POLL_INTERVAL_SEC) {
+    return c.json({ error: "INVALID_INTERVAL" }, 400);
+  }
+  const s = store(c);
+  const deviceIds = Array.isArray(body.device_ids)
+    ? (body.device_ids as unknown[]).filter((x): x is string => typeof x === "string")
+    : null;
+
+  if (deviceIds === null) {
+    await appendPollIntervalEvent(s, actorId, "global", intervalSec);
+    return c.json({ scope: "global", interval_sec: intervalSec }, 202);
+  }
+  if (deviceIds.length === 0) return c.json({ error: "EMPTY_DEVICE_IDS" }, 400);
+  const results: { device_id: string; ok: boolean }[] = [];
+  for (const deviceId of deviceIds) {
+    const rec = await s.readEvent(`truth/${DEVICE_TYPE}/${deviceId}.json`);
+    if (!rec || dataOf(rec).actor_id !== actorId) {
+      results.push({ device_id: deviceId, ok: false });
+      continue;
+    }
+    await appendPollIntervalEvent(s, actorId, deviceId, intervalSec);
+    results.push({ device_id: deviceId, ok: true });
+  }
+  return c.json({ scope: deviceIds.length === 1 ? "individual" : "multi_select", results }, 202);
+});
+
+// GET /devices/{id}/poll-interval — 4階層を解決した実効値(OBS-30)。
+deviceRoutes.get("/devices/:id/poll-interval", async (c) => {
+  const deviceId = c.req.param("id");
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const rec = await s.readEvent(`truth/${DEVICE_TYPE}/${deviceId}.json`);
+  if (!rec || dataOf(rec).actor_id !== actorId) return c.json({ error: "NOT_FOUND" }, 404);
+  const d = dataOf(rec);
+  const deviceOverride = await latestPollIntervalFor(s, deviceId);
+  const globalOverride = await latestPollIntervalFor(s, "global");
+  const resolved = resolvePollIntervalSec(d.provider, deviceOverride, globalOverride);
+  return c.json({ device_id: deviceId, ...resolved });
 });
 
 // POST /devices/{id}/test — dummy provider connection test + auto-discovery

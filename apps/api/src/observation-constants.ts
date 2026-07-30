@@ -133,3 +133,108 @@ export const CONFIDENCE_ORDER = {
   model_inference: "△",
   unknown: "△",
 } as const;
+
+// ── V3-OBS-12: 標準撮影チャンバー(booth) ────────────────────────────────
+/** Type-A=常設 / Type-B=可搬(booth_type on a capture's booth record). */
+export const BOOTH_TYPES = ["fixed", "portable"] as const;
+/** 5視点(上面/正面/背面/左右) — RAW(dng)+JPG(確認用)の2ファイルを視点ごとに紐づける。 */
+export const CAPTURE_VIEWS = ["top", "front", "back", "left", "right"] as const;
+export const CAPTURE_FILE_KINDS = ["raw", "jpg"] as const;
+
+// ── V3-OBS-13: BPCMS v1.0(甲虫色彩計測標準規格・凍結) ────────────────────
+export const BPCMS_VERSION = "1.0" as const;
+
+/**
+ * BPCMS v1.0 派生値レイヤー(R127/F-5): 生画像は無補正のまま保存(OBS-23)、Lab補正
+ * 値は後処理で算出する別レイヤーとしてのみ持つ。CIE76(ΔE*ab)固定 — CIEDE2000への
+ * 切替は別途確定(要件文どおり凍結対象外)。純関数: 画像内グレーカード基準Labから
+ * サンプルの生Labを線形補正するだけで、生データそのものへは一切触れない。
+ */
+export function correctLabViaGreycard(
+  sampleLab: { l: number; a: number; b: number },
+  greycardMeasuredLab: { l: number; a: number; b: number },
+  greycardReferenceLab: { l: number; a: number; b: number } = { l: 76.55, a: -0.5, b: 1.5 }, // X-Rite 18%グレー相当
+): { l: number; a: number; b: number; bpcms_version: typeof BPCMS_VERSION } {
+  return {
+    l: sampleLab.l + (greycardReferenceLab.l - greycardMeasuredLab.l),
+    a: sampleLab.a + (greycardReferenceLab.a - greycardMeasuredLab.a),
+    b: sampleLab.b + (greycardReferenceLab.b - greycardMeasuredLab.b),
+    bpcms_version: BPCMS_VERSION,
+  };
+}
+
+/** CIE76 ΔE*ab(BPCMS v1.0 凍結式)。CIEDE2000切替タイミングは別途確定(要件文どおり)。 */
+export function deltaE76(
+  a: { l: number; a: number; b: number },
+  b: { l: number; a: number; b: number },
+): number {
+  return Math.sqrt((a.l - b.l) ** 2 + (a.a - b.a) ** 2 + (a.b - b.b) ** 2);
+}
+
+// ── V3-OBS-30: デバイス取得間隔4階層(既定/一括上書き/複数選択/個別) ───────
+/** クラウド最新値取得系(SwitchBot等)はDB格納値取得のみでリアルタイムでない=間隔設定は無意味。 */
+export const CLOUD_POLL_PROVIDERS = new Set(["switchbot"]);
+/** 自作デバイス(custom)は秒単位で細かく設定可能。既定は5分(既存TELEMETRY_BUCKET_MSと同スケール)。 */
+export const DEFAULT_POLL_INTERVAL_SEC = 300;
+export const CUSTOM_MIN_POLL_INTERVAL_SEC = 1;
+
+// ── V3-OBS-38: 画像配信の低コスト改善(段階1) ─────────────────────────────
+/** サムネイル/画像レスポンスのキャッシュ寿命(秒)。URL再利用・重複fetch削減の低コスト策。 */
+export const MEDIA_CACHE_MAX_AGE_SEC = 3600;
+/** テレメトリ保持ポリシー(3〜6ヶ月超はアーカイブ/削除対象・既定=保守的な6ヶ月側)。 */
+export const TELEMETRY_RETENTION_MONTHS = 6;
+
+/** bucket_start_ms が保持期間(TELEMETRY_RETENTION_MONTHS)を超えているか(OBS-38)。
+ *  純関数: 実削除/アーカイブ処理は別レイヤー(バッチ)の責務、ここは判定のみ。 */
+export function isTelemetryStale(bucketStartMs: number, nowMs: number): boolean {
+  const retentionMs = TELEMETRY_RETENTION_MONTHS * 30 * 24 * 60 * 60 * 1000;
+  return nowMs - bucketStartMs > retentionMs;
+}
+
+// ── V3-OBS-58: QC builder(blur/exposure/scale/background/occlusion) ──────
+export const QC_FLAGS = ["usable", "warning", "reject", "unchecked"] as const;
+export const QC_THRESHOLDS = {
+  minEdgePx: 128, // scale: サムネイル長辺がこれ未満は解像度不足(reject)
+  warnEdgePx: 256, // scale: これ未満はwarning
+  maxFileBytes: 20 * 1024 * 1024, // exposure/background代理指標: 極端に大きい/小さいファイルは撮影条件異常の代理シグナル
+  minFileBytes: 512,
+} as const;
+
+/**
+ * QC builder(OBS-58) — 決定論ヒューリスティック(LLM/Vision既定OFF・不変条項①)。
+ * blur/occlusion の画素解析は将来の client-side WASM 拡張の余地として qc_score
+ * に0.5の中立値を残す(未実装機能を"検査済み"と偽らない=誇張ゼロ)。scale
+ * (解像度)と exposure/background の代理指標(ファイルサイズ極端値)のみ、既存の
+ * サムネイル生成結果(width/height/bytes)から決定論的に判定する。
+ */
+export function computeQcFlag(
+  widthPx: number,
+  heightPx: number,
+  fileBytes: number,
+): { qc_flag: (typeof QC_FLAGS)[number]; qc_score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  const longEdge = Math.max(widthPx, heightPx);
+  if (fileBytes < QC_THRESHOLDS.minFileBytes || fileBytes > QC_THRESHOLDS.maxFileBytes) {
+    reasons.push("exposure_or_background_out_of_range");
+  }
+  if (longEdge < QC_THRESHOLDS.minEdgePx) {
+    reasons.push("scale_too_small");
+    return { qc_flag: "reject", qc_score: 0, reasons };
+  }
+  if (reasons.length > 0 || longEdge < QC_THRESHOLDS.warnEdgePx) {
+    if (longEdge < QC_THRESHOLDS.warnEdgePx) reasons.push("scale_low_resolution");
+    return { qc_flag: "warning", qc_score: 0.5, reasons };
+  }
+  return { qc_flag: "usable", qc_score: 1, reasons };
+}
+
+// ── V3-OBS-71: 観測データ印刷 — 選べる項目の許可リスト ────────────────────
+export const PRINT_ALLOWED_FIELDS = [
+  "capture_id",
+  "subject_ref",
+  "domain",
+  "species_candidate",
+  "measurements",
+  "note",
+  "observed_at",
+] as const;
