@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore, deriveActorId } from "@ihl/truth";
 import { issueSessionToken } from "../apps/api/src/session";
-import { revokeActor, isDenylisted } from "../apps/api/src/denylist";
+import { revokeActor, isDenylisted, revocationOf } from "../apps/api/src/denylist";
 import { appendKarma, grantKarmaCountIncrease, isBanned, projectLedger } from "../apps/api/src/ledger-routes";
 import { GOV_FLAG_COUNT_STEPS } from "../apps/api/src/plaza-constants";
 import { memoryKV } from "../apps/api/src/kv";
@@ -112,8 +112,8 @@ describe("V3-AUT-03 BAN(V3-KRM-04)から denylist への配線", () => {
     await grantKarmaCountIncrease(s, actorId, 10, "dispute", env.AUTH_DENYLIST); // fibPenalty(0,10)=143 → BAN
 
     const after = await app.request("/api/v1/me/ledger", { headers: bearer(session) }, env);
-    expect(after.status).toBe(401);
-    expect(await after.json()).toEqual({ error: "SESSION_REVOKED" });
+    expect(after.status).toBe(403);
+    expect(await after.json()).toEqual({ error: "KARMA_SUSPENDED" });
   });
 
   it("BAN 閾値を跨がない小さいペナルティは denylist に触れない(既存セッションは生存)", async () => {
@@ -185,5 +185,70 @@ describe("V3-AUT-03 行政命令フラグ(V3-GOV-09)から denylist への配線
   it("GOV_FLAG_COUNT_STEPS のペナルティは BAN 閾値を跨がない(検証の前提)", () => {
     // 90 - fibPenalty(0,10) = 90 - 143 = -53 > -100(KARMA_BAN_THRESHOLD)。
     expect(GOV_FLAG_COUNT_STEPS).toBe(10);
+  });
+});
+
+// V3-AUT-19 差し戻し是正(2026-07-31): denylist の値に失効理由コードを持たせる。
+// revocationOf 自体は denylist.ts 単体の契約なので index.ts の変更なしに検証できる。
+describe("V3-AUT-19 失効理由コード — revocationOf(denylist.ts単体)", () => {
+  it("reason 付き revokeActor は revocationOf で理由を返す", async () => {
+    const kv = memoryKV();
+    const now = Math.floor(Date.now() / 1000);
+    await revokeActor(kv, "actor-ban", now, "karma_ban");
+    expect(await revocationOf(kv, "actor-ban", now - 10)).toEqual({ revoked: true, reason: "karma_ban" });
+  });
+
+  it("reason 省略の revokeActor(既定=旧形式)は revocationOf で reason=null", async () => {
+    const kv = memoryKV();
+    const now = Math.floor(Date.now() / 1000);
+    await revokeActor(kv, "actor-x", now); // reason 省略 → 後方互換で "<epoch>" のみ書く
+    expect(await revocationOf(kv, "actor-x", now - 10)).toEqual({ revoked: true, reason: null });
+  });
+
+  it("KV へ直接 put した旧形式値(パイプなし・移行前データ想定)も reason=null で読める", async () => {
+    const kv = memoryKV();
+    const now = Math.floor(Date.now() / 1000);
+    await kv.put("actor-legacy", String(now));
+    expect(await revocationOf(kv, "actor-legacy", now - 10)).toEqual({ revoked: true, reason: null });
+  });
+
+  it("isDenylisted(既存 boolean 契約)は reason 付きエントリでも壊れない", async () => {
+    const kv = memoryKV();
+    const now = Math.floor(Date.now() / 1000);
+    await revokeActor(kv, "actor-ban2", now, "karma_ban");
+    expect(await isDenylisted(kv, "actor-ban2", now - 10)).toBe(true);
+    expect(await isDenylisted(kv, "actor-ban2", now + 10)).toBe(false);
+  });
+});
+
+// KV へ直接 put する旧形式(理由なし)の値が保護 API 経路でも従来どおり SESSION_REVOKED
+// になることの回帰テスト。index.ts は isDenylisted(boolean契約)を呼ぶだけなので、
+// この経路は本レーンの denylist.ts 変更だけで(index.ts 無改修のまま)通る。
+describe("V3-AUT-19 後方互換 — 旧形式KV値は index.ts 無改修のまま SESSION_REVOKED", () => {
+  it("KV に直接 put した旧形式値(理由なし)は 401 SESSION_REVOKED のまま", async () => {
+    const env = makeEnv();
+    const actorId = await deriveActorId("legacy-format@example.com");
+    const session = await issueSessionToken(actorId, SESSION_SECRET);
+    const now = Math.floor(Date.now() / 1000);
+    await env.AUTH_DENYLIST.put(actorId, String(now));
+    const res = await app.request("/api/v1/me/ledger", { headers: bearer(session) }, env);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "SESSION_REVOKED" });
+  });
+});
+
+// index.ts・ledger-routes.ts への AUT-19 是正diff(n62fix1・2026-07-31 適用済み)により
+// it.skip を解除(n62aut03)。
+describe("V3-AUT-19 KARMA_SUSPENDED(index.ts+ledger-routes.ts diff適用済み)", () => {
+  it("カルマがBAN域まで落ちた既発行セッションは 403 KARMA_SUSPENDED", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const actorId = await deriveActorId("karma-suspended-419@example.com");
+    const session = await issueSessionToken(actorId, SESSION_SECRET);
+    const s = new TruthStore(bucket);
+    await grantKarmaCountIncrease(s, actorId, 10, "dispute", env.AUTH_DENYLIST); // fibPenalty(0,10)=143 → BAN
+    const after = await app.request("/api/v1/me/ledger", { headers: bearer(session) }, env);
+    expect(after.status).toBe(403);
+    expect(await after.json()).toEqual({ error: "KARMA_SUSPENDED" });
   });
 });
