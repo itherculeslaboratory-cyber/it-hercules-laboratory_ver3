@@ -80,6 +80,29 @@ describe("C2 auth — magic-link + verify", () => {
     const b = await login("user@example.com");
     expect(a.actorId).toBe(b.actorId);
   });
+
+  it("V3-AUT-02: a magic token is one-time — replaying the SAME token → 401 INVALID_TOKEN", async () => {
+    const env = makeEnv(); // one shared KV/bucket across both /verify calls
+    const ml = await app.request(
+      "/api/v1/auth/magic-link",
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ email: "onetime@example.com" }) },
+      { ...env, IHL_DEV_EXPOSE_MAGIC_TOKEN: "1" },
+    );
+    const { dev_magic_token } = (await ml.json()) as { dev_magic_token: string };
+    const first = await app.request(
+      "/api/v1/auth/verify",
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ token: dev_magic_token }) },
+      env,
+    );
+    expect(first.status).toBe(200);
+    const replay = await app.request(
+      "/api/v1/auth/verify",
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ token: dev_magic_token }) },
+      env,
+    );
+    expect(replay.status).toBe(401);
+    expect(await replay.json()).toEqual({ error: "INVALID_TOKEN" });
+  });
 });
 
 describe("C2 auth — negative (tamper / expiry / purpose)", () => {

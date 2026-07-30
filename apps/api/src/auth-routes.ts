@@ -67,6 +67,24 @@ authRoutes.post("/magic-link", async (c) => {
   return c.json(res, 202);
 });
 
+// V3-AUT-02: マジックリンクトークンのワンタイム性。トークン実体はサーバに保存しない
+// (session.ts 冒頭コメント同旨)ため、verify-code の consumed-iat と同型で「(email,iat)を
+// 検証済みとして刻む」形で担保する。AUTH_CODE_STATE KV は既に verify-code の試行状態を
+// 持つ namespace だが、キー prefix を分けて衝突しない(magic-consumed: vs code-state:)。
+function magicConsumedKey(email: string, iat: number): string {
+  return `magic-consumed:${email}:${iat}`;
+}
+
+async function isMagicConsumed(kv: KVNamespaceLite | undefined, email: string, iat: number): Promise<boolean> {
+  if (!kv) return false; // 未バインド = ワンタイム性が働かない degrade(AUTH_CODE_STATE 既存規約と同型)
+  return (await kv.get(magicConsumedKey(email, iat))) !== null;
+}
+
+async function markMagicConsumed(kv: KVNamespaceLite | undefined, email: string, iat: number): Promise<void> {
+  if (!kv) return;
+  await kv.put(magicConsumedKey(email, iat), "1", { expirationTtl: MAGIC_TTL });
+}
+
 // POST /verify (公開): magic token → session token + Set-Cookie. { actor_id }.
 authRoutes.post("/verify", async (c) => {
   const minuteBucket = Math.floor(Date.now() / (RATE_WINDOW_SECONDS * 1000));
@@ -83,6 +101,10 @@ authRoutes.post("/verify", async (c) => {
   }
   const payload = await verifyMagicToken(body.token, c.env.SESSION_SECRET);
   if (!payload) return c.json({ error: "INVALID_TOKEN" }, 401);
+  if (await isMagicConsumed(c.env.AUTH_CODE_STATE, payload.email, payload.iat)) {
+    return c.json({ error: "INVALID_TOKEN" }, 401);
+  }
+  await markMagicConsumed(c.env.AUTH_CODE_STATE, payload.email, payload.iat);
   const actorId = await deriveActorId(payload.email); // email already normalized at magic-link entry
   const store = new TruthStore(c.env.TRUTH);
   // KRM-04: 永久 BAN は session 発行前に弾く（ログイン時のみ判定＝毎リクエスト走査回避）。
