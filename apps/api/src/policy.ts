@@ -68,3 +68,34 @@ export function resolvePolicyInt(
   if (fallback !== undefined) return fallback;
   throw new Error(`policy key not found: ${policyKey}`);
 }
+
+// ── V3-SEC-15 open-redirect ガード ──────────────────────────────────────
+// 認証済み /login?next= の遷移先は「内部絶対パス(/始まり・//不可)」のみ許可する。
+// それ以外(外部URL・プロトコル相対 //evil.com・空値)は "/" にフォールバックする。
+// 呼び出し側(auth-routes.ts の /login?next= 相当処理・w1-aut所有)は本関数の戻り値を
+// そのまま redirect 先として使えばよい(判定ロジックをここに一本化・重複実装させない)。
+export function safeNextPath(next: string | null | undefined): string {
+  if (typeof next !== "string" || next.length === 0) return "/";
+  if (!next.startsWith("/")) return "/"; // 外部URL(http://...)・相対パスを拒否
+  if (next.startsWith("//")) return "/"; // プロトコル相対(スキームレス外部URL)を拒否
+  return next;
+}
+
+// ── V3-SEC-19 本番認証バイパス変数の不在チェック ───────────────────────────
+// 要件本文が名指しする IHL_AUTH_REQUIRED/IHL_AUTH_BYPASS/IHL_WEB_AUTH_BYPASS は、
+// 現行の index.ts 認可ゲート(deny-by-default・PUBLIC_ROUTES 明示リスト方式)には
+// 実装として存在しない(該当変数名の参照はコード中ゼロ件・2026-07-31実測)。この関数は
+// 将来これらの変数名が実装に持ち込まれた場合に備えた回帰チェック(CI/ops が呼べる)。
+export interface ProdAuthEnvCheck {
+  ok: boolean;
+  problems: string[];
+}
+export function checkProdAuthEnv(env: Record<string, string | undefined>): ProdAuthEnvCheck {
+  const problems: string[] = [];
+  if (env.IHL_AUTH_REQUIRED !== undefined && env.IHL_AUTH_REQUIRED !== "1") {
+    problems.push("IHL_AUTH_REQUIRED must be '1' (or left unset in code that has no bypass path)");
+  }
+  if (env.IHL_AUTH_BYPASS) problems.push("IHL_AUTH_BYPASS must be unset in production");
+  if (env.IHL_WEB_AUTH_BYPASS) problems.push("IHL_WEB_AUTH_BYPASS must be unset (would bypass all routes)");
+  return { ok: problems.length === 0, problems };
+}

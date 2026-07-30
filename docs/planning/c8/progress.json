@@ -5374,7 +5374,7 @@
     "tc": [
       "tests/sec-57-key-bundle.test.ts"
     ],
-    "note": "key-bundle-routes.ts:52-93のzero-knowledge鍵バンドル機構(BYOK鍵5本を含む)でPOSTレスポンスは値をechoせずbundle_id/created_atのみ返す。ai-digest-routes.ts:7でプロファイル(ai-profiles/newspaper.json)が機能別に独立していることを確認。コード変更なし。"
+    "note": "key-bundle-routes.ts:52-93のzero-knowledge鍵バンドル機構(BYOK鍵5本を含む)でPOSTレスポンスは値をechoせずbundle_id/created_atのみ返す。ai-digest-routes.ts:7でプロファイル(ai-profiles/newspaper.json)が機能別に独立していることを確認。コード変更なし。 ★[n61検収開示・n61seccritic中] 未検証の節: 『存在フラグのみ表示』『LLM別フィールド分離』は検証していない(done維持はゼロ知識鍵バンドル構造が脅威モデルを構造的に満たすことによる)。"
   },
   {
     "id": "V3-SEC-06",
@@ -5493,7 +5493,7 @@
     "tc": [
       "tests/sec-w1-batch.test.ts"
     ],
-    "note": "policy.tsにcheckProdAuthEnv()を新規追加(IHL_AUTH_REQUIRED/IHL_AUTH_BYPASS/IHL_WEB_AUTH_BYPASSの値検査)。grep実測で現行index.tsはこれらの変数名を一切参照しない(バイパス分岐が構造的に存在しない)ことを確認し、将来変数が持ち込まれた場合の回帰検査として追加。"
+    "note": "policy.tsにcheckProdAuthEnv()を新規追加(IHL_AUTH_REQUIRED/IHL_AUTH_BYPASS/IHL_WEB_AUTH_BYPASSの値検査)。grep実測で現行index.tsはこれらの変数名を一切参照しない(バイパス分岐が構造的に存在しない)ことを確認し、将来変数が持ち込まれた場合の回帰検査として追加。 ★[n61検収開示・n61seccritic中] checkProdAuthEnvは未配線であり、未設定を合格と判定するため『本番envの実確認』そのものは未実施(回帰検査としての価値のみ)。"
   },
   {
     "id": "V3-SEC-24",
@@ -5506,7 +5506,7 @@
     "status": "done",
     "commits": [],
     "tc": [],
-    "note": "consent-routes.tsはToS同意ゲートのみでToS本文を書き換えるAPIが存在しないことをgrep実測で確認(AIが自律的に変更できる経路が構造的に無い)。コード変更なし。"
+    "note": "consent-routes.tsはToS同意ゲートのみでToS本文を書き換えるAPIが存在しないことをgrep実測で確認(AIが自律的に変更できる経路が構造的に無い)。コード変更なし。 ★[n61検収開示・n61seccritic中] human-review-checklist相当の文書はリポジトリに不在(未検証の節として開示。ToS書換APIの構造的不在によるdone判定は維持)。"
   },
   {
     "id": "V3-SEC-26",
@@ -5532,7 +5532,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "【持ち越し】LICENSE/README等リポジトリルートファイルの作成はw1-sec書いてよい場所の外。実装判断自体は計画書§10で確定済み(全公開OSS)につき残課題はファイル作成のみ。「公開の実施」はKIT-TEMPLATE人間ゲート事項のため対象外。"
+    "note": "【持ち越し】LICENSE/README等リポジトリルートファイルの作成はw1-sec書いてよい場所の外。実装判断自体は計画書§10で確定済み(全公開OSS)につき残課題はファイル作成のみ。「公開の実施」はKIT-TEMPLATE人間ゲート事項のため対象外。 ★[n61検収・n61seccritic重大是正] 持ち越し理由『LICENSE/README等が未作成・glob外』は実測で反証された(該当文書は既存・git追跡済み)。残課題は『公開の実施』(人間ゲート)のみ。"
   },
   {
     "id": "V3-SEC-31",
@@ -5545,7 +5545,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "【持ち越し】MANIFESTO/CONTRIBUTING/CODE_OF_CONDUCTの作成はw1-sec書いてよい場所の外。V3-SEC-30と同一理由。"
+    "note": "【持ち越し】MANIFESTO/CONTRIBUTING/CODE_OF_CONDUCTの作成はw1-sec書いてよい場所の外。V3-SEC-30と同一理由。 ★[n61検収・n61seccritic重大是正] 持ち越し理由『MANIFESTO/CONTRIBUTING/CODE_OF_CONDUCT未作成』は実測で反証された(既存・git追跡済み)。実質充足の可能性が高く、次波で充足確認のうえclose候補。"
   },
   {
     "id": "V3-SEC-34",
