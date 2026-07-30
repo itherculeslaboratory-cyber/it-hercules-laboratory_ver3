@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { ReactNode } from "react";
+import { PosthogProvider } from "./posthog-provider";
 
 export const metadata = {
   title: "IHL",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             documented contract asks for. As the first child of <body>, it
             runs before any of our visible content is even parsed. */}
         <script src="/assets/theme.js" />
+        <PosthogProvider />
         {children}
       </body>
     </html>

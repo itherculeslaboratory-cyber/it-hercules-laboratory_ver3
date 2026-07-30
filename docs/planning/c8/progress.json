@@ -8,8 +8,12 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["8e00920"],
-    "tc": ["tests/guards.test.ts describe(V3-AIP-05 checkRtm)"],
+    "commits": [
+      "8e00920"
+    ],
+    "tc": [
+      "tests/guards.test.ts describe(V3-AIP-05 checkRtm)"
+    ],
     "note": "RTM 100%紐づけは749件全件を1レーンで達成するのは非現実的と判断し、g09レーンで今回実装した4件(AIP-104/93/31/28)をreq/det/test/trn_ui/retrofitの実参照付きでrtm.jsonへ追加(13→17件)、rtm.csv/mdを再生成。rtm.jsonの$commentに『捏造禁止・testの無いIDは足さない』運用方針を明記。全749件の充足には至っていない。"
   },
   {
@@ -21,8 +25,12 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["124027b(既存)"],
-    "tc": [".github/workflows/ci.yml"],
+    "commits": [
+      "124027b(既存)"
+    ],
+    "tc": [
+      ".github/workflows/ci.yml"
+    ],
     "note": "CIパイプライン(pytest+apps/web test/build+npm run lint、シークレット不要)は既に.github/workflows/ci.ymlに実装済みで04-traceability/rtm.jsonで5ゲート閉包済み(要件72条件を再検証)。progress.jsonがtodoのまま停滞していたstaleケース。新規コミット不要、既存124027bで実装済みを確認。"
   },
   {
@@ -34,7 +42,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["567a554"],
+    "commits": [
+      "567a554"
+    ],
     "tc": [],
     "note": "CONTRIBUTING.mdにrepoルート相対のセットアップ手順+「#NNの選び方」(progress.json tier優先度で次タスクを選ぶ運用)を追記。"
   },
@@ -47,8 +57,13 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["3d21a73", "8e00920(cwd依存バグ修正)"],
-    "tc": ["tests/scorecard-gate.test.ts describe(V3-AIP-28 evaluateScorecard total + per-axis minimums)"],
+    "commits": [
+      "3d21a73",
+      "8e00920(cwd依存バグ修正)"
+    ],
+    "tc": [
+      "tests/scorecard-gate.test.ts describe(V3-AIP-28 evaluateScorecard total + per-axis minimums)"
+    ],
     "note": "加重スコアカードゲート機構(合計点+各軸最低点の同時判定)をscripts/scorecard-gate.mjs(evaluateScorecard関数)として実装、config/scorecard-presets.jsonに要件本文の2例(weighted-3axis/abcd-rtm)をプリセット化。軸スコアの実測(採点そのもの)は批評家ゲート運用側の継続作業でこのスコープ外。"
   },
   {
@@ -60,8 +75,12 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["b88a0f6"],
-    "tc": ["tests/guards.test.ts describe(V3-AIP-31 classifyDangerousDiff auto-gate-bypass)"],
+    "commits": [
+      "b88a0f6"
+    ],
+    "tc": [
+      "tests/guards.test.ts describe(V3-AIP-31 classifyDangerousDiff auto-gate-bypass)"
+    ],
     "note": "人間ゲート必須・ワンクリック全自動禁止の機械ガードとして、scripts/check-danger-code.mjsにauto-gate-bypassカテゴリを追加(autoApprove/skipHumanGate/oneClickDeploy等をPR diffで検出)。"
   },
   {
@@ -77,7 +96,9 @@
       "124027b",
       "fc2fada"
     ],
-    "tc": ["tests/spec-market-trade.test.ts (6 tests, market-trade画面へのspec/base契約横展開)"],
+    "tc": [
+      "tests/spec-market-trade.test.ts (6 tests, market-trade画面へのspec/base契約横展開)"
+    ],
     "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。 追加(g09レーン): in_progress残余(他ドメインへの拡張)には今回も着手できず。他18項目を優先した時間配分上の判断で、内容の困難さによるスキップではない。次セッションでの継続を推奨。\n\n[統合cleanup-final追記] 同型の契約(schema適合+deny-by-default route matrix+navigation到達可能性の3点)をmarket-trade画面へ横展開(fc2fada・tests/spec-market-trade.test.ts新設)。これで2ドメイン目まで実装済み。残りは他ドメイン(データモデル全般・付与条件・ナビ・権限)への横断適用で、in_progressのまま据え置く(status=doneへの昇格は見送り — 要件が求める全ドメイン横断にはまだ届いていないため)。"
   },
   {
@@ -120,7 +141,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["b1511e4"],
+    "commits": [
+      "b1511e4"
+    ],
     "tc": [],
     "note": "既存11スキル(~/.claude/skills)をkeep/merge/rewrite/deleteで機械監査、notebooklmの暗黙トリガーが広すぎるためrewrite候補と特定。docs/ops/skill-audit.md新設。グローバル設定の実際の書き換えは越権のため実施せず(監査記録のみ)。"
   },
@@ -133,7 +156,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["91e2e17"],
+    "commits": [
+      "91e2e17"
+    ],
     "tc": [],
     "note": "ver1/ver2資料の日時信頼性分類+要約抽出書先出しは既にPhase B1で実施済み(srs.md冒頭の「抽出書v2・711件」+source:frontmatter provenance chain)であることの証跡をdocs/planning/research/ver1-ver2-triage-evidence.mdに記録。新規プロセス実装ではなく既存事実の記録。"
   },
@@ -146,8 +171,14 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["55f7fc7"],
-    "tc": ["tests/ai-digest.test.ts", "tests/github-issues-connector.test.ts", "tests/cl-04-route-matrix.test.ts"],
+    "commits": [
+      "55f7fc7"
+    ],
+    "tc": [
+      "tests/ai-digest.test.ts",
+      "tests/github-issues-connector.test.ts",
+      "tests/cl-04-route-matrix.test.ts"
+    ],
     "note": "GitHub Issues/掲示板→AI要約スレを最小構成で実装。github-issues-connector.ts(payjp-connector.tsと同型のDI可能な薄い読み取りコネクタ・public repoは無認証で可・GITHUB_TOKENは任意)+ai-digest-routes.ts(POST /api/v1/ai-digest/sync・requireRole operator/admin・手動即時実行)。要約はai-kernel.tsのLLMClient(既定AI_DISABLED)+ai-profiles/newspaper.json(BYOK summarize)をそのまま再利用しLLM呼び出しは既定OFF/BYOK時のみ(不変条項①)— AI無効時は捏造せずposts_created=0・ai_disabled=trueを返すことをテストで確認済み。新イベント型は増やさずihl.plaza.post.v1(channel=knowledge-board・board_kind=improvement)を再利用してR2 INSERT ONLY保存し、既存の知の広場「改善の板」画面(GET /plaza/channels/knowledge-board/threads)にそのまま表示されることを実際にroute越しに検証。同一issueの再要約はcorrection_ofで連結した新バージョンを追記(上書きなし・2バージョン共存を確認)。config/ai-digest-config.json でrepo/labels/batch_size/frequencyを管理(ハードコード禁止・既存github-contribution-weights.jsonと同型)。route-matrix.csv+cl-04-route-matrix.test.tsをinfra-route-081として72→73行に更新済み(統合時にinfra-route-080はV3-CST-02が先取していたため採番をずらして解決)。掲示板→GitHub Issue自動起票(Phase2)は要件本文どおりスコープ外。admin用のUI画面(screen-def)は新設していない(バックエンドのrequireRole gate付きAPIのみ・ブリーフの「薄いコネクタ」範囲に厳密に収めた)。"
   },
   {
@@ -159,7 +190,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["4883f25"],
+    "commits": [
+      "4883f25"
+    ],
     "tc": [],
     "note": "夜間/週次実行パック分割(完全無人禁止・迷う1割は人間ゲート)を既存runner.ps1機構(1タスク=1ファイル選定・zero_result_stop・morning-review OK/NG)へ対応付け、docs/ops/nightly-autorun.mdに追記。"
   },
@@ -172,7 +205,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["91a782f"],
+    "commits": [
+      "91a782f"
+    ],
     "tc": [],
     "note": "統合検索(RAG)基盤を既存の観測パイプライン決定論梯子+wiki統合基盤のruri-v3-70m(384次元)選定の横展開として設計。新規ベクトルDBなし・不変条項①準拠。docs/knowledge/topics/unified-search-rag.md新設(OKF形式・index.md/log.md同時更新)。"
   },
@@ -198,8 +233,12 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["2219a99"],
-    "tc": ["tests/file-board-registry.test.ts describe(V3-AIP-93 gen-file-board-registry scan + csv)"],
+    "commits": [
+      "2219a99"
+    ],
+    "tc": [
+      "tests/file-board-registry.test.ts describe(V3-AIP-93 gen-file-board-registry scan + csv)"
+    ],
     "note": "file-board linkageレジストリ(repo_path+sha256短縮)を新設。scripts/gen-file-board-registry.mjsが01-requirements/02-design/screen-defsを走査し04-traceability/file-board-registry.csvを生成、npm run lintに--check組み込みでCI一致検証。board_thread_id自体(実スレ紐づけ)は継続運用として未着手(正直に空欄)。"
   },
   {
@@ -211,7 +250,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["26bbb23"],
+    "commits": [
+      "26bbb23"
+    ],
     "tc": [],
     "note": "夜間自動運転(D:\\claude\\ops\\autorun)のHQ側実体を読み取り専用で実在確認し、docs/ops/nightly-autorun.mdに参照文書化+検証手順(schtasks照会/runs.jsonl/STOP.md等)を記録。"
   },
@@ -224,7 +265,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["4ac0d40"],
+    "commits": [
+      "4ac0d40"
+    ],
     "tc": [],
     "note": "HQワークスペース階層(D:\\claude直下4フォルダ構成)を実在確認し、docs/ops/hq-workspace-hierarchy.mdに参照文書化+検証手順を記録。"
   },
@@ -237,7 +280,9 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["3388451"],
+    "commits": [
+      "3388451"
+    ],
     "tc": [],
     "note": "時間帯予約式スケジューラ(週間グリッドdev/recovery/auto)をautorun-schedule.json実在確認の上、docs/ops/nightly-autorun.mdに追記。"
   },
@@ -295,8 +340,12 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["e9db7f7"],
-    "tc": ["tests/handle.test.ts"],
+    "commits": [
+      "e9db7f7"
+    ],
+    "tc": [
+      "tests/handle.test.ts"
+    ],
     "note": "GET/POST /api/v1/me/handleを新設。3〜30文字[A-Za-z0-9_]の限定文字種を検証、truth/ihl.aut.handle.v1/<handle>.jsonへのput-if-absentで一意性を担保(409 HANDLE_TAKEN)、本人が既に確定済みなら再確定を拒否(409 HANDLE_IMMUTABLE)。OSは自動生成せず本人の明示POSTでのみ確定(usecase-driven-design.md §auth-onboarding-locale準拠)。候補生成UI・availability advisory route・onboarding画面統合はスコープ外(UI波)。"
   },
   {
@@ -308,8 +357,12 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["eda9946"],
-    "tc": ["tests/account-onboarding.test.ts::V3-AUT-09 open registration — account row created on first verify"],
+    "commits": [
+      "eda9946"
+    ],
+    "tc": [
+      "tests/account-onboarding.test.ts::V3-AUT-09 open registration — account row created on first verify"
+    ],
     "note": "初回ログイン成功時(magic-link verify/verify-code/dev-login)にtruth/ihl.aut.account.v1/<actor_id>.jsonをput-if-absentするensureAccountを新設(2回目以降はidempotent no-op)。独立サインアップ画面は元々無い(login画面のマジックリンク検証がオープン登録)ことも確認。"
   },
   {
@@ -321,8 +374,17 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["eda9946", "2126232", "8e792cb"],
-    "tc": ["apps/web/src/middleware.test.ts > skipsOnboardingCheck — V3-AUT-10 onboarding gate (pure)", "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior (onboarding系4件)", "tests/settings-preferences.test.ts > handle は1〜40文字のみ許可(空文字/超過は400)", "tests/auth.test.ts > V3-AUT-05/V3-AUT-10: dev-login's seeded handle+locale satisfies the SAME onboarding SSOT middleware reads (regression guard)"],
+    "commits": [
+      "eda9946",
+      "2126232",
+      "8e792cb"
+    ],
+    "tc": [
+      "apps/web/src/middleware.test.ts > skipsOnboardingCheck — V3-AUT-10 onboarding gate (pure)",
+      "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior (onboarding系4件)",
+      "tests/settings-preferences.test.ts > handle は1〜40文字のみ許可(空文字/超過は400)",
+      "tests/auth.test.ts > V3-AUT-05/V3-AUT-10: dev-login's seeded handle+locale satisfies the SAME onboarding SSOT middleware reads (regression guard)"
+    ],
     "note": "バックエンド契約は完成: projectOnboardingStatus(handle確定+locale明示選択の両方=必須2ゲート)をGET /api/v1/me/onboardingとGET /api/v1/auth/sessionのonboarding_completeで公開・テスト済み。表示名/タイムゾーン/テーマはゲート対象外(usecase-driven-design.md §auth-onboarding-locale準拠)。未完了部分: クライアント側で「オンボーディング未完了の間はアプリ全体を専用フローに閉じる」実際のUI(setup-profile統合画面)がまだ存在しない(ui-asset-catalog.mdが指摘する既知ギャップ「handle確定専用ステップ」画面未作成)。V3-AUT-12のmiddlewareは未ログインのみ/s/loginへ誘導し、ログイン済みだがonboarding未完了のケースはまだガードしていない。\n\n[統合uiux-g07追記] setup-profile画面新設(handle確定+locale明示選択を1フォームでPATCH /me/preferences)。既存ihl.pref.set.v1にhandleフィールド追加(1-40文字必須・新規イベント型は増やさない)。middleware.tsにonboarding gate追加(handle未設定の間は/s/setup-profileへ307誘導・setup-profile自体は除外してリダイレクトループ回避・onboarding判定fetch失敗時はfail-open)。前回note記載の未完了部分は本レーンで解消。\n\n[統合cleanup-final追記] wave-2最終検証で設計債を発見・修正(8e792cb): projectOnboardingStatusのhandleゲートがfindOwnHandle(HANDLE_TYPE・V3-AUT-08の別機能、どのUI画面からも到達しない)を見ており、setup-profile画面が実際に書く先(PATCH /me/preferences・pref-set)と一致していなかったため、このSSOT関数は実運用フローでは永久にfalseのままになる欠陥があった(dev-loginのseedも本物のonboarding完了もどちらも反映されない)。projectOnboardingStatusのhandle判定をprojectPreferencesのhandleフィールド参照へ修正し、setup-profile/dev-loginと一致させた。middleware.tsは/auth/session 1回のonboarding_completeのみで判定するよう単純化(2回目fetch廃止)。dev-login→onboarding_complete:trueの回帰ガードをtests/auth.test.tsに追加。"
   },
   {
@@ -349,8 +411,15 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["db2bc69", "3f5012a", "2126232"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx > Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)", "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior"],
+    "commits": [
+      "db2bc69",
+      "3f5012a",
+      "2126232"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx > Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)",
+      "apps/web/src/middleware.test.ts > middleware — V3-AUT-12 redirect behavior"
+    ],
     "note": "apps/web/src/middleware.tsを新設: /s/login・/s/login-sent以外の全画面をセッション必須にし、未ログイン時は/s/loginへ307誘導(既存の公開GET /api/v1/auth/sessionを叩くのみでJWT検証を再実装しない・API不通時はfail-closed)。next buildで実際にコンパイル成功を確認済み。未実装: (a)ログイン済みだがonboarding未完了のケースをsetup-profile画面へ誘導する分岐(V3-AUT-10のonboarding_completeは取得済みなので追加は小さいが、誘導先のsetup-profile画面自体が無い) (b)ログイン/登録/ログアウトのナビリンクをAppShellヘッダーに常時表示する要件 — Renderer共通のapp-shell caseか全47screen-defへの追記が必要で、golden snapshot(screendef-snapshots.test.tsx 50件)への影響が大きく、UI磨き波(別レーン)に委ねる判断をした。\n\n[統合uiux-g07追記] (a)(b)とも本レーンで解消: middleware.tsにonboarding gate追加(setup-profileへ誘導)、AppShellヘッダーにログイン/登録/ログアウトの常時ナビリンク実装(V3-UIX-28コミットで充足)。middleware.tsはdb2bc69(基礎ガード)+本レーン(onboarding拡張)のスーパーセットとして統合担当がworktree版で解決、npm run lint/testとも緑を確認済み。"
   },
   {
@@ -375,7 +444,9 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["987c5c3"],
+    "commits": [
+      "987c5c3"
+    ],
     "tc": [],
     "note": "認証ゲートにINVALID_TOKEN(v1.形式トークンが提示されたが検証失敗)を追加し、既存のAUTH_REQUIRED(無提示)/SESSION_REVOKED(denylist)とは区別した(CL-03/CL-04等の既存frozen契約は不変のまま拡張)。USER_NOT_FOUND/KARMA_SUSPENDEDは未実装: 前者はアカウント行(V3-AUT-09で新設)の存在を毎リクエスト参照する設計判断が必要(現状はensureAccountで自動作成するため事実上USER_NOT_FOUNDは発生しない設計)、後者はKRM-04「BANはログイン時のみ判定・毎リクエスト走査回避」という既存コスト裁定(不変条項①)と衝突するため、per-requestカルマ再計算を追加する設計判断が必要。次波での裁定待ち。"
   },
@@ -388,8 +459,13 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["987c5c3"],
-    "tc": ["apps/web/src/lib/error-messages.test.ts", "apps/web/src/renderer/renderer.test.tsx::Renderer — defaultExecute forwards the server's machine-readable error code (V3-AUT-20)"],
+    "commits": [
+      "987c5c3"
+    ],
+    "tc": [
+      "apps/web/src/lib/error-messages.test.ts",
+      "apps/web/src/renderer/renderer.test.tsx::Renderer — defaultExecute forwards the server's machine-readable error code (V3-AUT-20)"
+    ],
     "note": "defaultExecute(renderer.tsx)が非2xx応答のbody.errorを読みApiError.codeに積むよう変更(従来はHTTPステータスのみ)。mapErrorに主要な機械可読コード(INVALID_TOKEN/BANNED/INVALID_EMAIL/INVALID_CODE/TOO_MANY_ATTEMPTS/HANDLE_TAKEN/HANDLE_IMMUTABLE等)の個別文言を追加、既存のaria-invalid付きalert表示経路(V3-UIX-03)へ接続。"
   },
   {
@@ -406,7 +482,9 @@
       "0bf56a8",
       "640fa3b"
     ],
-    "tc": ["apps/web/src/renderer/screen-boards-footer.test.tsx"],
+    "tc": [
+      "apps/web/src/renderer/screen-boards-footer.test.tsx"
+    ],
     "note": "バックエンド: BOARD_KINDS(guide/complaint/improvement)3板enum+POST /plaza/posts+projectChannelThreads board_kindグルーピング+GOV-23ランキング(apps/api/src/plaza-routes.ts/plaza-constants.ts)。未了: 全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ・IDE導線はフロントエンド未着手(スコープ外)。thread画面再構築済み。追記(knowledge-g03レーン): Renderer本体に折り畳み式ScreenBoardsFooter(channel=screen-<screen_id>)を1回だけ差し込み、50本のscreen-def個別編集なしに全画面テンプレートへの必須付与を機械的に保証(既定は折り畳み=開くまでAPI呼び出しゼロ、既存レンダラテストのonAction呼び出し回数前提を壊さない設計)。残: コンポーネント編集/入れ替え/Fork一覧ポップアップ/IDE導線(identity/Fork lineage UIの設計待ち)は引き続きスコープ外。 追記(knowledge-finalレーン): 前セッションのnoteから追加のバックエンド増分は見つけられなかった。残余(全ファイル/全コンポーネント/全画面テンプレートへの掲示板UI必須付与・Fork一覧ポップアップ)は必要データが既存API(GET /plaza/channels/{channel}/threads・GET /plaza/forks)で既に揃っており、真に不足しているのは横断的なフロントエンド組み込み作業(apps/web/src/renderer/renderer.tsx全体・5000行超・全画面テンプレへの一律適用)。UI磨き第2弾(HANDOFF §3-1)は別レーン担当かつ「描画を確認できない媒体で完成と言うな」規約によりスクショ検証なしに手を出すべきでないと判断し、これ以上のバックエンド増分なしでnote据え置き。"
   },
   {
@@ -437,8 +515,12 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["814c648"],
-    "tc": ["tests/plaza-improvement-queue.test.ts"],
+    "commits": [
+      "814c648"
+    ],
+    "tc": [
+      "tests/plaza-improvement-queue.test.ts"
+    ],
     "note": "改善要求(board_kind=improvement)をvoteableにした。新規投票機構は作らず既存プラチナ投票基盤(KRM-25・POST /social/platinum-votes・projectPlatinumVoteTally)を再利用。AI安全チェックは決定論キーワードブロックリスト(LLM既定OFF・不変条項①)。GET /plaza/channels/{channel}/improvement-queueでコイン降順の運営者向け優先度キュー+閾値(既定100票)到達でofficial/notify_adminフラグ。"
   },
   {
@@ -450,8 +532,12 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["d005f3a"],
-    "tc": ["tests/engagement.test.ts"],
+    "commits": [
+      "d005f3a"
+    ],
+    "tc": [
+      "tests/engagement.test.ts"
+    ],
     "note": "Engagement(公開Q&A/称賛/一括募集)をboard_kind=engagement(4板目)として掲示板側の募集スレ型に限定実装。市場のオファー機構(V3-MKT-06・別レーン)とは非衝突。classifyEngagementQuestion(決定論キーワード分類)・projectPraisePoints(観測データ変動係数から称賛ポイント自動抽出)・projectPredictedQuestions(過去Q&A頻度+自動分類)。GET /plaza/engagement/insights。"
   },
   {
@@ -643,8 +729,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["adae1e9"],
-    "tc": ["tests/gov-07-dispute-vote.test.ts"],
+    "commits": [
+      "adae1e9"
+    ],
+    "tc": [
+      "tests/gov-07-dispute-vote.test.ts"
+    ],
     "note": "gov-routes.tsに紛争のプラチナ投票裁定を新規実装: POST publicize(当事者限定・opener_role宣言・二重publicize防止)/POST votes(二択・1票=1PT消費・PT残高>=1で誰でも投票可・1 actor 1票)/GET vote-result(集計投影)/POST vote-resolve(7日窓経過後に多数決確定・敗者へΔcount+5を1回だけ付与・同数は引き分け無変動・appendPrecedent再利用でR2判例記録・deterministic keyで二重実行防止)。gov-dispute/gov-vote/economy-pt-eventスキーマを拡張(enum追加のみ・型リネームなし)。"
   },
   {
@@ -656,7 +746,9 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["0c866ff"],
+    "commits": [
+      "0c866ff"
+    ],
     "tc": [],
     "note": "市場側(market-flag-routes.ts のユーザー指摘route・gov-stop route両方)には累計30件ごとに1PT消費(reason_code=indictment_fee・カルマΔcountとは別経路・非ブロッキングでPT残高がマイナスになっても指摘自体は拒否しない)を配線しテスト済み(commits内)。掲示板側(「掲示板の指摘」)は現行コードに『掲示板の投稿へ指摘/報告する』というユーザー向けエンドポイント自体が存在しない(plaza-signalはlike/use/retain等のみでflag相当が無い)ため配線先が無く未実装。新規に掲示板指摘機能を丸ごと作るのはスコープ外の推測実装になるため見送った。"
   },
@@ -669,8 +761,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["837b314"],
-    "tc": ["tests/gov-11-home-judicial-iot-preview.test.ts"],
+    "commits": [
+      "837b314"
+    ],
+    "tc": [
+      "tests/gov-11-home-judicial-iot-preview.test.ts"
+    ],
     "note": "GET /home/summaryにjudicial_inbox(本人が当事者の未決着紛争を最大5件・締切近い順)とiot_due(既存overdue+near投影を最大3件に切り詰め・二重実装なし)を追加。審理・投票本体は既存の/gov/disputes/*へ委譲(委譲のみで新規UI実装なし)。"
   },
   {
@@ -682,8 +778,13 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["d59fb61"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx::derives the resolver from catalogs+viewerLocale when resolveMessage is omitted", "apps/web/src/lib/viewer-locale.test.ts"],
+    "commits": [
+      "d59fb61"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx::derives the resolver from catalogs+viewerLocale when resolveMessage is omitted",
+      "apps/web/src/lib/viewer-locale.test.ts"
+    ],
     "note": "page.tsx/[screen]/page.tsxがサーバ側でGET /me/preferencesのlocaleを読み、loadCatalogs()と共にRendererへcatalogs+viewerLocale(シリアライズ可能な形)で渡す配線。Renderer内でresolveMessageを自前構築(関数はRSC境界を越えられないため)。全画面共通の1配線点なのでauth/UI/掲示板/裁判/マーケット/カルマ横断で効く。副産物としてi18n.tsをi18n-resolve.ts(client-safe純関数)とloadCatalogs()(node:fs使用)に分離。"
   },
   {
@@ -708,8 +809,13 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["d59fb61"],
-    "tc": ["screen-defs/settings.json (navigation.json self-edge settings→settings)", "apps/web/src/lib/viewer-locale.test.ts"],
+    "commits": [
+      "d59fb61"
+    ],
+    "tc": [
+      "screen-defs/settings.json (navigation.json self-edge settings→settings)",
+      "apps/web/src/lib/viewer-locale.test.ts"
+    ],
     "note": "settings.jsonのpref-formにsettings自己遷移(既存のself-navigate=再読込規約)を追加。保存後にPATCH /me/preferencesが成功すると画面が再読込され、サーバ側が新localeを読み直してUI全文が切替わる(再ログイン不要)。localeはcountryと独立でカルマ停止/係争にブロックされない(settings-routes.tsは元々banチェックなし・既存挙動)。"
   },
   {
@@ -721,8 +827,12 @@
     "lane": "L3/L4-auth",
     "scope": "required",
     "status": "done",
-    "commits": ["b3cd929"],
-    "tc": ["tests/i18n-ugc.test.ts::I18-06 part2 — plaza posts / dispute messages も原文保存 + lang 刻印"],
+    "commits": [
+      "b3cd929"
+    ],
+    "tc": [
+      "tests/i18n-ugc.test.ts::I18-06 part2 — plaza posts / dispute messages も原文保存 + lang 刻印"
+    ],
     "note": "market listing(既存)と同型でplaza-post/gov-dispute messageにもactor localeからlangを刻印(サーバ翻訳なし・原文保存)。schemas/events 2件にlang追加+codegen再生成。"
   },
   {
@@ -735,7 +845,10 @@
     "scope": "required",
     "status": "done",
     "commits": [],
-    "tc": ["apps/web/src/lib/i18n.test.ts", "tests/check-i18n-keys.test.ts"],
+    "tc": [
+      "apps/web/src/lib/i18n.test.ts",
+      "tests/check-i18n-keys.test.ts"
+    ],
     "note": "実装済み確認のみ(コード変更なし)。i18n.ts fallback chain(exact→lang→ja→key・空文字は不採用)+check-i18n-keys.mjs CI gate(ハードコードCJK検知・全screen-def解決確認)が既に完備。既存テストgreenを再確認しdoneと報告。"
   },
   {
@@ -777,8 +890,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["145d78d"],
-    "tc": ["tests/match.test.ts describe(\"IND-08 projectMatchConvergence (evaluation log — Precision@K/AUC/separation)\")"],
+    "commits": [
+      "145d78d"
+    ],
+    "tc": [
+      "tests/match.test.ts describe(\"IND-08 projectMatchConvergence (evaluation log — Precision@K/AUC/separation)\")"
+    ],
     "note": "GET /match/convergence(projectMatchConvergence・apps/api/src/match-routes.ts)を実装。append-only preference_event履歴からPrecision@K/AUC(Mann-Whitney rank-sum)/score separation/vector_change(直近更新ステップ量)/learning_stability_index(更新ステップの変動係数から算出)を都度再計算(GPU不要・O(events+distinct items)・ブラックボックス推論なし)。評価ログ専用の別テーブルは持たず、Truth append-onlyなpreference_eventそのものが再構築元(学習率/数式を変えても同じ履歴から再計算可能=DELETE禁止要件を自動充足)。converged=(auc>=MATCH_AUC_VALID_THRESHOLD=0.7)。route-matrix infra-route-080として登録・CL-04テスト整合。npx vitest run tests/match.test.tsで8/8 green再確認(wave-2 reconciliation)。"
   },
   {
@@ -790,8 +907,14 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e61f50b", "3f941f2"],
-    "tc": ["tests/individual.test.ts describe(\"IND-12 交配結果(projectCross・決定論)\")", "tests/individual.test.ts it(\"率カード→詳細一覧ドリルダウン: ?parent_id=+?status=でコホート絞り込み(V3-IND-12)\")"],
+    "commits": [
+      "e61f50b",
+      "3f941f2"
+    ],
+    "tc": [
+      "tests/individual.test.ts describe(\"IND-12 交配結果(projectCross・決定論)\")",
+      "tests/individual.test.ts it(\"率カード→詳細一覧ドリルダウン: ?parent_id=+?status=でコホート絞り込み(V3-IND-12)\")"
+    ],
     "note": "血統(Cross)画面の率カード計算(齢別平均体重/サイズ極値/死亡率・完品率・羽化不全率・生存率・孵化率・性比・?metric=差し替え・ホーム直接不可)はe61f50bで実装済み。wave-2(3f941f2)で残課題だった率カード→詳細一覧ドリルダウンを解消: GET /individualsに?parent_id=を追加しoffspringOf(parent_id)によるコホート絞り込み+既存?statusとのAND条件を実装。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: color_reproducibility は色解析パイプライン(V3-OBS-14/45/53等、システム全体で進行中)待ちのままnull固定—IND-12固有の設計不備ではなく系統的な後波依存。"
   },
   {
@@ -803,8 +926,18 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e61f50b", "d49dcd9", "3d89c63", "57cc941"],
-    "tc": ["tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: placement_id → device_binding → telemetry を join(未配置は空配列)\")", "tests/individual.test.ts it(\"V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)\")", "tests/individual.test.ts: owner_history/environment_history 2件"],
+    "commits": [
+      "e61f50b",
+      "d49dcd9",
+      "3d89c63",
+      "57cc941"
+    ],
+    "tc": [
+      "tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")",
+      "tests/individual.test.ts it(\"V3-IND-13 environment: placement_id → device_binding → telemetry を join(未配置は空配列)\")",
+      "tests/individual.test.ts it(\"V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)\")",
+      "tests/individual.test.ts: owner_history/environment_history 2件"
+    ],
     "note": "個体詳細(A2)実装は2系統ある: (1) projectIndividual()+GET /individuals/{id}(6文化ブロックの薄い一覧・e61f50b)は0076681で「死にUI」判定されscreen-defs/individual-detail.jsonの実画面から外され現在UI到達不可(コードのみ残存)。(2) 実際にUIが呼ぶのはprojectIndividualProfile()+GET /individuals/{id}/profile(V3-AIP-101スライスA・screen-defs/individual-detail.json準拠)— wave-2(d49dcd9+批評家修正3d89c63)でここへenvironment(現placementのopen device_binding→telemetry join、unbind後の旧placementへのデータ漏れも根治)を追加。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: bio-card/cross統計は実画面(individual-detail.json)の設計判断でスコープA対象外(意図的除外・死にUIを出さない方針)。(統合obs-finalレーン追記) projectIndividualにowner_history(市場transfer取引のindividual_idsを個体横断集計・projectOwnershipLineageの個体版)とenvironment_history(現在地だけでなくoccupancy全件=引っ越し全履歴)を追加し、旧note記載の所有者履歴欠落/現placementのみの2ギャップを解消。market_offers/improvementsはMKT-29(listing側にindividual_idsリンクが無い・別クラスタ残課題)のブロックのまま据え置き(gapが明記した通り対象外)。"
   },
   {
@@ -831,8 +964,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["57cc941"],
-    "tc": ["tests/individual.test.ts: POST /individuals/{id}/schedule/generate — STAGE_UNKNOWN 400/決定論間隔生成/NO_INTERVAL_FOR_STAGE 400 3件"],
+    "commits": [
+      "57cc941"
+    ],
+    "tc": [
+      "tests/individual.test.ts: POST /individuals/{id}/schedule/generate — STAGE_UNKNOWN 400/決定論間隔生成/NO_INTERVAL_FOR_STAGE 400 3件"
+    ],
     "note": "(統合obs-finalレーン) バックエンドの決定論的中核は実装: POST /individuals/{id}/schedule/generate(直近molt life-eventから現在ステージ自動検出→SCHEDULE_STAGE_INTERVAL_DAYSの決定論間隔で次回観測予定を1件生成・LLM/常駐AI不使用=不変条項①・未定義ステージは400で推測しない)。ただし要件文の「給餌タスク」区分(観測リマインダーと別種のタスク種別)・過去観測からの多様なタスク自動生成・individual-detail画面への「スケジュール自動生成ボタン」のUI配線は未着手(audit自身が『reconciliationでなく新規設計が必要』と評価した規模のため、バックエンド核のみを安全に閉じた)。"
   },
   {
@@ -844,8 +981,16 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e61f50b", "8b05247", "57cc941"],
-    "tc": ["tests/individual.test.ts describe(\"IND-21 真正性(projectAuthenticity)\")", "tests/individual.test.ts describe(\"V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/lineage-check)\")", "tests/individual.test.ts: lineage-doubt 記録/reason必須400/withdrawn 2件"],
+    "commits": [
+      "e61f50b",
+      "8b05247",
+      "57cc941"
+    ],
+    "tc": [
+      "tests/individual.test.ts describe(\"IND-21 真正性(projectAuthenticity)\")",
+      "tests/individual.test.ts describe(\"V3-IND-21 出品血統照合(checkLineageClaim / GET /individuals/lineage-check)\")",
+      "tests/individual.test.ts: lineage-doubt 記録/reason必須400/withdrawn 2件"
+    ],
     "note": "projectAuthenticity(画像sha256連鎖/成長単調性/血統矛盾検知→0..1連続性スコア)は既存実装済み(e61f50b)。wave-2(8b05247)でGET /individuals/lineage-check(checkLineageClaim)を追加: 申告sire_id/dam_id/speciesをTruthと照合しSIRE_UNKNOWN/DAM_UNKNOWN/SPECIES_MISMATCH_*/SIRE_DAM_SAME_INDIVIDUALを検出(read-only)。対象はV3-IND-35予約listingのreservation_sire_id/dam_idのみ(一般listing↔個体紐付けはmkt-listingにindividual_ids欄がなくMKT-29待ちのため対象外・推測実装なし)。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: 一般出品(予約以外)への適用はMKT-29裁定待ち。(統合obs-finalレーン追記) POST/GET /individuals/{id}/lineage-doubt を新設(新イベントihl.ind.lineage_doubt.v1・append-only・withdrawn時も元raisedレコードは残す)。GET .../authenticityのdoubts[]に集約表示し、旧note記載の『疑義を購入者が確認・記録できる文化』の永続化route欠落を解消。汎用market-flag(GOV-35)route誤用の代替として専用route化。"
   },
   {
@@ -857,8 +1002,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["3f941f2", "57cc941"],
-    "tc": ["tests/individual.test.ts describe(\"V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)\")"],
+    "commits": [
+      "3f941f2",
+      "57cc941"
+    ],
+    "tc": [
+      "tests/individual.test.ts describe(\"V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)\")"
+    ],
     "note": "lineage_id(任意タグ)をindividual master/clutchスキーマへ追加(schemas/events/ind-master.schema.json, ind-clutch.schema.json+codegen再生成)。GET /individuals・GET /clutchesに?lineage_id=完全一致フィルタ、clutch promoteで子個体へ継承。系統合流(異なるlineage_id同士の交配→子に新タグ)は既存parents APIがlineageを跨ぐ制約を課さないため追加実装なしで可能(ユーザーがタグを選ぶ運用・テストで確認)。成長ステージの自動更新(直近molt life-eventのto_stageから都度導出・常駐フィールドなし)・所有者(actor_id)・観測履歴・画像(subject_ref経由)は既存基盤で充足。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。(統合obs-finalレーン追記・partial据え置き) feature_tagsのP4空スタブは解消(既存の二層タグ集約 POST/GET /tags・target_type=\"individual\" へ実配線・aggregateTagsのai_tags∪user_tagsを表示)。ただし系統合流(複数系統A/C並行育成→合流)の専用merge-flow UI/ロジックは未着手のまま——既存parents API(POST /individuals/{id}/parents)+手動タグ付けで代替可能な状態が続く。ダッシュボード的な「系統一覧+合流ウィザード」画面は新規design/UI着手が必要(次波候補)。"
   },
   {
@@ -1104,8 +1254,12 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["0a868da"],
-    "tc": ["tests/mkt-03-comments.test.ts"],
+    "commits": [
+      "0a868da"
+    ],
+    "tc": [
+      "tests/mkt-03-comments.test.ts"
+    ],
     "note": "受領(market-finalレーン): マッチング前公開面の欠けていた要素(公開Q&A+ほめボード)をihl.mkt.comment.v1で新設。POST/GET /market/listings/{id}/comments。answerは出品者のみ。既存の非公開ボード(matched後)は不変。"
   },
   {
@@ -1132,8 +1286,12 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["31fc4f9"],
-    "tc": ["tests/market-auction-settle.test.ts describe(\"V3-MKT-05 オークション自動決着\")"],
+    "commits": [
+      "31fc4f9"
+    ],
+    "tc": [
+      "tests/market-auction-settle.test.ts describe(\"V3-MKT-05 オークション自動決着\")"
+    ],
     "note": "listed_auctionのまま締切(ends_at)経過を過ぎた出品を、settleDueAuctionsがread-time自己修復(既存settleNoPayCancelと同型)で自動決着。最高額入札があればmatch(matched・落札額=最高額)、入札が無ければdelist(「入札なしでも決着」)。listing schemaにends_at(任意)を追加。価格帯別入札単位刻み+ヤフオク型自動入札(予算上限までの自動再入札)は既存の無条件bid append経路への影響リスクを避け本波では対象外(決着ロジックのみ先行実装)。"
   },
   {
@@ -1145,8 +1303,12 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["8a40adf"],
-    "tc": ["tests/mkt-06-individual-offer.test.ts"],
+    "commits": [
+      "8a40adf"
+    ],
+    "tc": [
+      "tests/mkt-06-individual-offer.test.ts"
+    ],
     "note": "受領(market-finalレーン): 個体詳細画面からの未出品個体への直接オファー(ihl.mkt.individual_offer.v1)+個体ごと拒否設定(ihl.mkt.offer_policy.v1・現観測者=個体マスタactor_idのみ設定可)を新設。open/closed/research_only。既存isBlockedPairを再利用。"
   },
   {
@@ -1164,7 +1326,9 @@
       "bff1b98",
       "9d14f02"
     ],
-    "tc": ["tests/market-fee-obligation.test.ts describe(\"V3-MKT-10 取引成立時の5%維持費税自動計上\")"],
+    "tc": [
+      "tests/market-fee-obligation.test.ts describe(\"V3-MKT-10 取引成立時の5%維持費税自動計上\")"
+    ],
     "note": "round-16裁定(ゆるい請求ベース・PAY.JP第一弾)でfee-routes.ts/payjp-connector.ts新設(TC: tests/fee-routes.test.ts・tests/payjp-connector.test.ts): POST /fees/{obligation_id}/invoice(請求発行)・POST /fees/payjp-webhook(charge再照会2段構えで消込)・GET /me/fees(未払い投影+days_unpaid)。既存義務台帳(ihl.gmo.obligation.v1)を継承・新イベント型ihl.fee.invoice.v1/ihl.fee.settlement.v1。未着手のまま: 取引成立からの義務自動計上(market-routes.tsからのobligation発行route)・30日猶予後の貢献度1:1変換・fee_unpaid月次Fibonacci課金(期限超過の自動ペナルティは今回スコープ外=ゆるい請求は投影のみ) — 引き続きpartial。 追加(market-g04レーン): 取引成立(receive∧rate揃う)時に5%維持費税を義務台帳(OBLIGATION_TYPE)へ自動計上する残作業を配線した。gross(成約額)はpay_confirm確認額>pay_declare申告額>listing.price表示価格の決定的順位で採用、全欠落なら課税しない(round-16裁定=取り逃し許容・自動ペナルティなし)。1 listing=1 obligation(put-if-absentで冪等)。元要件のFibonacci課金/資本貢献度1:1変換はround-16裁定の「厳格強制より負担金額と楽さ優先」と矛盾するため意図的に対象外(前セッションnote踏襲)。"
   },
   {
@@ -1176,8 +1340,12 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["887bb12"],
-    "tc": ["tests/fee-routes.test.ts"],
+    "commits": [
+      "887bb12"
+    ],
+    "tc": [
+      "tests/fee-routes.test.ts"
+    ],
     "note": "round-16裁定: 5%(fee_tax)レーンはU-code正規表現照合を使わずPAY.JP charge metadata.obligation_idの直接照合へ移行(fee-routes.ts)。本要件が定義するU-code FIFO(GMO名前照合)自体はgmo-routes.tsに実装済みだがroute非マウント(GMO退役)。P2P用途は別裁定待ちのため本要件は評価対象を変えずtodoのまま。 追加(market-finalレーン): 振込コード生成(deriveTransferCode CL-11)は既存実装済みだったため、5%ゆる請求のfee invoice/GET me/fees応答へbank_transfer_codeを新規露出。P2Pの自動FIFO照合(旧GMO API)は退役済み・代替銀行API無しのため対象外のまま。"
   },
   {
@@ -1240,7 +1408,9 @@
       "3631352",
       "b01847d"
     ],
-    "tc": ["tests/market-pricing.test.ts describe(\"pricing routes\") > \"individuals省略 → 実個体データ(種/計測/血統)を自動集約\""],
+    "tc": [
+      "tests/market-pricing.test.ts describe(\"pricing routes\") > \"individuals省略 → 実個体データ(種/計測/血統)を自動集約\""
+    ],
     "note": "出品黄金フローautofill(個体ID選択→{{var}}テンプレ穴埋め+観測引用+推奨価格自動算出)をbuildListingDraft()+POST /market/listings/draftとして実装。TC: tests/market-pricing.test.ts describe(\"MKT-23 buildListingDraft 黄金フロー autofill\"/\"pricing routes\")。テストで確認できるのは個体1件の観測(size/bloodline/weight)+comparablesのみで、要件が挙げる親個体画像・成長履歴・温度/重量ログ全期間・類似個体価格・過去取引履歴の自動引用の網羅性は未確認(cited_observationsは現在観測1件のみ)。 追加(market-g04レーン): POST /market/listings/draftのindividuals省略時にautoDeriveIndividualObs()がV3-IND-13 projectIndividual+V3-IND-12 buildPedigreeを再利用し、種/計測値(measurements item全件フラット化・テンプレ{{item名}}と1:1対応)/直系血統(親個体ID+写真media_key)をserver側で自動集約するよう配線(従来はclient供給のobservationsが必須で黄金フローが機能していなかった)。comparables省略時も全成約履歴を既定候補として自動採用。類似個体の血統/種フィルタはlisting↔individual参照が未整備のため対象外(ponytail・既存コードの既知ギャップ)。"
   },
   {
@@ -1280,8 +1450,14 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["3631352", "5d11d74"],
-    "tc": ["tests/market-ownership.test.ts", "tests/market-stage.test.ts"],
+    "commits": [
+      "3631352",
+      "5d11d74"
+    ],
+    "tc": [
+      "tests/market-ownership.test.ts",
+      "tests/market-stage.test.ts"
+    ],
     "note": "受領(market-finalレーン・検証のみ・新規コミットなし): 所有者移転+観測データ引継ぎ(transferイベント連結・carried_observations・payload.external=trueで非引継ぎ)はC5期(3631352)+round-16決済拡張(5d11d74)で既に実装済み・GET /market/listings/{id}/ownership稼働中・既存TC全緑を確認済み。progress.json側の要件IDとの対応付け見落としと判断し統合時にdoneへ倒す。"
   },
   {
@@ -1329,8 +1505,13 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["dbbb506", "1d472b1"],
-    "tc": ["tests/mkt-40-ledger-audit.test.ts"],
+    "commits": [
+      "dbbb506",
+      "1d472b1"
+    ],
+    "tc": [
+      "tests/mkt-40-ledger-audit.test.ts"
+    ],
     "note": "受領(market-finalレーン): GET /ledger/audit新設。貸方(coin_event)/借方(platinum_vote+研究支援ストア注文の2ストリーム差引き)から残高非負+重複ID検知の健全性サマリを都度再計算。新規台帳テーブルは作らず既存の2ストリーム差引きモデル(social-routes.ts既存実装)を検算に転用。今後コイン系新機能を追加するたびdebit側を追記登録する運用が必要。"
   },
   {
@@ -1342,8 +1523,12 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["1d472b1"],
-    "tc": ["tests/mkt-45-research-store.test.ts"],
+    "commits": [
+      "1d472b1"
+    ],
+    "tc": [
+      "tests/mkt-45-research-store.test.ts"
+    ],
     "note": "受領(market-finalレーン): 研究支援ストア(project_id紐づけ・プラチナ/代引き/外部EC誘導の3方式)を新設。在庫チェック必須+都度再計算、プラチナは残高チェック後にのみ確定。外部ECは実鍵無し(research-ec-adapter.tsが縮退・注文自体はブロックしない)。"
   },
   {
@@ -1355,8 +1540,13 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["0958f97"],
-    "tc": ["tests/mkt-47-docker-extension.test.ts", "tests/plaza-fork.test.ts"],
+    "commits": [
+      "0958f97"
+    ],
+    "tc": [
+      "tests/mkt-47-docker-extension.test.ts",
+      "tests/plaza-fork.test.ts"
+    ],
     "note": "受領(market-finalレーン): Docker拡張フォーク管理を既存plaza-fork汎用基盤(POST/GET /plaza/forks・/plaza/signals・/plaza/ranking)で実装。target_type enumにdocker_extension/world_templateを追加+lineage_hash任意フィールド新設のみ(reuse-first)。実行基盤=デモ起動はV3-SEC-45裁定待ちで対象外。"
   },
   {
@@ -1368,8 +1558,13 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["36bc43c"],
-    "tc": ["tests/cst-02-costs.test.ts(既存・再確認)", "apps/web screendef-snapshots(new screen counted)"],
+    "commits": [
+      "36bc43c"
+    ],
+    "tc": [
+      "tests/cst-02-costs.test.ts(既存・再確認)",
+      "apps/web screendef-snapshots(new screen counted)"
+    ],
     "note": "運営コスト透明表示。バックエンド(GET /api/v1/costs・config/running-costs.json静的構成+fetchR2Usage no-opアダプタ)は既にmain上にV3-CST-02として実装済みだったため新規作成せず、その上に表示screen-def(screen-defs/costs.json)を新設。要件の『ただし』条件どおり収益/銀行残高は一切表示せずランニングコストのみ表示。home/economy-statusから導線+navigation.json/i18n登録。"
   },
   {
@@ -1381,8 +1576,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["ee79efd"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx::Renderer — target-navigator node (V3-OBS-02)", "tests/targets.test.ts (既存バックエンドTC・今回変更なし)"],
+    "commits": [
+      "ee79efd"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx::Renderer — target-navigator node (V3-OBS-02)",
+      "tests/targets.test.ts (既存バックエンドTC・今回変更なし)"
+    ],
     "note": "バックエンド(POST /observation/targets/search の name/yesno/tree 3モード)は既存実装済み・既テストだったが、obs-navigator.jsonのUIはyes-no未実装・分類ツリーはAPI応答形状と食い違うbind_itemsで機能していなかった。target-navigatorノード(3経路統合・候補提示と確定を分離)を新設して配線。"
   },
   {
@@ -1413,7 +1613,9 @@
       "e61f50b",
       "aa9dee3"
     ],
-    "tc": ["tests/observation-ext.test.ts:describe(OBS-07 remeasureタグの自動付与)"],
+    "tc": [
+      "tests/observation-ext.test.ts:describe(OBS-07 remeasureタグの自動付与)"
+    ],
     "note": "信頼度モデル(自動取得>手入力>後日編集)+◎/○/△視覚文化を実装。apps/api/src/tag-routes.ts confidenceGrade()(コメントでOBS-07明示): CONFIDENCE_ORDERで9値enum全域を◎/○/△に総写像、is_manual_edit=trueは起源に関わらず最下位△(後日編集)。TC: tests/tags.test.ts describe(\"OBS-07 confidenceGrade (value_origin -> grade, 自動>手入力>後日編集)\")—ランク順序/is_manual_edit最下位/9値enum全域totalityの3テスト。未実装:「再測定タグ」(テンプレ/AI/技術向上後の再測定に付与する専用タグ)はコード内に該当箇所なし(grep該当0件) — 再測定の識別自体は未着手。 追加(C8 obs-analysisレーン): 残余だった再測定タグを解消。POST /observation/{capture_id}/reanalyze成功時にtag-routes.appendTagEvent経由でtarget_type=capture・tag=remeasure・tag_type=quality・source_type=machine_suggestedを自動append(best-effort)。既存の手動remeasure運用(tests/tags.test.ts)と同じ規約。"
   },
   {
@@ -1425,8 +1627,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e61f50b", "35e555e"],
-    "tc": ["components/obs-manifest/tests/test_manifest.py:test_output_rows_and_run_info_carry_derived_artifact_metadata"],
+    "commits": [
+      "e61f50b",
+      "35e555e"
+    ],
+    "tc": [
+      "components/obs-manifest/tests/test_manifest.py:test_output_rows_and_run_info_carry_derived_artifact_metadata"
+    ],
     "note": "todoだったが実際はe61f50b(C5波)で大枠実装済みと判明(obs-manifest ITO契約)。残gapだった派生成果物メタデータ(run_id/schema_version/input_hash/provenance)をoutput row+run_infoへ追加。run-level input_hashは入力sha256集合の順不同集約。"
   },
   {
@@ -1438,8 +1645,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e61f50b", "35e555e"],
-    "tc": ["components/obs-manifest/tests/test_manifest.py:test_resolve_image_backend_*, test_analyze_color_*"],
+    "commits": [
+      "e61f50b",
+      "35e555e"
+    ],
+    "tc": [
+      "components/obs-manifest/tests/test_manifest.py:test_resolve_image_backend_*, test_analyze_color_*"
+    ],
     "note": "todoだったが埋め込みbackend切替自体はe61f50bで実装済みと判明。EmbeddingBackend Protocol(components/wiki-ingestのruri Protocol資産と同型)をDummyImageBackend/Dinov2ImageBackend/resolve_image_backend()として画像側にも展開(既存embed_dummy/_embed_dinov2/get_backendは後方互換維持)。色ヒストグラム/透明感/黒割合をanalyze_color()で併算(既定はembed_dummyと同じ誠実さでbyte-hash由来の決定論プレースホルダ・実ピクセル解析はPillow/numpy decodeが要る後続wave・実値供給はクライアント側capture-time解析(OBS-47/AIP-104)がmeasurements value_origin=image_derived経由で担う契約)。"
   },
   {
@@ -1451,8 +1663,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e61f50b"],
-    "tc": ["tests/observation-ext.test.ts:describe(OBS-11 compositeScore + aggregateIndividual)"],
+    "commits": [
+      "e61f50b"
+    ],
+    "tc": [
+      "tests/observation-ext.test.ts:describe(OBS-11 compositeScore + aggregateIndividual)"
+    ],
     "note": "確認のみ・追加変更なし(C8 obs-analysisレーン)。rerank合成式(compositeScore 0.50e+0.20color+0.20size+0.10lineage・欠測既定)+aggregateIndividual(max/mean_top3/weighted_latest)はe61f50bで既に実装・テスト済み(観測ルートのsearch経路で稼働中)と検証。progress.jsonのtodoは実態と乖離していたため今回doneへ修正。"
   },
   {
@@ -1464,8 +1680,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["426c2ca"],
-    "tc": ["components/obs-manifest/tests/test_lab_features.py"],
+    "commits": [
+      "426c2ca"
+    ],
+    "tc": [
+      "components/obs-manifest/tests/test_lab_features.py"
+    ],
     "note": "components/obs-manifest/lab_features.py新設。純粋numpy(sRGB->linear->XYZ->L*a*b* D65)で部位別(頭部/胸角/前胸/上翅・任意名も可)の平均/分散L*a*b*+8bin色ヒストグラムを算出するforkable独立ノード。画像デコード/部位切り出し自体はOBS-46/47(端末側・後続wave)としてスコープ外に明示。欠測部位はゼロ埋めせず除外。"
   },
   {
@@ -1477,8 +1697,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["ce81dd5"],
-    "tc": ["tests/obs-device-binding-commit.test.ts"],
+    "commits": [
+      "ce81dd5"
+    ],
+    "tc": [
+      "tests/obs-device-binding-commit.test.ts"
+    ],
     "note": "writeCaptureFromCommitBody(solid-observation/commit・batch-commit capture kindの共通funnel)にdevices[]対応を追加。宣言device_idごとに登録済みplacement_refを引きDeviceBinding(open済み再利用・二重POST防止)+Occupancyをbest-effortで自動start。専用binding API不要でcommit1回完結。obs-capture.schema.jsonにdevices(任意配列)を追加(additive)+codegen再生成。"
   },
   {
@@ -1490,8 +1714,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["f728a06"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx describe(\"Renderer — WorkflowContext client-only prefill (V3-OBS-19)\") 3件", "tests/observation.test.ts: V3-OBS-19 life_stage_candidate round-trip 1件"],
+    "commits": [
+      "f728a06"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx describe(\"Renderer — WorkflowContext client-only prefill (V3-OBS-19)\") 3件",
+      "tests/observation.test.ts: V3-OBS-19 life_stage_candidate round-trip 1件"
+    ],
     "note": "WorkflowContext(観測コンテキスト)をclient-only localStorage縮退で実装: renderer.tsxにFieldNode workflow_key(読取)+FormNode carry_to_workflow(書込)の汎用プリミティブを追加、obs-entry.jsonのspecies_candidate/新設life_stage_candidate(obs-capture.schema.json additive追加+CAPTURE_FIELDS登録)へ配線。taxonomy確定は常にユーザーのまま(既定値プリフィルのみ・自動送信なし)。(統合obs-finalレーン)"
   },
   {
@@ -1503,8 +1732,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["890f079"],
-    "tc": ["tests/observation-ext.test.ts::OBS-20 placement/shelf QR (棚→個体 連鎖)", "tests/observation-ext.test.ts::OBS-20 qr prefill (?prefill=1) + entry_mode (既存拡張)"],
+    "commits": [
+      "890f079"
+    ],
+    "tc": [
+      "tests/observation-ext.test.ts::OBS-20 placement/shelf QR (棚→個体 連鎖)",
+      "tests/observation-ext.test.ts::OBS-20 qr prefill (?prefill=1) + entry_mode (既存拡張)"
+    ],
     "note": "個体QRのみだった発行/解決を棚(placement)QRへ拡張。POST /placements/{id}/qr(CL-10 env_qr_token_v1形状)+既存GET /qr/{token}を個体/場所両対応へ一般化(occupancy投影で現占有個体へ連鎖・空棚はqr_placement_emptyで404にしない)。device.json+新規placement-qr.jsonでUI導線。"
   },
   {
@@ -1517,7 +1751,10 @@
     "scope": "required",
     "status": "done",
     "commits": [],
-    "tc": ["tests/observation.test.ts (既存)", "tests/observation-ext.test.ts (既存)"],
+    "tc": [
+      "tests/observation.test.ts (既存)",
+      "tests/observation-ext.test.ts (既存)"
+    ],
     "note": "検証のみ・コード変更なし。MVP v1コア5機能(観測データ収集・写真登録・詳細ビュー・親個体連携・QR)はいずれも実装・テスト済みであることを確認(observation.test.ts/observation-ext.test.ts/targets.test.ts等)。市場/マッチング等は第7回裁定後さらに拡張されているが、コア5機能を壊していない。"
   },
   {
@@ -1529,8 +1766,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e3d5aa5"],
-    "tc": ["tests/observation-ext.test.ts::obs-detail.json's photo list binds the thumbnail endpoint, not raw /image/ (regression guard)", "tests/observation-ext.test.ts::OBS-23 thumbnail serve, no raw bulk download (既存)"],
+    "commits": [
+      "e3d5aa5"
+    ],
+    "tc": [
+      "tests/observation-ext.test.ts::obs-detail.json's photo list binds the thumbnail endpoint, not raw /image/ (regression guard)",
+      "tests/observation-ext.test.ts::OBS-23 thumbnail serve, no raw bulk download (既存)"
+    ],
     "note": "監査中に発見した実装ズレを修正: obs-detail.jsonの写真一覧が/image/{photo_id}(無圧縮raw原本)を全件bind_itemsしており、要件が明示禁止する「raw全件DL」を毎回発生させていた。既存の/thumbnail/{photo_id}(512px JPEG)へ1行修正+回帰防止テスト追加。"
   },
   {
@@ -1542,8 +1784,14 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["f728a06"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx: image-grid search_path/score_pct/citation-buttonテスト1件", "tests/observation-ext.test.ts: aggregate=max individual_idアサーション追加", "screen-def gates(validate-schemas/check-screendef-structure/check-i18n-keys/check-navigation)全緑"],
+    "commits": [
+      "f728a06"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx: image-grid search_path/score_pct/citation-buttonテスト1件",
+      "tests/observation-ext.test.ts: aggregate=max individual_idアサーション追加",
+      "screen-def gates(validate-schemas/check-screendef-structure/check-i18n-keys/check-navigation)全緑"
+    ],
     "note": "obs-detail.jsonを高忠実度化: hero大型写真(hide_if_empty_path新設ガード)+構造化撮影条件カード+由来タグ付き測定表(measurement-table readonlyモード再利用)+類似個体サイドバー(V3-OBS-11のPOST /observation/search rerank APIをimage-gridのsearch_path/search_body/item_action_*縮退で再利用・スコア%表示用score_pct合成+この個体を引用ボタン)。observation-routes.tsのaggregate応答にindividual_id(bare id)をadditive追加。(統合obs-finalレーン)"
   },
   {
@@ -1556,7 +1804,9 @@
     "scope": "required",
     "status": "done",
     "commits": [],
-    "tc": ["tests/observation-ext.test.ts::OBS-25/62 commit is the confirmed save path with the subspecies gate (既存)"],
+    "tc": [
+      "tests/observation-ext.test.ts::OBS-25/62 commit is the confirmed save path with the subspecies gate (既存)"
+    ],
     "note": "検証のみ・コード変更なし。obs-register→obs-register-entry→obs-register-confirm→obs-register-done(および旧経路obs-entry→obs-confirm)とも「入力画面での即時保存なし・確認画面の主CTAは『登録する』1つ」を満たしていることをscreen-def読み込み+既存テストで確認済み。"
   },
   {
@@ -1568,8 +1818,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["f728a06"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx 既存measurement-tableスイート回帰確認済み・screendef-snapshots.test.tsx 50件回帰確認済み"],
+    "commits": [
+      "f728a06"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx 既存measurement-tableスイート回帰確認済み・screendef-snapshots.test.tsx 50件回帰確認済み"
+    ],
     "note": "既存measurement-table(V3-OBS-18)ノードをobs-entry.jsonの計測入力に実配線(項目/数値/単位/計測方法の4要素・自由項目追加可)。旧2固定フィールド(measure-item/measure-value)を置換。IoT機器未登録時はdevice画面への静的リンクを併設。(統合obs-finalレーン)"
   },
   {
@@ -1581,8 +1835,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["f728a06"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx: describe(\"Renderer — measurement-table StructuredRow group/lock (V3-OBS-27)\") 3件"],
+    "commits": [
+      "f728a06"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx: describe(\"Renderer — measurement-table StructuredRow group/lock (V3-OBS-27)\") 3件"
+    ],
     "note": "measurement-tableノードにgroup(measurement/photo_condition/environment_snapshot・混在時のみ小見出し表示)+value_origin由来の読取専用ロック(◎/○/△バッジ・自動取得値は編集不可)+bind_items(スコープ配列を読むviewモード)を追加。専用ノードを増やさず既存コンポーネントの機能拡張でStructuredRow要件を満たす。(統合obs-finalレーン)"
   },
   {
@@ -1622,8 +1880,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["2dcf396"],
-    "tc": ["tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"],
+    "commits": [
+      "2dcf396"
+    ],
+    "tc": [
+      "tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"
+    ],
     "note": "スケール紙物理仕様(SCALE_PAPER)はe61f50bで既存。実寸換算式calibratedRealLengthMm(realLength=pixelLength×mmPerPixel、検出失敗はnull)を新規追加。四隅マーカー自動検出+射影変換のCV実装自体はここでは未着手。 残余(C8 obs-analysisレーン): 四隅マーカー自動検出+射影変換をブラウザ側(WASM/Canvas)で行うCV実装そのもの。V3-AIP-104(サーバ側重処理なし既定OFF・OpenCV.js等の重量級ライブラリ回避)によりクライアント実装が前提だが、具体アルゴリズム(自前の最小限Canny/Hough vs 軽量WASM CVライブラリ)の選定はUI/フロントエンドレーンとの協調が要るアーキテクチャ分岐のため、推測実装せずスキップ。docs/planning/c8/design-obs-53-mm-precision-scale.mdに境界を明記済み。裁定/設計待ち: どちらのCV方式を採るか(推奨=まず自前最小実装で500行未満に収める案、ユーザー影響=バンドルサイズ)。"
   },
   {
@@ -1635,8 +1897,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["e61f50b"],
-    "tc": ["tests/obs-annotations.test.ts"],
+    "commits": [
+      "e61f50b"
+    ],
+    "tc": [
+      "tests/obs-annotations.test.ts"
+    ],
     "note": "残余(C8 obs-analysisレーン): backend側(append-only POST /observation/annotations・value_originタグ付与・編集ルート非存在)はe61f50bで既に実装・テスト済み(tests/obs-annotations.test.ts)と確認済み(itemsDoneのOBS-14/57作業中に検証)。残余: 既存OSSのLabelMeをflexlayoutの別パネルにiframe並列配置しASTをpostMessageで共有するフロントエンド統合自体は本レーン(バックエンド/パイプライン中心)のスコープ外・未着手。"
   },
   {
@@ -1648,8 +1914,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["e61f50b"],
-    "tc": ["tests/obs-annotations.test.ts:describe(OBS-47 append-only guardrails)"],
+    "commits": [
+      "e61f50b"
+    ],
+    "tc": [
+      "tests/obs-annotations.test.ts:describe(OBS-47 append-only guardrails)"
+    ],
     "note": "残余(C8 obs-analysisレーン): backend側の契約(自動計測値は修正不可・手入力は明確な選択+タグ付与・value_origin frozen enumゲート)はe61f50bで既に実装・テスト済み(tests/obs-annotations.test.ts describe(OBS-47 append-only guardrails))と確認済み。残余: 撮影直後のHSV/Lab色空間・輪郭・サイズ推定・ダメージ検出をブラウザ側で行う実際のCV実装自体は、V3-OBS-45と同じアーキ判断待ちのため未着手(docs/planning/c8/design-obs-53-mm-precision-scale.md参照)。"
   },
   {
@@ -1661,8 +1931,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["e61f50b"],
-    "tc": ["tests/observation-ext.test.ts:describe(OBS-48 reanalyze appends)"],
+    "commits": [
+      "e61f50b"
+    ],
+    "tc": [
+      "tests/observation-ext.test.ts:describe(OBS-48 reanalyze appends)"
+    ],
     "note": "確認のみ・追加変更なし(C8 obs-analysisレーン。V3-OBS-07で自動タグ付けhookのみ追加)。reanalyze append(analysis_id別・元画像削除禁止・delta/correction_semver記録)+reanalysis-manifest投影はe61f50bで既に実装・テスト済みと検証。progress.jsonのtodoは実態と乖離していたため今回doneへ修正。"
   },
   {
@@ -1674,8 +1948,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["2dcf396"],
-    "tc": ["tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"],
+    "commits": [
+      "2dcf396"
+    ],
+    "tc": [
+      "tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"
+    ],
     "note": "「設計図/スケールシートを提供する」の設計図としてdocs/planning/c8/design-obs-53-mm-precision-scale.mdを新規作成。実装済み(SCALE_PAPER定数・calibratedRealLengthMm式・photo_conditions偽装拒否・lab_features.py)と未実装(client-side CV・要アーキ判断)の境界+既存データ契約(新API不要)を整理。 残余(C8 obs-analysisレーン): 設計図は納品済みだが、要件statement本体が指す「観測システムそのもの」のフル実装(mm精度取得の一連のUI+CVフロー)はV3-OBS-45/47と同じ理由でクライアント側CV実装待ち・未着手。"
   },
   {
@@ -1687,8 +1965,12 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["2dc42f8"],
-    "tc": ["components/obs-manifest/tests/test_searchable_capture_set.py"],
+    "commits": [
+      "2dc42f8"
+    ],
+    "tc": [
+      "components/obs-manifest/tests/test_searchable_capture_set.py"
+    ],
     "note": "components/obs-manifest/searchable_capture_set.py新設。run.pyのSEARCHABLE_CAPTURE_SET_COLUMNS固定列順でPolars DataFrameを構築しParquetへ書き出すbuild_searchable_capture_set()/write_snapshot()。snapshots/<snapshot_id>append-only(FileExistsError re-write防止)・latest.jsonをpointerとして更新(pointerのみ上書き対象)。join元データの実結合(captures+thumbnail+embedding manifest)は別waveとして明示。polarsはimportorskipガード+CI(.github/workflows/ci.yml)にpolars追加でskipのまま放置しない。"
   },
   {
@@ -1700,8 +1982,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["b7078e5"],
-    "tc": ["tests/obs-species-suggestions.test.ts", "tests/cl-04-route-matrix.test.ts"],
+    "commits": [
+      "b7078e5"
+    ],
+    "tc": [
+      "tests/obs-species-suggestions.test.ts",
+      "tests/cl-04-route-matrix.test.ts"
+    ],
     "note": "apps/api/src/observation-routes.tsにheuristicSpeciesCandidatesFromVector(既存search embedding ladderを再利用しspecies_confirmed_by=user確定captureの近傍探索でspecies_candidateを提案)+suggestSpeciesCandidates(ヒューリスティック空の時だけCLIP→Visionへ注入可能callableでエスカレーション、両方未設定でも必ず完走しdegraded配列に明示)を追加。GET /observation/{capture_id}/species-suggestions(protected)を新設・tests/fixtures/route-matrix.csvにinfra-route-080として追加しcl-04-route-matrix.test.tsの期待行数を更新(統合時にinfra-route-080はV3-CST-02が先取していたためinfra-route-083へ採番をずらして解決・75行)。種の自動確定はしない(species_confirmed_byは既存frozen const\"user\"のまま無変更)。"
   },
   {
@@ -1713,8 +2000,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["4ab0135"],
-    "tc": ["tests/obs-freetext-parser.test.ts::OBS-61 parseObservationFreetext (pure, deterministic)", "tests/obs-freetext-parser.test.ts::OBS-61 POST /observation/parse-freetext route"],
+    "commits": [
+      "4ab0135"
+    ],
+    "tc": [
+      "tests/obs-freetext-parser.test.ts::OBS-61 parseObservationFreetext (pure, deterministic)",
+      "tests/obs-freetext-parser.test.ts::OBS-61 POST /observation/parse-freetext route"
+    ],
     "note": "自然言語フリーテキスト1つ+「解析する」ボタンで日付・個体・温度・湿度・胸角・エサを決定論パーサ(正規表現・LLM既定OFF)でJSON化する最小観測入力UI。POST /observation/parse-freetextは解析結果を返すのみでR2コミットはしない(候補提示止まり)。obs-freetext.json新設+obs-register.jsonから導線。"
   },
   {
@@ -1739,8 +2031,13 @@
     "lane": "L4-obs",
     "scope": "required",
     "status": "done",
-    "commits": ["23a4064"],
-    "tc": ["tests/fnd-18-source.test.ts::V3-OBS-72 lab environment (placement 拡張・append-only latest-wins projection)", "tests/observation-ext.test.ts::OBS-72 individual → placement → lab-environment 連鎖"],
+    "commits": [
+      "23a4064"
+    ],
+    "tc": [
+      "tests/fnd-18-source.test.ts::V3-OBS-72 lab environment (placement 拡張・append-only latest-wins projection)",
+      "tests/observation-ext.test.ts::OBS-72 individual → placement → lab-environment 連鎖"
+    ],
     "note": "新イベント型ihl.src.lab_environment.v1(append-only・最新1件投影)でplacementに部屋/空調/センサー位置を紐付け。POST/GET /placements/{id}/lab-environment + GET /individuals/{id}/lab-environment(occupancy連鎖)を追加、placement-qr.json(記録)とobs-detail.json(表示)に配線。"
   },
   {
@@ -1820,8 +2117,12 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["41600e4"],
-    "tc": ["tests/research-quadrant.test.ts"],
+    "commits": [
+      "41600e4"
+    ],
+    "tc": [
+      "tests/research-quadrant.test.ts"
+    ],
     "note": "観測データ4象限モデル(n11/n10/n01/n00)で研究の空白領域を自動検出。P/Q判定は既存matchConditions/autoFillDescriptorを再利用。逆/裏/対偶をderivePropositionsで機械生成、薄い象限にhypothesisDraftsForGapsで仮説論文タイトル/要旨案。POST /research/quadrant。引用ネットワークグラフ上の強調表示はフロント側(対象外)。"
   },
   {
@@ -1852,8 +2153,13 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["f2ac74c"],
-    "tc": ["tests/research-ppr-12.test.ts", "tests/clutch.test.ts(境界値更新)"],
+    "commits": [
+      "f2ac74c"
+    ],
+    "tc": [
+      "tests/research-ppr-12.test.ts",
+      "tests/clutch.test.ts(境界値更新)"
+    ],
     "note": "監査のみ実施・実装/明文化は未着手。apps/api/src配下にtorch/onnxruntime/tensorflow/opencv等サーバ側重処理依存が皆無であることをgrepで確認(完全ローカル計算原則に実装は既に整合)。ただし要件が求める「明文化」(原則を書いた文書)の置き場所が不明(constitution.mdは既に一般論として不変条項①を持つが、PPR固有の書き込み先は未確定) — 裁定待ち: どのファイルに明文化するか(推奨: 02-design/design-c5.md K5節への追記)。 追記(knowledge-finalレーン): 実解析(SIMD/LUT/ROI Lab変換等)は端末CPU/GPUで完結する設計を前提に、サーバ側は結果の保存+diff記録とCSV出力のみ実装。writeAnalysisFromReanalyzeBodyを抽出しPOST /observation/batch-commitのkind:\"reanalyze\"として再利用(Recompute All=既存バッチ経路の拡張・新規route無し)。BATCH_MAX_ITEMSを200→1000に引き上げ(1000枚一括要件)。GET /observation/exportで全captureのmeasurementsをCSV決定論シリアライズ(全データダウンロード)。"
   },
   {
@@ -1928,8 +2234,12 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["ffa8eb1"],
-    "tc": ["tests/research-auto-draft.test.ts"],
+    "commits": [
+      "ffa8eb1"
+    ],
+    "tc": [
+      "tests/research-auto-draft.test.ts"
+    ],
     "note": "PaperSectionsV1(実装済み)の拡張として、統一フォーマット観測データ(measurements[]=item/value/unit)のみからconditions節+完了率を自動生成する下書き機能。purpose/hypothesis/phase/gapは人間記述前提でfilled:falseのまま(機械が主張を捏造しない)。POST /research/auto-draft(非永続プレビュー)。"
   },
   {
@@ -1941,8 +2251,13 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["c4af847"],
-    "tc": ["tests/research-citations-export.test.ts", "tests/plaza-cite.test.ts(拡張)"],
+    "commits": [
+      "c4af847"
+    ],
+    "tc": [
+      "tests/research-citations-export.test.ts",
+      "tests/plaza-cite.test.ts(拡張)"
+    ],
     "note": "論文の章構成(PaperSectionsV1)+引用管理をCiteRef単一正本の再利用で実装。cite-ref.schema.jsonにurl/book型を追加(既存9タイプは変更なし)、論文の引用はobservation/paper/url/bookの4タイプにroute側で限定(400 INVALID_CITATION)。公開範囲設定(visibility public/private・plaza-forkと同じ規約)。GET /research/content/{id}/export?format=htmlで章構成+引用+measurementsを自己完結HTMLへ変換、PDFはブラウザ標準印刷機能を再利用(新規依存を追加しない)。"
   },
   {
@@ -1984,8 +2299,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["7c28a03"],
-    "tc": ["tests/sec-14-login-rate-limit.test.ts"],
+    "commits": [
+      "7c28a03"
+    ],
+    "tc": [
+      "tests/sec-14-login-rate-limit.test.ts"
+    ],
     "note": "auth-routes.tsのPOST /magic-link(20/60秒/IP)・POST /verify(60/60秒/IP)にIPレート制限を追加。rate-limit.tsの共有カウンタを再利用。"
   },
   {
@@ -1997,8 +2316,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["067fd1d"],
-    "tc": ["tests/sec-20-onboarding-consent.test.ts"],
+    "commits": [
+      "067fd1d"
+    ],
+    "tc": [
+      "tests/sec-20-onboarding-consent.test.ts"
+    ],
     "note": "仕上げ完了。未認証/onboarding/terms閲覧・login.json必須チェックボックスによる送信disableは既存実装で既に充足済みと確認(コード変更なし)。残余だったAPI側MUST_AGREE_TO_TERMS検証ゲートをconsent-routes.tsに新設: POST /onboarding/agree(両同意必須・不備は400 MUST_AGREE_TO_TERMS)+CL-05 consent-record(frozen)をterms/privacy別ファイルでappend-only永続化・GET /me/consentで投影。"
   },
   {
@@ -2010,8 +2333,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["ec51ada"],
-    "tc": ["tests/sec-41-valuecheck-isolation.test.ts"],
+    "commits": [
+      "ec51ada"
+    ],
+    "tc": [
+      "tests/sec-41-valuecheck-isolation.test.ts"
+    ],
     "note": "match-routes.tsは既に本人JWTスコープのみ(他actorの学習結果/ランキングを返す経路が存在せずscoreもstrip済み)で要件を充足していたと確認。クロスアクター分離の回帰テストのみ追加(コード変更なし)。"
   },
   {
@@ -2023,8 +2350,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["ca52bb8"],
-    "tc": ["tests/sec-42-image-hash-integrity.test.ts"],
+    "commits": [
+      "ca52bb8"
+    ],
+    "tc": [
+      "tests/sec-42-image-hash-integrity.test.ts"
+    ],
     "note": "元画像のSHA-256は既存実装済みと確認(対象外)。残り2件を実装: annotation(ROIマスク)にast_sha256、reanalyze結果にresults_sha256をSHA-256(canonicalJson(...))でサーバ算出・append(クライアント供給値は無視)。加えて「公式画像アップロード経路はobservation/upload一つのみ」の構造回帰ガードを追加(統合時にmarket-routes.tsの既存出品写真アップロード=別ドメインとして正しく許容するようテストを補正)。"
   },
   {
@@ -2036,7 +2367,9 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["6db3dd9"],
+    "commits": [
+      "6db3dd9"
+    ],
     "tc": [],
     "note": "要件の『Whitelist(Component/API/Workflow)+Permission制御』の認可ゲート部分のみ実装(sandbox-routes.ts POST /sandbox/execute-request: whitelist違反/本番DB書込/外部通信/CPU・メモリ超過をすべて400で拒否・テスト済み)。要件本文が求める『サンドボックス境界(Extism/Docker/WebAssembly/vm)で完全隔離実行』そのものは未実装 — Cloudflare Workersランタイム(workerd)がnew Function等の動的コード生成を禁止するため、実際の隔離実行にはWorkers for Platforms契約(インフラ決定)かWASMインタプリタの新規開発(数週間規模)が必要と判断し、design doc(docs/planning/c8/design-v3-sec-45-sandbox-boundary.md)に整理して引き継いだ。誇張ゼロのため『実行できる』とはコード・レスポンス・ドキュメントのいずれにも書いていない。"
   },
@@ -2049,8 +2382,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["6bcd976"],
-    "tc": ["tests/sec-56-listing-registry-boundary.test.ts"],
+    "commits": [
+      "6bcd976"
+    ],
+    "tc": [
+      "tests/sec-56-listing-registry-boundary.test.ts"
+    ],
     "note": "ver3にはver2由来のPOST /listing-registryは存在せず、既存のCL-04 deny-by-default(index.ts)が唯一かつ十分な認可境界として全出品状態書込・テンプレ公開・GMO routeを保護していると確認(requireMarketListingStateWrite等の個別関数は不要)。ADR(02-design/adr)で明示+回帰ガードテストを追加。実際の再設計はV3-MKT-41(市場レーン・別要件)へ引き継ぎ。"
   },
   {
@@ -2062,8 +2399,14 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["72eccff"],
-    "tc": ["tests/theme-codegen.test.ts", "tests/theme-packs.test.ts", "apps/web/src/renderer/renderer.test.tsx"],
+    "commits": [
+      "72eccff"
+    ],
+    "tc": [
+      "tests/theme-codegen.test.ts",
+      "tests/theme-packs.test.ts",
+      "apps/web/src/renderer/renderer.test.tsx"
+    ],
     "note": "caution(黄=注意)がdanger(赤=失敗)と同一トークンで見分けがつかなかった実装済みの退行を発見・修正。ThemePackトークンにinfo/info-bg/caution/caution-bg(4キー・11→15)を新設しconfig/design-tokens.json正本→codegen一式(tokens.generated.css/theme-packs/*.json)を再生成。両テーマでWCAG AA(4.5:1)維持。"
   },
   {
@@ -2075,7 +2418,9 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["25dbfe5"],
+    "commits": [
+      "25dbfe5"
+    ],
     "tc": [],
     "note": "V3-IND-08のマチアプ数式エンジン(match-routes.tsの決定論線形学習w←w+α·y·x)を再利用し、/observation/search に personalize=true フラグを新設。OBS-11のcompositeScore(ADR-H-12・sum=1.0)は変更せず、preferenceScore(ロジスティック飽和で[0,1]収束・決定論)をPERSONALIZE_WEIGHT=0.25で後段ブレンドする独立レイヤーとして実装、好み未学習時は中立0.5に安全縮退。TC2件で実証。残余: obs-search.json(UIのpersonalizeトグル露出)はobs-finalレーンが編集中のscreen-defのため未着手(エンジン+API接続のみ完了・残りはboolean1個の配線)。"
   },
@@ -2088,7 +2433,9 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["a5c8c86"],
+    "commits": [
+      "a5c8c86"
+    ],
     "tc": [],
     "note": "全screen-defsを監査し、実在する「本番データを装う」唯一の箇所(POST /devices/{id}/test の dummy discovery)を特定。device.json画面に疎通確認フローを配線し、結果表示の直前に必ず「サンプルデータです(実プロバイダ未接続)」を明示。他のstub画面は監査の結果、実データ(APIバック)のみで現状違反なしと確認(誇張ゼロ)。"
   },
@@ -2101,8 +2448,12 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["3f5012a"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx > home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)"],
+    "commits": [
+      "3f5012a"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx > home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)"
+    ],
     "note": "home.jsonを18ボタン羅列から「今日の状態(kpi-tile: カルマ/超過/近接)+次の一手(today_lines table+deep link)+文明の状態(civ-minimap kpi)」の司令塔へ再構成。nav-reachability.test.ts のclick-budget契約・observation.spec.ts のラベル契約(観測を始める/ドメインから選んで始める等)は既存id/label/hrefを一切変更せず追加のみで維持。"
   },
   {
@@ -2114,8 +2465,13 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["3f5012a"],
-    "tc": ["tests/home-insights.test.ts > V3-UIX-26 ホーム文明ミニマップ(非PII集計3指標)", "apps/web/src/renderer/renderer.test.tsx > home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)"],
+    "commits": [
+      "3f5012a"
+    ],
+    "tc": [
+      "tests/home-insights.test.ts > V3-UIX-26 ホーム文明ミニマップ(非PII集計3指標)",
+      "apps/web/src/renderer/renderer.test.tsx > home screen-def — triage kpis + today_lines + civ-minimap (V3-UIX-25/26/27)"
+    ],
     "note": "GET /api/v1/home/civ-minimap(新規route・非PII集計3指標: 直近7日観測件数/全ユーザーintl_trust平均/テンプレ文化版数)を返す。個別actorの値は一切出さない(テストで検証)。KpiTileNodeにprops.fallback追加、値が空の間(ロード中/取得失敗)は近似値(0/50/0)を表示。\n\n[統合uiux-g07追記] main側で既にinfra-route-080..090が別レーンに割り当て済みだったため、統合担当が本routeをinfra-route-091に採番し直し、route-matrix.csv / tests/cl-04-route-matrix.test.ts(83行)を更新した。"
   },
   {
@@ -2127,8 +2483,12 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["3f5012a"],
-    "tc": ["tests/home-insights.test.ts > V3-UIX-27 today_lines (overdue→near merged, capped at 3, deep-linked)"],
+    "commits": [
+      "3f5012a"
+    ],
+    "tc": [
+      "tests/home-insights.test.ts > V3-UIX-27 today_lines (overdue→near merged, capped at 3, deep-linked)"
+    ],
     "note": "GET /home/summaryのtoday_linesをoverdue→near統合・サーバ側で最大3行にcapし、個体ごとの観測入力deep link(/s/obs-register-entry?id=...)を付与。TableNodeのlinkセルで既存語彙のまま描画(新規ノード不要)。"
   },
   {
@@ -2140,8 +2500,12 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["3f5012a"],
-    "tc": ["apps/web/src/renderer/renderer.test.tsx > Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)"],
+    "commits": [
+      "3f5012a"
+    ],
+    "tc": [
+      "apps/web/src/renderer/renderer.test.tsx > Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)"
+    ],
     "note": "app-shell 1箇所(renderer.tsx AppShellNode新設)に全画面共通ブランドクロムを実装。ヘッダー=ブランド+観測対象ナビゲータ/マイページ/通知/設定+認証状態別ログイン/登録/ログアウト、フッター=愚痴・改善/投票・Fork/Builder(未ログイン時は死にリンクを避け非表示)。globals.css に civ-chrome-* トークン準拠CSS追加。47+全screen-defへ横展開(per-screen改修不要)。"
   },
   {
@@ -2153,7 +2517,9 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["0499a80"],
+    "commits": [
+      "0499a80"
+    ],
     "tc": [],
     "note": "docs/planning/c8/oss-stack-audit.md を新設し1枚で棚卸し。Next.js15は実採用、Tailwind v4は導入済みだが実質未使用(civ-*トークンCSS運用)、shadcn/ui・tldraw・flexlayout-react・5ch型テンプレは0件と確認。ver2資産(packages/ihl-ui-catalog等)は本repoに非存在と明記。判断: 974本超テスト+E2E全緑の自作レンダラの全面破棄は不変条項①⑤に照らし非推奨、ui-asset-catalog.mdのPath A/B継続+shadcn/ui個別つまみ食いを推奨として記録。"
   },
@@ -2166,8 +2532,12 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["25abe42"],
-    "tc": ["tests/settings-preferences.test.ts"],
+    "commits": [
+      "25abe42"
+    ],
+    "tc": [
+      "tests/settings-preferences.test.ts"
+    ],
     "note": "既存settings画面(screen-defs/settings.json)を拡張し、AI接続(ai-profile-settings)・機器連携(device)・テーマ(theme-gallery)への導線+新規選好2項目(ui_exposure/push_notifications_enabled・pref-setスキーマ追記)+CSV自己データ持出し導線(GET /export/facts.csv・photos.csv)を1画面に集約した。Push実配信基盤(VAPID鍵)とアカウント統合は対象外(理由をnotesに明記・裁定待ちではなく設計判断として除外)。"
   },
   {
@@ -2179,8 +2549,12 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["269fe93"],
-    "tc": ["apps/web/src/renderer/screendef-snapshots.test.tsx(新規画面1件追加・green)"],
+    "commits": [
+      "269fe93"
+    ],
+    "tc": [
+      "apps/web/src/renderer/screendef-snapshots.test.tsx(新規画面1件追加・green)"
+    ],
     "note": "観測入力4画面フロー(観測対象選択=obs-domain-select/テンプレート入力=obs-entry/条件リクエスト=obs-entry内既存の+項目追加・+単位追加/フォーク管理=新設screen-defs/obs-templates.json)。フォーク管理画面は既存API(GET/POST /observation/templates・V3-OBS-18 forked_from)を再利用し新規route追加なし。既存3クリック・確認画面主CTA1つの主フローは変更せず、obs-entryに任意の側リンクを追加しただけ。スコープ決定(要エスカレーション相当・正直に記載): 要件文の『4画面』を厳密な4ルートではなく機能的に対応する既存画面群+1新設画面として実装。fork時の親項目自動コピーは既存APIの制約(呼び出し側が items を再送する設計)によりUIでは提供せず、テンプレ名+forked_from(手入力)+新規項目1行の保存フォームに留めた。"
   },
   {
@@ -2192,7 +2566,9 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["4af2f0e"],
+    "commits": [
+      "4af2f0e"
+    ],
     "tc": [],
     "note": "実装済み: (1)GET /users/{actor}/individuals新設(既存GET /individualsとロジック共用)でprofile.jsonに他者作品全表示+自分の作品一覧を追加(透明性の文化) (2)economy-status.jsonのhistory listが実在しないフィールド({{created_at}}/{{label}})をbindしていた退行(常に空表示)を修正し{{at}}/{{kind}}へ (3)称号(title)表示・PT残高(GET /me/pt・非公開)を同一画面に集約(新規画面を増やさない)。残余(裁定/設計待ち): お気に入り2種(推し作者=通知あり/推し作品=保存のみ)は永続化方式(既存social-eval kind=favorite/follow流用 vs 専用schema新設)の設計判断が必要なため未実装。他画面(広場投稿者名・出品者名等)からprofile?actor=へのリンク配線(送り手側)も未着手。統合時にroute番号をinfra-route-113へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。"
   },
@@ -2205,8 +2581,12 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "done",
-    "commits": ["efac100"],
-    "tc": ["tests/settings-preferences.test.ts(新規2ケース)"],
+    "commits": [
+      "efac100"
+    ],
+    "tc": [
+      "tests/settings-preferences.test.ts(新規2ケース)"
+    ],
     "note": "取引前PII準備の完了ナッジ。重要な事前調査結果: 要件文が指す『取引前PII設定画面(局留め受取・配送先・銀行振込口座)』は現行コードベースに一切存在しなかった(V3-MKT-28は749件のprogress.json必須リストにも入っておらず未実装・実住所/実口座番号の保持はV3-SEC-06/V3-SEC-11/V3-MKT-20の既存不変条項が明確に禁じている)。よって実住所/実口座は保持しない設計で、①受取方法の選好(delivery_pref: 局留め受取/自宅配送のカテゴリのみ)②銀行振込の受け取り準備の自己申告(bank_transfer_ready: yes/no)の2フィールドを既存pref-set(append-only選好)へ追加し、settings.json(既存の設定画面)で編集可能にした。GET /me/profileにpii_readiness.all_setを追加し、market-tradeの取引詳細タブに非強制ナッジ(whenプリミティブ・viewer経由・renderer変更ゼロ)を表示、完了で自動的に消える。これは実装判断であり、本来の『配送先・銀行口座そのものの事前登録』を求める設計に立ち返る場合は人間裁定が必要な分岐だと考えるため、正直にここへ明記する。"
   },
   {
@@ -2283,8 +2663,12 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["7c2049a"],
-    "tc": ["tests/knowledge-lint.test.ts"],
+    "commits": [
+      "7c2049a"
+    ],
+    "tc": [
+      "tests/knowledge-lint.test.ts"
+    ],
     "note": "月次Lint(矛盾/孤立ページ/古い記述/リンク切れ)を既存機構の再利用のみで実装(専用常駐lintデーモンは作らない)。孤立ページ=knowledge-graph.tsの参照グラフ入出次数ゼロ、リンク切れ=plaza-routes.tsのciteTargetExists、矛盾=projectConsensus(BBS-36 divisive判定)、古い記述=created_at閾値(既定180日)。既存WIK-01 wiki_node型のlevel enumに\"lint_log\"を追加(新規event型は作らない)してlog.md形式で記録。POST /wiki/lint(手動実行)+GET /wiki/lint-log(履歴)。月次スケジューリング(wrangler.toml cron追加)はresearch-agent-batch.tsの新聞バッチと同じく人間ゲート(config/consented-crons.json同意)のため未配線。"
   },
   {
@@ -2345,8 +2729,12 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["783b38f"],
-    "tc": ["tests/knowledge-graph.test.ts"],
+    "commits": [
+      "783b38f"
+    ],
+    "tc": [
+      "tests/knowledge-graph.test.ts"
+    ],
     "note": "設計書・コード・掲示板・論文・フォーク系統を同一の細胞構造で相互参照する横断投影(文明の図書館)。専用の常駐グラフDB(file-board-registry的な新規資産)は作らず、既存の各機能が持つ参照フィールド(plaza cite_refs・content cited_paper_ids/citations・fork/culture-template/proposal のforked_from)をprefix scanで束ねるだけ。buildReferenceIndex+projectKnowledgeCellで意図(intent)・系譜(lineage祖先/子孫)・被引用(referenced_by)を1クエリ(GET /knowledge/cell/{id})で返す。「OS自身が観測対象として自己成長する」は哲学的射程が広くAPI実装の対象外として明示的に据え置き。"
   },
   {
@@ -2358,8 +2746,13 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["36fa042"],
-    "tc": ["tests/research-ai-sessions.test.ts(新規7ケース)", "tests/cl-04-route-matrix.test.ts(107 rows)"],
+    "commits": [
+      "36fa042"
+    ],
+    "tc": [
+      "tests/research-ai-sessions.test.ts(新規7ケース)",
+      "tests/cl-04-route-matrix.test.ts(107 rows)"
+    ],
     "note": "AIセッション閲覧の最小構成を核心含め全て実装(itemsPartialではなくitemsDone)。既存の共通CMS基盤(ihl.research.content.v1・content_type=chat_log・research-content-routes.ts)を100%再利用し新規イベント型なし。POST /research/ai-sessions(決定論アダプタadaptAiSession・adaptGithubSourceと同型・JSONL→role別markdown整形・content_idはsha256(source:session_ref)導出で再投入409=重複しない)を新設。閲覧screen-defs/ai-sessions.jsonは一覧=既存GET /research/chat-index、本文=既存GET /research/content/{id}を再利用(新規route最小化)。ローカル抽出手順書docs/architecture/ai-session-ingest-howto.mdにCursor state.vscdbをfile:...?mode=ro&immutable=1で読み取り専用・開く→読む→閉じるの一度きり接続する手順を明記(常駐DB接続はしない)。route-matrix.csvにinfra-route-115追加・CL-04を107 rowsへ更新。"
   },
   {
@@ -2371,8 +2764,12 @@
     "lane": "L4-knowledge",
     "scope": "required",
     "status": "done",
-    "commits": ["bc4f513"],
-    "tc": ["tests/research-external-import.test.ts"],
+    "commits": [
+      "bc4f513"
+    ],
+    "tc": [
+      "tests/research-external-import.test.ts"
+    ],
     "note": "anthropics/life-sciences等の外部GitHub公開リポジトリの本文をcontent(article)へ決定論正規化して取り込むアダプタ(adaptGithubSource)+手順書までを実装。常駐フェッチは行わない(呼び手が本文を供給・サーバは正規化+appendのみ)。system_tags(external/github/repo)+citations(PPR-23で追加したurl型を再利用)。POST /research/external-import。"
   },
   {
@@ -4401,8 +4798,12 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["a06fc66"],
-    "tc": ["tests/mkt-64-payment-guidance.test.ts"],
+    "commits": [
+      "a06fc66"
+    ],
+    "tc": [
+      "tests/mkt-64-payment-guidance.test.ts"
+    ],
     "note": "受領(market-finalレーン): GET /market/payment-guidance新設。バンドルカード等3DS対応プリカの静的案内をPAY.JP/PayPay照会結果に依存せず返す(非強制)。"
   },
   {
@@ -4414,8 +4815,12 @@
     "lane": "L1/PAY",
     "scope": "required",
     "status": "done",
-    "commits": ["2cf67e0"],
-    "tc": ["npm run lint の ui-copy/screendef-structure/i18n-keys GATE + apps/web screendef-snapshots.test.tsx(全50件)で構造確認"],
+    "commits": [
+      "2cf67e0"
+    ],
+    "tc": [
+      "npm run lint の ui-copy/screendef-structure/i18n-keys GATE + apps/web screendef-snapshots.test.tsx(全50件)で構造確認"
+    ],
     "note": "P2P個人間送金アプリ(PayPay送金等)によるユーザー間代金決済の利用禁止を、非公開ボード(Stage2)の決済カード直下に明示テキストとして追加(screen-defs/market-trade.json)。IHL宛徴収のPayPay OPA商用契約は対象外である旨は要件文どおり。利用規約全文(onboarding/terms.json)への追記はg05/g06クラスタ・UI磨きレーンとの競合を避け対象外。"
   },
   {
@@ -4427,8 +4832,13 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": ["912941e", "ed2c13a"],
-    "tc": ["tests/ai-profile.test.ts describe(V3-AIP-104 BYOC compute_location)"],
+    "commits": [
+      "912941e",
+      "ed2c13a"
+    ],
+    "tc": [
+      "tests/ai-profile.test.ts describe(V3-AIP-104 BYOC compute_location)"
+    ],
     "note": "写真解析/embedding実行場所をBYOC3層(device既定・docker・cloud)としてdocs/architecture.mdに設計反映、schemas/ai-profile.schema.jsonにcompute_locationフィールド追加、ai-profile-settings.json画面にUI選択肢を追加。round-16裁定(受領5補足)準拠。"
   },
   {
@@ -4520,7 +4930,9 @@
       "65d7a00",
       "cc21229"
     ],
-    "tc": ["tests/individual.test.ts:describe(V3-OBS-73 データエクスポート二層)(既存・pre-existing)"],
+    "tc": [
+      "tests/individual.test.ts:describe(V3-OBS-73 データエクスポート二層)(既存・pre-existing)"
+    ],
     "note": "データエクスポート二層は実装済み: apps/api/src/individual-routes.ts GET /export/facts.csv(事実CSV・バイナリ非含有)+ GET /export/photos.csv(写真参照メタのみ・media_key/sha256、バイナリ本体は含まない)。TC: tests/individual.test.ts describe(\"V3-OBS-73 データエクスポート二層(facts.csv / photos.csv)\")。未了: 要件statementのCRフロー(grillingで確定した事項を要件へ環流させる運用プロセス)はドキュメント作業フローでありデータ実装のスコープ外——コード側コメントで明示的に対象外と宣言(誇張ゼロ)。プロセス整備自体は未着手のため in_progress のまま。 追加(C8 obs-analysisレーン): データエクスポート二層(facts.csv/photos.csv)は65d7a00で既に実装・テスト済みと確認(追加変更なし)。残余だった「grillingで確定した事項を要件へ環流させるCRフロー」はdocs/planning/c8/requirement-cr-flow.mdとして、新規ツールを増やさず既存実績(round-15/16裁定=このフローの実例)の5ステップformalizeで充足したためdoneへ。"
   },
   {
@@ -4532,8 +4944,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["290c33d"],
-    "tc": ["tests/sec-57-key-bundle.test.ts"],
+    "commits": [
+      "290c33d"
+    ],
+    "tc": [
+      "tests/sec-57-key-bundle.test.ts"
+    ],
     "note": "key-bundle-routes.ts新設: POST/GET /me/key-bundle(クライアント側で暗号化済みのciphertextをそのまま保管・返却するのみ・サーバは中身を一切解釈/復号しない=真のzero-knowledge)・POST /me/key-bundle/recovery-code(1回限りの高エントロピーコードを発行・平文はレスポンスにのみ載せサーバはSHA-256ハッシュのみ保管)・POST .../verify(ハッシュ一致+未消費のみ許可・1回限り消費・二回目はconflict)。device-routes.ts(V3-OBS-31)のAES鍵管理とは異なりサーバ側に復号可能な鍵を一切持たない設計。"
   },
   {
@@ -4545,8 +4961,12 @@
     "lane": "L4-gov",
     "scope": "required",
     "status": "done",
-    "commits": ["c3a907e"],
-    "tc": ["tests/sec-58-write-rate-limit.test.ts"],
+    "commits": [
+      "c3a907e"
+    ],
+    "tc": [
+      "tests/sec-58-write-rate-limit.test.ts"
+    ],
     "note": "R2書込経路(POST/PUT/PATCH/DELETE)にユーザー別固定ウィンドウのレート制限(60/分)+日次クォータ(5000/日)をindex.tsの単一choke-pointミドルウェアで実装。RATE_LIMIT KV未バインド時はno-op degrade(既存AUTH_DENYLIST等と同規約)のため既存テスト無影響。"
   },
   {
@@ -4558,8 +4978,3299 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["a45ae3e"],
+    "commits": [
+      "a45ae3e"
+    ],
     "tc": [],
     "note": "大物のため部分実装(ブリーフで明示許容)。GET /individuals/{id}/graph新設: 血縁(既存buildPedigree再利用)+画像類似(既存loadVector/cosineSimilarityをobservation-routes.tsからexportし再利用)を統合したnodes/edges投影を実装・TC2件で検証(血縁+類似の統合/埋め込み無し個体でも壊れない)。残余: SVG/Canvasでのグラフ描画・ホバー簡易カード・クリック遷移のレンダラ新ノード型、およびscreen-def配線(データ投影のみ実装・次段の土台として設計済み)。統合時にroute番号をinfra-route-114へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。"
+  },
+  {
+    "id": "V3-CST-04",
+    "title": "最安インフラを選定する:独自ドメインは年間更新料が最小のTLD(.uk最安)を採…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-CST-05",
+    "title": "デプロイ/運用手順を整備する:nginx+certbot(Let's Encry…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-10",
+    "title": "ver4では負荷を偏在させず、メインAPI・スケール・R2バインディングを Cl…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-11",
+    "title": "本番API接続は Cloudflare Pages 経由 rewrite ではな…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-15",
+    "title": "全進化しうるデータ構造に系譜メタ(uuid/parent_uuid/ancest…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-16",
+    "title": "フォーク文化を前提とし全構成を置換しても同一文明であり続ける(R2=神域はfor…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-17",
+    "title": "it-hercules-laboratory を唯一の新製品(OSS publi…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-19",
+    "title": "重い計算は原則ユーザー端末(WASM/WebGPU/ローカルLLM+8GB GP…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-25",
+    "title": "『文明として進化するOS』を第一原理の上位ビジョンとして承認する。ただし実装スコ…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-30",
+    "title": "MVP v1スコープを明確化する:マーケット(#06)・マチアプ(#10)・裁判…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-I18-04",
+    "title": "ログインUI文言は日本語中心とし、locale設定はオンボーディング側に委譲する…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-FND-06",
+    "title": "世界状態を immutable な snapshot として保存し、上書きせず版…",
+    "cluster": "g01-基盤コスト",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-I18-05",
+    "title": "言語設定はUIと翻訳表示の基準のみを決め、国籍・居住地・タイムゾーン・法的管轄・…",
+    "cluster": "g06-認証多言語",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-I18-17",
+    "title": "国籍によってUIを分けず全ユーザー共通のデフォルトUIとし、国旗はデフォルト非表…",
+    "cluster": "g06-認証多言語",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-02",
+    "title": "マジックリンクトークンはTTL15分・ワンタイム（検証済はR2で消費済に更新）と…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-04",
+    "title": "マジックリンクの本番SMTP鍵・送信ドメイン設定は人間ゲートとし、実メール送信は…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-05",
+    "title": "SMTP未設定/送信失敗/CI時はdev_tokenフォールバック（画面内トーク…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-13",
+    "title": "認証境界はデフォルトデナイ（疑わしきは保護）とし、公開は認証入口(/login …",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-14",
+    "title": "観測配下はREAD既定・WRITE列挙のdeny-listとし、新WRITEルー…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-16",
+    "title": "観測検索スコープはScope A（コミュニティ）とし、ログイン済ユーザーは全観測…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-17",
+    "title": "書き込み・個人設定(commit・命名・個体・デバイス等)はuseActorId…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-18",
+    "title": "個体QRはihl://individual/<id>のアプリスキームdeep l…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-22",
+    "title": "admin系ルートのroleゲート・devツール既定off・Capability…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-45",
+    "title": "レガシー register/locale/complete-onboarding…",
+    "cluster": "g06-認証多言語",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L3/L4-auth",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-24",
+    "title": "創世アカウント IT.Hercules.Laboratory(role:admi…",
+    "cluster": "g06-認証多言語",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AUT-33",
+    "title": "物理userテーブルはUUIDとメール(任意)のみの最小構成とし、状態はstat…",
+    "cluster": "g06-認証多言語",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L3/L4-auth",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-02",
+    "title": "収集エージェント(collector)の秘密鍵はcollector/.envにの…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-04",
+    "title": "秘密値(.env/credentials/APIキー/Cloudflare/Sa…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-05",
+    "title": "LLMのAPI Keyは保存時のみ送信しレスポンスに返さず存在フラグのみ表示する…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-06",
+    "title": "システムは個人情報・決済情報(氏名/住所/電話/クレカ/口座)の平文を一切保持し…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-07",
+    "title": "個人情報を保存前に必ずPII検出→マスク→保存の順で処理し、マスク前データの保存…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-11",
+    "title": "プロフィールに住所を保持せず主体識別はUUID/UserID/表示名のみとし、O…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-13",
+    "title": "公開エクスチェンジ移行時はPIIをredactし構造化ID(追跡番号・観測画像I…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-15",
+    "title": "open-redirectガードとして、認証済み /login?next= は内…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-16",
+    "title": "セキュリティ機構(認証ゲート等)は『置いただけで効いている』と仮定せず、未ログイ…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-17",
+    "title": "画像取得エンドポイントの認証は、blob取得方式が不十分でない限り除外(認証免除…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-19",
+    "title": "本番環境変数を人間が確認する — VPS APIは IHL_AUTH_REQUI…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-24",
+    "title": "利用規約の条文正本・法務文言はAIが自律的に変更してはならない(#02 HUMA…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-26",
+    "title": "自己ホスト版とクラウド提供版の責任分界を条文で明示し、自己ホスト利用者向けに『デ…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-30",
+    "title": "文明OSはOSS前提(Apache 2.0/MIT検討)で公開し、仕様書・R2構…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-31",
+    "title": "特許は取得せず、公開日をもって先使用権を主張する『公開宣言書』(MANIFEST…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-34",
+    "title": "外部データの取り込みは共有ボタン/認証済みAPI/OAuth(GitHub/No…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-46",
+    "title": "ロジックはAPIに固定しUIはAPIを呼ぶだけの『皮』に留める。価値ある操作(コ…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-52",
+    "title": "cron等でユーザー不在時に勝手に情報取得する仕組みは日本の法律上問題がある恐れ…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-01",
+    "title": "観測データは原則オープンデータ(ライセンス選択可)とし、論文本文は著作権配慮のう…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-25",
+    "title": "利用規約・プライバシー・市場/プラチナコイン利用注意の法務ドラフトと人間確認チェ…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-27",
+    "title": "IHLは civilization-os とは別の独立ToS/Privacyを …",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-29",
+    "title": "利用規約に収集項目(メールアドレス・国・言語・行動履歴/画面遷移/AI利用履歴)…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-35",
+    "title": "システムは外部AIモデルの再学習(学習)には使わず、取り込んだデータは推論・保存…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-37",
+    "title": "テンプレート/OSS取り込みはオープンライセンスのものだけを選んで一括取り込みし…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-SEC-50",
+    "title": "ユーザーのブランド資産(ロゴ等)を『禁止/保護アセット(A110/protect…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-01",
+    "title": "観測は昆虫専用ではなく、対象を生物/器物/デジタル/環境/カスタムの5ドメインに…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-03",
+    "title": "種の同定候補はAI/GBIF/Wikidataが提示してよいが、種・亜種・個体ラ…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-04",
+    "title": "TaxonomyCandidateとUserConfirmedTaxonomyを…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-05",
+    "title": "観測はappend-onlyとし編集UIを禁止、修正は新規追記(APPEND)で…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-10",
+    "title": "類似検索は決定論優先の梯子(metadata whitelist絞り込み→siz…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-15",
+    "title": "環境データは生値(温度・湿度・light_level)のみ保存し、露点・飽差・絶…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-16",
+    "title": "環境点はBモデルでenvironment_snapshotとphoto_cond…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-18",
+    "title": "計測テンプレートはユーザーが完全自由に項目(数値/テキスト/選択/画像アノテーシ…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-21",
+    "title": "観測入力時に次回観測日(next_observation_at)を決め、テンプレ…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-28",
+    "title": "SwitchBot等IoT環境センサー(温度/湿度/CO2/照度/ジャイロ/pH…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-29",
+    "title": "SwitchBot等IoTの秘密鍵(TOKEN/SECRET)をIHLサーバ/V…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-31",
+    "title": "計測機器(Device)は環境(placement)に紐づけ個体には紐づけない。…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-44",
+    "title": "観測input取得はDocker拡張側に寄せ、文明OS本体はC-USB Lite…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-52",
+    "title": "写真・音声・センサー生データ等のRawData/元画像はRDBに入れずR2/S3…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-54",
+    "title": "観測データは改ざん不可・透明・再現可能とし、捏造・他者観測の盗用・AI偽造を禁止…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-63",
+    "title": "タグは真実でなく解釈のため固定列の現在値でなくappend-onlyなtag e…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-13",
+    "title": "甲虫色彩計測標準規格BPCMS v1.0を凍結制定する。ただし観測の生画像は無補…",
+    "cluster": "g02-観測個体",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-55",
+    "title": "観測データの物理基盤として、生活空間と分離した非居室の研究室(第三種24h換気・…",
+    "cluster": "g02-観測個体",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OBS-65",
+    "title": "取り込みは自分自身のもの・自分で証明できるデータに限定する。生体登録の親画像も本…",
+    "cluster": "g02-観測個体",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-01",
+    "title": "個体/観測(RAG chunk)を軸に、固定価格・オークション・抽選・プラチナコ…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-11",
+    "title": "マーケットの「システム維持費」(旧称:手数料。悪印象回避+利益からの貢献還元とい…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-15",
+    "title": "【第16回裁定で読み替え】GMOあおぞら退役に伴い、本条の人間ゲートはPAY.J…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-19",
+    "title": "悪質ユーザーを排除するのでなく、正しい取引の方が儲かるインセンティブ設計(『10…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-39",
+    "title": "経済(カルマ・プラチナ・マーケット)データは全てR2(JSON)のみで管理しDB…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-55",
+    "title": "全決済がprojectIdに紐づき透明であること、マーケットデータは公開情報とす…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-01",
+    "title": "ユーザーのコア思想2点は不可侵: (1)10年続くランニングコスト最小=R2/保…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-02",
+    "title": "OSS/フォーク文化を中核に据える: 世界中のエンジニアが粒度自由(ボタン一つ〜…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-03",
+    "title": "OSS公開を前提に、市場(#06)・掲示板(#07)等をcivilization…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-05",
+    "title": "分類・観測・API基盤のスキーマは生物専用に固定せず自由キー構造とし表記揺れはA…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-06",
+    "title": "ブランド/アイデンティティ: サービス名は必ず『ヘラクレス』を含める(英雄でなく…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-07",
+    "title": "少人数×物量の思想: 運営者一人が多数の役職(研究者/開発者/法務/デザイナー)…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-10",
+    "title": "好みモデルは離散モデルとし連続数値の合計スコアを定義しない。検索スコア順序はRA…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-12",
+    "title": "生成物の再現性を保証: 同じ入力からは必ず同じ結果を返し、乱数など非決定的処理を…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-27",
+    "title": "根本ビジョン: 単なる甲虫飼育管理アプリではなく『ユーザーが自分の文明を作り育て…",
+    "cluster": "g08-動画その他",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-28",
+    "title": "取引に関する個人情報(氏名・配送先・振込口座・局留め設定)は掲示板に打ち込ませず…",
+    "cluster": "g04-経済",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-66",
+    "title": "予約マーケットにおいて、単価固定・ラブレター形式・貢献度優先の3パターンを、並列…",
+    "cluster": "g04-経済",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-MKT-67",
+    "title": "プラチナコインショップの商品は運営者(ユーザー本人)のみが用意し、一般ユーザーは…",
+    "cluster": "g04-経済",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-09",
+    "title": "バージョン戦略: ver2完了基準は『.dev環境で検索でき、画像表示と可変詳細…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-15",
+    "title": "ユーザー体験の中核循環を『観測→変換(1〜4次)→生成(画像/動画)→評価→司法…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "C",
+    "lane": "L1/PAY",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-OTH-20",
+    "title": "タグはsystem_tags(UI自動付与・編集不可)/ai_tags(AI自動…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-01",
+    "title": "知の広場(/knowledge)を掲示板改称の統合ハブとし、3柱構成(1.公式掲…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-09",
+    "title": "掲示板の投稿者名は入力欄を廃止し、初回登録時に確定した固定ユーザーネーム({{c…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-10",
+    "title": "スレッドは一定量(100投稿ごと)でAIが要約・タグ付け・RAG向け整形を行い、…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-20",
+    "title": "全エンティティ(観測個体・スレ・投稿・ユーザー・タグ・論文・マーケット出品等)を…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-29",
+    "title": "フォーク前提の文明とし、改善案(フォーク)は既存コンポーネントから必ず自動でブラ…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-36",
+    "title": "知の広場の設計目標は「意見交換と化学反応(異視点の衝突・合意形成・セレンディピテ…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-37",
+    "title": "任意の画面/機能/正本ファイルから、関連する議論スレ・intentチェーン(in…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-38",
+    "title": "GitHub統合は画面遷移(外部リンク)ではなくAPI連携を原則とする。知の広場…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-WIK-02",
+    "title": "知識バンドルはOKF v0.1規約(type frontmatter必須/ind…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-WIK-05",
+    "title": "ページを作成・改名したら同じ変更でindex.mdに1行を追加・修正し、inde…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-WIK-06",
+    "title": "各TopicページはTruthイベント・設計doc・辞書への引用をCitatio…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-WIK-09",
+    "title": "安定・高信頼な知識のみwiki層に蒸留し、高頻度更新・大量データ(生の時系列画像…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-WIK-14",
+    "title": "検索用タグを3層(system_tags=UI自動付与・編集不可/ai_tags…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-WIK-22",
+    "title": "知識の属人化を完全に消し(『本人しか知らない』が存在しない)、誰でも短時間で『わ…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-WIK-30",
+    "title": "仕様書のルール(例: 掲示板作成+5Pt)をJSONで全公開し、誰でも文明の『法…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-15",
+    "title": "通報システムは導入せず、法律に反する言動があれば即BAN、それ以外はコミュニティ…",
+    "cluster": "g03-知識",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-BBS-21",
+    "title": "掲示板/コミュニティを『掲示板』ではなく『コミュニティの記憶・知識史システム』と…",
+    "cluster": "g03-知識",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-01",
+    "title": "争い処理の基本モデル: 開発者・創世者は裁判官にならず、争いは(1)マーケット(…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-09",
+    "title": "行政・当局から指摘があった場合、該当出品・データ・画像に即『不使用フラグ』を立て…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-12",
+    "title": "判例をR2 append-onlyに蓄積し引用可能にする。争いクローズ時にAIが…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-13",
+    "title": "AI違法性スコアによる自動モデレーション(NGワード表)は採用せず、人間の指摘と…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-19",
+    "title": "統治ルール群(ProjectRules/Governance/Civilizat…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-20",
+    "title": "世界法(A50)を憲法/物理法則/文化法/経済法/AI法/翻訳法/観測法の統合体…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-22",
+    "title": "機能・UI・部品・コードを4レイヤー(3:機能構成/2:UI構成/1:部品/0:…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-23",
+    "title": "OS自体をフォーク可能とし(C-USB準拠なら誰でもブランチ可)、マージは投票制…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-KRM-01",
+    "title": "カルマは『カルマ値([-100,+100]、登録直後0)』と『カルマカウント(別…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-KRM-02",
+    "title": "カルマカウントが n-1→n に増加するたびカルマ値を -Fib(n) 減点し(…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-KRM-13",
+    "title": "GitHub上の開発者貢献(PRマージ・Issueクローズ・レビュー・コメント・…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-KRM-16",
+    "title": "プラチナ・カルマ・貢献度・称号の付与条件を『何が起きたか(イベント/API)をキ…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-KRM-23",
+    "title": "個人の人格・価値観・判断癖・行動ログ・世界観は完全にユーザー個人のものとし他ユー…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-KRM-25",
+    "title": "改善要求は『プラチナ投票』制度とし、1票=1プラチナコインで任意枚数積める(誰が…",
+    "cluster": "g04-経済",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L1/PAY",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-04",
+    "title": "第三者の争いへの関与は閲覧のみとし投稿はさせない。",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-14",
+    "title": "違反対応は段階的ペナルティとする: まず警告(ミスかもしれない)→複数回続くとカ…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-16",
+    "title": "管理者は運営者1人のみとし常駐せず『召喚型』とする(思想の純度維持)。日常は研究…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-18",
+    "title": "API追加・R2追加・テーブル追加など『壊れないためのセーフティ』が必要な危険操…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-21",
+    "title": "文明OSを完全構造主義(善意・信頼・人間性に依存せず、裏切りの利得<協調の割引現…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-25",
+    "title": "変更管理プロトコル(CMP)/AI管理官(A90)憲法: 仕様変更は『変更理由の…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-GOV-36",
+    "title": "投票制度は二層とする: ①無料のノーコスト投票(誰でも参加) ②プラチナコイン『…",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L4-gov",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-KRM-08",
+    "title": "カルマが下がるのは問題行為(詐欺・故意の未発送/未入金・誹謗中傷・虚偽レビュー・…",
+    "cluster": "g04-経済",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L1/PAY",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-01",
+    "title": "観測セッションを親個体(individual)に紐づけ父(sire)・母(dam…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-07",
+    "title": "マチアプ(個体マッチング/ValueCheck)は画像に対するYES/NO(緑/…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-18",
+    "title": "血統(個体)機能にランキング・トップ10・最高サイズ等の競争煽り要素は一切作らず…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-19",
+    "title": "種(species)と形態(morph/Form)のCRUD管理をR2(spec…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-30",
+    "title": "研究用の個体ID・観測IDは「生体情報ではなく研究ID」として個人情報と切り分け…",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-PPR-04",
+    "title": "論文を『進行中(in_progress)を一級市民』として扱い、下書き概念を使わ…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-PPR-14",
+    "title": "論文をLiving Paper(動的論文)として構造化データ(JSON)で管理し…",
+    "cluster": "g03-知識",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-17",
+    "title": "個体観測データは死亡・失敗も正式ステータス(alive/dead/failed、…",
+    "cluster": "g02-観測個体",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-IND-31",
+    "title": "ヘラクレスオオカブトの成長研究を環境・容器/空間・栄養・遺伝・成長プロセス・外乱…",
+    "cluster": "g02-観測個体",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-obs",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-PPR-10",
+    "title": "解析エンジンをセマンティックバージョニングで凍結(Major=論文単位で固定/M…",
+    "cluster": "g03-知識",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L4-knowledge",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-PPR-19",
+    "title": "既存の論文商業モデル(有料・閲覧制限・取り寄せ)への不満から、情報は無料で共有さ…",
+    "cluster": "g03-知識",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-PPR-24",
+    "title": "研究コミュニティをSNS/掲示板/Wikiではなく、個体(Individual)…",
+    "cluster": "g03-知識",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4-knowledge",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-01",
+    "title": "モデル分業を制度化する：計画・設計・レビューは高effortモデル、機械的作業は…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-02",
+    "title": "タスク重要度に応じてeffort/モデルTierを動的ルーティングし既定を下げて…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-03",
+    "title": "実装物は独立の批評家/監査エージェント(実装EXECと監査AUDITは別エージェ…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-04",
+    "title": "敵対的検証の独立性は、決定論チェック(lint/test/schema)を前段に…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-05",
+    "title": "機能ごとにV-model5点ゲート(要件定義・詳細設計・遷移設計・UI設計・テス…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-06",
+    "title": "設計→実装の解禁は3段の委任Goチェーン(DELEGATED-DESIGN-GO…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-08",
+    "title": "既存の先行実装はretrofit(impl-ahead)として扱い、V-mode…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-09",
+    "title": "人間の「完成」宣言より機械GATE PASSを優先する(C6)。「完成しましたか…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-10",
+    "title": "設計・DOC作業を4段階(1フォルダ構成→2設計書構成→3設計作成→3b網羅GA…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-101",
+    "title": "完成報告の実機検証義務(AI完成報告恐怖症対策): AI は「できました」報告の…",
+    "cluster": "g01-AI運用",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-105",
+    "title": "file-board-registry の board_thread_id 列を…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-106",
+    "title": "実装コードを変更するPRは、対応する設計書§の同時更新、または理由付きの「設計影…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-107",
+    "title": "リリースごとにgit tag+リリースノート(GitHub Releases)を…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-11",
+    "title": "設計書憲法の不変原則を守る：同一トピックに正本を1つに固定(C1)、情報は削除せ…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-12",
+    "title": "REQは1機能200–400行を目安に意図と測定可能な受入基準のみ書き、API …",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-13",
+    "title": "詳細設計はv3を唯一のDET正本とし旧版は1行stub化してアーカイブmove、…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-14",
+    "title": "契約変更はDET v3§3→契約レジスタ更新→オラクルcheck→TESTの順で…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-15",
+    "title": "横断アーキ決定は機能番号を付けない新ADRに記録し、要件定義書には仕様(WHAT…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-16",
+    "title": "contributorが3hop以内に辿れるContributor Spine(…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-17",
+    "title": "全パスをCanonical/Working/Generated/Archiveの…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-18",
+    "title": "24機能すべてにfeature README(IDXテンプレ・全正本層への1枚リ…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-19",
+    "title": "新規フォルダ作成はデフォルト禁止(新#NN feature/sub/_横断種別/…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-20",
+    "title": ".github/CODEOWNERSで01-04・05-運用/queuesをde…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-21",
+    "title": "リポジトリを単一repo正本(it-hercules-laboratory-cl…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-24",
+    "title": "設計正本の物理配置をREQ=01-要件/・DET/TRN/UI=02-設計/fe…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-25",
+    "title": "AI執筆はスライス執筆/stub/索引をAutoで機能あたり≤8並列(ファイル衝…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-26",
+    "title": "ラボ画面/実装はREQ→DET→UI→TRNのオラクル階層に従い該当設計書の該当…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-27",
+    "title": "エージェントの自己採点とユーザー採点の差分を採点テンプレート・キャリブレーション…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-29",
+    "title": "大規模作業は司令塔(オーケストレーター)1体が計画・分配し、実作業は単一巨大エー…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-30",
+    "title": "詳細設計文書を巨大単一ファイルにせずAPI1ルート・FR1ID・スキーマフィール…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-32",
+    "title": "要件は一度凍結したら変更はCR(変更要求)のみ：抜けが見つかったら§9未決に追記…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-33",
+    "title": "要件の正本階層を憲法>採用REQ(accepted_requirements.c…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-35",
+    "title": "意図駆動開発ISP(Intent→Spec→Implementation)を正式…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-36",
+    "title": "全変更で意図↔仕様↔コミット↔文明史(R2)を紐付け、意図メタデータ(inten…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-37",
+    "title": "改善履歴・改善サイクルはGitHub(PR/Discussions/BOARD.…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-40",
+    "title": "AI機能ごとに使用モデル/計算資源を差し替え可能にする(ai-profile: …",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-41",
+    "title": "AI推論はスマホ/エッジ(ユーザーの計算資源)推論をデフォルト最優先としクラウド…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-43",
+    "title": "AI機能をタグ別(#script/#image/#video/#analytic…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-44",
+    "title": "全コンポーネントにEngineer Spec(技術者用)・Human-Frien…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-45",
+    "title": "データ設計をAIのRAG検索・引用で最大限活用できる形へ最適化する(最大のユーザ…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-46",
+    "title": "OSS/importを最大活用し車輪の再発明をしない：各サブシステムをOSSから…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-48",
+    "title": "完成の定義は「欲しい機能が実際に使え、データが保管され、エラーが無く、UXが最低…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-52",
+    "title": "機能追加は機能単位のプチウォーターフォール(micro-waterfall)で進…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-53",
+    "title": "一般的なウォーターフォール型で要件定義・詳細設計・UI設計・テスト設計・CI設計…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-54",
+    "title": "ver1を「完璧」に仕上げてから同一品質バー(同DoD・同Tier体系)で機能単…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-55",
+    "title": "自律実行の運用ルール：可逆なステップでは許可を求めて止まらず自律実行し、確認質問…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-56",
+    "title": "大型・自律的な開発はultracode相当の複数ステージ(Stage P調査→R…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-59",
+    "title": "セッション進捗報告は「今どこ/完了/進行中/次はあなた/次はAuto/数字/既知…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-61",
+    "title": "システム構築に必要な最高の技術選定をまずdeep researchで行い(ant…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-63",
+    "title": "環境層・知識層・プロダクト層の3層を相互補強させ、プロダクト層での学びを知識層へ…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-64",
+    "title": "並列実行の資源制御：worktree分離は並列エージェントが同一ファイルを触る場…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-65",
+    "title": "既存設計書はいきなり動かさずStage Rで全設計書の一覧・重複・矛盾・参照切れ…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-66",
+    "title": "git運用ルール：ユーザーが明示的に指示しない限りcommitしない、force…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-68",
+    "title": "ユーザーが機能を改善・開発した際に本番同様に結合・試用できるサンドボックス(本番…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-70",
+    "title": "本番apps/webは編集禁止(読み取り専用参照)、apps/ui-parts-…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "C",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-76",
+    "title": "AIプロンプト・評価軸・文化テンプレート(UIテーマ/掲示板構造/評価軸)をコー…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-80",
+    "title": "システムの「外側」(UI Schema/思想/宣言書Manifesto/技術思想…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-94",
+    "title": "仕様書と実装の間で思想レイヤー(不変:哲学・文明観・目的・価値観)/構造レイヤー…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-99",
+    "title": "モデル階層ポリシー: 自動運転(開発予約外時間帯の無人運転)は軽量モデル(Son…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-47",
+    "title": "独自UIを発明する前に必ずOSS事例調査(ライセンス/流用範囲/効果)を設計フェ…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-51",
+    "title": "E2E詳細化には要件定義書だけでは不足で、ユーザー入力(HQ判断/シナリオ)とP…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-58",
+    "title": "やるべきタスクとその依存順序を00-マスター実行順.mdに集約しチャット毎に追記…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-73",
+    "title": "エージェントに実装を委ねる際はRAGに基づく思想理解に沿った改善は事前確認不要で…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-79",
+    "title": "段階的リリースを取り最小核(観測してデータが取れる+個体ページ閲覧+Issue風…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-81",
+    "title": "世界(DB+API)とUI(文化)をリポジトリレベルで分離しWorld=不変/U…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-88",
+    "title": "仕様統合の優先順位ルールを「現在の実装仕様<旧設計書<新アイディア<マイクロカー…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-89",
+    "title": "コード構造をKernel(物理法則/API・データ・計算・観測)・Feature…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-AIP-91",
+    "title": "実装は依存関係の積み上げ順(userid→観測→そのデータを使う多機能→変換→台…",
+    "cluster": "g09-AIプロセス",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L4",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-01",
+    "title": "ユーザー向けUIに「未実装」「WIP(未完)」等の未完表示を出さない。機能未提供…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-02",
+    "title": "主要導線(観測開始→保存、抽選応募、取引、GMO振込等)を機械計測で3クリック以…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-03",
+    "title": "空状態・ローディング・エラー・権限なし・409競合理由の表示を全経路(各画面/各…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-05",
+    "title": "認知負荷を下げるUI憲法:1画面1目的、主情報は3〜5チャンク、セクション最大3…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-06",
+    "title": "各画面の主要CTA(Primary CTA/主ボタン)を1つに限定する。",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-08",
+    "title": "UIビルダーの責務を配置(layout)とデザイン(visual)と既存機能の紐…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-14",
+    "title": "スタイル(色/角丸/影/アニメーション/レイアウト/余白/タイポグラフィ)自体を…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-16",
+    "title": "デザインの正本をThemePack(--civ-*トークン/design_tok…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-17",
+    "title": "UIをコードでなくデータ(ScreenDef/JSON)として宣言的に定義し、単…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-18",
+    "title": "ScreenDef JSON(screen-defs/*.json)を画面定義の…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-37",
+    "title": "UIは統一と使い回しを徹底する(UIビルダーを念頭に共通部品を再利用、独自の作り…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-45",
+    "title": "一般ユーザーが自分に合わせてUI/OSテンプレートを選び・差し替え・編集・フォー…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-76",
+    "title": "万人共通の最適UIは存在しない(色弱・欠損・デバイス差・時代変化)前提で、誰が編…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-83",
+    "title": "個体ファインダー(IND内探索モード): 一覧・絞り込み(決定論sort=体長/…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-84",
+    "title": "プロフィール等の画面に、カルマ・貢献度・取引評価を合成した派生スコア(例:『信頼…",
+    "cluster": "g07-UIUX",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L6-ui",
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-19",
+    "title": "UI(画面)はロジック(transform)を一切持たず、C-USBのoutpu…",
+    "cluster": "g07-UIUX",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-53",
+    "title": "掲示板は社交・議論・愚痴・改善の独立エントリ(/board)としコンテンツ発見経…",
+    "cluster": "g07-UIUX",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-67",
+    "title": "Builderを技術ではなくユーザーの『めんどくささ』で4レイヤー(L3 OS/…",
+    "cluster": "g07-UIUX",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-UIX-75",
+    "title": "UIは知識が無くても小学生でもぱっと見で使えるよう機能を詰め込みすぎずシンプル・…",
+    "cluster": "g07-UIUX",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L6-ui",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-01",
+    "title": "台本→画像→字幕→音声→合成→サムネ/メタまでの生成パイプライン(F10〜F80…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "S",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-02",
+    "title": "動画自動生成を台本→音声→画像→合成の順にステップ分割し、各分割点でオーナー(人…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-03",
+    "title": "画像アセットは再利用優先: 台本生成時に既存画像をベクトル検索(CLIP emb…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-07",
+    "title": "完成後、システムの思想・開発苦労・既存の不透明性への不満などをネタに短尺動画を毎…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-08",
+    "title": "動画を全プラットフォーム(YouTube/TikTok/Reels/X/FB/L…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-09",
+    "title": "動画末尾はまとめ/振り返りで締める。チャンネル登録・高評価に加え、行動の「お願い…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "C",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-11",
+    "title": "Twinの『AIに自然な会話をさせる自動対話方式』は難があり廃止/アーカイブする…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-12",
+    "title": "ヘラクレス標準撮影チャンバーで全国参加者がスマホで同一品質画像を取得(同一照明/…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-13",
+    "title": "シリーズ管理: 新規/追加シリーズを扱い、長すぎる台本は自動エピソード分割、一定…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-15",
+    "title": "動画・記事などAI生成コンテンツの評価軸は再生数などの数字を参考値に留め、作者(…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "C",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-16",
+    "title": "全プラットフォームの動画メトリクス(再生数/視聴維持率/クリック率等)をVide…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-17",
+    "title": "記事/UI/スレッドから動画台本を自動生成して動画化し、元の記事に自動で埋め込む…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-18",
+    "title": "動画生成をn8nワークフローで自動化(video_pipeline/voice_…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-19",
+    "title": "認証済みシステムのURLや会話ログ(この対話ログ含む)を取り込み、ローカルLLM…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-23",
+    "title": "学習コスト最小化のため各仕様をショート動画/まとめ動画/文章版/英語版/翻訳版/…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-27",
+    "title": "動画・画像・台本などの生成処理はすべて小さな関数単位(1枚/1段落/1カット)に…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-28",
+    "title": "動画台本エンジン: 構造化台本(Hook最初3秒/本題/例/まとめ)を過去成功例…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-29",
+    "title": "動画制作は内容ファーストを制約とする: 投資順位は 台本・構成 > 音声/字幕 …",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-31",
+    "title": "台本・構成の標準規約: ①冒頭で「何が必要か」「得られるメリット」を明確に提示 …",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-32",
+    "title": "視聴者への要求(CTA)全面禁止: いいね・チャンネル登録・通知ON・シェア等を…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-ROUTE-A",
+    "title": "動画の公開URLは固定・永続(R2 latest.json / routing …",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-ROUTE-B",
+    "title": "画面ごとに使い方マニュアル動画URLを紐付ける動画ルーティング機能。紐付けがあれ…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-ROUTE-C",
+    "title": "VideoRoutingRuleで動画の目的(recruit/explain等)…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
+  },
+  {
+    "id": "V3-VID-STORE",
+    "title": "動画本体はR2/システムに保存せず外部(YouTube/TikTok/X)に置き…",
+    "cluster": "g08-動画その他",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": "L5-video",
+    "scope": "best-effort",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": ""
   }
 ]
