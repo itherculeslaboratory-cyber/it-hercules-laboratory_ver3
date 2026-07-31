@@ -4275,9 +4275,10 @@
       "tests/paper-match.test.ts GET /research/content/:id/citation-graph route TC",
       "apps/api/src/plaza-routes.ts (appendCitationLink/projectPaperCitationsForThread/POST /plaza/posts自動append)",
       "tests/plaza-w2-additions.test.ts describe(\"V3-PPR-08\")",
-      "tests/research-content.test.ts describe(\"V3-PPR-08 GET /research/content/:id/cited-by-posts\")"
+      "tests/research-content.test.ts describe(\"V3-PPR-08 GET /research/content/:id/cited-by-posts\")",
+      "tests/research-content.test.ts describe(\"V3-PPR-08 GET /research/content/:id/citation-count\")"
     ],
-    "note": "(w2-ind Wave2部分実装) paper-match.ts buildCitationEdges(純関数)+ GET /research/content/{id}/citation-graph。[2026-08-01橋渡し波(R0731-7b0c89)追記] plaza-routes.tsに GET /plaza/threads/:thread_id/paper-citations(板→論文方向・読み取り専用投影)を追加。[2026-08-01 w-plaza2追記] bridgeplan J1-3の指示どおりcitation-linkイベント経由へ寄せた: POST /plaza/postsがcite_refs(type=paper)を含む投稿を作成すると自動でcitation-link行をappendするよう配線(appendCitationLink・INSERT ONLY)。GET .../paper-citationsはcitation-linkのprefix scan(via_citation_link)も合算(後方互換維持)。査読コメントは既存plaza-postをそのまま使う(新規スキーマなし)。板側はこれで型F3点が揃った。[2026-08-01 w-ind2追記] 論文側の逆引き投影を追加: GET /research/content/:id/cited-by-posts(research-content-routes.ts)。post_id→paper_idの索引が無いため全plaza postをO(n)全件走査しcite_refs一致を集める設計とコード内コメントで正直に明記。論文→板の逆参照フィールドをcontent.schema.json側に持たせるかどうかの設計判断は依然未確定のためin_progressのまま。"
+    "note": "(w2-ind Wave2部分実装) paper-match.ts buildCitationEdges(純関数)+ GET /research/content/{id}/citation-graph。[2026-08-01橋渡し波(R0731-7b0c89)追記] plaza-routes.tsに GET /plaza/threads/:thread_id/paper-citations(板→論文方向・読み取り専用投影)を追加。[2026-08-01 w-plaza2追記] bridgeplan J1-3の指示どおりcitation-linkイベント経由へ寄せた: POST /plaza/postsがcite_refs(type=paper)を含む投稿を作成すると自動でcitation-link行をappendするよう配線(appendCitationLink・INSERT ONLY)。GET .../paper-citationsはcitation-linkのprefix scan(via_citation_link)も合算(後方互換維持)。査読コメントは既存plaza-postをそのまま使う(新規スキーマなし)。板側はこれで型F3点が揃った。[2026-08-01 w-ind2追記] 論文側の逆引き投影を追加: GET /research/content/:id/cited-by-posts(research-content-routes.ts)。post_id→paper_idの索引が無いため全plaza postをO(n)全件走査しcite_refs一致を集める設計とコード内コメントで正直に明記。論文→板の逆参照フィールドをcontent.schema.json側に持たせるかどうかの設計判断は依然未確定のためin_progressのまま。[2026-07-31 g65-countapi追記] 「引用リンクの一覧は取れるが件数を返す経路が無い」を解消: GET /research/content/:id/citation-count(research-content-routes.ts)を追加。citation-linkのキー(truth/ihl.citation.link.v1/<content_id>/<link_id>.json)を直接prefix scanして数える(projectPaperCitationsForThreadと同じ都度再計算原則・全件走査ではなくcontent_id prefixで直接絞れる分より単純)。テストでハンドラを外すと該当ケースが404で赤くなることを確認済み。既存noteにある『論文→板の逆参照フィールドをcontent.schema.jsonに持たせるかの設計判断が未確定』は本作業のスコープ外のため未解決のまま残る(statusをdoneへは上げない)。[2026-08-01 67代目HQ適用] 本entryはR0731-45e3f5報告の提出JSON行をprogress-merge.mjsで適用したもの(refpath艦R0801-6859a3が未反映を検出)。"
   },
   {
     "id": "V3-PPR-11",
@@ -7735,8 +7736,10 @@
     "scope": "required",
     "status": "done",
     "commits": [],
-    "tc": [],
-    "note": "[w1-aip 型C対応表] 既存機構が満たす: tests/ai-view.test.ts(04-traceability/rtm.md:20。二層ビュー human/machine + 参照カウンタ都度再計算)。"
+    "tc": [
+      "tests/research-content.test.ts describe(\"V3-AIP-45 GET /research/content/:id/reference-count\")"
+    ],
+    "note": "[w1-aip 型C対応表] 既存機構が満たす: tests/ai-view.test.ts(04-traceability/rtm.md:20。二層ビュー human/machine + 参照カウンタ都度再計算)。[2026-07-31 g65-countapi追記] projectReferenceCounter(reference-counter.ts:11)の呼び出し元がテストのみで実アプリから到達不能だった状態(R65-16)を解消: GET /research/content/:id/reference-count(research-content-routes.ts)を追加し、既存関数をそのまま呼ぶだけの薄いHTTPハンドラで配線した(新しい数え方は発明していない・protected既定のまま)。カウント対象はcontent_idではなくreadEventで解決したenvelope.id(理由は本報告書「判断」節1参照)。テストでハンドラを外すと該当ケースが404で赤くなることを確認済み(型F3点=コード/テスト/progress行 が揃った)。現時点で研究content宛にinput_event_idsを書く経路が他に無いため実測値は常に0(配線は正・参照元がまだ無いだけ=別スコープのギャップとして正直に記録)。[2026-08-01 67代目HQ適用] 本entryはR0731-45e3f5報告の提出JSON行をprogress-merge.mjsで適用したもの(refpath艦R0801-6859a3が未反映を検出)。"
   },
   {
     "id": "V3-AIP-46",
