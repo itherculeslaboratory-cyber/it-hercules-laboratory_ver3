@@ -103,7 +103,10 @@ describe("CL-04 route matrix (107 rows)", () => {
     for (const r of rows) expect(["public", "protected"]).toContain(r.access);
   });
 
-  it("public = only auth magic-link/verify/verify-code/session + payjp-webhook paths", () => {
+  // 2026-08-01 w-aut2(第22回裁定 V3-AUT-15/14/16): 観測データ閲覧(検索・一覧・詳細)11行を
+  // protected→public へ緩和(route-matrix.csv 参照)。書込系(capture/measurement/commit/
+  // upload/template append/dictionary-extensions)は protected のまま(V3-AUT-14 deny-list)。
+  it("public = auth magic-link/verify/verify-code/session + payjp-webhook + 観測READ 11 paths", () => {
     const publicPaths = new Set(rows.filter((r) => r.access === "public").map((r) => r.path));
     expect([...publicPaths].sort()).toEqual([
       "/api/v1/auth/magic-link",
@@ -111,6 +114,17 @@ describe("CL-04 route matrix (107 rows)", () => {
       "/api/v1/auth/verify",
       "/api/v1/auth/verify-code",
       "/api/v1/fees/payjp-webhook",
+      "/api/v1/observation/export",
+      "/api/v1/observation/measurement-dictionary",
+      "/api/v1/observation/search",
+      "/api/v1/observation/targets/catalog",
+      "/api/v1/observation/targets/search",
+      "/api/v1/observation/templates",
+      "/api/v1/observation/templates/{template_id}",
+      "/api/v1/observation/{capture_id}",
+      "/api/v1/observation/{capture_id}/image",
+      "/api/v1/observation/{capture_id}/reanalysis-manifest",
+      "/api/v1/observation/{capture_id}/species-suggestions",
     ]);
   });
 

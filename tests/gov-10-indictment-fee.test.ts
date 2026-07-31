@@ -1,7 +1,8 @@
 // V3-GOV-10: 掲示板・マーケットの指摘は30回ごとにプラチナ1枚を消費し(クールダウンなし)、
 // カルマΔcountとは別経路のプラチナ台帳消費のみとする。市場側(market-flag-routes.ts の
-// user flag route + gov-stop route)にのみ配線済み。掲示板側は指摘機能自体が未実装のため
-// 未配線(裁定待ち・引継ぎ参照)。
+// user flag route + gov-stop route)は配線済み。掲示板側は POST /gov/disputes
+// (category="board")に bridgeplan J1-1 の設計どおり相乗り配線済み(gov-routes.ts
+// maybeChargeBoardIndictmentFee・市場側とは独立カウント)。
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { issueSessionToken } from "../apps/api/src/session";
@@ -76,5 +77,38 @@ describe("V3-GOV-10 市場指摘30回ごとの1PT消費(クールダウンなし
       .filter((d) => d.actor_id === "gov10-flagger3");
     expect(ptEvents).toHaveLength(1);
     expect(ptEvents[0]).toMatchObject({ delta: -1, reason_code: "indictment_fee" });
+  });
+
+  it("board側(category=board)は30回目の指摘でPT残高が1減り、市場側とは独立カウント", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const flaggerH = await authOf("gov10-board-flagger");
+
+    const s = new TruthStore(bucket);
+    for (let i = 1; i < GOV_INDICTMENT_PT_FEE_EVERY; i++) {
+      const r = await post(env, flaggerH, "/gov/disputes", {
+        category: "board",
+        target_type: "rating",
+        target_id: `rating-${i}`,
+        respondent_id: "gov10-board-respondent",
+      });
+      expect(r.status).toBe(201);
+      expect((await projectPt(s, "gov10-board-flagger")).balance).toBe(0); // unchanged before the 30th
+    }
+    const last = await post(env, flaggerH, "/gov/disputes", {
+      category: "board",
+      target_type: "rating",
+      target_id: "rating-last",
+      respondent_id: "gov10-board-respondent",
+    }); // the 30th filing
+    expect(last.status).toBe(201);
+    expect((await projectPt(s, "gov10-board-flagger")).balance).toBe(-1);
+
+    // market側の累計と混ざらないこと(独立カウントの直接検証)。
+    const ptEvents = (await s.listEvents("truth/ihl.economy.pt_event.v1/"))
+      .map((e) => e.data as Record<string, unknown>)
+      .filter((d) => d.actor_id === "gov10-board-flagger");
+    expect(ptEvents).toHaveLength(1);
+    expect(ptEvents[0]).toMatchObject({ delta: -1, reason_code: "indictment_fee", ref: "gov-dispute-board" });
   });
 });

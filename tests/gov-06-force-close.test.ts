@@ -5,7 +5,13 @@ import app from "../apps/api/src/index";
 import { TruthStore, ulid } from "@ihl/truth";
 import { projectLedger } from "../apps/api/src/ledger-routes";
 import { milestoneKarmaSteps } from "../apps/api/src/gov-routes";
-import { GOV06_FORCE_CLOSE_DAYS, KRM09_MILESTONE_STEP } from "../apps/api/src/gov-routes-constants";
+import { projectPt } from "../apps/api/src/contribution";
+import {
+  GOV06_FORCE_CLOSE_DAYS,
+  KRM09_MILESTONE_STEP,
+  KRM09_ZOMBIE_DISPUTE_THRESHOLD,
+  KRM09_ZOMBIE_PT_COST,
+} from "../apps/api/src/gov-routes-constants";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
 
 const DISPUTE_TYPE = "ihl.gov.dispute.v1";
@@ -98,6 +104,44 @@ describe("V3-KRM-09 milestone karma (every KRM09_MILESTONE_STEP-th force-close o
 
     const after = await projectLedger(new TruthStore(bucket), "repeat-offender");
     expect(after.karma_count).toBeGreaterThan(before.karma_count); // Δcount charged on the 5th milestone
+  });
+});
+
+describe("V3-KRM-09 zombie dispute fee (every KRM09_ZOMBIE_DISPUTE_THRESHOLD-th force-close only)", () => {
+  it("does not charge PT below the threshold, and charges KRM09_ZOMBIE_PT_COST on the Nth", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const past = new Date(Date.now() - (GOV06_FORCE_CLOSE_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
+    // Seed (threshold - 1) prior force-closed disputes for "zombie-offender".
+    for (let i = 1; i < KRM09_ZOMBIE_DISPUTE_THRESHOLD; i++) {
+      await seedForceClosed(bucket, `d-zseed-${i}`, "zombie-offender", `zcounterpart-${i}`, past);
+    }
+    const s = new TruthStore(bucket);
+    expect((await projectPt(s, "zombie-offender")).balance).toBe(0); // unchanged below the threshold
+
+    // Open + force-close the Nth dispute via the live route -> hits the zombie threshold.
+    await seedOpen(bucket, "d-zlive", "zombie-offender", "zcounterpart-live", past);
+    const res = await forceClose(env, "d-zlive");
+    expect(res.status).toBe(201);
+
+    expect((await projectPt(s, "zombie-offender")).balance).toBe(-KRM09_ZOMBIE_PT_COST);
+    const ptEvents = (await s.listEvents("truth/ihl.economy.pt_event.v1/"))
+      .map((e) => e.data as Record<string, unknown>)
+      .filter((d) => d.actor_id === "zombie-offender");
+    expect(ptEvents).toHaveLength(1);
+    expect(ptEvents[0]).toMatchObject({ delta: -KRM09_ZOMBIE_PT_COST, reason_code: "indictment_fee", ref: "gov-dispute-zombie-force-closed" });
+  });
+
+  it("does not block force-close when PT balance would go negative (non-blocking, after-the-fact fee)", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const past = new Date(Date.now() - (GOV06_FORCE_CLOSE_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
+    for (let i = 1; i < KRM09_ZOMBIE_DISPUTE_THRESHOLD; i++) {
+      await seedForceClosed(bucket, `d-zblock-${i}`, "zombie-poor", `zpcounterpart-${i}`, past);
+    }
+    await seedOpen(bucket, "d-zblock-live", "zombie-poor", "zpcounterpart-live", past);
+    const res = await forceClose(env, "d-zblock-live");
+    expect(res.status).toBe(201); // dispute force-close itself is never blocked by PT balance
   });
 });
 

@@ -238,6 +238,26 @@ export async function projectName(
   return rows.length ? rows[rows.length - 1].name : null;
 }
 
+/** V3-IND-05: name_event 全履歴(actor_type/promotion_reason 込み)を created_at 昇順で返す
+ * 参照用投影。projectName と同じ走査+ソートだが、記録した昇格主体/理由を落とさず返す。 */
+export async function projectNameHistory(
+  s: TruthStore,
+  id: string,
+): Promise<Array<{ name: string; created_at: string; actor_type: string | null; promotion_reason: string | null }>> {
+  const rows = (await s.listEvents(`truth/${NAME_TYPE}/${id}-`))
+    .filter((e) => dataOf(e).individual_id === id)
+    .map((e) => ({
+      ev: idOf(e),
+      name: String(dataOf(e).name ?? ""),
+      created_at: String(dataOf(e).created_at ?? ""),
+      actor_type: typeof dataOf(e).actor_type === "string" ? (dataOf(e).actor_type as string) : null,
+      promotion_reason:
+        typeof dataOf(e).promotion_reason === "string" ? (dataOf(e).promotion_reason as string) : null,
+    }))
+    .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.ev.localeCompare(b.ev));
+  return rows.map(({ ev: _ev, ...rest }) => rest);
+}
+
 /**
  * Whole-individual projection: master + current name + timeline (life-events
  * sorted birth→…→specimen) + the 6 culture blocks (IND-13). observations join by
@@ -961,6 +981,7 @@ export async function createIndividualMaster(
     birth_or_hatch_date?: string;
     source_type?: string;
     lineage_id?: string; // V3-IND-34 複数系統並行管理タグ
+    project_id?: string; // V3-IND-23 projectHub拡張(任意)
   },
 ): Promise<{ individualId: string; res: Awaited<ReturnType<TruthStore["putEventAt"]>> }> {
   const individualId =
@@ -970,7 +991,14 @@ export async function createIndividualMaster(
     actor_id: actorId,
     created_at: nowIso(),
   };
-  for (const k of ["local_label_text", "species", "birth_or_hatch_date", "source_type", "lineage_id"] as const) {
+  for (const k of [
+    "local_label_text",
+    "species",
+    "birth_or_hatch_date",
+    "source_type",
+    "lineage_id",
+    "project_id",
+  ] as const) {
     if (fields[k] !== undefined) data[k] = fields[k];
   }
   const res = await s.putEventAt(
@@ -1032,6 +1060,7 @@ individualRoutes.post("/individuals", async (c) => {
     birth_or_hatch_date: body.birth_or_hatch_date as string | undefined,
     source_type: body.source_type as string | undefined,
     lineage_id: typeof body.lineage_id === "string" ? body.lineage_id : undefined,
+    project_id: typeof body.project_id === "string" ? body.project_id : undefined,
   });
   if (res.status === "invalid") return c.json({ error: "INVALID_INDIVIDUAL", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_INDIVIDUAL", key: res.key }, 409);
@@ -1444,6 +1473,9 @@ individualRoutes.post("/individuals/:id/name", async (c) => {
     created_at: typeof body.created_at === "string" ? body.created_at : nowIso(),
   };
   if (typeof body.brand_template_id === "string") data.brand_template_id = body.brand_template_id;
+  // V3-IND-05: 昇格主体(手動/半自動/自動)と理由を記録する(任意・省略時はスキーマ側で無指定のまま)。
+  if (typeof body.actor_type === "string") data.actor_type = body.actor_type;
+  if (typeof body.promotion_reason === "string") data.promotion_reason = body.promotion_reason;
   const res = await store(c).putEventAt(
     `truth/${NAME_TYPE}/${id}-${ulid()}.json`,
     envelope(NAME_TYPE, SCHEMA.name, actorId, data),
@@ -1458,6 +1490,13 @@ individualRoutes.get("/individuals/:id/name", async (c) => {
   const id = c.req.param("id");
   const at = c.req.query("at");
   return c.json({ individual_id: id, name: await projectName(store(c), id, at), at: at ?? null });
+});
+
+// GET /individuals/{id}/name-history — full rename/promotion history including
+// actor_type/promotion_reason (V3-IND-05・参照側).
+individualRoutes.get("/individuals/:id/name-history", async (c) => {
+  const id = c.req.param("id");
+  return c.json({ individual_id: id, events: await projectNameHistory(store(c), id) });
 });
 
 // ── V3-IND-03 ブランド命名(series-year-seq 自動採番)─────────────────────────
@@ -1863,4 +1902,56 @@ individualRoutes.post("/individuals/:id/schedule/generate", async (c) => {
     { individual_id: id, schedule_id: scheduleId, detected_stage: stage, stage: transitionKey, next_observation_at: nextAt },
     201,
   );
+});
+
+// ── V3-IND-11(②のみ)好みの統計(人間ゲート範囲内) ────────────────────────────
+// 「色などの見た目を画像解析しユーザーの好みを統計学習」のうち、①端末内の決定論的な
+// 特徴抽出(HSV/Lab数値化)は w-web1 が apps/web/src/lib/ に実装する(本艦の担当外・
+// design35 §A-8-e)。ここでは②そのベクトルの平均・分散を計算する純関数のみを持つ。
+// 外部の学習済みモデル配線・「AI鑑定」は作らない(§6人間ゲート・in_progress止まりで正しい)。
+export interface PreferenceStats {
+  mean: number[];
+  variance: number[];
+  n: number;
+}
+
+/**
+ * computePreferenceStats — ユーザーが選んだ個体の特徴量ベクトル群(次元は呼び手が揃える・
+ * 例: HSV/Lab数値化の出力)から要素ごとの平均・分散(標本分散・n-1除算)を決定論算出する。
+ * 外部AIモデルは一切使わない純粋な統計計算(V3-IND-11②)。次元不一致は 400 相当を呼び手が
+ * 判定できるよう例外を投げる(この関数自体は route から呼ばれる想定・沈黙で辻褄を合わせない)。
+ */
+export function computePreferenceStats(vectors: number[][]): PreferenceStats {
+  if (vectors.length === 0) return { mean: [], variance: [], n: 0 };
+  const dim = vectors[0].length;
+  if (vectors.some((v) => v.length !== dim)) {
+    throw new Error("VECTOR_DIMENSION_MISMATCH");
+  }
+  const n = vectors.length;
+  const mean = new Array(dim).fill(0);
+  for (const v of vectors) for (let i = 0; i < dim; i++) mean[i] += v[i] / n;
+  const variance = new Array(dim).fill(0);
+  if (n > 1) {
+    for (const v of vectors) for (let i = 0; i < dim; i++) variance[i] += (v[i] - mean[i]) ** 2 / (n - 1);
+  }
+  return { mean, variance, n };
+}
+
+// POST /individuals/preference-stats — 選択済み個体の特徴量ベクトル(body.vectors・端末側で
+// 既に数値化済み=w-web1のcolor-analysis.ts等の出力)から平均・分散を返す非永続プレビュー
+// (POST /research/auto-draft と同じ規約=Truthへは書かない)。
+individualRoutes.post("/individuals/preference-stats", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const vectors = Array.isArray(body.vectors) ? (body.vectors as number[][]) : [];
+  if (!vectors.every((v) => Array.isArray(v) && v.every((x) => typeof x === "number"))) {
+    return c.json({ error: "INVALID_VECTORS", details: ["vectors must be number[][]"] }, 400);
+  }
+  try {
+    return c.json({ ...computePreferenceStats(vectors), persisted: false });
+  } catch (e) {
+    if (e instanceof Error && e.message === "VECTOR_DIMENSION_MISMATCH") {
+      return c.json({ error: "VECTOR_DIMENSION_MISMATCH" }, 400);
+    }
+    throw e;
+  }
 });

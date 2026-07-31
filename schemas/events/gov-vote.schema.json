@@ -41,6 +41,10 @@
       "type": "string",
       "description": "fork_rank 時の提案ランク（任意・FORK_RANKS のいずれか）。"
     },
+    "project_id": {
+      "type": "string",
+      "description": "所属プロジェクトID（V3-IND-23・projectHub拡張・任意=全optional・必須化は不可逆のため禁止）。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

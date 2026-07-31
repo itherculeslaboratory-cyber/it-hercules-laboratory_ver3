@@ -3,8 +3,9 @@
 // full app(apps/api/src/index)経由でテストする(plaza-fork.test.ts と同型)。
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
-import { draftBoardFromText } from "../apps/api/src/plaza-routes";
-import { AUTH_HEADERS, makeEnv } from "./helpers";
+import { draftBoardFromText, appendCitationLink } from "../apps/api/src/plaza-routes";
+import { TruthStore } from "@ihl/truth";
+import { AUTH_HEADERS, FakeR2Bucket, makeEnv, makeEnvelope } from "./helpers";
 
 function postJson(env: ReturnType<typeof makeEnv>, path: string, body: Record<string, unknown>) {
   return app.request(path, { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify(body) }, env);
@@ -86,6 +87,86 @@ describe("V3-BBS-25 unified node view", () => {
     }))).json()) as { post_id: string };
     const view = (await (await app.request(`/api/v1/plaza/node/${target.post_id}`, { headers: AUTH_HEADERS }, env)).json()) as { backlinks: string[] };
     expect(view.backlinks).toContain(citing.post_id);
+  });
+});
+
+describe("V3-BBS-25(2026-08-01追記) — GET /plaza/node/:id は dispatchNode 経由で content/ppr-cycle-node も解決する", () => {
+  it("resolves a content node (not just plaza-post) via the shared dispatcher", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const store = new TruthStore(bucket);
+    await store.putEventAt(
+      "truth/ihl.research.content.v1/content-1.json",
+      makeEnvelope({ type: "ihl.research.content.v1", data: { content_id: "content-1", title: "論文X" } }),
+    );
+    const res = await app.request("/api/v1/plaza/node/content-1", { headers: AUTH_HEADERS }, env);
+    expect(res.status).toBe(200);
+    const view = (await res.json()) as { node_type: string; post_id: string; channel: string; thread_id: string; post: Record<string, unknown> };
+    expect(view.node_type).toBe("content");
+    expect(view.post_id).toBe("content-1");
+    expect(view.channel).toBe(""); // plaza概念を持たないため空文字(捏造しない)
+    expect(view.thread_id).toBe("");
+    expect(view.post).toMatchObject({ content_id: "content-1", title: "論文X" });
+  });
+
+  it("resolves a ppr-cycle-node via the shared dispatcher", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const store = new TruthStore(bucket);
+    await store.putEventAt(
+      "truth/ihl.ppr.cycle_node.v1/cycle-1.json",
+      makeEnvelope({ type: "ihl.ppr.cycle_node.v1", data: { node_id: "cycle-1", node_type: "hypothesis" } }),
+    );
+    const res = await app.request("/api/v1/plaza/node/cycle-1", { headers: AUTH_HEADERS }, env);
+    expect(res.status).toBe(200);
+    const view = (await res.json()) as { node_type: string };
+    expect(view.node_type).toBe("ppr-cycle-node");
+  });
+
+  it("still resolves plaza-post as before (backward compatible)", async () => {
+    const env = makeEnv();
+    const created = (await (await postJson(env, "/api/v1/plaza/posts", post({ channel: "c-bbs25d", board_kind: "guide" }))).json()) as { post_id: string };
+    const res = await app.request(`/api/v1/plaza/node/${created.post_id}`, { headers: AUTH_HEADERS }, env);
+    const view = (await res.json()) as { node_type: string };
+    expect(view.node_type).toBe("guide");
+  });
+});
+
+describe("V3-PPR-08(2026-08-01追記) — 板側の citation-link 統合(bridgeplan J1-3)", () => {
+  it("posting with cite_refs type=paper auto-appends a citation-link event (content_id/target_ref=thread)", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const created = (await (await postJson(env, "/api/v1/plaza/posts", post({
+      channel: "c-ppr08", topic: "cites-a-paper", cite_refs: [{ type: "paper", id: "paper-xyz" }],
+    }))).json()) as { post_id: string; thread_id: string };
+
+    const store = new TruthStore(bucket);
+    const links = (await store.listEvents("truth/ihl.citation.link.v1/paper-xyz/")).map((e) => (e as { data: Record<string, unknown> }).data);
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({ content_id: "paper-xyz", target_ref: { type: "thread", id: created.thread_id }, link_kind: "discussed_in" });
+  });
+
+  it("GET .../paper-citations unions cite_refs(type=paper) with citation-link rows (via_citation_link)", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const created = (await (await postJson(env, "/api/v1/plaza/posts", post({
+      channel: "c-ppr08b", topic: "t", cite_refs: [{ type: "paper", id: "paper-abc" }],
+    }))).json()) as { post_id: string; thread_id: string };
+
+    const res = await app.request(`/api/v1/plaza/threads/${created.thread_id}/paper-citations`, { headers: AUTH_HEADERS }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { paper_ids: string[]; via_citation_link: string[] };
+    expect(body.paper_ids).toContain("paper-abc");
+    expect(body.via_citation_link).toContain("paper-abc"); // 自動appendされたcitation-link経由でも見える
+  });
+
+  it("appendCitationLink is a pure append (INSERT ONLY) helper usable outside the POST route", async () => {
+    const bucket = new FakeR2Bucket();
+    const store = new TruthStore(bucket);
+    const r1 = await appendCitationLink(store, "paper-1", "actor-1", { type: "thread", id: "thread-1" }, "cites");
+    expect(r1).not.toBeNull();
+    const rows = await store.listEvents("truth/ihl.citation.link.v1/paper-1/");
+    expect(rows).toHaveLength(1);
   });
 });
 

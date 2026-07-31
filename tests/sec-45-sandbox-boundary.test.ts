@@ -62,6 +62,18 @@ describe("V3-SEC-45 sandbox execute-request gate (400 on every violation)", () =
     expect(await res.json()).toMatchObject({ accepted: true });
   });
 
+  // FND-31/T2是正(2026-08-01・design19 §T2・R64-9): 「安全に実行できる」と誤読されない
+  // よう、隔離実行はこちら側で行わない旨を 400/202 の両方の応答に明記する(ロジック不変)。
+  it("compliant request(202) にはローカル実行を促す note が付く(T2是正)", async () => {
+    const res = await post({ kind: "api", ref: "match-preference", target_db: "test", write: true, network: false, cpu_ms: 100, memory_mb: 16 });
+    expect((await res.json())).toMatchObject({ note: "隔離実行はこちらでは行わない。ローカルで実行してください。" });
+  });
+
+  it("拒否応答(400)にも同じ note が付く(T2是正)", async () => {
+    const res = await post({ kind: "component", ref: "not-a-real-component" });
+    expect((await res.json())).toMatchObject({ note: "隔離実行はこちらでは行わない。ローカルで実行してください。" });
+  });
+
   it("unauthenticated -> 401 (deny-by-default)", async () => {
     const res = await app.request("/api/v1/sandbox/execute-request", { method: "POST", body: JSON.stringify({}) }, makeEnv());
     expect(res.status).toBe(401);

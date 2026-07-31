@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+dist
+.next
+**/*.tsbuildinfo
+.wrangler
+**/.wrangler
+__pycache__
+.venv
+**/.venv
+coverage
+.git
+.claude
+test-results
+playwright-report

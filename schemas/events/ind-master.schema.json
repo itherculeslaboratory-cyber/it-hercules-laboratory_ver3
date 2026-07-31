@@ -40,6 +40,10 @@
       "minLength": 1,
       "description": "登録者の actor_id（セッション principal 強制・V3-AUT-17）。"
     },
+    "project_id": {
+      "type": "string",
+      "description": "所属プロジェクトID（V3-IND-23・projectHub拡張・任意=全optional・必須化は不可逆のため禁止）。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",

@@ -15,6 +15,7 @@ import {
   hasSeriesNameConflict,
   reduceFailureData,
   summarizeEnvironmentReadings,
+  computePreferenceStats,
 } from "../apps/api/src/individual-routes";
 import { issueSessionToken } from "../apps/api/src/session";
 import { DEV_TOKEN, FakeR2Bucket, SESSION_SECRET, makeEnv } from "./helpers";
@@ -1410,5 +1411,77 @@ describe("V3-IND-28 location_history × 自動環境集計(pure fn)", () => {
     const body = (await res.json()) as { individual_id: string; periods: unknown[] };
     expect(body.individual_id).toBe(id);
     expect(body.periods).toEqual([]);
+  });
+});
+
+describe("V3-IND-05 昇格主体(actor_type/promotion_reason)の記録・参照", () => {
+  it("POST .../name に actor_type/promotion_reason を渡すと name-history に残る(任意・省略時は付かない)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "promo-1" });
+    await post(`/api/v1/individuals/${id}/name`, { name: "no-meta", created_at: "2026-01-01T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${id}/name`,
+      { name: "promoted", actor_type: "manual", promotion_reason: "血統内で最良個体", created_at: "2026-02-01T00:00:00Z" },
+      env,
+    );
+    const res = await get(`/api/v1/individuals/${id}/name-history`, env);
+    const body = (await res.json()) as {
+      events: { name: string; actor_type: string | null; promotion_reason: string | null }[];
+    };
+    expect(body.events.length).toBe(2);
+    expect(body.events[0].actor_type).toBeNull();
+    expect(body.events[1].actor_type).toBe("manual");
+    expect(body.events[1].promotion_reason).toBe("血統内で最良個体");
+    // current name projection (projectName) still resolves to the latest name unaffected by the new fields.
+    const nameRes = await get(`/api/v1/individuals/${id}/name`, env);
+    expect(((await nameRes.json()) as { name: string }).name).toBe("promoted");
+  });
+});
+
+describe("V3-IND-23 project_id(projectHub拡張・書込側の穴埋め)", () => {
+  it("POST /individuals・POST /clutches に project_id を渡すと Truth に記録される", async () => {
+    const { bucket, env } = ctx();
+    const id = await createInd(env, { local_label_text: "proj-linked", project_id: "PROJ-1" });
+    const master = await new TruthStore(bucket).readEvent(`truth/ihl.ind.master.v1/${id}.json`);
+    expect((master?.data as Record<string, unknown> | undefined)?.project_id).toBe("PROJ-1");
+  });
+});
+
+describe("V3-IND-11(②のみ) 好みの統計(computePreferenceStats・純関数・外部AI不使用)", () => {
+  it("mean/varianceを要素ごとに算出する(標本分散・n-1除算)", () => {
+    const stats = computePreferenceStats([
+      [1, 10],
+      [2, 20],
+      [3, 30],
+    ]);
+    expect(stats.n).toBe(3);
+    expect(stats.mean).toEqual([2, 20]);
+    expect(stats.variance[0]).toBeCloseTo(1, 6); // ((1-2)^2+(2-2)^2+(3-2)^2)/(3-1) = 1
+    expect(stats.variance[1]).toBeCloseTo(100, 6);
+  });
+
+  it("空配列は n=0・空mean/varianceを返す(0除算しない)", () => {
+    expect(computePreferenceStats([])).toEqual({ mean: [], variance: [], n: 0 });
+  });
+
+  it("次元不一致は例外(呼び手が400へ変換する)", () => {
+    expect(() => computePreferenceStats([[1, 2], [3]])).toThrow("VECTOR_DIMENSION_MISMATCH");
+  });
+
+  it("POST /individuals/preference-stats はTruthへ何も書かない非永続プレビュー", async () => {
+    const { env } = ctx();
+    const res = await post("/api/v1/individuals/preference-stats", { vectors: [[0, 0], [10, 10]] }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { mean: number[]; variance: number[]; n: number; persisted: boolean };
+    expect(body.mean).toEqual([5, 5]);
+    expect(body.n).toBe(2);
+    expect(body.persisted).toBe(false);
+  });
+
+  it("次元不一致のvectorsは400 VECTOR_DIMENSION_MISMATCH", async () => {
+    const { env } = ctx();
+    const res = await post("/api/v1/individuals/preference-stats", { vectors: [[1, 2], [3]] }, env);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("VECTOR_DIMENSION_MISMATCH");
   });
 });

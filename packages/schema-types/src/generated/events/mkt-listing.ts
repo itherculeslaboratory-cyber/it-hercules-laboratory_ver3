@@ -68,4 +68,8 @@ export interface MktListing {
    * どの観測対象（種族）についての出品かを示す任意参照（ヘッダー『観測対象』narrowing の基盤・plaza-post.species_id/SW-1と同型）。ユーザー再入力なしのパススルー・集約キーではなく出品自体のタグ。
    */
   species_id?: string;
+  /**
+   * 出品者の所在国（MKT-52検索用複合インデックスの唯一の欠落フィールド・任意）。indexを張る作業は別ラウンド（w-mkt2）。
+   */
+  country?: string;
 }

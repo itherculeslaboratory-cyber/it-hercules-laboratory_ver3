@@ -296,3 +296,97 @@ describe("V3-PPR-11 GET /research/dataset (公開データセット・匿名化�
     expect((await res.json()) as { count: number; items: unknown[] }).toEqual({ engine_version: null, license: "CC0", count: 0, items: [] });
   });
 });
+
+describe("V3-PPR-08 GET /research/content/:id/cited-by-posts (論文側の逆引き投影・O(n)全件走査)", () => {
+  it("集める: cite_refs(type=paper,id=論文)を持つ投稿だけを横断して返す(索引は無い=全 plaza post を走査)", async () => {
+    const bucket = new FakeR2Bucket();
+    const paper = await createContent(bucket, {
+      content_id: "PAP-CITED-1", content_type: "paper", title: "Cited paper",
+      sections: {
+        purpose: { filled: false, text: "" }, hypothesis: { filled: false, text: "" },
+        conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+        phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+      },
+      completeness_pct: 0,
+    });
+    expect(paper.status).toBe(201);
+    const citing = await post(bucket, "/api/v1/plaza/posts", {
+      channel: "c-ppr08rev", board_kind: "guide", topic: "citing thread", body: "見て", cite_refs: [{ type: "paper", id: "PAP-CITED-1" }],
+    });
+    expect(citing.status).toBe(201);
+    const { post_id: citingPostId, thread_id: citingThreadId } = (await citing.json()) as { post_id: string; thread_id: string };
+    // a post citing a DIFFERENT paper must not show up.
+    await post(bucket, "/api/v1/plaza/posts", {
+      channel: "c-ppr08rev", board_kind: "guide", topic: "unrelated", body: "別件", cite_refs: [{ type: "paper", id: "PAP-OTHER" }],
+    });
+
+    const res = await get(bucket, "/api/v1/research/content/PAP-CITED-1/cited-by-posts");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { content_id: string; citing_posts: { post_id: string; thread_id: string; channel: string }[] };
+    expect(body.content_id).toBe("PAP-CITED-1");
+    expect(body.citing_posts).toEqual([{ post_id: citingPostId, thread_id: citingThreadId, channel: "c-ppr08rev" }]);
+  });
+
+  it("404s for an unknown content_id", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await get(bucket, "/api/v1/research/content/nope/cited-by-posts");
+    expect(res.status).toBe(404);
+  });
+
+  it("no citing posts -> empty array (not an error)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, {
+      content_id: "PAP-LONELY", content_type: "paper", title: "Uncited",
+      sections: {
+        purpose: { filled: false, text: "" }, hypothesis: { filled: false, text: "" },
+        conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+        phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+      },
+      completeness_pct: 0,
+    });
+    const res = await get(bucket, "/api/v1/research/content/PAP-LONELY/cited-by-posts");
+    const body = (await res.json()) as { citing_posts: unknown[] };
+    expect(body.citing_posts).toEqual([]);
+  });
+});
+
+describe("V3-PPR-03 POST /research/content: filled:true な section の text 空は400で拒否", () => {
+  it("filled:true かつ text が空文字だと INVALID_SECTION_FILLED_WITHOUT_TEXT で400", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await createContent(bucket, {
+      content_id: "PAP-PPR03-1", content_type: "paper", title: "Bad section",
+      sections: { purpose: { filled: true, text: "" } },
+      completeness_pct: 0,
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; details: string[] };
+    expect(body.error).toBe("INVALID_SECTION_FILLED_WITHOUT_TEXT");
+    expect(body.details[0]).toContain("purpose");
+  });
+
+  it("filled:true かつ text が空白のみでも同様に400で拒否", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await createContent(bucket, {
+      content_id: "PAP-PPR03-2", content_type: "paper", title: "Whitespace section",
+      sections: { gap: { filled: true, text: "   " } },
+      completeness_pct: 0,
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("INVALID_SECTION_FILLED_WITHOUT_TEXT");
+  });
+
+  it("filled:true かつ text ありなら201で通る(既存の正常系が壊れていないことの確認)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await createContent(bucket, {
+      content_id: "PAP-PPR03-3", content_type: "paper", title: "Good section",
+      sections: {
+        purpose: { filled: true, text: "目的が書いてある" },
+        hypothesis: { filled: false, text: "" }, conditions: { filled: false, text: "" },
+        verification: { filled: false, text: "" }, phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+      },
+      completeness_pct: 17,
+    });
+    expect(res.status).toBe(201);
+  });
+});

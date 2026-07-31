@@ -37,6 +37,10 @@ export interface GovVote {
    */
   rank_to?: string;
   /**
+   * 所属プロジェクトID（V3-IND-23・projectHub拡張・任意=全optional・必須化は不可逆のため禁止）。
+   */
+  project_id?: string;
+  /**
    * 投票時刻（RFC3339）。
    */
   created_at: string;

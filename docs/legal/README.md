@@ -20,6 +20,8 @@
 | `privacy-policy.md` | プライバシーポリシー | V3-SEC-25 / V3-SEC-27 |
 | `terms-version-management.md` | 版管理・再同意フロー・scroll gate・暗黙同意廃止の運用文書 | V3-SEC-23 |
 | `human-review-checklist.md` | 公開前に人間(弁護士/経営)が確認すべきチェックリスト | V3-SEC-25 |
+| `self-hosted-responsibility.md` | 自己ホスト版/クラウド提供版の責任分界(追加条文案) | V3-SEC-26 |
+| `market-transparency-clause.md` | マーケット決済のprojectId紐付け・公開情報条文(追加条文案・文書側のみ) | V3-MKT-55 |
 
 ## 三形態の関係(V3-SEC-21)
 

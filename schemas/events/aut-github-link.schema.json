@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/aut-github-link.schema.json",
+  "title": "GitHub account link (ihl.aut.github_link.v1)",
+  "description": "GitHubユーザー名とIHLユーザー(actor_id)の対応表 append-only 行（V3-AUT-38・bridgeplan J1-6で設計確定）。Truth キー truth/ihl.aut.github_link.v1/<github_login>/<link_id>.json（login prefixで全件走査を回避）。既存の汎用マッピング型は0件だったため新規1本（前波 R0731-7b0c89 の実物確認で確定済み）。mapping未設定の github_login からのwebhookはanonymousプールへ入れる（本スキーマにレコードが無い＝未マッピングと判定・route側の責務）。",
+  "x_ihl_req": "V3-AUT-38",
+  "x_ihl_source": "kits/lane-think/R0731-4cb9f2-REPORT-2026-07-31-bridgeplan.md §J1-6",
+  "type": "object",
+  "required": ["link_id", "github_login", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "link_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "このリンク行の一意キー（ULID）。"
+    },
+    "github_login": {
+      "type": "string",
+      "minLength": 1,
+      "description": "GitHub側のユーザー名（webhook sender.login と同一値・Truth キーのprefix）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対応付け先のIHL actor_id。"
+    },
+    "linked_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "この対応付けを確定した actor_id（本人確定操作・セッション principal 強制・V3-AUT-17・任意=actor_id本人操作なら省略可）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "対応付け確定時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

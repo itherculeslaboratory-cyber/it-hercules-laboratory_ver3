@@ -6,7 +6,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { projectLedger } from "./ledger-routes";
+import { projectLedger, grantKarmaCountIncrease } from "./ledger-routes";
 import { reduceMarket } from "./market-settlement";
 import { loadTxns } from "./market-routes";
 import {
@@ -14,6 +14,20 @@ import {
   LOW_RATING_KARMA_MAX,
   LOW_RATING_STAR_MAX,
 } from "./economy-constants";
+
+// V3-KRM-08(design19 §T1-1)。カルマ減点は「問題行為(詐欺・故意の未発送/未入金・
+// 誹謗中傷・虚偽レビュー・法律違反・差別)」のみを対象とし、死着・梱包が雑等の
+// 結果論・文化差・不可抗力では減点しない、という「思想」区分の制約をロジックに
+// 反映するための tags 語彙(mkt-rating.tags は既存の自由文字列配列・スキーマ変更0)。
+export const MISCONDUCT_TAGS = [
+  "fraud", // 詐欺
+  "no_ship_no_pay", // 故意の未発送/未入金
+  "harassment", // 誹謗中傷
+  "fake_review", // 虚偽レビュー
+  "illegal", // 法律違反
+  "discrimination", // 差別
+] as const;
+const RATING_MISCONDUCT_KARMA_STEPS = 1;
 
 const RATING_TYPE = "ihl.mkt.rating.v1";
 const RATING_SCHEMA = "schemas/events/mkt-rating.schema.json";
@@ -130,21 +144,61 @@ marketRatingRoutes.post("/market/ratings", async (c) => {
     schema_version: SCHEMA_VERSION,
   };
   if (reason) data.reason = reason;
-  if (Array.isArray(body?.tags)) data.tags = (body?.tags as unknown[]).filter((t) => typeof t === "string");
+  const tags = Array.isArray(body?.tags) ? (body?.tags as unknown[]).filter((t) => typeof t === "string") : [];
+  if (tags.length > 0) data.tags = tags;
   if (typeof body?.comment === "string") data.comment = body.comment;
 
-  const res = await store(c).putEvent(envelope(id, raterId, data));
+  const s = store(c);
+  const res = await s.putEvent(envelope(id, raterId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_RATING", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_RATING", key: res.key }, 409);
+
+  // V3-KRM-08: grade=bad かつ tags が問題行為に該当する時だけ減点(結果論・文化差・
+  // 不可抗力では減点しない)。karma対象は評価された側(rateeId)。
+  if (grade === "bad" && tags.some((t) => (MISCONDUCT_TAGS as readonly string[]).includes(t))) {
+    await grantKarmaCountIncrease(s, rateeId, RATING_MISCONDUCT_KARMA_STEPS, "other");
+  }
+
   return c.json({ rating_id: id }, 201);
 });
 
+// V3-KRM-22①(design19 §T1-1)。相手ページへのリンク先(profile_url)を組み立てる
+// だけの純関数 — 実ページ経路は本レーンglob外のフロント側が決めるため、この API
+// 自体を「相手の評価集計を引ける経路」として指すに留める(自己参照ループ)。
+function counterpartLink(actorId: string): { actor_id: string; profile_url: string } {
+  return { actor_id: actorId, profile_url: `/market/users/${actorId}/ratings` };
+}
+
 // GET /market/users/{actor}/ratings — 公開の評価集計 + 低評価フィルタ(MKT-27)。
 // karma は被評価者の投影値を読む(good/normal/bad と分離・投影で都度導出)。
+// ★V3-KRM-22①(design19 §T1-1)= 「相手が悪いと言った/言われた回数・悪くないと
+// 言った/言われた回数」の4カウントと相手ページへのリンクを mkt-rating の上に
+// 投影として追加(mkt-rating スキーマは1文字も変えない・MKT-27の資産を再利用)。
 marketRatingRoutes.get("/market/users/:actor/ratings", async (c) => {
   const actor = c.req.param("actor");
   const s = store(c);
   const summary = await projectRating(s, actor);
   const { karma_value } = await projectLedger(s, actor);
-  return c.json({ ...summary, karma_value, low_rating: lowRatingFlag(summary, karma_value) });
+
+  const all = (await s.listEvents(`truth/${RATING_TYPE}/`)).map(dataOf);
+  const saidByMe = all.filter((d) => d.rater_id === actor);
+  const saidAboutMe = all.filter((d) => d.ratee_id === actor);
+  const saidBadRows = saidByMe.filter((d) => d.grade === "bad");
+  const saidNotBadRows = saidByMe.filter((d) => d.grade !== "bad");
+  const wasSaidBadRows = saidAboutMe.filter((d) => d.grade === "bad");
+  const wasSaidNotBadRows = saidAboutMe.filter((d) => d.grade !== "bad");
+
+  return c.json({
+    ...summary,
+    karma_value,
+    low_rating: lowRatingFlag(summary, karma_value),
+    said_bad: saidBadRows.length,
+    said_not_bad: saidNotBadRows.length,
+    was_said_bad: wasSaidBadRows.length,
+    was_said_not_bad: wasSaidNotBadRows.length,
+    said_bad_counterparts: saidBadRows.map((d) => counterpartLink(String(d.ratee_id))),
+    said_not_bad_counterparts: saidNotBadRows.map((d) => counterpartLink(String(d.ratee_id))),
+    was_said_bad_counterparts: wasSaidBadRows.map((d) => counterpartLink(String(d.rater_id))),
+    was_said_not_bad_counterparts: wasSaidNotBadRows.map((d) => counterpartLink(String(d.rater_id))),
+  });
 });

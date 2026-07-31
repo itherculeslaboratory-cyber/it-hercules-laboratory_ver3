@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/citation-link.schema.json",
+  "title": "Citation link (ihl.citation.link.v1)",
+  "description": "論文(content)↔板(plaza thread/post)↔観測↔論文…のあらゆる方向の構造化リンクを、content.schema.json 自体は一切変更せず別イベントストリームとして記録する append-only 行（V3-PPR-08・bridgeplan J1-3で設計確定）。Truth キー truth/ihl.citation.link.v1/<content_id>/<link_id>.json。既存の CiteRef（cite-ref.schema.json）をそのまま target_ref に流用するため、リンク先の種別（post/thread/observation/individual/paper 等）は新規enumを増やさず既存12+4値をそのまま使い回す。査読コメント（BBSレビュー層）は本スキーマの対象外＝新規スキーマ0本のまま既存 plaza-post をそのまま使う（bridgeplan J1-3）。",
+  "x_ihl_req": "V3-PPR-08",
+  "x_ihl_source": "kits/lane-think/R0731-4cb9f2-REPORT-2026-07-31-bridgeplan.md §J1-3",
+  "type": "object",
+  "required": ["link_id", "content_id", "target_ref", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "link_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "このリンク行の一意キー（ULID）。"
+    },
+    "content_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "起点となる論文（Living Paper）の content_id（schemas/events/content.schema.json 側の正本を参照するのみ・当該ファイルは書き換えない）。"
+    },
+    "target_ref": {
+      "$ref": "cite-ref.schema.json"
+    },
+    "link_kind": {
+      "type": "string",
+      "enum": ["cites", "discussed_in", "derived_from", "responds_to"],
+      "description": "リンクの意味種別（任意・省略時は単純な相互参照として扱う）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "このリンクを記録した actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "記録時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

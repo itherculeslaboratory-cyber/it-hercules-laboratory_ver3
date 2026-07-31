@@ -21,6 +21,11 @@ export const LEARNING_RATE = 0.1;
 /** AUC threshold for a "valid"/converged preference model (IND-08). */
 export const MATCH_AUC_VALID_THRESHOLD = 0.7;
 
+/** V3-IND-09「N問到達での打ち切り」— Pairwise比較(②)の進捗チップ/打ち切り目安の
+ * 質問数。要件本文・design35とも具体数は未確定のため、UX慣例値(10問前後)を暫定既定
+ * として置く(人間裁定で差し替え可・PATCH機構は未実装のためこの定数を直接編集する)。 */
+export const IND09_PAIRWISE_QUESTION_TARGET = 10;
+
 /** V3-UIX-21: 検索結果への好み(preference)ブレンド比率。OBS-11 の compositeScore
  * (embedding/color/size/lineage・ADR-H-12・sum=1.0)は変更せず、その結果へ追加で
  * 上書きブレンドする独立レイヤーとして personalize=true 時のみ効かせる(既定 rerank

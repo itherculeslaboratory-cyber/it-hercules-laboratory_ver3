@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/krm-feedback.schema.json",
+  "title": "KRM feedback event (ihl.krm.feedback.v1)",
+  "description": "取引に紐づかない一般ユーザー評価の append-only イベント（V3-KRM-22②）。Truth キー truth/ihl.krm.feedback.v1/<feedback_id>.json。×/-/◯(grade)+理由(reason)+対象(target_actor_id)を記録する。「decision/creation/style model の自動更新」は外部AIではなく match-preference.schema.json と同型の学習率つき重みベクトル更新（純関数）で行う（design19 T1-1 案A）。取引(listing)に紐づく評価は別要件(V3-MKT-27・mkt-rating.schema.json)であり、本スキーマと混同しない。",
+  "x_ihl_req": "V3-KRM-22",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-1",
+  "type": "object",
+  "required": ["feedback_id", "actor_id", "target_actor_id", "grade", "created_at", "schema_version"],
+  "properties": {
+    "feedback_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "フィードバックイベントの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "評価者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "target_actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "評価対象の actor_id。"
+    },
+    "grade": {
+      "type": "string",
+      "enum": ["bad", "normal", "good"],
+      "description": "×/-/◯ の3値評価（mkt-rating.schema.json の grade 語彙と揃える）。"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "評価理由。grade=bad のとき必須（if/then）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": { "grade": { "const": "bad" } },
+    "required": ["grade"]
+  },
+  "then": {
+    "required": ["reason"]
+  }
+}

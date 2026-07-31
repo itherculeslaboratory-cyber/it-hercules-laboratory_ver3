@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-datasource.schema.json",
+  "title": "Observation DataSource declaration event (ihl.obs.datasource.v1)",
+  "description": "外部API/センサーを宣言的に登録する DataSource ノードの append-only イベント（V3-OBS-64・★R64-7裁定によりこの最小版のスコープは『外部APIを1つ domain=datasource として登録できる』まで。Workerを自動で動かす domain=law の Law ノードは対象外）。★秘密フィールドを1つも持たない — headers は Authorization/APIキー等の認証情報を含まない非秘密ヘッダのみを保存する（サーバー側に秘密を保管しない・第20回裁定DK-1・V3-SEC-03整合）。認証が要る外部APIは本スキーマでは自動取得できず、利用者端末側での取得を要する（design19 T1-10 案A）。既存 obs-device.schema.json(V3-OBS-31・センサー実体)とは別要件であり、統合しない。",
+  "x_ihl_req": "V3-OBS-64",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-10",
+  "type": "object",
+  "required": ["datasource_id", "actor_id", "method", "url", "interval", "saveTo", "parser", "created_at"],
+  "properties": {
+    "datasource_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "DataSource ノードの一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "登録者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "method": {
+      "type": "string",
+      "minLength": 1,
+      "description": "HTTPメソッド（この最小版は認証不要の公開APIのみを想定）。"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "取得先URL。"
+    },
+    "interval": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "取得間隔（秒）。cron が interval で取得する（本番cron設定はインフラ作業・実装艦のglob外）。"
+    },
+    "saveTo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "取得結果の保存先キー/プレフィクス。"
+    },
+    "parser": {
+      "type": "string",
+      "minLength": 1,
+      "description": "応答のパース方式識別子。"
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "★秘密でない付随ヘッダのみ（例: Accept）。Authorization/APIキー等の認証情報を含めてはならない。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（任意）。"
+    }
+  },
+  "additionalProperties": false
+}

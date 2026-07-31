@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/krm-preference-template.schema.json",
+  "title": "KRM preference template version event (ihl.krm.preference_template.v1)",
+  "description": "価値観テンプレートの版イベント（append-only・V3-KRM-22③）。Truth キー truth/ihl.krm.preference_template.v1/<version_id>.json（envelope.id === version_id 規約・culture-template.schema.json と同じ fork 作法）。タグ項目ごとの『合わない/どちらとも/合う』(-1/0/+1) を items[] に持ち、forked_from で fork 元を記録、order で項目の並び替えを表現する（項目追加削除は新しい version として append）。書き込み経路は既存 POST /events を再利用し、新規 route は作らない（culture-template と同型）。",
+  "x_ihl_req": "V3-KRM-22",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-1",
+  "type": "object",
+  "required": ["template_id", "version_id", "author_actor_id", "items", "created_at", "schema_version"],
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "テンプレ系列の識別子（版をまたいで安定）。"
+    },
+    "version_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "版イベントの一意キー（ULID）。envelope.id と一致させる。"
+    },
+    "author_actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "版を打った actor_id。"
+    },
+    "items": {
+      "type": "array",
+      "description": "タグ項目ごとの3択評価。",
+      "items": {
+        "type": "object",
+        "required": ["tag", "value"],
+        "properties": {
+          "tag": { "type": "string", "minLength": 1, "description": "評価対象のタグ項目名。" },
+          "value": {
+            "type": "integer",
+            "enum": [-1, 0, 1],
+            "description": "合わない(-1)/どちらとも(0)/合う(+1)。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "order": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "タグ項目の表示順（tag 名の配列・任意）。"
+    },
+    "forked_from": {
+      "type": ["string", "null"],
+      "description": "親版の version_id（fork 元・任意 nullable）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -30,6 +30,11 @@ export interface GovDispute {
   respondent_id?: string;
   subject_ref?: CitationReferenceCiteRefSharedType;
   /**
+   * 紐付け先の種別（design35 §3 A-2。省略時は category から投影側で導出する対応表を使う・任意）。
+   */
+  anchor_type?:
+    "board_message" | "listing_engagement" | "listing" | "trade_private" | "trade_public_exchange" | "market_rating";
+  /**
    * 発言本文（message 時・任意）。
    */
   body?: string;
@@ -77,7 +82,11 @@ export interface CitationReferenceCiteRefSharedType {
     | "precedent"
     | "fork"
     | "url"
-    | "book";
+    | "book"
+    | "listing_engagement"
+    | "trade_private"
+    | "trade_public_exchange"
+    | "market_rating";
   /**
    * 引用先の一意キー（type ごとの ID 空間）。
    */

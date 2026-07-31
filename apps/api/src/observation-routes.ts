@@ -73,6 +73,9 @@ const QR_TYPE = "ihl.ind.qr.v1";
 // 不可侵・packages/truthはw2-obsのglob外)、同じ capture-prefix キー規約の別
 // レイヤーとして追記する(source-routes.ts projectLabEnvironmentAt と同型)。
 const PHOTO_META_TYPE = "ihl.obs.photo_meta.v1";
+// V3-OBS-64 R64-7最小版(design19 §T1-10・bridge2-addendum が obs-datasource.schema.json を追加)。
+const DATASOURCE_TYPE = "ihl.obs.datasource.v1";
+const DATASOURCE_SCHEMA = "schemas/events/obs-datasource.schema.json";
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -201,7 +204,25 @@ const CAPTURE_FIELDS = [
   "photo_conditions",
   "note",
   "devices", // OBS-17: DeviceBinding/Occupancy自動派生のトリガー(commit1回で完結)
+  "visibility", // V3-OBS-54段階2: 公開範囲(public/uid_linked/private・省略時public)
+  "species_candidate_gbif_id", // V3-OBS-04: GBIF canonical_id(候補根拠・任意)
+  "species_candidate_wikidata_qid", // V3-OBS-04: Wikidata Q番号(候補根拠・任意)
+  "product_ref", // V3-MKT-44(観測側): mkt-product-node.schema.json への参照(任意)
+  "lot_id", // V3-OBS-69: ロット別比較用(任意)
+  "version_id", // V3-OBS-69: Ver別比較用(任意)
 ] as const;
+
+// V3-OBS-54/A-8-b(AUT-15 観測閲覧READ公開化)の可視性判定(純関数)。
+// actorId が undefined = 未ログイン閲覧(AUT-15でREADがpublicになった場合の想定)。
+// private は本人(actor_id一致)のみ、uid_linked はログイン済みなら誰でも、
+// public・未指定(既定public)は誰でも見える。「routeがpublic」と「データがpublic」は
+// 別軸(発注書A-4整合)— この判定を通さずに visibility=private を露出させない。
+export function captureVisibleTo(cap: Record<string, unknown>, actorId: string | undefined): boolean {
+  const v = cap.visibility;
+  if (v === "private") return cap.actor_id === actorId;
+  if (v === "uid_linked") return actorId !== undefined;
+  return true;
+}
 
 /** OBS-12: booth_type は BOOTH_TYPES(fixed/portable)以外を許さない。未指定は許容。
  *  frozen obs-capture schema(additionalProperties:false)は拡張せず(schema変更+
@@ -592,11 +613,14 @@ obsRoutes.post("/observation/search", async (c) => {
   if (!body) return c.json({ error: "INVALID_BODY" }, 400);
 
   const topK = typeof body.top_k === "number" && body.top_k >= 1 ? Math.min(100, Math.floor(body.top_k)) : 10;
+  const searchActorId = c.get("actorId"); // A-8-b/AUT-15: undefined if未ログイン(将来のpublic化に備える)
 
   // ponytail: full capture-type prefix scan, O(n) per query — no resident index
   // (design-c3 §1 "R2 list→都度計算"). A projection index is a later rung if n grows.
   let candidates = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`)).map(dataOf);
   candidates.sort((a, b) => String(a.capture_id).localeCompare(String(b.capture_id)));
+  // V3-OBS-54段階2: 一覧投影から非公開を除外(research-content-routes.ts:235と同型)。
+  candidates = candidates.filter((x) => captureVisibleTo(x, searchActorId));
 
   // OBS-10 query 自身除外: never rank the query capture(s) against themselves.
   const prototypeIds = Array.isArray(body.prototype_capture_ids)
@@ -813,6 +837,58 @@ export async function suggestSpeciesCandidates(
   }
   return { candidates: [], method_used: "heuristic", degraded };
 }
+
+// ── V3-OBS-04: GBIF/Wikidata 外部ID取得(bridge艦がschemaへ追加済みの
+// species_candidate_gbif_id/species_candidate_wikidata_qidへの書き込み元)。
+// OBS-57のclip/vision chainと同じ「注入可能な非同期呼び出し・失敗はベストエフォート
+// 劣化(nullを返すだけでrouteは落とさない)」パターンを踏襲。fetcherを注入できるため
+// テストは実ネットワークに依存しない(pure以外の唯一の例外=I/O自体が目的の関数)。
+
+/** GBIF species/match APIから canonical usageKey(GBIF ID)を取得(ベストエフォート)。
+ *  一致なし/エラーはnull(誇張ゼロ・でっち上げない)。 */
+export async function lookupGbifCanonicalId(
+  scientificName: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string | null> {
+  try {
+    const res = await fetcher(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(scientificName)}`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as { usageKey?: number; matchType?: string };
+    if (body.matchType === "NONE" || typeof body.usageKey !== "number") return null;
+    return String(body.usageKey);
+  } catch {
+    return null;
+  }
+}
+
+/** Wikidata wbsearchentities APIからQ番号を取得(ベストエフォート)。 */
+export async function lookupWikidataQid(
+  scientificName: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string | null> {
+  try {
+    const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(scientificName)}&language=en&format=json&type=item&limit=1`;
+    const res = await fetcher(url);
+    if (!res.ok) return null;
+    const body = (await res.json()) as { search?: { id?: string }[] };
+    const id = body.search?.[0]?.id;
+    return typeof id === "string" && /^Q[0-9]+$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+// GET /observation/species-candidates/external-ids?scientific_name=... — V3-OBS-04:
+// GBIF/Wikidata照会結果を提示するのみ(確定・保存はしない)。クライアントが確認後、
+// POST /observation/captures の species_candidate_gbif_id/species_candidate_wikidata_qid
+// として明示的に送って初めてTruthへ入る(species_confirmed_by==="user"契約と同型・
+// 外部照会結果を自動確定しない)。
+obsRoutes.get("/observation/species-candidates/external-ids", async (c) => {
+  const name = c.req.query("scientific_name");
+  if (!name) return c.json({ error: "INVALID_QUERY", details: ["scientific_name required"] }, 400);
+  const [gbif_id, wikidata_qid] = await Promise.all([lookupGbifCanonicalId(name), lookupWikidataQid(name)]);
+  return c.json({ scientific_name: name, gbif_id, wikidata_qid });
+});
 
 // GET /observation/{capture_id}/species-suggestions — OBS-57 種候補提案(確定はしない・
 // 提示のみ)。CLIP/Vision未設定(既定)でもヒューリスティックのみで必ず完走する。
@@ -1329,11 +1405,28 @@ obsRoutes.post("/solid-observation/commit", async (c) => {
   return c.json({ capture_id: r.capture_id, committed: true, device_bindings: r.device_bindings }, 202);
 });
 
+// GET /observation/datasources — 本人スコープ一覧(V3-OBS-64)。
+// 批評ゲート指摘(重大1・GATE-2026-08-01-w-obs2): "/observation/:capture_id" の
+// 単一セグメントparam routeが後段(旧位置)にあると、Honoは登録順で照合するため
+// "datasources" もcapture_idとして食われて到達不能になる。既存の /observation/templates
+// 等と同じく、param routeより前に置く規約に合わせて移動した。
+obsRoutes.get("/observation/datasources", async (c) => {
+  const actorId = c.get("actorId");
+  const rows = (await store(c).listEvents(`truth/${DATASOURCE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.actor_id === actorId);
+  return c.json({ datasources: rows });
+});
+
 // GET /observation/{capture_id} — detail projection: capture + photos[].
 obsRoutes.get("/observation/:capture_id", async (c) => {
   const captureId = c.req.param("capture_id");
   const capture = await store(c).readEvent(`truth/${CAPTURE_TYPE}/${captureId}.json`);
   if (!capture) return c.json({ error: "NOT_FOUND" }, 404);
+  const cap0 = dataOf(capture);
+  // V3-OBS-54段階3/A-8-b: 非公開は未ログイン・他人には存在ごと隠す(NOT_FOUNDで統一・
+  // PRIVATE_FORBIDDEN等の専用エラーにすると「存在はする」が漏れるため404で揃える)。
+  if (!captureVisibleTo(cap0, c.get("actorId"))) return c.json({ error: "NOT_FOUND" }, 404);
   // capture-prefixed photo keys → prefix list, no full-type scan.
   const photos = (await store(c).listEvents(`truth/${PHOTO_TYPE}/${captureId}-`)).map(dataOf);
   const cap = dataOf(capture);
@@ -1348,7 +1441,14 @@ obsRoutes.get("/observation/:capture_id", async (c) => {
 
 // GET /observation/{capture_id}/image/{photo_id} — media blob.
 obsRoutes.get("/observation/:capture_id/image/:photo_id", async (c) => {
+  const captureId = c.req.param("capture_id");
   const photoId = c.req.param("photo_id");
+  // V3-OBS-54段階3/A-8-b: 画像取得も詳細routeと同じ可視性ゲートを通す(非公開の
+  // 画像だけ抜け道で見えてしまう事故を防ぐ)。
+  const capture = await store(c).readEvent(`truth/${CAPTURE_TYPE}/${captureId}.json`);
+  if (!capture || !captureVisibleTo(dataOf(capture), c.get("actorId"))) {
+    return c.json({ error: "NOT_FOUND" }, 404);
+  }
   const obj = await c.env.TRUTH.get(`media/photo/${photoId}`);
   if (!obj) return c.json({ error: "NOT_FOUND" }, 404);
   // OBS-38 低コスト改善①: 元画像も photo_id 毎に不変・URL再利用可能(重複fetch削減)。
@@ -1366,9 +1466,11 @@ obsRoutes.get("/observation/:capture_id/image/:photo_id", async (c) => {
 obsRoutes.get("/individuals/:individual_id/observations", async (c) => {
   const individualId = c.req.param("individual_id");
   const ref = `individual/${individualId}`;
+  const actorId = c.get("actorId"); // A-8-b/AUT-15: undefined if未ログイン
   const observations = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
     .map(dataOf)
-    .filter((d) => d.subject_ref === ref);
+    .filter((d) => d.subject_ref === ref)
+    .filter((d) => captureVisibleTo(d, actorId)); // V3-OBS-54段階2
   return c.json({ individual_id: individualId, observations });
 });
 
@@ -1420,6 +1522,192 @@ obsRoutes.get("/observation/:capture_id/environment", async (c) => {
   const deviceIds = Array.isArray(cap.devices) ? (cap.devices as unknown[]).filter((x): x is string => typeof x === "string") : [];
   const env = await projectEnvironmentForObservation(c.env.TRUTH, subjectRef, deviceIds);
   return c.json({ capture_id: captureId, ...env });
+});
+
+// ── V3-OBS-69(design19 §T1-12): 観測データの統計投影 — 保存せず純関数で都度計算する
+// (「自動進化エンジン」ではなく「投影による統計」と明記)。本ラウンドで実装できるのは
+// 自glob内(observation*)で完結する2種類のみ:①成長率(項目の時系列傾き)②湿度・温度相関。
+// ★未実装(範囲外・正直に明記): Ver別/ロット別比較はobs-capture schemaへの
+// lot_id/version_id追加(bridge2-addendum・design19 §T1-7)がまだ着地していないため
+// 対象フィールドが無く実装不可(bridge3待ち)。生存率は個体の生死判定(life-events)が
+// w1-ind glob側の責務のため対象外(二重実装しない)。研究ギャップ検出はw-ind2側の
+// KRM-15成果(ppr-cycle-node)をそのまま使う想定でここでは作らない。画面はWave4(作らない)。
+
+/** V3-OBS-69 成長率: (最新値-最古値)/経過日数(単純線形)。2点未満・経過0日は
+ *  null(推測しない・誇張ゼロ)。 */
+export function projectGrowthRate(
+  points: { value: number; at: string }[],
+): { rate_per_day: number | null; n: number; from: string | null; to: string | null } {
+  const sorted = [...points]
+    .filter((p) => Number.isFinite(p.value) && !Number.isNaN(Date.parse(p.at)))
+    .sort((a, b) => a.at.localeCompare(b.at));
+  if (sorted.length === 0) return { rate_per_day: null, n: 0, from: null, to: null };
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  if (sorted.length < 2) return { rate_per_day: null, n: 1, from: first.at, to: first.at };
+  const days = (Date.parse(last.at) - Date.parse(first.at)) / 86_400_000;
+  if (!(days > 0)) return { rate_per_day: null, n: sorted.length, from: first.at, to: last.at };
+  return { rate_per_day: (last.value - first.value) / days, n: sorted.length, from: first.at, to: last.at };
+}
+
+/** V3-OBS-69 湿度・温度相関: Pearson相関係数。n<2 または一方の分散0は null。 */
+export function pearsonCorrelation(xs: number[], ys: number[]): number | null {
+  const n = Math.min(xs.length, ys.length);
+  if (n < 2) return null;
+  const xm = xs.slice(0, n).reduce((a, b) => a + b, 0) / n;
+  const ym = ys.slice(0, n).reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let dx2 = 0;
+  let dy2 = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - xm;
+    const dy = ys[i] - ym;
+    num += dx * dy;
+    dx2 += dx * dx;
+    dy2 += dy * dy;
+  }
+  if (dx2 === 0 || dy2 === 0) return null;
+  return num / Math.sqrt(dx2 * dy2);
+}
+
+/** V3-OBS-69 Ver別/ロット別比較: captureのlot_id/version_idでitem値をグルーピングし
+ *  平均を返す(比較のみ・保存しない)。lot_id/version_id未設定のcaptureは集計から
+ *  除外する(欠測をでっち上げない・0扱いしない)。 */
+export function groupMeanByField(
+  captures: { groupKey: string | undefined; value: number | null }[],
+): { group: string; mean: number; n: number }[] {
+  const byGroup = new Map<string, number[]>();
+  for (const { groupKey, value } of captures) {
+    if (!groupKey || value === null) continue;
+    (byGroup.get(groupKey) ?? byGroup.set(groupKey, []).get(groupKey)!).push(value);
+  }
+  return [...byGroup.entries()]
+    .map(([group, values]) => ({ group, mean: values.reduce((a, b) => a + b, 0) / values.length, n: values.length }))
+    .sort((a, b) => a.group.localeCompare(b.group));
+}
+
+// GET /individuals/{individual_id}/stats-projection?item=<measurement item> —
+// V3-OBS-69。都度計算のみ(保存しない=不変条項①)。OBS-54可視性ゲートを一覧投影と
+// 揃える(非公開captureを統計に混ぜない)。lot_id/version_idはbridge2-addendumが
+// obs-capture.schema.jsonへ追加済み(本ラウンドで着地・当初はbridge3待ちだったが
+// 作業中に landed したため実装した)。
+obsRoutes.get("/individuals/:individual_id/stats-projection", async (c) => {
+  const individualId = c.req.param("individual_id");
+  const ref = `individual/${individualId}`;
+  const actorId = c.get("actorId");
+  const item = c.req.query("item") ?? "";
+  const captures = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.subject_ref === ref)
+    .filter((d) => captureVisibleTo(d, actorId));
+
+  const points: { value: number; at: string }[] = [];
+  const temps: number[] = [];
+  const humids: number[] = [];
+  const byLot: { groupKey: string | undefined; value: number | null }[] = [];
+  const byVersion: { groupKey: string | undefined; value: number | null }[] = [];
+  for (const cap of captures) {
+    const pc = cap.photo_conditions as Record<string, unknown> | undefined;
+    const at = typeof pc?.captured_at === "string" ? pc.captured_at : String(cap.capture_id);
+    const v = item ? measureValue(cap, item) : null;
+    if (item && v !== null) points.push({ value: v, at });
+    if (typeof pc?.temp_c === "number") temps.push(pc.temp_c);
+    if (typeof pc?.humidity_pct === "number") humids.push(pc.humidity_pct);
+    if (item) {
+      byLot.push({ groupKey: typeof cap.lot_id === "string" ? cap.lot_id : undefined, value: v });
+      byVersion.push({ groupKey: typeof cap.version_id === "string" ? cap.version_id : undefined, value: v });
+    }
+  }
+
+  return c.json({
+    individual_id: individualId,
+    note: "投影による統計(保存せず都度計算)。生存率はw1-ind glob(life-events)側の責務のため対象外(二重実装しない)。研究ギャップ検出はw-ind2側のKRM-15成果をそのまま使う想定でここでは作らない。",
+    growth_rate: item ? projectGrowthRate(points) : null,
+    humidity_temp_correlation: pearsonCorrelation(temps, humids),
+    lot_comparison: item ? groupMeanByField(byLot) : [],
+    version_comparison: item ? groupMeanByField(byVersion) : [],
+  });
+});
+
+// ── V3-OBS-64(design19 §T1-10・R64-7最小版): 外部API/センサーを domain=datasource
+// のDataSourceノードとして登録・一覧・取得実行する。保存するのは method/url/interval/
+// saveTo/parser/秘密でないheadersのみ。★認証情報(Authorization/APIキー/トークン)は
+// 一切保存しない — ユーザーの×裁定(第20回裁定DK-1)を別名で作り直さないため、schemaの
+// description記述だけでなくroute側でもハードゲートする(FORBIDDEN_HEADER_KEYS)。
+// Lawノードは作らない(R64-7スコープ外)。本番cron設定(定期実行)はHQ直接の担当・
+// この艦の対象外(config/consented-crons.json = 人間ゲート)。
+
+const FORBIDDEN_HEADER_KEYS = /^(authorization|x-api-key|api-key|apikey|x-auth-token|cookie|proxy-authorization)$/i;
+
+/** headersオブジェクトに秘密っぽいキーが1つでも含まれるか(大小無視)。 */
+export function headersContainSecret(headers: unknown): boolean {
+  if (typeof headers !== "object" || headers === null) return false;
+  return Object.keys(headers as Record<string, unknown>).some((k) => FORBIDDEN_HEADER_KEYS.test(k));
+}
+
+// POST /observation/datasources — DataSource登録(V3-OBS-64)。
+obsRoutes.post("/observation/datasources", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return c.json({ error: "INVALID_BODY" }, 400);
+  if (headersContainSecret(body.headers)) return c.json({ error: "SECRET_HEADER_FORBIDDEN" }, 400);
+  const actorId = c.get("actorId");
+  const datasourceId = ulid();
+  const data: Record<string, unknown> = {
+    datasource_id: datasourceId,
+    actor_id: actorId,
+    method: body.method,
+    url: body.url,
+    interval: body.interval,
+    saveTo: body.saveTo,
+    parser: body.parser,
+    created_at: new Date().toISOString(),
+  };
+  if (body.headers !== undefined) data.headers = body.headers;
+  const res = await store(c).putEventAt(
+    `truth/${DATASOURCE_TYPE}/${datasourceId}.json`,
+    envelope(DATASOURCE_TYPE, datasourceId, DATASOURCE_SCHEMA, actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_DATASOURCE", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_DATASOURCE", key: res.key }, 409);
+  return c.json({ datasource_id: datasourceId }, 201);
+});
+
+/** V3-OBS-64 取得実行(fetcher注入・テスト時は実ネットワーク非依存)。保存はcaller
+ *  (route側)の責務にする — この関数はI/O結果を返すだけの薄いラッパー。 */
+export async function executeDatasourceFetch(
+  ds: { method: string; url: string; headers?: Record<string, string> },
+  fetcher: typeof fetch = fetch,
+): Promise<{ ok: boolean; status: number; body: string }> {
+  try {
+    const res = await fetcher(ds.url, { method: ds.method, headers: ds.headers });
+    const body = await res.text();
+    return { ok: res.ok, status: res.status, body };
+  } catch (e) {
+    return { ok: false, status: 0, body: e instanceof Error ? e.message : "fetch_failed" };
+  }
+}
+
+// POST /observation/datasources/{id}/execute — 1回分の取得実行(V3-OBS-64)。本番cronの
+// 定期実行配線はHQ担当(対象外)だが、cronが呼び出す実行本体はここに実装しておく
+// (「公開APIを1本登録し、cronがintervalで取得してsaveToに保存できる」の完了条件を
+// 満たす土台)。結果は saveTo プレフィクス配下へ生バイト列のまま保存する(パース処理
+// parser識別子ごとの分岐は本最小版では未実装=正直に明記)。
+obsRoutes.post("/observation/datasources/:id/execute", async (c) => {
+  const dsId = c.req.param("id");
+  const actorId = c.get("actorId");
+  const rec = await store(c).readEvent(`truth/${DATASOURCE_TYPE}/${dsId}.json`);
+  if (!rec) return c.json({ error: "NOT_FOUND" }, 404);
+  const d = dataOf(rec);
+  if (d.actor_id !== actorId) return c.json({ error: "NOT_FOUND" }, 404);
+  const result = await executeDatasourceFetch({
+    method: String(d.method),
+    url: String(d.url),
+    headers: (d.headers ?? undefined) as Record<string, string> | undefined,
+  });
+  const saveTo = String(d.saveTo);
+  const savedKey = result.ok ? `${saveTo}/${dsId}-${new Date().toISOString()}.json` : null;
+  if (savedKey) await store(c).putBlob(savedKey, new TextEncoder().encode(result.body), "application/json");
+  return c.json({ datasource_id: dsId, ok: result.ok, status: result.status, saved_key: savedKey });
 });
 
 // POST /individuals/{individual_id}/qr — issue an ind.qr.v1 token.

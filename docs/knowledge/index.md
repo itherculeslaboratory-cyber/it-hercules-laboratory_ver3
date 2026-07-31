@@ -12,6 +12,16 @@
 | 研究ノートモデル | [topics/research-notes-model.md](./topics/research-notes-model.md) | 論文 6 節スキーマ・5 ステップ進行・append-only 研究フロー（PROVISIONAL） |
 | 標準撮影チャンバー | [topics/shooting-chamber.md](./topics/shooting-chamber.md) | 全国参加者がスマホで同一品質のヘラクレス画像を撮る標準化撮影ボックス仕様 |
 | 文明の脳(統合検索RAG) | [topics/unified-search-rag.md](./topics/unified-search-rag.md) | 観測/wiki/掲示板/UI/テンプレートを同一384次元embedding空間で検索する多段複合検索設計(V3-AIP-90・新規ベクトルDBなし) |
+| ArticleNode言語レイヤー | [topics/article-node-language-layer.md](./topics/article-node-language-layer.md) | 論文/観測/種族・市場文化データから初心者向け記事を自動生成する設計ドラフト(V3-WIK-35・未実装) |
+
+## manifesto
+
+| name | link | 一文説明 |
+|---|---|---|
+| 技術宣言書(索引・スコープ明示) | [manifesto/README.md](./manifesto/README.md) | V3-BBS-32。3層(専門家/一般/動画台本)×日本語のみ作成、英語版・個別コンポーネント3パターン文書は未着手 |
+| 専門家向け | [manifesto/technical-manifesto-expert.md](./manifesto/technical-manifesto-expert.md) | AIファースト・Truth外部化・10年コスト最小・フォーク文化・人間ゲートの5原則 |
+| 一般向け(10歳でも分かる) | [manifesto/technical-manifesto-general.md](./manifesto/technical-manifesto-general.md) | 専門用語なしの平易版 |
+| ショート動画台本 | [manifesto/technical-manifesto-video-script.md](./manifesto/technical-manifesto-video-script.md) | 45〜60秒のショート動画台本ドラフト |
 
 ## sources
 
@@ -26,3 +36,4 @@
 | オープンクエスチョン | [open-questions.md](./open-questions.md) | 矛盾・ギャップ・次に調べること |
 | バンドル規約 | [CLAUDE.md](./CLAUDE.md) | OKF frontmatter・保存=index 追記・出典必須・境界 |
 | 更新ログ | [log.md](./log.md) | Initialization / Ingest / Lint 履歴 |
+| 3パターン設計書ガイド | [spec-pattern-guide.md](./spec-pattern-guide.md) | 属人化解消のためEngineer Spec先行→human/AI最適化版を派生させる執筆規約(V3-WIK-22) |

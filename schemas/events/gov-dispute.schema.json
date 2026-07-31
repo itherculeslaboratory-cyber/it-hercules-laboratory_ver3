@@ -35,6 +35,18 @@
     "subject_ref": {
       "$ref": "cite-ref.schema.json"
     },
+    "anchor_type": {
+      "type": "string",
+      "enum": [
+        "board_message",
+        "listing_engagement",
+        "listing",
+        "trade_private",
+        "trade_public_exchange",
+        "market_rating"
+      ],
+      "description": "紐付け先の種別（design35 §3 A-2。省略時は category から投影側で導出する対応表を使う・任意）。"
+    },
     "body": {
       "type": "string",
       "description": "発言本文（message 時・任意）。"

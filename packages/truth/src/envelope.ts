@@ -137,6 +137,22 @@ const VALIDATOR_NAME: Record<string, string> = {
   "mkt-store-order": "mktStoreOrder",
   // V3-PPR-14(残課題): Living Paper グラフ自動更新の永続履歴イベント型。
   "ppr-graph-update": "pprGraphUpdate",
+  // V3-PPR-08(bridgeplan J1-3): content.schema.json を変更せず論文↔板↔観測の双方向リンクを記録。
+  "citation-link": "citationLink",
+  // V3-AUT-38(bridgeplan J1-6): GitHubユーザー名↔IHL actor_id 対応表。
+  "aut-github-link": "autGithubLink",
+  // V3-PPR-24/25/03・BBS-02/18/25・OBS-51(design35 §A-5): content 以外の新しいノード型。
+  "ppr-cycle-node": "pprCycleNode",
+  // 2026-08-01 bridge2追補(design19由来の新規スキーマ9本)。
+  "krm-feedback": "krmFeedback",
+  "krm-preference-template": "krmPreferenceTemplate",
+  "auth-2fa-event": "auth2faEvent",
+  "mkt-pii-ref": "mktPiiRef",
+  "fnd-restore-applied": "fndRestoreApplied",
+  "fnd-sandbox-realm": "fndSandboxRealm",
+  "krm-title": "krmTitle",
+  "mkt-product-node": "mktProductNode",
+  "obs-datasource": "obsDatasource",
 };
 
 const FROZEN_NAMES = new Set([
@@ -265,6 +281,22 @@ const EVENT_NAMES = new Set([
   // V3-PPR-14 — data validation MUST fire or putEvent stores unchecked data
   // permanently (Truth is INSERT ONLY, unfixable).
   "ppr-graph-update",
+  // V3-PPR-08/V3-AUT-38/design35 §A-5 — data validation MUST fire or putEvent
+  // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
+  "citation-link",
+  "aut-github-link",
+  "ppr-cycle-node",
+  // 2026-08-01 bridge2追補(design19由来) — data validation MUST fire or putEvent
+  // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
+  "krm-feedback",
+  "krm-preference-template",
+  "auth-2fa-event",
+  "mkt-pii-ref",
+  "fnd-restore-applied",
+  "fnd-sandbox-realm",
+  "krm-title",
+  "mkt-product-node",
+  "obs-datasource",
 ]);
 
 function validatorFor(name: string): ValidateFn {

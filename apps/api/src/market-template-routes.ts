@@ -6,7 +6,8 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { RANKING_WEIGHTS } from "./economy-constants";
+import { RANKING_WEIGHTS, MKT36_FORK_CONTRIBUTION } from "./economy-constants";
+import { appendForkContribution } from "./contribution";
 
 const TEMPLATE_TYPE = "ihl.mkt.template.v1";
 const TEMPLATE_SCHEMA = "schemas/events/mkt-template.schema.json";
@@ -138,16 +139,33 @@ marketTemplateRoutes.get("/market/templates", async (c) => {
 });
 
 // POST /market/templates/{id}/fork — フォーク出品(forked_from=親で系譜連結・MKT-22)。
+// ★V3-MKT-36層3(フォーク10%貢献度分配・bridge波でcontribution.tsへappendForkContribution
+// フックを追加済み)。金銭側(FEE_FORK_REVENUE_RATE・market-settlement.ts)とは別軸で、
+// フォーク時点で actor 自身に development 軸の基礎貢献度を計上し、その10%を forked_from
+// の系譜(祖先まで遡る)へ均等分配する。
 marketTemplateRoutes.post("/market/templates/:id/fork", async (c) => {
   const parentId = c.req.param("id");
-  const parentEv = await store(c).readEvent(`truth/${TEMPLATE_TYPE}/${parentId}.json`);
+  const s = store(c);
+  const parentEv = await s.readEvent(`truth/${TEMPLATE_TYPE}/${parentId}.json`);
   if (!parentEv) return c.json({ error: "NOT_FOUND" }, 404);
   const parent = dataOf(parentEv);
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : `Fork of ${String(parent.title)}`;
   const bodyRef = typeof body.body_ref === "string" ? body.body_ref : undefined;
-  const { res, id } = await appendTemplate(c, c.get("actorId"), String(parent.kind), title, parentId, bodyRef);
+  const actorId = c.get("actorId");
+  const { res, id } = await appendTemplate(c, actorId, String(parent.kind), title, parentId, bodyRef);
   if (res.status === "invalid") return c.json({ error: "INVALID_TEMPLATE", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_TEMPLATE", key: res.key }, 409);
+
+  const existing = (await s.listEvents(`truth/${TEMPLATE_TYPE}/`)).map(dataOf) as {
+    template_id?: unknown;
+    forked_from?: unknown;
+  }[];
+  const nodes = [
+    ...existing.map((t) => ({ node_id: String(t.template_id ?? ""), forked_from: typeof t.forked_from === "string" ? t.forked_from : undefined })),
+    { node_id: id, forked_from: parentId },
+  ];
+  await appendForkContribution(s, actorId, nodes, id, "development", MKT36_FORK_CONTRIBUTION, "fork", parentId);
+
   return c.json({ template_id: id, forked_from: parentId }, 201);
 });

@@ -586,3 +586,106 @@ describe("thin routes: /research/review, /research/confidence, /research/hypothe
     expect(res.status).toBe(401);
   });
 });
+
+describe("V3-PPR-14 POST /research/content/:id/fork-template + update-history", () => {
+  function post(bucket: FakeR2Bucket, path: string, body: unknown, headers = AUTH_HEADERS): Promise<Response> {
+    return app.request(path, { method: "POST", headers, body: JSON.stringify(body) }, makeEnv(bucket));
+  }
+  function get(bucket: FakeR2Bucket, path: string): Promise<Response> {
+    return app.request(path, { headers: AUTH_HEADERS }, makeEnv(bucket));
+  }
+  async function seedTemplate(bucket: FakeR2Bucket): Promise<void> {
+    const res = await post(bucket, "/api/v1/research/content", {
+      content_id: "TEMPLATE-1",
+      content_type: "paper",
+      title: "Template paper",
+      sections: {
+        purpose: { filled: true, text: "p" }, hypothesis: { filled: false, text: "" },
+        conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+        phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+      },
+      completeness_pct: 17,
+      conditions: { temp: { min: 25, max: 30, required: true } },
+    });
+    expect(res.status).toBe(201);
+  }
+
+  it("forks sections/conditions from the source paper into a new content, records derived_from lineage + first update-history entry", async () => {
+    const bucket = new FakeR2Bucket();
+    await seedTemplate(bucket);
+    const fork = await post(bucket, "/api/v1/research/content/TEMPLATE-1/fork-template", { title: "My fork" });
+    expect(fork.status).toBe(201);
+    const forkBody = (await fork.json()) as { content_id: string; forked_from: string };
+    expect(forkBody.forked_from).toBe("TEMPLATE-1");
+
+    const forked = await get(bucket, `/api/v1/research/content/${forkBody.content_id}`);
+    const forkedBody = (await forked.json()) as { title: string; sections: Record<string, { filled: boolean }> };
+    expect(forkedBody.title).toBe("My fork");
+    expect(forkedBody.sections.purpose.filled).toBe(true); // copied from template
+
+    const history = await get(bucket, `/api/v1/research/content/${forkBody.content_id}/update-history`);
+    const historyBody = (await history.json()) as { updates: { triggered_by: string }[] };
+    expect(historyBody.updates.length).toBe(1);
+    expect(historyBody.updates[0].triggered_by).toBe("template_fork:TEMPLATE-1");
+  });
+
+  it("fork-template 404s for an unknown source id, 400s for a non-paper source", async () => {
+    const bucket = new FakeR2Bucket();
+    const notFound = await post(bucket, "/api/v1/research/content/nope/fork-template", {});
+    expect(notFound.status).toBe(404);
+
+    await post(bucket, "/api/v1/research/content", {
+      content_id: "ART-1", content_type: "article", title: "not a paper",
+    });
+    const wrongType = await post(bucket, "/api/v1/research/content/ART-1/fork-template", {});
+    expect(wrongType.status).toBe(400);
+  });
+});
+
+describe("V3-PPR-24/25 POST/GET /research/cycle-nodes (append-only, no update/delete route)", () => {
+  function post(bucket: FakeR2Bucket, path: string, body: unknown, headers = AUTH_HEADERS): Promise<Response> {
+    return app.request(path, { method: "POST", headers, body: JSON.stringify(body) }, makeEnv(bucket));
+  }
+  function get(bucket: FakeR2Bucket, path: string): Promise<Response> {
+    return app.request(path, { headers: AUTH_HEADERS }, makeEnv(bucket));
+  }
+
+  it("rejects an unknown node_type (only the 8 design35 §A-5 values are accepted)", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/cycle-nodes", { node_type: "not_a_real_type" });
+    expect(res.status).toBe(400);
+  });
+
+  it("knowledge_evidence keeps leading_hypotheses as an array (multiple co-existing theories, no single-winner field)", async () => {
+    const bucket = new FakeR2Bucket();
+    const created = await post(bucket, "/api/v1/research/cycle-nodes", {
+      node_type: "knowledge_evidence",
+      subject_ref: { type: "individual", id: "IND-1" },
+      sections: { leading_hypotheses: ["theory A", "theory B"] },
+    });
+    expect(created.status).toBe(201);
+    const { node_id } = (await created.json()) as { node_id: string };
+    const detail = await get(bucket, `/api/v1/research/cycle-nodes/${node_id}`);
+    const body = (await detail.json()) as { sections: { leading_hypotheses: string[] } };
+    expect(body.sections.leading_hypotheses).toEqual(["theory A", "theory B"]);
+  });
+
+  it("GET /research/cycle-nodes filters by node_type and subject_id", async () => {
+    const bucket = new FakeR2Bucket();
+    await post(bucket, "/api/v1/research/cycle-nodes", {
+      node_type: "hypothesis", subject_ref: { type: "paper", id: "P-1" },
+    });
+    await post(bucket, "/api/v1/research/cycle-nodes", {
+      node_type: "comment", subject_ref: { type: "paper", id: "P-1" },
+    });
+    await post(bucket, "/api/v1/research/cycle-nodes", {
+      node_type: "hypothesis", subject_ref: { type: "paper", id: "P-2" },
+    });
+    const byType = await get(bucket, "/api/v1/research/cycle-nodes?node_type=hypothesis");
+    expect(((await byType.json()) as { items: unknown[] }).items.length).toBe(2);
+    const bySubject = await get(bucket, "/api/v1/research/cycle-nodes?subject_id=P-1");
+    expect(((await bySubject.json()) as { items: unknown[] }).items.length).toBe(2);
+    const both = await get(bucket, "/api/v1/research/cycle-nodes?node_type=hypothesis&subject_id=P-1");
+    expect(((await both.json()) as { items: unknown[] }).items.length).toBe(1);
+  });
+});

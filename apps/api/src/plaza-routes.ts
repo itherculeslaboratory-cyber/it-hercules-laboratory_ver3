@@ -29,6 +29,12 @@ import {
 // 通貨方式)を再利用する。新規投票機構は作らない(round-16 裁定準拠)。
 import { projectPlatinumVoteTally, OFFICIAL_THRESHOLD_KEY, OFFICIAL_THRESHOLD_DEFAULT } from "./social-routes";
 import { resolvePolicyInt } from "./policy";
+// BBS-25(design35 §A-5): 統一ノードビューの実体は node-dispatch-routes.ts(bridge2 新設・
+// content/ppr-cycle-node/plaza-post の3型を1本のディスパッチャで振り分け)。plaza側の
+// /plaza/node/:post_id はこのディスパッチャを呼ぶだけにし、post 全走査ロジックを2重に
+// 持たない(reuse-first)。node-dispatch-routes.ts 自体はこの艦のglob外(bridge2所有)だが、
+// 既にexportされている関数を読み取りimportするだけなので越境ではない。
+import { dispatchNode } from "./node-dispatch-routes";
 
 const POST_TYPE = "ihl.plaza.post.v1";
 const POST_SCHEMA = "schemas/events/plaza-post.schema.json";
@@ -42,6 +48,11 @@ const SUMMARY_TYPE = "ihl.plaza.summary.v1";
 const SUMMARY_SCHEMA = "schemas/events/plaza-summary.schema.json";
 const RESOLUTION_TYPE = "ihl.plaza.resolution.v1";
 const RESOLUTION_SCHEMA = "schemas/events/plaza-resolution.schema.json";
+// V3-PPR-08(bridgeplan J1-3・design35): 論文↔板の双方向リンクを独立イベント列で持つ。
+// content.schema.json は1文字も触らない(citation-link.schema.json は bridge2 が新設済み・
+// この艦は既存スキーマを読み取り import するだけ=schemas/events/* を編集していない)。
+const CITATION_LINK_TYPE = "ihl.citation.link.v1";
+const CITATION_LINK_SCHEMA = "schemas/events/citation-link.schema.json";
 // gov.vote は K6-gov 側が書き込む。投影は読み取りだけ参照(fork ランク昇降/ランキング)。
 const VOTE_TYPE = "ihl.gov.vote.v1";
 const SCHEMA_VERSION = "1";
@@ -209,11 +220,43 @@ plazaRoutes.post("/plaza/posts", async (c) => {
   data.lang = (await projectPreferences(store(c), actorId)).locale;
 
   const key = `truth/${POST_TYPE}/${channel}/${threadId}/${postId}.json`;
-  const res = await store(c).putEventAt(key, envelope(POST_TYPE, POST_SCHEMA, postId, actorId, data));
+  const s = store(c);
+  const res = await s.putEventAt(key, envelope(POST_TYPE, POST_SCHEMA, postId, actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_POST", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_POST", key: res.key }, 409);
+  // V3-PPR-08(板側): 論文を引用する投稿は同時に citation-link イベントを1本 append する
+  // (content.schema.json は触らず独立イベント列に記録・bridgeplan J1-3どおり)。best-effort
+  // (citation-link の append 失敗は投稿自体の成功を道連れにしない=投稿本体が正)。
+  for (const ref of refs) {
+    if (ref.type !== "paper") continue;
+    await appendCitationLink(s, ref.id, actorId, { type: "thread", id: threadId }, "discussed_in").catch(() => {});
+  }
   return c.json({ post_id: postId, thread_id: threadId }, 201);
 });
+
+// appendCitationLink — V3-PPR-08 citation-link 1行を append(INSERT ONLY・削除不可)。
+// キー truth/ihl.citation.link.v1/<content_id>/<link_id>.json(bridgeplan J1-3 の設計どおり)。
+export async function appendCitationLink(
+  s: TruthStore,
+  contentId: string,
+  actorId: string,
+  targetRef: CiteRef,
+  linkKind?: "cites" | "discussed_in" | "derived_from" | "responds_to",
+): Promise<{ link_id: string } | null> {
+  const linkId = ulid();
+  const data: Record<string, unknown> = {
+    link_id: linkId,
+    content_id: contentId,
+    target_ref: targetRef,
+    actor_id: actorId,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (linkKind) data.link_kind = linkKind;
+  const key = `truth/${CITATION_LINK_TYPE}/${contentId}/${linkId}.json`;
+  const res = await s.putEventAt(key, envelope(CITATION_LINK_TYPE, CITATION_LINK_SCHEMA, linkId, actorId, data));
+  return res.status === "inserted" ? { link_id: linkId } : null;
+}
 
 // projectThread — thread の materialized view(ULID 昇順・correction_of は原投稿に
 // 追記畳込で両方保持・cite 欠落は tombstone に積むが cite_ref 自体は消さない・BBS-05)。
@@ -254,22 +297,43 @@ plazaRoutes.get("/plaza/threads/:thread_id", async (c) => {
 });
 
 // GET /plaza/threads/:thread_id/paper-citations — スレが引用する論文一覧(V3-PPR-08「掲示板↔
-// 論文」双方向リンクのうち板→論文方向の最小投影)。既存 cite_refs(type=paper)を集約するだけの
-// 薄い読み取り専用投影(新規スキーマ不要・都度再計算)。論文→板方向(査読コメントR2 append-only
-// レイヤーを含む完全な双方向リンク)は content.schema.json 側の変更を要し本艦glob外(w1-plaza所有
-// のplaza-routes.tsのみが本艦の許可範囲・contentスキーマは対象外)のため対象外。差し戻し(考える
-// 役)へ: 論文側からの逆参照フィールド設計は次波の設計判断。
-plazaRoutes.get("/plaza/threads/:thread_id/paper-citations", async (c) => {
-  const threadId = c.req.param("thread_id");
-  const view = await projectThread(store(c), threadId);
-  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+// 論文」双方向リンクのうち板→論文方向の投影)。[2026-08-01 w-plaza2追記] bridgeplan J1-3の
+// 指示どおり citation-link イベント経由に寄せた: (1) 引き続き post.cite_refs(type=paper)を
+// 集約(後方互換・既存投稿はcitation-link行を持たないため) (2) 新たに citation-link を
+// target_ref={type:"thread",id:threadId} で prefix scan し content_id を合算する
+// (POST /plaza/posts が論文引用時に自動 append する行・上記 appendCitationLink 参照)。
+// 論文→板方向(査読コメントR2 append-onlyレイヤーを含む完全な双方向リンク)は
+// content.schema.json 側の変更を要し本艦glob外のため対象外(bridgeplanどおり査読コメントは
+// 新規スキーマを作らずplaza-postをそのまま使う=/board/paperチャンネルへの投稿がそれ)。
+export async function projectPaperCitationsForThread(
+  s: TruthStore,
+  threadId: string,
+): Promise<{ thread_id: string; paper_ids: string[]; via_citation_link: string[] } | null> {
+  const view = await projectThread(s, threadId);
+  if (!view) return null;
   const paperIds = new Set<string>();
   for (const p of view.posts) {
     for (const ref of (p.cite_refs as CiteRef[] | undefined) ?? []) {
       if (ref.type === "paper") paperIds.add(ref.id);
     }
   }
-  return c.json({ thread_id: threadId, paper_ids: [...paperIds] });
+  // citation-link は content_id(論文側)でキー付けされている(truth/ihl.citation.link.v1/
+  // <content_id>/<link_id>.json)ため、板→論文方向の逆引きは全件走査になる(「index がある
+  // かのように書くな」=node-dispatch-routes.ts と同じ正直な注記)。
+  const links = (await s.listEvents(`truth/${CITATION_LINK_TYPE}/`)).map(dataOf);
+  const viaCitationLink = new Set<string>();
+  for (const l of links) {
+    const target = l.target_ref as CiteRef | undefined;
+    if (target?.type === "thread" && target.id === threadId) viaCitationLink.add(str(l.content_id));
+  }
+  for (const id of viaCitationLink) paperIds.add(id);
+  return { thread_id: threadId, paper_ids: [...paperIds], via_citation_link: [...viaCitationLink] };
+}
+
+plazaRoutes.get("/plaza/threads/:thread_id/paper-citations", async (c) => {
+  const view = await projectPaperCitationsForThread(store(c), c.req.param("thread_id"));
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json(view);
 });
 
 // projectChannelThreads — channel 内スレ一覧(thread ごと集約 + board_kind グルーピング・
@@ -1179,36 +1243,61 @@ plazaRoutes.get("/plaza/species/:species_id/book", async (c) => {
 // 既存 citeUrl/parseCiteTokens と同型で解決する。
 export interface PlazaNodeView {
   post_id: string;
-  node_type: string; // board_kind(paper の場合は paper_case を併記)
-  channel: string;
-  thread_id: string;
+  node_type: string; // plaza-post は board_kind(paper の場合は paper_case を併記)。
+  // content/ppr-cycle-node は dispatchNode の node_kind をそのまま使う。
+  channel: string; // plaza-post 以外は空文字(該当概念が無い)。
+  thread_id: string; // plaza-post 以外は空文字(該当概念が無い)。
   post: Record<string, unknown>;
-  backlinks: string[]; // この投稿を [ihl:cite type=post id=<post_id>] で引用している他 post_id
+  backlinks: string[]; // この id を [ihl:cite type=post id=<id>] で引用している他 post_id
 }
 
-export async function projectNodeView(s: TruthStore, postId: string): Promise<PlazaNodeView | null> {
-  const post = await findPostById(s, postId);
-  if (!post) return null;
-  const boardKind = str(post.board_kind);
-  const paperCase = paperCaseOf(post.tags);
-  const nodeType = paperCase ? `paper:${paperCase}` : boardKind || "thread";
+// projectNodeView — BBS-25「全投稿型を /node/:nodeId の統一ビューで表示する」の plaza側
+// 実装(design35 §A-5)。新しい保存場所は作らず、既存の統一ディスパッチャ(dispatchNode)を
+// 1回呼ぶだけにする。以前は plaza-post 専用の全走査ロジックをここに複製していたが
+// (62代目HQ検収の指摘=specimen/appeal/cancel等の他イベント型に未対応)、dispatchNode に
+// 寄せたことで content / ppr-cycle-node も同じ id 空間から解決できるようになった
+// (性能特性はdispatchNode側の注記どおり=content/ppr-cycle-nodeはO(1)・plaza-postのみO(n))。
+export async function projectNodeView(s: TruthStore, nodeId: string): Promise<PlazaNodeView | null> {
+  const dispatched = await dispatchNode(s, nodeId);
+  if (!dispatched) return null;
+
   const allPosts = (await s.listEvents(`truth/${POST_TYPE}/`)).map(dataOf);
   const backlinks = allPosts
-    .filter((p) => ((p.cite_refs as CiteRef[] | undefined) ?? []).some((r) => r.type === "post" && r.id === postId))
+    .filter((p) => ((p.cite_refs as CiteRef[] | undefined) ?? []).some((r) => r.type === "post" && r.id === nodeId))
     .map((p) => str(p.post_id));
+
+  if (dispatched.node_kind === "plaza-post") {
+    const post = dispatched.node;
+    const boardKind = str(post.board_kind);
+    const paperCase = paperCaseOf(post.tags);
+    const nodeType = paperCase ? `paper:${paperCase}` : boardKind || "thread";
+    return {
+      post_id: nodeId,
+      node_type: nodeType,
+      channel: str(post.channel),
+      thread_id: str(post.thread_id),
+      post,
+      backlinks,
+    };
+  }
+
+  // content / ppr-cycle-node: plaza 概念(channel/thread_id/board_kind)を持たないため
+  // 空文字のまま返す(存在しない概念を捏造しない)。node_type は dispatchNode の種別。
   return {
-    post_id: postId,
-    node_type: nodeType,
-    channel: str(post.channel),
-    thread_id: str(post.thread_id),
-    post,
+    post_id: nodeId,
+    node_type: dispatched.node_kind,
+    channel: "",
+    thread_id: "",
+    post: dispatched.node,
     backlinks,
   };
 }
 
 // GET /plaza/node/:post_id — BBS-25 統一ビュー(読み取り専用・cross-leak防止は既存
 // channel スコープ分離をそのまま踏襲=general/component の thread は channel が異なる
-// ため collectSearchThreads の channel 引数指定で漏れない)。
+// ため collectSearchThreads の channel 引数指定で漏れない)。[2026-08-01 w-plaza2追記]
+// dispatchNode 経由化により content / ppr-cycle-node の id もこのルートで解決できる
+// (以前は plaza-post のみ)。
 plazaRoutes.get("/plaza/node/:post_id", async (c) => {
   const view = await projectNodeView(store(c), c.req.param("post_id"));
   if (!view) return c.json({ error: "NOT_FOUND" }, 404);

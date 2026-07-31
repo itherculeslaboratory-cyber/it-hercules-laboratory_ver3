@@ -1,0 +1,52 @@
+# V3-AIP-71: 1-command Docker-only dev stack (no Node required on the host).
+# API = Cloudflare Worker via `wrangler dev --local` (apps/api). Web = Next.js
+# dev server (apps/web). Both bind 0.0.0.0 inside the container so the
+# docker-compose port mapping to the host actually works (the repo's own
+# package.json scripts default to 127.0.0.1, which is fine bare-metal but
+# unreachable from the host through Docker's port forwarding).
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /repo/apps/api
+    command: >-
+      npx wrangler dev --port 8787 --local --ip 0.0.0.0
+      --compatibility-date 2026-05-03
+    ports:
+      - "8787:8787"
+    volumes:
+      - .:/repo
+      - repo_node_modules:/repo/node_modules
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /repo/apps/web
+    command: npx next dev -H 0.0.0.0 -p 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/repo
+      - repo_node_modules:/repo/node_modules
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://127.0.0.1:8787
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(()=>process.exit(0)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+volumes:
+  repo_node_modules:

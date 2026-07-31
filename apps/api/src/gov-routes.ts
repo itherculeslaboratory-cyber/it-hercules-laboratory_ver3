@@ -8,23 +8,26 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { projectRanking, dedupVotes } from "./plaza-routes";
+import { projectRanking, dedupVotes, findPostById } from "./plaza-routes";
 import { requireRole } from "./authz";
 import { grantKarmaCountIncrease } from "./ledger-routes";
 import { revokeActor } from "./denylist";
 import { projectPreferences } from "./settings-routes";
-import { projectPt, PT_TYPE } from "./contribution";
+import { projectPt, PT_TYPE, tier, type ContributorTier, type Axis, projectContribution } from "./contribution";
 import {
   DISPUTE_TTL_DAYS,
   GOV_FLAG_COUNT_STEPS,
   OS_PROMOTION_MIN_SCORE,
   GOV_DISPUTE_VOTE_WINDOW_DAYS,
   GOV_DISPUTE_LOSER_KARMA_STEPS,
+  GOV_INDICTMENT_PT_FEE_EVERY,
 } from "./plaza-constants";
 import {
   GOV06_FORCE_CLOSE_DAYS,
   KRM09_MILESTONE_STEP,
   KRM09_MILESTONE_KARMA_STEPS,
+  KRM09_ZOMBIE_DISPUTE_THRESHOLD,
+  KRM09_ZOMBIE_PT_COST,
   GOV08_STAGE_KARMA_STEPS,
   GOV08_CATEGORY_KARMA_STEPS,
   GOV08_DEFAULT_CATEGORY_KARMA_STEPS,
@@ -155,16 +158,71 @@ govRoutes.get("/gov/os/promotion", async (c) => {
 });
 
 // ── Dispute 二人部屋(GOV-01)────────────────────────────────────────────────
+// V3-GOV-10(掲示板側): 既存 ihl.gov.dispute.v1 に category="board" で相乗り(bridgeplan J1-1で
+// 設計確定・新規スキーマ0本)。market-flag-routes.ts の maybeChargeIndictmentFee() と同型の
+// board版カウンタ。市場側の指摘件数とは完全に独立してカウントする(plaza-dispute-routes.ts:7-8
+// の「独立カウント」方針どおり)。
+async function maybeChargeBoardIndictmentFee(s: TruthStore, actorId: string): Promise<void> {
+  const all = (await s.listEvents(`truth/${DISPUTE_TYPE}/`)).map(dataOf);
+  const filings = all.filter(
+    (e) => e.actor_id === actorId && e.action === "open" && e.category === "board",
+  ).length;
+  if (filings > 0 && filings % GOV_INDICTMENT_PT_FEE_EVERY === 0) {
+    const id = ulid();
+    await s.putEvent({
+      specversion: "1.0",
+      id,
+      source: "apps/api",
+      type: PT_TYPE,
+      time: new Date().toISOString(),
+      dataschema: PT_SCHEMA,
+      provenance: { generator_kind: "human", actor_id: actorId },
+      data: {
+        pt_event_id: id,
+        actor_id: actorId,
+        delta: -1,
+        reason_code: "indictment_fee",
+        ref: "gov-dispute-board",
+        created_at: new Date().toISOString(),
+        schema_version: SCHEMA_VERSION,
+      },
+    });
+  }
+}
+
 // POST /gov/disputes — 紛争を open。キー truth/ihl.gov.dispute.v1/<dispute_id>/<event_id>.json。
-// open は category/respondent_id 必須(route 検証)。subject_ref は CiteRef 単一正本($ref)。
+// open は category必須(route検証)。respondent_id は通常直接指定(必須)だが、
+// category="board" かつ target_type/target_id 指定時は plaza-dispute-routes.ts(削除済み・
+// R64-1)が持っていた「投稿への指摘」導出(respondent=投稿者・自分の投稿は不可)を踏襲する
+// (V3-BBS-06/08 移植・tests/plaza-dispute.test.ts の振る舞いを tests/gov-dispute.test.ts へ
+// 移植済み)。subject_ref は CiteRef 単一正本($ref)— target_id 指定時は type=post/market_rating
+// で自動投影(body.subject_ref を明示指定していればそちらを優先)。
 // opener=actor_id はセッション principal 強制。不服申立 route は無い(思想)。
 govRoutes.post("/gov/disputes", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const category = str(body?.category);
-  const respondentId = str(body?.respondent_id);
   if (!category) return c.json({ error: "INVALID_DISPUTE", details: ["category required (open)"] }, 400);
-  if (!respondentId) return c.json({ error: "INVALID_DISPUTE", details: ["respondent_id required (open)"] }, 400);
   const actorId = c.get("actorId");
+  const s = store(c);
+
+  let respondentId = str(body?.respondent_id);
+  const targetId = str(body?.target_id);
+  const targetType = body?.target_type === "rating" ? "rating" : "post";
+  if (category === "board" && targetId) {
+    // V3-BBS-06 移植: target_type="post"(既定)は plaza post を指摘 → respondent は投稿者
+    // (自分の投稿は不可)。target_type="rating" は本ファイルが market-rating データを
+    // 所有しないため存在検証はせず respondent_id を呼び出し側に必須で要求する
+    // (plaza-dispute-routes.ts の元設計を踏襲・reuse-first)。
+    if (targetType === "post") {
+      const post = await findPostById(s, targetId);
+      if (!post) return c.json({ error: "NOT_FOUND" }, 404);
+      respondentId = str(post.actor_id);
+      if (respondentId === actorId) return c.json({ error: "CANNOT_DISPUTE_OWN_POST" }, 400);
+    } else if (!respondentId) {
+      return c.json({ error: "INVALID_DISPUTE", details: ["respondent_id required for target_type=rating"] }, 400);
+    }
+  }
+  if (!respondentId) return c.json({ error: "INVALID_DISPUTE", details: ["respondent_id required (open)"] }, 400);
   const disputeId = str(body?.dispute_id) || ulid();
   const eventId = ulid();
   const data: Record<string, unknown> = {
@@ -176,11 +234,16 @@ govRoutes.post("/gov/disputes", async (c) => {
     created_at: new Date().toISOString(),
     schema_version: SCHEMA_VERSION,
   };
-  if (body?.subject_ref !== undefined) data.subject_ref = body.subject_ref;
+  if (body?.subject_ref !== undefined) {
+    data.subject_ref = body.subject_ref;
+  } else if (category === "board" && targetId) {
+    data.subject_ref = { type: targetType === "rating" ? "market_rating" : "post", id: targetId };
+  }
   const key = `truth/${DISPUTE_TYPE}/${disputeId}/${eventId}.json`;
-  const res = await store(c).putEventAt(key, envelope(DISPUTE_TYPE, DISPUTE_SCHEMA, eventId, actorId, data));
+  const res = await s.putEventAt(key, envelope(DISPUTE_TYPE, DISPUTE_SCHEMA, eventId, actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_DISPUTE", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_DISPUTE", key: res.key }, 409);
+  if (category === "board") await maybeChargeBoardIndictmentFee(s, actorId);
   return c.json({ dispute_id: disputeId }, 201);
 });
 
@@ -365,6 +428,54 @@ export function milestoneKarmaSteps(cumulativeCount: number): number {
   return 0;
 }
 
+// V3-KRM-09(★批評是正版): ゾンビ攻撃対策。force_closed の累計(countForceClosedDisputesForActor
+// と同じ cumulative 値を呼び出し側から受け取る=二重に走査しない)が
+// KRM09_ZOMBIE_DISPUTE_THRESHOLD(=30)の倍数に到達した回だけプラチナコイン
+// KRM09_ZOMBIE_PT_COST(=1)枚を消費する(クールダウンなし)。maybeChargeBoardIndictmentFee
+// (GOV-10・掲示板/市場側の別カウント)と同型の書込パターンを踏襲するが、本関数は
+// force_closed の累計(zombie/未解決の兆候)を数える別径路であり、GOV-10のカウントとは
+// 独立(plaza-constants.ts:154-156「独立カウント」方針を踏襲)。PT残高不足でも紛争の
+// force-close自体はブロックしない(既に append 済みのイベントを遡って無効化はできない
+// =append-only の性質上、消費は非ブロッキングの後追い徴収。maybeChargeIndictmentFee/
+// maybeChargeBoardIndictmentFeeと同じ設計)。
+async function maybeChargeZombieDisputeFee(s: TruthStore, actorId: string, cumulativeForceClosed: number): Promise<void> {
+  if (cumulativeForceClosed > 0 && cumulativeForceClosed % KRM09_ZOMBIE_DISPUTE_THRESHOLD === 0) {
+    const id = ulid();
+    // reason_code は schemas/events/economy-pt-event.schema.json の enum に無い新語を
+    // 発明せず、既存 "indictment_fee"(V3-GOV-10 指摘手数料)を再利用する(schema は
+    // このレーンのglob外=追加不可。ref で zombie 経路であることを区別する)。
+    const data: Record<string, unknown> = {
+      pt_event_id: id,
+      actor_id: actorId,
+      delta: -KRM09_ZOMBIE_PT_COST,
+      reason_code: "indictment_fee",
+      ref: "gov-dispute-zombie-force-closed",
+      created_at: new Date().toISOString(),
+      schema_version: SCHEMA_VERSION,
+    };
+    await s.putEvent(envelope(PT_TYPE, PT_SCHEMA, id, actorId, data));
+  }
+}
+
+// V3-KRM-29(design19 §T1-6 案A・★批評是正版の対象外だが同ラウンドで実装)。3階層は role
+// 文字列を増やさず(requireRole の語彙は operator/administrator の2値のまま)、既存3軸
+// 貢献度スコアの閾値のみで判定する純関数。バッジ表示は KRM-17 の称号を再利用(二重に作らない)。
+// 論文共著権(paper_coauthor)は要件原文どおり自動付与しない(常に human)。それ以外の
+// contentKind はプロ研究者のみ自動承認(design19 §T1-6 の意図=最も信頼度の高い階層だけが
+// 自動ルートを持つ、を素直に反映。個別 contentKind ごとの粒度別ルールは一次資料に無いため
+// 発明しない=穴埋め禁止)。
+export function routeApproval(t: ContributorTier, contentKind: string): "auto" | "human" {
+  if (contentKind === "paper_coauthor") return "human"; // 論文共著権は人が決める(要件明示)
+  return t === "pro_researcher" ? "auto" : "human";
+}
+
+/** actor_id から直接判定する便宜関数(tierOf相当をここでprojectContribution 1回で行う)。 */
+export async function canApprove(s: TruthStore, actorId: string, contentKind: string): Promise<boolean> {
+  const { axes } = await projectContribution(s, actorId);
+  const scores = { research: axes.research.score, capital: axes.capital.score, development: axes.development.score } as Record<Axis, number>;
+  return routeApproval(tier(scores), contentKind) === "auto";
+}
+
 // POST /gov/disputes/:dispute_id/force-close — GOV-06「合意しなければ1ヶ月で強制
 // クローズ」の実行route(vote-resolveと同型:誰でも呼べる・実質の認可はTTL経過ゲート)。
 // deterministic key(force-close.json)のput-if-absentで二重実行を防ぐ(先勝ちで十分)。
@@ -402,6 +513,7 @@ govRoutes.post("/gov/disputes/:dispute_id/force-close", async (c) => {
     const cumulative = await countForceClosedDisputesForActor(s, participant);
     const steps = milestoneKarmaSteps(cumulative);
     if (steps > 0) await grantKarmaCountIncrease(s, participant, steps, "dispute", c.env.AUTH_DENYLIST);
+    await maybeChargeZombieDisputeFee(s, participant, cumulative);
   }
   return c.json({ dispute_id: disputeId, resolution: "force_closed" }, 201);
 });

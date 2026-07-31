@@ -4,7 +4,7 @@
 // data.actor_id をセッション principal で強制刻印(V3-AUT-17)。取引遷移(match/
 // transition)・決済連動は C4 対象外(matrix ver3_note)。
 import { Hono } from "hono";
-import { TruthStore, ulid, deriveTransferCode } from "@ihl/truth";
+import { TruthStore, ulid, deriveTransferCode, type PutEventResult } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import {
   reduceMarket,
@@ -24,6 +24,9 @@ import {
   pickLotteryWinner,
   rankPlatinumPriority,
   nextRelistPrice,
+  computePreferenceScore,
+  preferenceHighlights,
+  type PreferenceTagSpec,
   type RelistDiscountMode,
   type MarketKind,
   type MarketState,
@@ -169,6 +172,8 @@ marketRoutes.post("/market/listings", async (c) => {
   // HDR-1(c9-structure-canon.md §1c・A1#4): ヘッダー観測対象の任意タグ(plaza-post
   // species_id/SW-1と同型パススルー・ユーザー再入力なし)。
   if (typeof body?.species_id === "string" && body.species_id) data.species_id = body.species_id;
+  // V3-MKT-52(w-mkt2): 出品者所在国(任意・bridge2追加フィールド)。
+  if (typeof body?.country === "string" && body.country.trim()) data.country = body.country.trim();
 
   // round-16 OQ-MKT-02: 成立方式(既定=即決・省略可)。V3-IND-35: 予約 listing 化する
   // 親個体参照+応募単位しきい値(いずれも任意)。
@@ -214,6 +219,11 @@ marketRoutes.post("/market/listings", async (c) => {
 marketRoutes.get("/market/listings", async (c) => {
   const speciesFilter = (c.req.query("species") ?? "").trim().toLowerCase();
   const langFilter = (c.req.query("lang") ?? "").trim().toLowerCase();
+  // V3-MKT-52(w-mkt2): country は bridge2 が mkt-listing.schema.json へ追加した任意
+  // フィールド(検索用複合インデックスの唯一の欠落フィールドだった=schema comment参照)。
+  // lang/species と同じ完全一致(大小無視)フィルタで足りる(既存in-memoryフィルタ→
+  // ID順ソート→スライスの複合インデックスに country 軸を1本追加するだけ)。
+  const countryFilter = (c.req.query("country") ?? "").trim().toLowerCase();
   const cursor = (c.req.query("cursor") ?? "").trim();
   const limitRaw = Number(c.req.query("limit"));
   const limit = Number.isInteger(limitRaw) && limitRaw > 0 && limitRaw <= 200 ? limitRaw : 50;
@@ -222,6 +232,7 @@ marketRoutes.get("/market/listings", async (c) => {
     .map(dataOf)
     .filter((l) => !speciesFilter || (typeof l.species_id === "string" && l.species_id.toLowerCase() === speciesFilter))
     .filter((l) => !langFilter || (typeof l.lang === "string" && l.lang.toLowerCase() === langFilter))
+    .filter((l) => !countryFilter || (typeof l.country === "string" && l.country.toLowerCase() === countryFilter))
     .sort((a, b) => String(a.listing_id).localeCompare(String(b.listing_id)))
     .filter((l) => !cursor || String(l.listing_id) > cursor);
   const page = all.slice(0, limit);
@@ -237,6 +248,43 @@ marketRoutes.get("/market/listings", async (c) => {
   }
   const nextCursor = page.length === limit ? String(page[page.length - 1].listing_id) : undefined;
   return c.json({ listings, next_cursor: nextCursor });
+});
+
+// POST /market/listings/preference-sort — V3-MKT-09「好みスコアで並べ替え」。
+// design35実測: 純関数(computePreferenceScore/preferenceHighlights)は
+// market-settlement.ts に実装済みで、HTTPルートに配線されていないだけだった
+// (設計不要・配線のみ)。重み(specs)は決め打ちにせず呼び出し側(将来のGUI/フォーク)
+// が渡す(market-settlement.ts のコメント「係数は決め打ちしない」判断を踏襲)。
+// タグの生値(raw_values)も呼び出し側が渡す — listing 自体は price 以外の任意タグを
+// 保持しないため(現行スキーマは title/description/price/lang/species_id/country のみ)。
+marketRoutes.post("/market/listings/preference-sort", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const specs = body && typeof body.specs === "object" && body.specs !== null
+    ? (body.specs as Record<string, PreferenceTagSpec>)
+    : null;
+  const items = Array.isArray(body?.items)
+    ? (body.items as unknown[]).filter(
+        (it): it is { listing_id: string; raw_values?: Record<string, number> } =>
+          typeof it === "object" && it !== null && typeof (it as { listing_id?: unknown }).listing_id === "string",
+      )
+    : [];
+  if (!specs || items.length === 0) {
+    return c.json({ error: "INVALID_PREFERENCE_SORT", details: ["specs (object) and items[] (listing_id required) required"] }, 400);
+  }
+  const results = items
+    .map((it) => {
+      const { score, matchPercent, tagContributions } = computePreferenceScore(specs, it.raw_values ?? {});
+      const { strongestTag, weakestTag } = preferenceHighlights(tagContributions);
+      return {
+        listing_id: it.listing_id,
+        score,
+        match_percent: matchPercent,
+        strongest_tag: strongestTag,
+        weakest_tag: weakestTag,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+  return c.json({ results });
 });
 
 // GET /market/transactions/mine — 観測者が当事者の「取引中」一覧(round-16裁定②=取引中は
@@ -406,6 +454,33 @@ function systemTxnEnvelope(id: string, data: Record<string, unknown>) {
     provenance: { generator_kind: "agent", agent_name: "market-auto-cancel" },
     data,
   };
+}
+
+// ★V3-GOV-05(design35 §433)。gov-dispute(category=market・二人部屋)の争いが解決
+// (close/vote_resolve)した際、対象 listing の trade_event(ihl.mkt.transaction_event.v1)
+// へ dispute_resolved を追記するフック関数。kind="dispute_resolved" は listing state を
+// 動かさない経済副次イベント(tax_debt/tax_pay/fee_unpaidと同型)。呼び出し側(gov-routes.ts・
+// w-govのglob)は dispute close/vote_resolve のハンドラからこの関数を1回呼ぶだけでよい。
+// GOV-05本体(表示切替)は plaza-routes.ts の既存 correction_of で足りているため不要
+// (design35実測)。system actor 発行(人間操作ではなくdispute解決という他イベント起因の
+// 副次記録・V3-AUT-17例外)。
+export async function appendDisputeResolvedTradeEvent(
+  s: TruthStore,
+  listingId: string,
+  disputeId: string,
+  resolution?: string,
+): Promise<PutEventResult> {
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    transaction_event_id: id,
+    listing_id: listingId,
+    actor_id: SYSTEM_AUTO_ACTOR,
+    kind: "dispute_resolved",
+    payload: resolution ? { dispute_id: disputeId, resolution } : { dispute_id: disputeId },
+    created_at: new Date().toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  return s.putEventAt(`truth/${TXN_TYPE}/dispute-resolved-${safeKeyPart(disputeId)}.json`, systemTxnEnvelope(id, data));
 }
 
 // 取引イベントを append(actor_id はセッション principal 強制・V3-AUT-17)。data と

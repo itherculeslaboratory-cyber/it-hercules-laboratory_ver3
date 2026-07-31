@@ -135,4 +135,24 @@ export interface ObsCapture {
    * commit時に宣言するデバイスID配列（任意・V3-OBS-17）。宣言するとDeviceBinding/Occupancyの区間が自動派生され、専用binding APIを別途呼ぶ必要がない（commit1回で完結）。
    */
   devices?: string[];
+  /**
+   * 所属プロジェクトID（V3-IND-23・projectHub拡張・任意=全optional・必須化は不可逆のため禁止）。
+   */
+  project_id?: string;
+  /**
+   * 公開範囲（V3-OBS-54段階1・任意・省略時はpublic扱い）。判定ロジック（段階2/3）は別ラウンドで実装。
+   */
+  visibility?: "public" | "uid_linked" | "private";
+  /**
+   * MKT-44 ProductNode(mkt-product-node.schema.json の product_id)への参照（任意=全optional・必須化は不可逆のため禁止・design19 T1-7）。
+   */
+  product_ref?: string;
+  /**
+   * OBS-69 ロット別比較のロットID（任意=全optional・design19 T1-12）。
+   */
+  lot_id?: string;
+  /**
+   * OBS-69 Ver別比較のバージョンID（任意=全optional・design19 T1-12）。
+   */
+  version_id?: string;
 }

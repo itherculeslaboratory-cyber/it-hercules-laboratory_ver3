@@ -1,0 +1,11 @@
+# V3-AIP-71: shared dev image for docker-compose.yml. Builds once with
+# node_modules baked in, then docker-compose.yml bind-mounts the repo over it
+# and keeps this image's node_modules via an anonymous volume — so a
+# contributor never needs Node installed on the host, only Docker.
+FROM node:22-bookworm
+
+WORKDIR /repo
+COPY . .
+RUN npm install
+
+CMD ["sh", "-c", "sleep infinity"]

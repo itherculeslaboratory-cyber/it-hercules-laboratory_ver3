@@ -22,7 +22,11 @@
         "precedent",
         "fork",
         "url",
-        "book"
+        "book",
+        "listing_engagement",
+        "trade_private",
+        "trade_public_exchange",
+        "market_rating"
       ],
       "description": "引用先の種別（安定 URL 生成 citeUrl の分岐キー）。"
     },

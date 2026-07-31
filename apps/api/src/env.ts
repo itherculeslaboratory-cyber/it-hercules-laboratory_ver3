@@ -67,6 +67,23 @@ export type Bindings = {
   // 管理者判定(auth-routes.ts rolesForEmail)用のカンマ区切りメールアドレス一覧。
   // 未設定=管理者ロールなし(既定 degrade)。実値投入は人間ゲート(運用設定)。
   ADMIN_EMAILS?: string;
+  // V3-AIP-95 AI推論モードフラグ(design35 §3 A-3)。★既定は必ず stub — prod にすると
+  // 通常CIが課金経路を叩く(ユーザーが最も嫌うコスト=軸C に直撃)。常時prod強制は禁止。
+  // 通常CIはcontract/stubで回す(本番AIルートのテストは別途明示オプトインで実行する)。
+  // 未設定/stub 以外の値は全て stub 扱い(resolveAiMode参照・fail-safeはstub側)。
+  AI_MODE?: string;
+  // true でローカル(LocalAI等)優先、false/未設定で外部プロバイダ(OpenAI等)へ
+  // 切替可能という構造を表す設定値のみ(実プロバイダ配線はai-kernel.ts側の担当・
+  // 本ランはこのフラグを持つのみで配線しない=未帰属ファイルにつき不触)。
+  LOCALAI_ENABLED?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };
+
+// ── V3-AIP-95: AI推論モードの解決(既定stub・常時prod強制はしない) ─────────
+export type AiMode = "stub" | "prod";
+
+/** env.AI_MODE を解決する。"prod" 明示以外は全て stub(fail-safe側に倒す)。 */
+export function resolveAiMode(env: Pick<Bindings, "AI_MODE">): AiMode {
+  return env.AI_MODE === "prod" ? "prod" : "stub";
+}

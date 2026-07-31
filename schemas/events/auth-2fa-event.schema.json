@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/auth-2fa-event.schema.json",
+  "title": "Auth 2FA state event (ihl.auth.2fa.v1)",
+  "description": "TOTP/2FA の有効化・解除の事実イベント（append-only・V3-AUT-32）。Truth キー truth/ihl.auth.2fa.v1/<actor_id>-<ulid>.json。★TOTP seed は本スキーマに一切含まない（seed は削除可能な KV へ置き、Truth には『いつ有効化・解除したか』という監査事実だけを残す設計・design19 T1-2 案A）。",
+  "x_ihl_req": "V3-AUT-32",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-2",
+  "type": "object",
+  "required": ["actor_id", "action", "at"],
+  "properties": {
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象 actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["enabled", "disabled"],
+      "description": "2FA の有効化/解除。"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（任意）。"
+    }
+  },
+  "additionalProperties": false
+}

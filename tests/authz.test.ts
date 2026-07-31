@@ -5,7 +5,8 @@
 import { describe, expect, it } from "vitest";
 import { Hono } from "hono";
 import app from "../apps/api/src/index";
-import { requireRole } from "../apps/api/src/authz";
+import { requireRole, requireResourceRole, type ResourceRole } from "../apps/api/src/authz";
+import { requireSecondFactor } from "../apps/api/src/authz-critical-ops";
 import { issueSessionToken, verifySessionToken } from "../apps/api/src/session";
 import type { Variables } from "../apps/api/src/env";
 import { DEV_TOKEN, SESSION_SECRET, makeEnv } from "./helpers";
@@ -76,6 +77,83 @@ describe("V3-AUT-22 roles 配線が既存保護 route を壊さない", () => {
       { headers: { Authorization: `Bearer ${DEV_TOKEN}` } },
       makeEnv(),
     );
+    expect(res.status).toBe(200);
+  });
+});
+
+// design35 §3 A-4(統一authz・案A)。①システムロール(requireRole・上記)とは別軸の
+// ②リソースロール(owner/editor/viewer)を検証する requireResourceRole の機構テスト。
+describe("V3-AUT-24/26/28(design35 A-4) requireResourceRole(②リソースロール・機構)", () => {
+  function appWithResourceRole(role: ResourceRole | null, ...allowed: ResourceRole[]) {
+    const a = new Hono<{ Variables: Variables }>();
+    a.get(
+      "/node/:id",
+      requireResourceRole(() => role, ...allowed),
+      (c) => c.json({ ok: true }),
+    );
+    return a;
+  }
+
+  it("resolver が null(=対象ノードへのロール無し) → 403 FORBIDDEN", async () => {
+    const res = await appWithResourceRole(null, "owner").request("/node/1");
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "FORBIDDEN" });
+  });
+
+  it("resolver が allowed 外のロールを返す(viewerのみでeditor要求) → 403", async () => {
+    const res = await appWithResourceRole("viewer", "editor", "owner").request("/node/1");
+    expect(res.status).toBe(403);
+  });
+
+  it("resolver が allowed のいずれかを返す → 通過(200)", async () => {
+    const res = await appWithResourceRole("owner", "owner", "editor").request("/node/1");
+    expect(res.status).toBe(200);
+  });
+
+  it("resolver は非同期でもよい(Promise<ResourceRole|null>)", async () => {
+    const a = new Hono<{ Variables: Variables }>();
+    a.get(
+      "/node/:id",
+      requireResourceRole(async () => "editor", "editor"),
+      (c) => c.json({ ok: true }),
+    );
+    const res = await a.request("/node/1");
+    expect(res.status).toBe(200);
+  });
+});
+
+// V3-AUT-32(design19 §T1-2)。TOTP本体はw-aut2が別途持つ — ここは「重要操作ルートへ
+// 二段階確認ゲートを挟む」ミドルウェアの骨格のみを検証する(判定関数は呼び手が渡す)。
+describe("V3-AUT-32(design19 T1-2) requireSecondFactor(重要操作の二段階確認ゲート・機構)", () => {
+  function appWithSecondFactor(verified: boolean) {
+    const a = new Hono<{ Variables: Variables }>();
+    a.post(
+      "/account/delete",
+      requireSecondFactor(() => verified, "account_deletion"),
+      (c) => c.json({ ok: true }),
+    );
+    return a;
+  }
+
+  it("二段階確認が未済 → 401 SECOND_FACTOR_REQUIRED(op付き)", async () => {
+    const res = await appWithSecondFactor(false).request("/account/delete", { method: "POST" });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "SECOND_FACTOR_REQUIRED", op: "account_deletion" });
+  });
+
+  it("二段階確認が済んでいる → 通過(200)", async () => {
+    const res = await appWithSecondFactor(true).request("/account/delete", { method: "POST" });
+    expect(res.status).toBe(200);
+  });
+
+  it("resolver は非同期でもよい(Promise<boolean>)", async () => {
+    const a = new Hono<{ Variables: Variables }>();
+    a.post(
+      "/account/delete",
+      requireSecondFactor(async () => true, "email_change"),
+      (c) => c.json({ ok: true }),
+    );
+    const res = await a.request("/account/delete", { method: "POST" });
     expect(res.status).toBe(200);
   });
 });

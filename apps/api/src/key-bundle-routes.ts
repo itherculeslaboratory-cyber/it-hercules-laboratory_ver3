@@ -18,8 +18,28 @@ const SCHEMA_VERSION = "1";
 
 export const keyBundleRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+// V3-SEC-48 段階2(発注書 sec2・bridgeplan J3-B案A の段階1 policy?hook をこの1ファイルへ
+// 先行適用)。key-bundle は所有権が絶対(actor_id 本人以外は読めも書けもしない)ため、
+// owner不一致(=誰かが他人の actor_id 宛てに書こうとした)を最初に検証する1ドメインに選んだ。
+// 判定 = data.actor_id と provenance.actor_id の一致(=書こうとしている本人と、書き込み先の
+// 所有者が同一か)。TruthStore.writeOnce は違反時に既存の "invalid" ステータスへ乗せる
+// (新ステータスを追加すると既存呼び出し元が黙って成功扱いする=退行になるため・store.ts
+// のコメント参照)。段階3(約53ファイルへの一括展開)は別ラウンド — この艦はここまで。
+// PolicyHook は packages/truth 側の型と同じ形をここで直接宣言する(index.ts に型export
+// を1本追加するだけの変更でも、共有パッケージへ触るのは1ファイルで足りる作業には
+// 過剰と判断し、呼び出し側のシグネチャ整合だけで足りるこの形を選んだ)。
+function keyBundleOwnerPolicy(envelope: unknown, _key: string): string | null {
+  const e = envelope as { data?: { actor_id?: unknown }; provenance?: { actor_id?: unknown } };
+  const dataActorId = e.data?.actor_id;
+  const provenanceActorId = e.provenance?.actor_id;
+  if (dataActorId !== undefined && dataActorId !== provenanceActorId) {
+    return `owner mismatch: data.actor_id(${String(dataActorId)}) !== provenance.actor_id(${String(provenanceActorId)})`;
+  }
+  return null;
+}
+
 function store(c: { env: Bindings }): TruthStore {
-  return new TruthStore(c.env.TRUTH);
+  return new TruthStore(c.env.TRUTH, keyBundleOwnerPolicy);
 }
 function dataOf(e: Record<string, unknown>): Record<string, unknown> {
   return (e.data ?? {}) as Record<string, unknown>;

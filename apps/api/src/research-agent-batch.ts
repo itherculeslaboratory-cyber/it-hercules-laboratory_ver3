@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { DIFFICULTY } from "./research-constants";
+import { aggregateContentTags } from "./research-content-routes";
 
 export const researchAgentBatchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -18,7 +19,14 @@ const WIKI_TYPE = "ihl.research.wiki_node.v1";
 const WIKI_SCHEMA = "schemas/events/wiki-node.schema.json";
 const CONTENT_TYPE = "ihl.research.content.v1";
 const CONTENT_SCHEMA = "schemas/events/content.schema.json";
+// V3-KRM-15(MinorGapDetector・g64-design19 §T1-11由来・V3-IND-09と同型の再配属でこの艦が実装)。
+// bridge2がスキーマ追加済みの ppr-cycle-node へ node_type="research_gap" として結果を積む
+// (新規スキーマ0本)。
+const CYCLE_NODE_TYPE = "ihl.ppr.cycle_node.v1";
+const CYCLE_NODE_SCHEMA = "schemas/events/ppr-cycle-node.schema.json";
 const SCHEMA_VERSION = "1";
+// 視点タグ集合(定義済み3つで開始・残りを勝手に発明しない・パラメータ化はw-gov3が持つ)。
+const DEFINED_VIEWPOINT_TAGS = ["failure_case", "ethics", "cost"] as const;
 // バッチ生成物（新聞 content の actor_id 等）の系統 actor。手動 route は session principal を使う。
 const SYSTEM_ACTOR = "system:research-batch";
 
@@ -72,6 +80,9 @@ function humanEnvelope(type: string, schema: string, actorId: string, data: Reco
 
 function taskKey(taskId: string): string {
   return `truth/${TASK_TYPE}/${taskId}.json`;
+}
+function cycleNodeKey(nodeId: string): string {
+  return `truth/${CYCLE_NODE_TYPE}/${nodeId}.json`;
 }
 function wikiKey(nodeId: string): string {
   return `truth/${WIKI_TYPE}/${nodeId}.json`;
@@ -174,6 +185,97 @@ export async function generateTaskNodes(s: TruthStore, now: Date): Promise<numbe
   }
   return created;
 }
+
+// ── MinorGapDetector（V3-KRM-15）────────────────────────────────────────────────
+// 「AIが意味を理解して未開拓領域を発見する」のではなく、視点タグの欠落と件数だけで機械的に
+// 洗い出す（embedding不使用・外部AI0・費用0）。missing_viewpoints は定義済み視点タグ集合
+// (DEFINED_VIEWPOINT_TAGS)からの引き算。data_scarcity_score は紐づく観測/論文件数の逆数
+// (正規化・1/(1+n) で 0 除算を避けつつ (0,1] に収める)。シリーズ貢献ボーナス係数はw-gov3が
+// 持つ(contribution*・本関数はスコアのみ返す)。
+export interface MinorGap {
+  content_id: string;
+  missing_viewpoints: string[];
+  data_scarcity_score: number;
+  linked_count: number;
+}
+
+/**
+ * computeMinorGap — 1論文分の判定(純関数)。tags は3層タグ(system/ai/user)を合わせた集合、
+ * linkedCount は紐づく観測/論文の件数。欠落なし(0件)なら null(ギャップ無しは検出結果に含めない)。
+ */
+export function computeMinorGap(contentId: string, tags: Set<string>, linkedCount: number): MinorGap | null {
+  const missing = DEFINED_VIEWPOINT_TAGS.filter((t) => !tags.has(t));
+  if (missing.length === 0) return null;
+  return {
+    content_id: contentId,
+    missing_viewpoints: missing,
+    data_scarcity_score: 1 / (1 + Math.max(0, linkedCount)),
+    linked_count: linkedCount,
+  };
+}
+
+async function appendMinorGapNode(s: TruthStore, gap: MinorGap, now: Date): Promise<{ inserted: boolean }> {
+  // node_id は決定論(sha1)で冪等 — 同一 content_id×欠落集合の再検出で重複 append しない。
+  const nodeId = await sha1hex(`research_gap|${gap.content_id}|${gap.missing_viewpoints.slice().sort().join(",")}`);
+  const data: Record<string, unknown> = {
+    node_id: nodeId,
+    node_type: "research_gap",
+    subject_ref: { type: "paper", id: gap.content_id },
+    sections: {
+      summary: `missing_viewpoints: ${gap.missing_viewpoints.join(", ")}`,
+      evidence: `data_scarcity_score=${gap.data_scarcity_score.toFixed(4)} (linked_count=${gap.linked_count})`,
+    },
+    actor_id: SYSTEM_ACTOR,
+    created_at: now.toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  const res = await s.putEventAt(cycleNodeKey(nodeId), agentEnvelope(CYCLE_NODE_TYPE, CYCLE_NODE_SCHEMA, data, now.toISOString()));
+  return { inserted: res.status === "inserted" };
+}
+
+// detectMinorGaps — 全 paper を走査し、視点タグ欠落があるものについて (a) ppr-cycle-node
+// (node_type=research_gap) を append、(b) suggested_task として既存 task-node.schema
+// (source_kind="data_gap")を同じ subject へ append する(新しいタスク型を発明しない・PPR-17の
+// appendTask と同一パターンを再利用)。返り値は新規 insert 件数のみ(冪等な再実行は0を返す)。
+export async function detectMinorGaps(s: TruthStore, now: Date): Promise<{ gaps_found: number; nodes_created: number; tasks_created: number }> {
+  const papers = (await s.listEvents(`truth/${CONTENT_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.content_type === "paper")
+    .sort((a, b) => String(a.content_id).localeCompare(String(b.content_id)));
+  let gapsFound = 0;
+  let nodesCreated = 0;
+  let tasksCreated = 0;
+  for (const p of papers) {
+    const contentId = String(p.content_id);
+    const tagState = await aggregateContentTags(s, contentId);
+    const tags = new Set([...tagState.system_tags, ...tagState.ai_tags, ...tagState.user_tags]);
+    const citations = (Array.isArray(p.citations) ? p.citations : []) as { type?: string }[];
+    const observationLinks = citations.filter((c) => c.type === "observation").length;
+    const paperLinks = Array.isArray(p.cited_paper_ids) ? p.cited_paper_ids.length : 0;
+    const linkedCount = observationLinks + paperLinks;
+    const gap = computeMinorGap(contentId, tags, linkedCount);
+    if (!gap) continue;
+    gapsFound++;
+    const nodeRes = await appendMinorGapNode(s, gap, now);
+    if (nodeRes.inserted) nodesCreated++;
+    const taskRes = await appendTask(
+      s,
+      "data_gap",
+      contentId,
+      `Missing viewpoints: ${gap.missing_viewpoints.join(", ")} (data_scarcity_score=${gap.data_scarcity_score.toFixed(4)})`,
+      now,
+    );
+    if (taskRes.inserted) tasksCreated++;
+  }
+  return { gaps_found: gapsFound, nodes_created: nodesCreated, tasks_created: tasksCreated };
+}
+
+// POST /research/minor-gaps/detect — V3-KRM-15 手動トリガ(generateTaskNodes と同じ規約=
+// バッチ本体は関数として提供し、Cron定期配線は §6人間ゲートのまま手動routeのみ納品)。
+researchAgentBatchRoutes.post("/research/minor-gaps/detect", async (c) => {
+  const report = await detectMinorGaps(store(c), new Date());
+  return c.json(report);
+});
 
 // ── distillWiki（WIK-01）────────────────────────────────────────────────────────
 // 掲示板/論文 → board_summary → big_wiki の階層を決定論 append する。board = project_id（無ければ

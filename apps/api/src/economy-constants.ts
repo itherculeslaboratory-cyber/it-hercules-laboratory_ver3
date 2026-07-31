@@ -88,3 +88,18 @@ export const GRACE_CANCEL_RESTRICT_DAYS = 7;
 // V3-IND-35.ambiguity「確認画面のタイムアウト仕様は詳細設計で確定要」への暫定既定
 // (ponytail: OFFER_RESPONSE_HOURS と同じ 24h を流用・人間裁定で差し替え可)。
 export const RESERVATION_CONFIRM_WINDOW_HOURS = 24;
+
+// V3-KRM-29(design19 §T1-6 案A)。3階層(プロ研究者/市民科学者・ブリーダー/エンジョイ勢)は
+// 役職を新規発行せず、既存3軸貢献度スコア(contribution.ts)の閾値から導出する純関数
+// tier()/canApprove()/routeApproval() の入力定数(関数本体はw-gov3=krm globが持つ・本ファイル
+// はmktのglobのため定数追加のみ・PATCH /gov/params で変更可能にする設計)。
+// ★具体的な閾値は要件本文・design19とも未確定(ambiguity「自動承認の閾値が未確認」)のため、
+// CONTRIBUTION_TITLE_THRESHOLD(10000=称号ライン)より1桁小さい値を暫定既定として置く
+// (ponytail: 人間裁定で差し替え可・関数側の実装艦がこの定数を読むだけで済むよう先に用意する)。
+export const KRM29_PRO_RESEARCHER_THRESHOLD = 1000; // research軸がこれ以上でプロ研究者
+export const KRM29_CITIZEN_SCIENTIST_THRESHOLD = 100; // いずれかの軸がこれ以上で市民科学者/ブリーダー
+
+// V3-MKT-36層3(フォーク10%貢献度分配)。マーケットテンプレをフォークした actor 自身に
+// 発生する development 軸の基礎貢献度(この値の10%が UPSTREAM_PERCENT により上流lineageへ
+// 分配される・appendForkContribution 経由)。既存 CONTRIB_INDIVIDUAL_CREATED(=10)と同水準。
+export const MKT36_FORK_CONTRIBUTION = 10;

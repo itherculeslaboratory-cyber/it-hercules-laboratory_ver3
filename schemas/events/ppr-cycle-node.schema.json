@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ppr-cycle-node.schema.json",
+  "title": "PPR cycle node (ihl.ppr.cycle_node.v1)",
+  "description": "content(paper)以外の新しい「ノード型」(review/hypothesis/replication_proposal/replication_result/research_gap/comment/correction_note/knowledge_evidence)を content.schema.json を1文字も変えずに追加するための append-only イベント（V3-PPR-24/25/03・BBS-02/18/25・OBS-51の受け皿。design35 §A-5で設計確定）。Truth キー truth/ihl.ppr.cycle_node.v1/<node_id>.json。GET /node/:node_id ディスパッチャが id 接頭辞で content/plaza-post/ppr-cycle-node のいずれかへ振り分ける（新しい保存場所は作らない）。",
+  "x_ihl_req": "V3-PPR-24",
+  "x_ihl_source": "kits/lane-think/R0731-573d7f-REPORT-2026-07-31-design35.md §3 A-5(637-718行)",
+  "type": "object",
+  "required": ["node_id", "node_type", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "node_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "このノードの一意キー（ULID）。GET /node/:node_id で参照される。"
+    },
+    "node_type": {
+      "type": "string",
+      "enum": [
+        "review",
+        "hypothesis",
+        "replication_proposal",
+        "replication_result",
+        "research_gap",
+        "comment",
+        "correction_note",
+        "knowledge_evidence"
+      ],
+      "description": "ノード種別（8値。paper は既存 content 側にあるためここには入れない＝二重定義を作らない）。knowledge_evidence が PPR-24 の Evidence型 Knowledge を担う。"
+    },
+    "subject_ref": {
+      "$ref": "cite-ref.schema.json"
+    },
+    "sections": {
+      "type": "object",
+      "description": "PPR-24 の Evidence型7区画（全て optional・knowledge_evidence 以外の node_type では省略してよい）。",
+      "properties": {
+        "summary": { "type": "string", "description": "概要（任意）。" },
+        "current_understanding": { "type": "string", "description": "現在の理解（任意）。" },
+        "leading_hypotheses": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "主な説（任意）。★配列必須 — 「複数の説を共存させ」「勝敗を決めず」が要件のため、1つに絞る単数フィールド・勝者フラグは作らない（design35 §A-5）。"
+        },
+        "evidence": { "type": "string", "description": "根拠（任意）。" },
+        "counterarguments": { "type": "string", "description": "反論（任意）。" },
+        "unresolved": { "type": "string", "description": "未解決（任意）。" },
+        "history": { "type": "string", "description": "履歴（任意）。" }
+      },
+      "additionalProperties": false
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "このノードを起こした actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "作成時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -4,7 +4,13 @@
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore, ulid, deriveActorId } from "@ihl/truth";
+import { issueSessionToken } from "../apps/api/src/session";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
+
+function bearer(tok: string) {
+  return { Authorization: `Bearer ${tok}`, "content-type": "application/json" };
+}
+const authOf = async (actor: string) => bearer(await issueSessionToken(actor, "test-session-secret", []));
 
 const DISPUTE_TYPE = "ihl.gov.dispute.v1";
 const DISPUTE_SCHEMA = "schemas/events/gov-dispute.schema.json";
@@ -108,5 +114,101 @@ describe("gov dispute route is protected", () => {
     const env = makeEnv();
     const r = await app.request("/api/v1/gov/disputes", { method: "POST", body: "{}" }, env);
     expect(r.status).toBe(401);
+  });
+});
+
+// V3-BBS-06/08 移植(R64-1・plaza-dispute-routes.ts 削除に伴うテスト移植・元
+// tests/plaza-dispute.test.ts「cannot dispute one's own post, opens a two-party room otherwise」
+// 「requires tag and reason」相当)。category="board" + target_type/target_id で category="board"
+// に相乗り(bridgeplan J1-1)。tag/reason 必須は gov-dispute.schema.json(additionalProperties:false・
+// bridge2 排他)に該当フィールドが無いため移植していない(判断が要った箇所として報告書に明記)。
+describe("V3-BBS-06/08 board dispute via /gov/disputes category=board (migrated from plaza-dispute-routes.ts)", () => {
+  it("cannot dispute one's own post (target_type=post derives respondent from the post author)", async () => {
+    const env = makeEnv();
+    const authorH = await authOf("bbs-author-self");
+    const post = (await (
+      await app.request(
+        "/api/v1/plaza/posts",
+        { method: "POST", headers: authorH, body: JSON.stringify({ channel: "c", board_kind: "guide", topic: "t", body: "own post" }) },
+        env,
+      )
+    ).json()) as { post_id: string };
+
+    const own = await app.request(
+      "/api/v1/gov/disputes",
+      { method: "POST", headers: authorH, body: JSON.stringify({ category: "board", target_id: post.post_id }) },
+      env,
+    );
+    expect(own.status).toBe(400);
+    expect((await own.json()) as { error: string }).toMatchObject({ error: "CANNOT_DISPUTE_OWN_POST" });
+  });
+
+  it("opens a two-party room against another actor's post (respondent derived, not caller-supplied)", async () => {
+    const env = makeEnv();
+    const authorH = await authOf("bbs-author");
+    const disputerH = await authOf("bbs-disputer");
+    const post = (await (
+      await app.request(
+        "/api/v1/plaza/posts",
+        { method: "POST", headers: authorH, body: JSON.stringify({ channel: "c", board_kind: "guide", topic: "t", body: "disputed post" }) },
+        env,
+      )
+    ).json()) as { post_id: string };
+
+    const opened = await app.request(
+      "/api/v1/gov/disputes",
+      { method: "POST", headers: disputerH, body: JSON.stringify({ category: "board", target_id: post.post_id }) },
+      env,
+    );
+    expect(opened.status).toBe(201);
+    const { dispute_id } = (await opened.json()) as { dispute_id: string };
+
+    const view = (await (
+      await app.request(`/api/v1/gov/disputes/${dispute_id}`, { headers: disputerH }, env)
+    ).json()) as { participants: { opener: string; respondent: string }; category: string; subject_ref: { type: string; id: string } | null };
+    expect(view.participants.opener).toBe("bbs-disputer");
+    expect(view.participants.respondent).toBe("bbs-author");
+    expect(view.category).toBe("board");
+    expect(view.subject_ref).toEqual({ type: "post", id: post.post_id });
+  });
+
+  it("404s when the disputed post does not exist", async () => {
+    const env = makeEnv();
+    const disputerH = await authOf("bbs-disputer-404");
+    const res = await app.request(
+      "/api/v1/gov/disputes",
+      { method: "POST", headers: disputerH, body: JSON.stringify({ category: "board", target_id: "no-such-post" }) },
+      env,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("target_type=rating requires an explicit respondent_id (this file does not own market-rating data)", async () => {
+    const env = makeEnv();
+    const disputerH = await authOf("bbs-rating-disputer");
+
+    const missing = await app.request(
+      "/api/v1/gov/disputes",
+      { method: "POST", headers: disputerH, body: JSON.stringify({ category: "board", target_type: "rating", target_id: "rating-1" }) },
+      env,
+    );
+    expect(missing.status).toBe(400);
+
+    const ok = await app.request(
+      "/api/v1/gov/disputes",
+      {
+        method: "POST",
+        headers: disputerH,
+        body: JSON.stringify({ category: "board", target_type: "rating", target_id: "rating-1", respondent_id: "rated-user" }),
+      },
+      env,
+    );
+    expect(ok.status).toBe(201);
+    const { dispute_id } = (await ok.json()) as { dispute_id: string };
+    const view = (await (
+      await app.request(`/api/v1/gov/disputes/${dispute_id}`, { headers: disputerH }, env)
+    ).json()) as { participants: { respondent: string }; subject_ref: { type: string; id: string } | null };
+    expect(view.participants.respondent).toBe("rated-user");
+    expect(view.subject_ref).toEqual({ type: "market_rating", id: "rating-1" });
   });
 });

@@ -36,9 +36,46 @@ function envelope(actorId: string, data: Record<string, unknown>) {
   };
 }
 
-// ── derived layer (批評家#4): source_type carrying "human" → user, else ai ──────
-function tagLayer(sourceType: unknown): "ai" | "user" {
-  return typeof sourceType === "string" && /human/i.test(sourceType) ? "user" : "ai";
+// ── derived layer (批評家#4 + V3-OTH-20 3層拡張・2026-08-01 r22delta) ──────────
+// V3-OTH-20 逐語(registry.json)「タグはsystem_tags(UI自動付与・編集不可)/ai_tags(AI自動
+// 抽出・最大10個)/user_tags(ユーザー自由編集)の3層構造とし、RAG検索の優先度もこの順に
+// する」。第22回裁定(r22delta)により既存の本ファイル(w1-plaza所有)を直接拡張してよいと
+// 確定済み。tag-event.schema.json(CL-13 frozen)の source_type は自由文字列(enum正本は
+// schemas/dictionaries/source_type.yaml 側の弱参照でこのfrozenスキーマ自体には列挙が
+// 無い)ため、新しい source_type 値を追加してもスキーマ変更は不要(reuse-first)。
+// 既存の human→user / それ以外→ai の2層判定は完全後方互換で維持し、system 判定を先に
+// 割り込ませるだけ(既存呼び出し元・既存テストの挙動を変えない)。
+export const SYSTEM_TAG_SOURCE_TYPE = "system_ui_auto";
+function tagLayer(sourceType: unknown): "system" | "ai" | "user" {
+  if (typeof sourceType !== "string") return "ai";
+  if (/^system/i.test(sourceType)) return "system";
+  if (/human/i.test(sourceType)) return "user";
+  return "ai";
+}
+
+// V3-OTH-20: RAG検索等がタグを引く際の優先度(system > ai > user)。既存の ai_tags/user_tags
+// (この順で並んでいた=偶然ではあるが変更しない)に system_tags を先頭へ追加するだけの
+// 単純な配列定数(較正不要=固定順序が要件そのもの)。
+export const TAG_LAYER_PRIORITY = ["system", "ai", "user"] as const;
+
+/**
+ * rankTagsByLayerPriority — V3-OTH-20「RAG検索の優先度もこの順にする」の決定論実装。
+ * 同じタグ文字列が複数レイヤーに存在する場合は最優先レイヤーの1件だけを残す(重複除去)。
+ * 実際のRAG/ベクトル検索自体は不変条項①(LLM既定OFF)により本ラウンド対象外(upgrade
+ * path・aggregateTagsの出力を検索側が読む際の並び順だけをここで確定する)。
+ */
+export function rankTagsByLayerPriority(agg: Pick<TagAggregate, "system_tags" | "ai_tags" | "user_tags">): { tag: string; layer: (typeof TAG_LAYER_PRIORITY)[number] }[] {
+  const seen = new Set<string>();
+  const out: { tag: string; layer: (typeof TAG_LAYER_PRIORITY)[number] }[] = [];
+  const byLayer = { system: agg.system_tags, ai: agg.ai_tags, user: agg.user_tags };
+  for (const layer of TAG_LAYER_PRIORITY) {
+    for (const tag of byLayer[layer]) {
+      if (seen.has(tag)) continue;
+      seen.add(tag);
+      out.push({ tag, layer });
+    }
+  }
+  return out;
 }
 
 /**
@@ -56,12 +93,17 @@ export function confidenceGrade(measurement: Record<string, unknown>): "◎" | "
 export interface TagAggregate {
   target_type: string;
   target_id: string;
-  ai_tags: string[]; // currently-on tags derived from machine events
+  system_tags: string[]; // V3-OTH-20: UI自動付与・編集不可(source_type="system_ui_auto"系)
+  ai_tags: string[]; // currently-on tags derived from machine events(最大10個・下記MAX参照)
   user_tags: string[]; // currently-on tags derived from human events
-  strong: string[]; // both layers agree the tag is on (合意)
+  strong: string[]; // both layers agree the tag is on (合意・ai/userの2層のみ・批評家#4の定義を維持)
   weak: string[]; // exactly one layer weighs in
   disputed: string[]; // layers disagree (one add, one remove)
 }
+
+// V3-OTH-20: 「ai_tags(AI自動抽出・最大10個)」。上限超過分は既存 onTags() のソート順
+// (アルファベット順)で先頭10件のみ残す(決定論・LLM不使用の機械的カット)。
+export const AI_TAGS_MAX = 10;
 
 /**
  * Aggregate the append-only tag_event stream for one target into the two derived
@@ -83,8 +125,8 @@ export async function aggregateTags(
     String(a.created_at).localeCompare(String(b.created_at)) ||
     String(a.tag_event_id).localeCompare(String(b.tag_event_id)),
   );
-  const layerEvents = { ai: 0, user: 0 };
-  const state: Record<"ai" | "user", Map<string, boolean>> = { ai: new Map(), user: new Map() };
+  const layerEvents = { system: 0, ai: 0, user: 0 };
+  const state: Record<"system" | "ai" | "user", Map<string, boolean>> = { system: new Map(), ai: new Map(), user: new Map() };
   for (const d of sorted) {
     const layer = tagLayer(d.source_type);
     layerEvents[layer]++;
@@ -93,9 +135,13 @@ export async function aggregateTags(
     state[layer].set(tag, d.action !== "remove"); // add/anything-but-remove = on
   }
 
-  // both derived layers must carry at least one event (批評家#4 400 condition).
+  // both derived layers must carry at least one event (批評家#4 400 condition). system は
+  // V3-OTH-20 で追加した第3層で、この既存ゲート条件には含めない(system_tags が0件でも
+  // 既存の ai/user 2層検証の意味は変わらない=後方互換維持)。
   if (layerEvents.ai === 0 || layerEvents.user === 0) return null;
 
+  // strong/weak/disputed は既存どおり ai/user の2層合意判定のみ(批評家#4の定義を変更しない・
+  // system は「UI自動付与・編集不可」で合意/対立の対象になる性質のタグではないため対象外)。
   const strong: string[] = [];
   const weak: string[] = [];
   const disputed: string[] = [];
@@ -113,7 +159,8 @@ export async function aggregateTags(
   return {
     target_type: targetType,
     target_id: targetId,
-    ai_tags: onTags(state.ai),
+    system_tags: onTags(state.system),
+    ai_tags: onTags(state.ai).slice(0, AI_TAGS_MAX),
     user_tags: onTags(state.user),
     strong: strong.sort(),
     weak: weak.sort(),

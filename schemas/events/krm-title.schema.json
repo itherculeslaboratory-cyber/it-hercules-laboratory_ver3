@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/krm-title.schema.json",
+  "title": "KRM title grant event (ihl.krm.title.v1)",
+  "description": "称号付与の append-only イベント（V3-KRM-17）。Truth キー truth/ihl.krm.title.v1/<actor_id>-<ulid>.json。称号は『自称×他称×貢献』の軸(axis)で構成され、行動条件/貢献パターンに応じ自動(auto)または投票(vote)で付与される。ユーザーの表示/非表示/削除選択は本イベントの上に別イベントとして重ねる想定であり、本スキーマは付与そのものの事実だけを持つ。",
+  "x_ihl_req": "V3-KRM-17",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-5",
+  "type": "object",
+  "required": ["title_id", "actor_id", "granted_by", "axis", "granted_at"],
+  "properties": {
+    "title_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "称号の一意キー（ULID）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "称号を付与された actor_id。"
+    },
+    "granted_by": {
+      "type": "string",
+      "enum": ["auto", "vote"],
+      "description": "自動付与(行動条件/貢献パターン)か投票付与か。"
+    },
+    "axis": {
+      "type": "string",
+      "description": "称号の軸（自称/他称/貢献のいずれか、または軸名の識別子）。"
+    },
+    "granted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "付与時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（任意）。"
+    }
+  },
+  "additionalProperties": false
+}

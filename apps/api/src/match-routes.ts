@@ -7,7 +7,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { LEARNING_RATE, MATCH_AUC_VALID_THRESHOLD } from "./observation-constants";
+import { LEARNING_RATE, MATCH_AUC_VALID_THRESHOLD, IND09_PAIRWISE_QUESTION_TARGET } from "./observation-constants";
 
 export const matchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -252,12 +252,27 @@ matchRoutes.post("/match/preference", async (c) => {
 
 // GET /match/ranking — actor's candidate pool ranked by learned preference weights
 // (IND-07). Inner-product descending; score is NOT part of the response.
+// ★V3-IND-09①(design35実測: match-routes.ts が実装先の再配属先=このレーンの担当。
+// 実装先は既にこのルートが担う「価値観に近いおすすめ個体が並ぶ」画面のデータ源)。
+// UX要件の「進捗チップ」「空状態時の②誘導」に必要な最小限の投影だけを追加する
+// (画面のレイアウト/導線自体はscreen-defs側=本レーンglob外)。
 matchRoutes.get("/match/ranking", async (c) => {
   const actorId = c.get("actorId");
   const s = store(c);
   const w = await projectPreferenceWeights(s, actorId);
-  const ranking = rankByPreference(w, await candidatePool(s, actorId));
-  return c.json({ actor_id: actorId, ranking });
+  const pool = await candidatePool(s, actorId);
+  const ranking = rankByPreference(w, pool);
+  // IND-09「進捗チップ」= 回答済みPairwise比較(valuecheck)数 / 打ち切り目安N。
+  // 「空状態時の②誘導」= 候補0件ならUIが②(Pairwise比較)へ誘導する判断材料。
+  const answeredValuecheck = (await s.listEvents(`truth/${MATCH_TYPE}/${actorId}-`))
+    .map(dataOf)
+    .filter((d) => d.actor_id === actorId && d.kind === "valuecheck").length;
+  return c.json({
+    actor_id: actorId,
+    ranking,
+    progress: { answered: answeredValuecheck, target: IND09_PAIRWISE_QUESTION_TARGET },
+    suggest_pairwise: ranking.length === 0,
+  });
 });
 
 // GET /match/convergence — evaluation log (Precision@K/AUC/score separation/

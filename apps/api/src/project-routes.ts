@@ -20,6 +20,10 @@ const CONTENT_TYPE = "ihl.research.content.v1";
 const OBS_PHOTO_TYPE = "ihl.obs.photo.v1";
 const OBS_ANALYSIS_TYPE = "ihl.obs.analysis.v1";
 const SCHEMA_VERSION = "1";
+// V3-IND-23(bridgeplan J1-2): 個体/ロット/投票の project_id optional追加により束ねられるようになった3型。
+const IND_MASTER_TYPE = "ihl.ind.master.v1";
+const IND_CLUTCH_TYPE = "ihl.ind.clutch.v1";
+const GOV_VOTE_TYPE = "ihl.gov.vote.v1";
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -56,15 +60,19 @@ async function sha1hex(input: string): Promise<string> {
 
 // ── projectHub 投影（PPR-16・都度再計算）───────────────────────────────────────
 // project 本体 + projectId で束ねた content(project_id)・その content への citation・子 Ver
-// (parent_project_id) を集約。market listing / observation(subject_ref) / task_node は現行
-// スキーマに project 直接リンクが無いため本投影では束ねない。
-// ponytail: content/citation/version の 3 軸のみ集約。market/observation/task を project へ束ねるには
-// それぞれのスキーマに project_id 参照を足す必要があり（今は無い）、リンクが入った波で拡張する。
+// (parent_project_id) を集約。V3-IND-23(bridgeplan J1-2)により ind-master/ind-clutch/gov-vote
+// に project_id が optional 追加されたため、個体/ロット/投票の3軸も同じ prefix scan + filter
+// パターンで束ねる（既存 content/citation/version と同型・新しい集約手法は増やさない）。
+// market listing / observation(subject_ref) / task_node は依然として project 直接リンクが無いため
+// 本投影では束ねない（現状のまま・拡張は当該スキーマに project_id が入った波で行う）。
 export interface ProjectHub {
   project: Record<string, unknown>;
   contents: Record<string, unknown>[];
   citations: Record<string, unknown>[];
   versions: Record<string, unknown>[];
+  individuals: Record<string, unknown>[];
+  clutches: Record<string, unknown>[];
+  votes: Record<string, unknown>[];
 }
 
 export async function projectHub(s: TruthStore, projectId: string): Promise<ProjectHub | null> {
@@ -88,7 +96,22 @@ export async function projectHub(s: TruthStore, projectId: string): Promise<Proj
     .filter((d) => d.parent_project_id === projectId)
     .sort((a, b) => String(a.project_id).localeCompare(String(b.project_id)));
 
-  return { project, contents, citations, versions };
+  const individuals = (await s.listEvents(`truth/${IND_MASTER_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.project_id === projectId)
+    .sort((a, b) => String(a.individual_id).localeCompare(String(b.individual_id)));
+
+  const clutches = (await s.listEvents(`truth/${IND_CLUTCH_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.project_id === projectId)
+    .sort((a, b) => String(a.clutch_id).localeCompare(String(b.clutch_id)));
+
+  const votes = (await s.listEvents(`truth/${GOV_VOTE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.project_id === projectId)
+    .sort((a, b) => String(a.vote_id).localeCompare(String(b.vote_id)));
+
+  return { project, contents, citations, versions, individuals, clutches, votes };
 }
 
 // ── bestVersion 投影（PPR-16・決定論選定）──────────────────────────────────────

@@ -38,6 +38,8 @@ import { marketCommentRoutes } from "./market-comment-routes";
 import { marketIndividualOfferRoutes } from "./market-individual-offer-routes";
 import { researchStoreRoutes } from "./research-store-routes";
 import { marketTemplateRoutes } from "./market-template-routes";
+import { marketPiiRoutes } from "./market-pii-routes";
+import { marketProductNodeRoutes } from "./market-product-node-routes";
 import { marketPricingRoutes } from "./market-pricing-routes";
 import { piiRoutes } from "./pii-routes";
 import { individualRoutes } from "./individual-routes";
@@ -386,6 +388,15 @@ app.route("/api/v1", marketRatingRoutes);
 // Template market (design-k3 §2.2 / V3-MKT-22): POST/GET /market/templates・
 // POST /market/templates/{id}/fork。ranking は RANKING_WEIGHTS・fork は forked_from 連結。
 app.route("/api/v1", marketTemplateRoutes);
+
+// Market PII reference (design19 §T1-3 / V3-MKT-28): PUT/DELETE /market/pii/profile/{slot}・
+// POST /market/pii/grants・GET /market/pii/profile/{owner_actor_id}/{slot}。PII実体は
+// 削除可能ストア(R2非truthプレフィクス)、取引側は参照(pii_ref)のみ append。
+app.route("/api/v1", marketPiiRoutes);
+
+// Market ProductNode (design19 §T1-7 / V3-MKT-44): POST/GET /market/products・
+// GET /market/products/{id}(成功率/失敗率はobs-capture×ind-life-eventの投影)。
+app.route("/api/v1", marketProductNodeRoutes);
 
 // Pricing / golden-flow / shipping (design-k3 §2.2 / V3-MKT-23/25/20): POST /market/
 // listings/draft・GET price-recommendation(embedding 既定 OFF)・GET shipping-estimate

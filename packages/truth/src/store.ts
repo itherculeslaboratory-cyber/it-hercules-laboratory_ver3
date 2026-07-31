@@ -32,6 +32,12 @@ export type PutEventResult =
   | { status: "conflict"; key: string }
   | { status: "invalid"; errors: string[] };
 
+// V3-SEC-48 段階1(bridgeplan J3-B・案A)。渡されなければ現状と完全に同一挙動。
+// 違反時は既存の "invalid" ステータスへ乗せる(新ステータスを追加すると既存呼び出し元
+// 全体(数十箇所)が黙って成功扱いする=セキュリティ退行になるため・R0731-7b0c89の危険判断を継承)。
+// 段階2(key-bundle-routes.ts 1ファイルへの適用)・段階3(全呼び出し元への展開)は別ラウンド。
+export type PolicyHook = (envelope: unknown, key: string) => string | null;
+
 export type PutBlobResult =
   | { status: "inserted"; key: string }
   | { status: "conflict"; key: string };
@@ -40,12 +46,19 @@ export type PutBlobResult =
 // Their absence is itself the append-only contract (invariant clause 3);
 // cl-12-ledger.test.ts asserts it.
 export class TruthStore {
-  constructor(private readonly bucket: R2BucketLite) {}
+  constructor(
+    private readonly bucket: R2BucketLite,
+    private readonly policy?: PolicyHook,
+  ) {}
 
   // put-if-absent at the STORAGE layer — live-verified on real R2:
   // docs/planning/c1/r2-put-if-absent-evidence.md (mode=storage, first-wins).
   // put does NOT throw on conflict; it returns null → map to 409 upstream.
   private async writeOnce(key: string, envelope: unknown): Promise<PutEventResult> {
+    if (this.policy) {
+      const violation = this.policy(envelope, key);
+      if (violation) return { status: "invalid", errors: [`FORBIDDEN: ${violation}`] };
+    }
     const res = await this.bucket.put(key, JSON.stringify(envelope), {
       onlyIf: { etagDoesNotMatch: "*" },
     });

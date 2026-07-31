@@ -83,6 +83,48 @@ describe("UIX-16 選好 append + LWW 投影", () => {
   });
 });
 
+describe("V3-I18-02(第22回裁定) 国の自動推測(確認用・非append)", () => {
+  it("CF-IPCountryヘッダがあり country 未設定なら country_suggested を上乗せする", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = { ...(await authOf("henry")), "cf-ipcountry": "JP" };
+    const p = (await (await app.request("/api/v1/me/preferences", { headers: h }, env)).json()) as Record<
+      string,
+      string
+    >;
+    expect(p.country).toBe(""); // 実値は未設定のまま(サーバはappendしない)
+    expect(p.country_suggested).toBe("JP");
+  });
+
+  it("CF-IPCountryヘッダが無ければ country_suggested を付けない", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const p = (await (await getPrefs(env, await authOf("iris"))).json()) as Record<string, unknown>;
+    expect(p.country_suggested).toBeUndefined();
+  });
+
+  it("Cloudflareの『不明』値(XX)は推測として扱わない", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = { ...(await authOf("jack")), "cf-ipcountry": "XX" };
+    const p = (await (await app.request("/api/v1/me/preferences", { headers: h }, env)).json()) as Record<
+      string,
+      unknown
+    >;
+    expect(p.country_suggested).toBeUndefined();
+  });
+
+  it("country が既に設定済みなら country_suggested を上乗せしない(確定値を推測で汚さない)", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("karen");
+    expect((await patchPrefs(env, h, { country: "US" })).status).toBe(200);
+    const withHeader = { ...h, "cf-ipcountry": "JP" };
+    const p = (await (await app.request("/api/v1/me/preferences", { headers: withHeader }, env)).json()) as Record<
+      string,
+      unknown
+    >;
+    expect(p.country).toBe("US");
+    expect(p.country_suggested).toBeUndefined();
+  });
+});
+
 describe("UIX-16/I18-08 負の validation(write-time 検証配線・批評家修正3)", () => {
   it("reduced_motion_override が enum 外なら 400", async () => {
     const env = makeEnv(new FakeR2Bucket());

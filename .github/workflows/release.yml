@@ -1,0 +1,30 @@
+name: Release
+
+# V3-AIP-107: git tag + release notes (GitHub Releases) の自動発行。
+# reuse-first: 自作の差分生成スクリプトは書かず、GitHub CLI (`gh`)標準搭載の
+# `--generate-notes`(コミット/PRからの自動要約。GitHub Actions runnerにプリインストール
+# 済み・追加依存0)をそのまま使う。「バージョン履歴」画面(Releases API参照側)は
+# apps/web(Wave4)の担当領域でありこのワークフローの範囲外(未着手のまま持ち越す)。
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # generate-notes needs the full commit history
+
+      - name: Create GitHub Release with auto-generated notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes

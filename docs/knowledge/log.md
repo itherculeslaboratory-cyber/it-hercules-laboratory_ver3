@@ -2,6 +2,13 @@
 
 `## YYYY-MM-DD` 見出し + `**Initialization**` / `**Ingest**` / `**Lint**` / `**Creation**` エントリ。月次 Lint もここに残す。
 
+## 2026-08-01
+
+* **Creation**: [article-node-language-layer](./topics/article-node-language-layer.md)(V3-WIK-35・設計ドラフトのみ・未実装)を新設 — 論文/観測/種族・市場文化データから初心者向け記事を自動生成する言語レイヤーの設計方針。index.md に1行追加(同一変更)。
+* **Creation**: [spec-pattern-guide.md](./spec-pattern-guide.md)(V3-WIK-22)を新設 — Engineer Spec先行→human/AI最適化版を派生させる3パターン設計書の執筆規約。index.md に1行追加(同一変更)。
+* **Lint**: [CLAUDE.md](./CLAUDE.md) に「index肥大化時のサブindex分割方針」(V3-WIK-05)と「必須条件の適用タイミング(月次バッチだけに頼らない)」(V3-WIK-06)の2節を追加(lane-implement/legal艦・R0731-9191c2・design35 A-6裁定によるglob拡張)。
+* **Creation**: [manifesto/](./manifesto/)(V3-BBS-32・技術宣言書)を新設 — 専門家向け/一般向け(10歳でも分かる)/ショート動画台本の3層を日本語のみ作成。英語版・個別コンポーネントの3パターン設計書整備は未着手のままREADME.mdに明記(誇張ゼロ)。index.mdに4行追加(同一変更)。
+
 ## 2026-07-17
 
 * **Creation**: [unified-search-rag](./topics/unified-search-rag.md)(V3-AIP-90)を新設 — 観測パイプラインの決定論梯子(metadata→cosine→rerank)と wiki 統合基盤の技術選定(ruri-v3-70m・384次元)を、掲示板/UI/テンプレートへ「新規ベクトルDBなし」で横展開する設計。index.md に1行追加(同一変更)。

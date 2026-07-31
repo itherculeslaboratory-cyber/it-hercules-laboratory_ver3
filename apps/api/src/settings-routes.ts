@@ -45,6 +45,30 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
   return (e.data ?? {}) as Record<string, unknown>;
 }
 
+// V3-I18-02(第22回裁定: ①アクセス元情報から国を自動推測して埋め、登録画面に確認用
+// 表示。ユーザーは進むか手で直せる)。Cloudflare Workers はエッジで CF-IPCountry ヘッダを
+// 自動付与する(新規依存0・GeoIP DB不要)ので、それをそのまま読むだけ。★サーバ側は
+// この推測値を一切 append しない(不変条項③=append-onlyを崩さない・GETに副作用を
+// 持たせない)。実際に country を確定させるのは既存の PATCH /me/preferences のまま
+// (ユーザーが「進む」を押す=確認画面から country 付きで PATCH する想定)。
+// 欠点(海外滞在・VPN経由だと誤ることがある)は呼び出し側(画面)が「確認用」と明示する前提。
+function suggestedCountryFrom(c: { req: { header(name: string): string | undefined } }): string | undefined {
+  const cc = (c.req.header("cf-ipcountry") ?? "").toUpperCase();
+  if (!cc || cc === "XX" || cc === "T1") return undefined; // XX=Cloudflareの「不明」・T1=Tor
+  return cc;
+}
+
+// prefs.country が未設定の時だけ country_suggested を上乗せする(既存フィールドの
+// 形は一切変えない=既存の toEqual 厳密一致テストへの非破壊を保つ)。
+function withCountrySuggestion<T extends { country: string }>(
+  prefs: T,
+  c: { req: { header(name: string): string | undefined } },
+): T | (T & { country_suggested: string }) {
+  if (prefs.country !== "") return prefs;
+  const suggested = suggestedCountryFrom(c);
+  return suggested ? { ...prefs, country_suggested: suggested } : prefs;
+}
+
 export type Preferences = {
   locale: string;
   theme_pack_id: string;
@@ -98,17 +122,18 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
   return acc;
 }
 
-// GET /me/preferences(041)— 本人の選好投影。
+// GET /me/preferences(041)— 本人の選好投影。country 未設定時のみ V3-I18-02 の
+// 確認用推測値(country_suggested)を上乗せする(サーバは何もappendしない)。
 settingsRoutes.get("/me/preferences", async (c) => {
   const prefs = await projectPreferences(store(c), c.get("actorId"));
-  return c.json(prefs);
+  return c.json(withCountrySuggestion(prefs, c));
 });
 
 // GET /me/settings(042)— preferences + account_meta 集約。
 settingsRoutes.get("/me/settings", async (c) => {
   const actorId = c.get("actorId");
   const preferences = await projectPreferences(store(c), actorId);
-  return c.json({ preferences, account: { actor_id: actorId } });
+  return c.json({ preferences: withCountrySuggestion(preferences, c), account: { actor_id: actorId } });
 });
 
 // GET /settings(043,050)— 利用可能 locale・theme-pack 一覧・feature flags を都度算出。

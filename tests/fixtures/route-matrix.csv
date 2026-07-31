@@ -62,8 +62,17 @@
 #   レーン(C8・V3-WIK-28)が AI セッション閲覧の取り込み新規 1 route(infra-route-115・
 #   POST /research/ai-sessions・protected・既存 research-content-routes.ts の
 #   content(chat_log)/chat-index を再利用し閲覧側は新規route無し)を追加 → 107 rows。
+# 2026-08-01 w-aut2(第22回裁定 V3-AUT-15/14/16): 観測データ閲覧(検索・一覧・詳細)を
+#   ログイン不要へ緩和。infra-route-012/013/014/015/016/017/018/024/025/083/097(計11行)を
+#   protected → public へ変更(書込系=capture/measurement/commit/upload/template append/
+#   dictionary-extensions は protected のまま維持=V3-AUT-14のREAD既定・WRITE列挙deny-list)。
+#   ★この行の変更は route レベル(401ゲート)のみ。visibility:private の観測は
+#   別途データレベルでゲートする(V3-OBS-54・w-obs2実装)。「routeがpublic」≠「データがpublic」。
+#   ★★index.ts(全艦不可侵)側のゲート実装(PUBLIC_ROUTESの拡張)はHQ適用待ち(w-aut2報告書
+#   「HQへの提案」節に具体diffを提示済み)。このCSV変更のみでは実際の401挙動はまだ変わらない。
 # access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
-#   + payjp-webhook のみ / 他は全て protected (deny-by-default)
+#   + payjp-webhook + 観測READ 11行(infra-route-012/013/014/015/016/017/018/024/025/083/097・
+#   2026-08-01 V3-AUT-15) / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
 —,GET,/api/v1/auth/session,VPS,Workers,W2,infra-route-001,public,implemented,
 —,POST,/api/v1/auth/magic-link,VPS,Workers,W2,infra-route-002,public,implemented,
@@ -75,20 +84,20 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/auth/verify,VPS,Workers,W2,infra-route-009,public,implemented,
 —,POST,/api/v1/auth/verify-code,VPS,Workers,W2,infra-route-072,public,implemented,V3-AUT-46(round-16 OQ-ONB-03)magic-linkと同一OTPの数字コード(6桁)verify・email+code自体が資格情報でPUBLIC・ワンタイム性/試行回数制限はroute内で担保
 —,GET,/api/v1/home/summary,VPS,Workers,W2,infra-route-011,protected,implemented,今日の要約 近接/超過/観測中 投影(C5 K1・design-k1 §1.1)
-—,GET,/api/v1/observation/{capture_id},VPS,Workers,W2,infra-route-012,protected,implemented,観測詳細投影(既存 reuse・design-k1 §1.1)
-—,GET,/api/v1/observation/{capture_id}/image,VPS,Workers,W2,infra-route-013,protected,implemented,画像は /image/{photo_id} で配信・512px サムネ /thumbnail/{photo_id} 追加(OBS-23)
-—,GET,/api/v1/observation/{capture_id}/reanalysis-manifest,VPS,Workers,W2,infra-route-014,protected,implemented,再解析マニフェスト(OBS-48・新 analysis_id append 非上書き)
-—,GET,/api/v1/observation/measurement-dictionary,VPS,Workers,W2,infra-route-015,protected,implemented,item_hash 登録辞書(OBS-18)
-—,GET,/api/v1/observation/targets/catalog,VPS,Workers,W2,infra-route-016,protected,implemented,ローカル分類ツリー+QID(OBS-02)
-—,GET,/api/v1/observation/templates,VPS,Workers,W2,infra-route-017,protected,implemented,テンプレ一覧投影(既存 reuse・OBS-18)
-—,GET,/api/v1/observation/templates/{template_id},VPS,Workers,W2,infra-route-018,protected,implemented,雌雄別/令齢別/置き場所別 scope 込みテンプレ(OBS-18)
+—,GET,/api/v1/observation/{capture_id},VPS,Workers,W2,infra-route-012,public,implemented,観測詳細投影(既存 reuse・design-k1 §1.1)★V3-AUT-15(第22回裁定)により public 化・visibility:private 個体はw-obs2側でデータ非公開ゲート(V3-OBS-54連携・「routeがpublic」と「データがpublic」は別)
+—,GET,/api/v1/observation/{capture_id}/image,VPS,Workers,W2,infra-route-013,public,implemented,画像は /image/{photo_id} で配信・512px サムネ /thumbnail/{photo_id} 追加(OBS-23)★V3-AUT-15により public 化(同上の私的データ別ゲート前提)
+—,GET,/api/v1/observation/{capture_id}/reanalysis-manifest,VPS,Workers,W2,infra-route-014,public,implemented,再解析マニフェスト(OBS-48・新 analysis_id append 非上書き)★V3-AUT-15により public 化
+—,GET,/api/v1/observation/measurement-dictionary,VPS,Workers,W2,infra-route-015,public,implemented,item_hash 登録辞書(OBS-18)★V3-AUT-15により public 化(一覧系・個体非依存の共有辞書)
+—,GET,/api/v1/observation/targets/catalog,VPS,Workers,W2,infra-route-016,public,implemented,ローカル分類ツリー+QID(OBS-02)★V3-AUT-15により public 化(一覧系・個体非依存)
+—,GET,/api/v1/observation/templates,VPS,Workers,W2,infra-route-017,public,implemented,テンプレ一覧投影(既存 reuse・OBS-18)★V3-AUT-15により public 化(一覧系)
+—,GET,/api/v1/observation/templates/{template_id},VPS,Workers,W2,infra-route-018,public,implemented,雌雄別/令齢別/置き場所別 scope 込みテンプレ(OBS-18)★V3-AUT-15により public 化(詳細系・テンプレ自体は個人非依存)
 —,POST,/api/captures,VPS,Workers,W2,infra-route-019,protected,merged,ver3 で /api/v1/observation/captures に統合
 —,POST,/api/measurements,VPS,Workers,W2,infra-route-020,protected,merged,ver3 で /api/v1/observation/measurements に統合(infra-route-023)
 —,POST,/api/solid-observation/commit,VPS,Workers,W2,infra-route-021,protected,implemented,3画面確認後の唯一の保存(OBS-25・ver3 実体 /api/v1/solid-observation/commit)
 —,POST,/api/v1/observation/dictionary-extensions,VPS,Workers,W2,infra-route-022,protected,implemented,未登録項目 はい/今回だけ/常に(OBS-18)
 —,POST,/api/v1/observation/measurements,VPS,Workers,W2,infra-route-023,protected,implemented,value_origin 必須・item_hash 未登録検出(OBS-06/18)
-—,POST,/api/v1/observation/search,VPS,Workers,W2,infra-route-024,protected,implemented,決定論梯子 whitelist→subset→embedding(C3・design-c3 §1)+ query自身除外/prototype平均/合成rerank(C5 OBS-10/11)
-—,POST,/api/v1/observation/targets/search,VPS,Workers,W2,infra-route-025,protected,implemented,学名 substring / yes-no二分探索 / ツリー → QID+taxonomy(OBS-02/03)
+—,POST,/api/v1/observation/search,VPS,Workers,W2,infra-route-024,public,implemented,決定論梯子 whitelist→subset→embedding(C3・design-c3 §1)+ query自身除外/prototype平均/合成rerank(C5 OBS-10/11)★V3-AUT-15により public 化(検索系・V3-AUT-16=Scope A横断検索・owner_user_id絞り込みなし)
+—,POST,/api/v1/observation/targets/search,VPS,Workers,W2,infra-route-025,public,implemented,学名 substring / yes-no二分探索 / ツリー → QID+taxonomy(OBS-02/03)★V3-AUT-15により public 化(検索系)
 —,POST,/api/v1/observation/templates,VPS,Workers,W2,infra-route-026,protected,implemented,テンプレ append(既存 reuse・fork via forked_from・OBS-18)
 —,POST,/api/v1/observation/upload,VPS,Workers,W2,infra-route-027,protected,implemented,撮影時 photo_conditions 自動埋込(既存 reuse・OBS-28)
 —,GET,/api/v1/market/listings,VPS,Workers,W2,infra-route-028,protected,implemented,一覧投影(design-c4 §3・V3-MKT-01 出品/閲覧まで)
@@ -139,7 +148,7 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/costs,VPS,Workers,W2,infra-route-080,protected,implemented,V3-CST-02ランニングコスト透明性ダッシュボード・Sakura VPS手動値+R2使用量(CF API未配線=config/running-costs.jsonのmanual_override_yenへdegrade)・ログイン済み全ユーザー閲覧可(追加ロール制限なし)
 —,POST,/api/v1/ai-digest/sync,VPS,Workers,W2,infra-route-081,protected,implemented,V3-AIP-67 GitHub Issues/掲示板→AI要約スレ・requireRole operator/admin手動即時実行・ai-kernel LLMClient(既定AI_DISABLED)+ai-profiles/newspaper.json再利用・保存はihl.plaza.post.v1(channel=knowledge-board)を再利用し新イベント型を増やさない
 —,POST,/api/v1/economy/vote,VPS,Workers,W2,infra-route-082,protected,implemented,V3-MKT-35 プラチナコイン投票通貨(対象・レイヤー0-3・枚数・理由指定・レイヤー4は403)・KRM-25 castPlatinumVote共有コア再利用
-—,GET,/api/v1/observation/{capture_id}/species-suggestions,VPS,Workers,W2,infra-route-083,protected,implemented,OBS-57 種候補提案チェーン(ヒューリスティック→CLIP任意→Vision任意)・CLIP/Vision未設定(既定)でもヒューリスティックのみで完走・種の自動確定はしない(species_confirmed_byは既存frozen const"user"のまま不変)
+—,GET,/api/v1/observation/{capture_id}/species-suggestions,VPS,Workers,W2,infra-route-083,public,implemented,OBS-57 種候補提案チェーン(ヒューリスティック→CLIP任意→Vision任意)・CLIP/Vision未設定(既定)でもヒューリスティックのみで完走・種の自動確定はしない(species_confirmed_byは既存frozen const"user"のまま不変)★V3-AUT-15により public 化(詳細系)
 —,POST,/api/v1/placements/{placement_id}/qr,VPS,Workers,W2,infra-route-084,protected,implemented,棚/場所QR発行(V3-OBS-20・CL-10 env_qr_token_v1 frozen形状・GET /api/v1/qr/{token}が個体QRと同じ入口で解決・occupancy投影で現占有個体へ連鎖)
 —,POST,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-085,protected,implemented,研究室環境コンテキスト登録(V3-OBS-72・placement基盤の拡張・append-only履歴+最新1件投影)
 —,GET,/api/v1/placements/{placement_id}/lab-environment,VPS,Workers,W2,infra-route-086,protected,implemented,研究室環境コンテキスト投影読み出し(V3-OBS-72・未記録はnull・404にしない)
@@ -153,7 +162,7 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/research/quadrant,VPS,Workers,W2,infra-route-094,protected,implemented,V3-PPR-07 観測データ4象限モデル(n11/n10/n01/n00)で研究空白領域を検出・逆/裏/対偶を機械生成+仮説論文タイトル/要旨案
 —,POST,/api/v1/research/auto-draft,VPS,Workers,W2,infra-route-095,protected,implemented,V3-PPR-20 PaperSectionsV1拡張・統一フォーマット観測データ(measurements[])のみからconditions節+完了率を自動生成(非永続プレビュー)
 —,GET,/api/v1/research/content/{id}/export,VPS,Workers,W2,infra-route-096,protected,implemented,V3-PPR-23 論文(章構成+引用+図表)を自己完結HTMLへ変換・PDFはブラウザ標準印刷機能を再利用(新規依存を追加しない)
-—,GET,/api/v1/observation/export,VPS,Workers,W2,infra-route-097,protected,implemented,V3-PPR-12 全capture measurements[]をCSVへ決定論シリアライズ(研究者向け全データダウンロード)・実解析は端末側ローカル計算でサーバ負荷ゼロ
+—,GET,/api/v1/observation/export,VPS,Workers,W2,infra-route-097,public,implemented,V3-PPR-12 全capture measurements[]をCSVへ決定論シリアライズ(研究者向け全データダウンロード)・実解析は端末側ローカル計算でサーバ負荷ゼロ★V3-AUT-15により public 化(一覧/エクスポート系)
 —,GET,/api/v1/knowledge/cell/{id},VPS,Workers,W2,infra-route-098,protected,implemented,V3-WIK-20 意図/系譜/被引用を1クエリで返す横断投影・既存cite_refs/cited_paper_ids/citations/forked_fromを束ねる決定論(常駐グラフDBなし)
 —,POST,/api/v1/wiki/lint,VPS,Workers,W2,infra-route-099,protected,implemented,V3-WIK-07 月次Lint(矛盾/孤立ページ/古い記述/リンク切れ)を手動実行しWIK-01 wiki_node(level=lint_log)へlog.md形式で記録・月次cron配線は人間ゲート
 —,GET,/api/v1/wiki/lint-log,VPS,Workers,W2,infra-route-100,protected,implemented,V3-WIK-07 月次Lint実行履歴(created_at降順)

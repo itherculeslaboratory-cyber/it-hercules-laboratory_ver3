@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/fnd-sandbox-realm.schema.json",
+  "title": "Personal Sandbox Realm event (ihl.fnd.sandbox_realm.v1)",
+  "description": "Personal Sandbox Realm の fork/promote/delete を記録する append-only イベント（V3-FND-31）。Truth キー truth/ihl.fnd.sandbox_realm.v1/<realm_id>-<ulid>.json。fork するのは本番 FeatureNode config（設定）であり任意コードではない。実際の設定差分(.sbx.json)は R2 オブジェクトであって Truth イベントではなく、本スキーマは fork/promote/delete の事実だけを持つ（design19 T1-9 案A）。同名の sandbox-routes.ts（V3-SEC-45 隔離実行の認可ゲート）とは中身が無関係の別要件であり、混同しない。",
+  "x_ihl_req": "V3-FND-31",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-9",
+  "type": "object",
+  "required": ["realm_id", "user_id", "action", "at"],
+  "properties": {
+    "realm_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Realm の一意キー（ULID）。"
+    },
+    "user_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Realm 所有者の actor_id（5個/user上限・管理者無制限）。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["forked", "promoted", "deleted"],
+      "description": "fork(本番からの分岐開始)/promoted(role=administratorのみ本番へ反映)/deleted。"
+    },
+    "forked_from_version": {
+      "type": "string",
+      "description": "fork 元の本番 config バージョン（action=forked のとき付随・任意）。"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（任意）。"
+    }
+  },
+  "additionalProperties": false
+}

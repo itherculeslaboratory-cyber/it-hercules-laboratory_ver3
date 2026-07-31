@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore } from "@ihl/truth";
-import { aggregateTags, confidenceGrade } from "../apps/api/src/tag-routes";
+import { aggregateTags, confidenceGrade, rankTagsByLayerPriority, AI_TAGS_MAX, SYSTEM_TAG_SOURCE_TYPE } from "../apps/api/src/tag-routes";
 import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
 
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -77,6 +77,50 @@ describe("OBS-07/52 remeasure tag lands in the machine (ai) layer", () => {
     // only ai layer has events -> aggregate read returns null (both-layer rule);
     // the append itself succeeded and the derived layer classification is machine.
     expect(agg).toBeNull();
+  });
+});
+
+describe("V3-OTH-20 タグ3層構造(system_tags/ai_tags/user_tags)+RAG優先度(2026-08-01追加)", () => {
+  it("system_tags is derived from SYSTEM_TAG_SOURCE_TYPE and does not affect the existing ai/user 400-gate", async () => {
+    const { env } = ctx();
+    await tag(env, { target_type: "individual", target_id: "ind-sys1", tag_type: "color", tag: "orange-base", source_type: HUMAN, action: "add" });
+    await tag(env, { target_type: "individual", target_id: "ind-sys1", tag_type: "color", tag: "orange-base", source_type: MACHINE, action: "add" });
+    await tag(env, { target_type: "individual", target_id: "ind-sys1", tag_type: "kind", tag: "individual", source_type: SYSTEM_TAG_SOURCE_TYPE, action: "add" });
+    const agg = (await (await aggregate(env, "individual", "ind-sys1")).json()) as {
+      system_tags: string[];
+      ai_tags: string[];
+      user_tags: string[];
+    };
+    expect(agg.system_tags).toEqual(["individual"]);
+    expect(agg.ai_tags).toEqual(["orange-base"]);
+    expect(agg.user_tags).toEqual(["orange-base"]);
+  });
+
+  it("system-only events (no ai/user) still 400 — system layer never satisfies the existing gate", async () => {
+    const { env } = ctx();
+    await tag(env, { target_type: "individual", target_id: "ind-sys2", tag_type: "kind", tag: "individual", source_type: SYSTEM_TAG_SOURCE_TYPE, action: "add" });
+    const res = await aggregate(env, "individual", "ind-sys2");
+    expect(res.status).toBe(400);
+  });
+
+  it("ai_tags caps at AI_TAGS_MAX(10) even when more machine tags are active", async () => {
+    const { env } = ctx();
+    await tag(env, { target_type: "individual", target_id: "ind-sys3", tag_type: "color", tag: "human-anchor", source_type: HUMAN, action: "add" });
+    for (let i = 0; i < 12; i++) {
+      await tag(env, { target_type: "individual", target_id: "ind-sys3", tag_type: "color", tag: `ai-tag-${String(i).padStart(2, "0")}`, source_type: MACHINE, action: "add" });
+    }
+    const agg = (await (await aggregate(env, "individual", "ind-sys3")).json()) as { ai_tags: string[] };
+    expect(agg.ai_tags.length).toBe(AI_TAGS_MAX);
+  });
+
+  it("rankTagsByLayerPriority orders system > ai > user and dedupes overlapping tags", () => {
+    const ranked = rankTagsByLayerPriority({
+      system_tags: ["auto-a", "shared"],
+      ai_tags: ["ai-a", "shared"],
+      user_tags: ["user-a", "shared"],
+    });
+    expect(ranked.map((r) => r.tag)).toEqual(["auto-a", "shared", "ai-a", "user-a"]);
+    expect(ranked.find((r) => r.tag === "shared")?.layer).toBe("system");
   });
 });
 

@@ -22,6 +22,7 @@ import {
   canTransitionHypothesis,
   promoteRepresentativeHypothesis,
   buildCitationEdges,
+  computeSectionsCompleteness,
   CONFIDENCE_WEIGHTS_DEFAULT,
   type ConditionsP,
   type ObservationJson,
@@ -40,6 +41,31 @@ export const paperMatchRoutes = new Hono<{ Bindings: Bindings; Variables: Variab
 const CONTENT_TYPE = "ihl.research.content.v1";
 const CONTENT_SCHEMA = "schemas/events/content.schema.json";
 const SCHEMA_VERSION = "1";
+// V3-PPR-14「更新履歴を表示し自動管理する」用の履歴イベント(bridge波でスキーマ追加済み・
+// このファイルは初めて発行側コードを書く)。
+const GRAPH_UPDATE_TYPE = "ihl.research.graph_update.v1";
+const GRAPH_UPDATE_SCHEMA = "schemas/events/ppr-graph-update.schema.json";
+// V3-PPR-08で追加済みの汎用リンク型を「テンプレfork」の血統記録に転用(新規スキーマ0本・
+// link_kind="derived_from"が意味的にfork元参照とそのまま一致するため)。
+const CITATION_LINK_TYPE = "ihl.citation.link.v1";
+const CITATION_LINK_SCHEMA = "schemas/events/citation-link.schema.json";
+// V3-PPR-24/25(design35 §A-5・bridge2でスキーマ追加済み)。研究循環7ノード型+knowledge_evidence
+// を content.schema.json を触らず独立イベント列で持つ受け皿。この艦は投影route(発行/一覧/詳細)を書く。
+const CYCLE_NODE_TYPE = "ihl.ppr.cycle_node.v1";
+const CYCLE_NODE_SCHEMA = "schemas/events/ppr-cycle-node.schema.json";
+const CYCLE_NODE_TYPES = [
+  "review",
+  "hypothesis",
+  "replication_proposal",
+  "replication_result",
+  "research_gap",
+  "comment",
+  "correction_note",
+  "knowledge_evidence",
+] as const;
+function cycleNodeKey(nodeId: string): string {
+  return `truth/${CYCLE_NODE_TYPE}/${nodeId}.json`;
+}
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -58,6 +84,20 @@ function envelope(actorId: string, data: Record<string, unknown>) {
     type: CONTENT_TYPE,
     time: new Date().toISOString(),
     dataschema: CONTENT_SCHEMA,
+    provenance: { generator_kind: "human", actor_id: actorId },
+    data,
+  };
+}
+// envelope() は CONTENT_TYPE 固定のため、graph_update/citation-link/ppr-cycle-node 等の
+// 別イベント型にはこの汎用版を使う(research-content-routes.ts/project-routes.ts と同型)。
+function envelopeFor(type: string, schema: string, actorId: string, data: Record<string, unknown>) {
+  return {
+    specversion: "1.0",
+    id: ulid(),
+    source: "apps/api",
+    type,
+    time: new Date().toISOString(),
+    dataschema: schema,
     provenance: { generator_kind: "human", actor_id: actorId },
     data,
   };
@@ -198,6 +238,143 @@ paperMatchRoutes.post("/research/graph/update", async (c) => {
   const threshold = typeof body.threshold === "number" ? body.threshold : undefined;
   const graph = computeLivingPaperGraph({ sections, conditions, claims }, observations, { threshold });
   return c.json({ ...graph, persisted: false });
+});
+
+// POST /research/content/:id/fork-template — 論文テンプレートのフォーク(V3-PPR-14
+// 「論文テンプレートもフォーク可能にする」)。:id は元となる paper の content_id(テンプレート)。
+// sections/conditions/claims をコピーした新規 paper content を作成し、fork 元との血統を
+// citation-link(link_kind="derived_from"・V3-PPR-08で追加済みの汎用型を再利用・新規スキーマ
+// 0本)として記録、初回の更新履歴を ppr-graph-update(V3-PPR-14で追加済み)として append する。
+// content.schema.json 自体は書き換えない(不変・本艦glob外)。
+paperMatchRoutes.post("/research/content/:id/fork-template", async (c) => {
+  const sourceId = c.req.param("id");
+  const s = store(c);
+  const sourceEv = await s.readEvent(contentKey(sourceId));
+  if (!sourceEv) return c.json({ error: "TEMPLATE_NOT_FOUND" }, 404);
+  const source = dataOf(sourceEv);
+  if (source.content_type !== "paper") {
+    return c.json({ error: "TEMPLATE_NOT_PAPER", details: ["fork-template は content_type=paper のみ対象"] }, 400);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const newContentId = typeof body.content_id === "string" && body.content_id ? body.content_id : ulid();
+  const sections = source.sections as Record<string, { filled: boolean; text: string }> | undefined;
+  const conditions = source.conditions as ConditionsP | undefined;
+  const claims = source.claims;
+  const newData: Record<string, unknown> = {
+    content_id: newContentId,
+    actor_id: actorId,
+    content_type: "paper",
+    title: typeof body.title === "string" && body.title ? body.title : `${String(source.title ?? "")}(fork)`,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+    sections: sections ?? {},
+    completeness_pct: computeSectionsCompleteness(sections),
+  };
+  if (conditions) newData.conditions = conditions;
+  if (claims !== undefined) newData.claims = claims;
+  const createRes = await s.putEventAt(contentKey(newContentId), envelope(actorId, newData));
+  if (createRes.status === "invalid") return c.json({ error: "INVALID_CONTENT", details: createRes.errors }, 400);
+  if (createRes.status === "conflict") return c.json({ error: "DUPLICATE_CONTENT", key: createRes.key }, 409);
+
+  // 血統記録(derived_from) — 新規スキーマ0本(既存 citation-link を fork 元参照に転用)。
+  const linkId = ulid();
+  await s.putEventAt(
+    `truth/${CITATION_LINK_TYPE}/${newContentId}/${linkId}.json`,
+    envelopeFor(CITATION_LINK_TYPE, CITATION_LINK_SCHEMA, actorId, {
+      link_id: linkId,
+      content_id: newContentId,
+      target_ref: { type: "paper", id: sourceId },
+      link_kind: "derived_from",
+      actor_id: actorId,
+      created_at: new Date().toISOString(),
+      schema_version: SCHEMA_VERSION,
+    }),
+  );
+
+  // 初回更新履歴(V3-PPR-14「更新履歴を表示し自動管理する」) — fork 直後のグラフ状態を1件目として積む。
+  const graph = computeLivingPaperGraph({ sections, conditions, claims: claims as TemplateClaim[] | undefined }, [], {});
+  const updateId = ulid();
+  await s.putEventAt(
+    `truth/${GRAPH_UPDATE_TYPE}/${newContentId}/${updateId}.json`,
+    envelopeFor(GRAPH_UPDATE_TYPE, GRAPH_UPDATE_SCHEMA, actorId, {
+      update_id: updateId,
+      content_id: newContentId,
+      actor_id: actorId,
+      triggered_by: `template_fork:${sourceId}`,
+      confidence: graph.confidence,
+      observation_count: graph.observation_count,
+      graph_snapshot: graph,
+      created_at: new Date().toISOString(),
+      schema_version: SCHEMA_VERSION,
+    }),
+  );
+
+  return c.json({ content_id: newContentId, forked_from: sourceId, key: createRes.key }, 201);
+});
+
+// GET /research/content/:id/update-history — V3-PPR-14 更新履歴投影(created_at 昇順・O(1)
+// prefix scan=content_id ごとに分離されたキー空間のため全件走査ではない)。
+paperMatchRoutes.get("/research/content/:id/update-history", async (c) => {
+  const id = c.req.param("id");
+  const rows = (await store(c).listEvents(`truth/${GRAPH_UPDATE_TYPE}/${id}/`))
+    .map(dataOf)
+    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || String(a.update_id).localeCompare(String(b.update_id)));
+  return c.json({ content_id: id, updates: rows });
+});
+
+// POST /research/cycle-nodes — V3-PPR-24/25 研究循環ノード(review/hypothesis/
+// replication_proposal/replication_result/research_gap/comment/correction_note/
+// knowledge_evidence)の append(INSERT ONLY・put-if-absent 409)。「編集でなく訂正投稿」
+// (PPR-25)方針どおり、既存ノードへの update/delete route は作らない — 訂正は node_type=
+// "correction_note" を subject_ref で元ノードへ向けて新規 append することで表す(store.ts自体が
+// update/delete メソッドを持たないためこの規律は route を書かなくても構造的に守られる)。
+// knowledge_evidence の「主な説(leading_hypotheses)」は配列のまま渡す(単数へ潰さない・PPR-24)。
+paperMatchRoutes.post("/research/cycle-nodes", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  if (!(CYCLE_NODE_TYPES as readonly string[]).includes(String(body.node_type))) {
+    return c.json(
+      { error: "INVALID_NODE_TYPE", details: [`node_type must be one of ${CYCLE_NODE_TYPES.join("/")}`] },
+      400,
+    );
+  }
+  const nodeId = typeof body.node_id === "string" && body.node_id ? body.node_id : ulid();
+  const data: Record<string, unknown> = {
+    node_id: nodeId,
+    node_type: body.node_type,
+    actor_id: actorId, // V3-AUT-17 強制刻印
+    created_at: typeof body.created_at === "string" ? body.created_at : new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (body.subject_ref !== undefined) data.subject_ref = body.subject_ref;
+  if (body.sections !== undefined) data.sections = body.sections;
+  const res = await store(c).putEventAt(cycleNodeKey(nodeId), envelopeFor(CYCLE_NODE_TYPE, CYCLE_NODE_SCHEMA, actorId, data));
+  if (res.status === "invalid") return c.json({ error: "INVALID_CYCLE_NODE", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_CYCLE_NODE", key: res.key }, 409);
+  return c.json({ node_id: nodeId, key: res.key }, 201);
+});
+
+// GET /research/cycle-nodes — 一覧投影(?node_type=・?subject_id= フィルタ・node_id 昇順決定論)。
+// subject_id は subject_ref.id への完全一致(同じ subject を巡る review/replication_result/
+// research_gap 等を横断で辿るための最小結合・新規索引は作らない=都度 prefix scan)。
+paperMatchRoutes.get("/research/cycle-nodes", async (c) => {
+  const nodeType = c.req.query("node_type");
+  const subjectId = c.req.query("subject_id");
+  const items = (await store(c).listEvents(`truth/${CYCLE_NODE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => !nodeType || d.node_type === nodeType)
+    .filter((d) => !subjectId || (d.subject_ref as { id?: string } | undefined)?.id === subjectId)
+    .sort((a, b) => String(a.node_id).localeCompare(String(b.node_id)));
+  return c.json({ items });
+});
+
+// GET /research/cycle-nodes/:id — 詳細投影(O(1)・キーが node_id 直下のためprefix scan不要)。
+paperMatchRoutes.get("/research/cycle-nodes/:id", async (c) => {
+  const id = c.req.param("id");
+  const ev = await store(c).readEvent(cycleNodeKey(id));
+  if (!ev) return c.json({ error: "CYCLE_NODE_NOT_FOUND" }, 404);
+  return c.json(dataOf(ev));
 });
 
 // POST /research/review — AI査読パイプライン段階1-5(構造/欠損/再現性/整合性/統計)を

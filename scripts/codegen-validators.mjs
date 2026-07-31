@@ -139,6 +139,26 @@ const SCHEMAS = [
   ["mktIndividualOffer", "events/mkt-individual-offer.schema.json"],
   ["mktStoreItem", "events/mkt-store-item.schema.json"],
   ["mktStoreOrder", "events/mkt-store-order.schema.json"],
+  // V3-PPR-14(残課題): Living Paper グラフ自動更新の永続履歴イベント型。
+  // ★2026-08-01bridge2で判明: envelope.ts VALIDATOR_NAME/EVENT_NAMES には登録済みだったが
+  // 本SCHEMAS配列への追加が漏れていた(bridgeplan J4-補②と同型の書き漏らし)。
+  ["pprGraphUpdate", "events/ppr-graph-update.schema.json"],
+  // V3-PPR-08(bridgeplan J1-3・2026-08-01bridge2新規)。
+  ["citationLink", "events/citation-link.schema.json"],
+  // V3-AUT-38(bridgeplan J1-6・2026-08-01bridge2新規)。
+  ["autGithubLink", "events/aut-github-link.schema.json"],
+  // V3-PPR-24/25/03・BBS-02/18/25・OBS-51(design35 §A-5・2026-08-01bridge2新規)。
+  ["pprCycleNode", "events/ppr-cycle-node.schema.json"],
+  // 2026-08-01 bridge2追補(design19由来の新規スキーマ9本・must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)。
+  ["krmFeedback", "events/krm-feedback.schema.json"],
+  ["krmPreferenceTemplate", "events/krm-preference-template.schema.json"],
+  ["auth2faEvent", "events/auth-2fa-event.schema.json"],
+  ["mktPiiRef", "events/mkt-pii-ref.schema.json"],
+  ["fndRestoreApplied", "events/fnd-restore-applied.schema.json"],
+  ["fndSandboxRealm", "events/fnd-sandbox-realm.schema.json"],
+  ["krmTitle", "events/krm-title.schema.json"],
+  ["mktProductNode", "events/mkt-product-node.schema.json"],
+  ["obsDatasource", "events/obs-datasource.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

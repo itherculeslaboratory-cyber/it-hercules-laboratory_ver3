@@ -7,6 +7,8 @@ import {
   CONTRIBUTION_PER_PLATINUM,
   CONTRIBUTION_TITLE_THRESHOLD,
   UPSTREAM_PERCENT,
+  KRM29_PRO_RESEARCHER_THRESHOLD,
+  KRM29_CITIZEN_SCIENTIST_THRESHOLD,
 } from "./economy-constants";
 
 export const PT_TYPE = "ihl.economy.pt_event.v1";
@@ -83,6 +85,34 @@ export async function projectContribution(
   }
   const axis_list = AXES.map((axis) => ({ axis, ...axes[axis] }));
   return { actor_id: actorId, axes, axis_list };
+}
+
+// ── 3階層(V3-KRM-29・design19 §T1-6 案A)────────────────────────────────
+// 役職(role文字列)を新規発行しない。既存3軸貢献度スコアの閾値から導出する純関数のみ。
+// 表示バッジは KRM-17 の称号をそのまま使う(このファイルは判定のみ・二重に作らない)。
+// 閾値は economy-constants.ts の暫定既定(KRM29_PRO_RESEARCHER_THRESHOLD=1000・
+// KRM29_CITIZEN_SCIENTIST_THRESHOLD=100・同ファイルコメント参照=要件本文未確定のため
+// CONTRIBUTION_TITLE_THRESHOLD より1桁小さい値を暫定既定とした)。
+export type ContributorTier = "pro_researcher" | "citizen_scientist" | "enjoy";
+
+/**
+ * scores(3軸の生スコア。projectContribution(...).axes から呼び出し側が抽出する)から
+ * 階層を導出する純関数。プロ研究者=research軸がKRM29_PRO_RESEARCHER_THRESHOLD以上。
+ * 市民科学者/ブリーダー=いずれかの軸がKRM29_CITIZEN_SCIENTIST_THRESHOLD以上。それ以外=
+ * エンジョイ勢(既定)。「プロ研究者」資格審査の要否はHQ裁定事項のため、本関数は閾値のみで
+ * 判定する(審査機構は作らない)。
+ */
+export function tier(scores: Record<Axis, number>): ContributorTier {
+  if (scores.research >= KRM29_PRO_RESEARCHER_THRESHOLD) return "pro_researcher";
+  if (AXES.some((axis) => scores[axis] >= KRM29_CITIZEN_SCIENTIST_THRESHOLD)) return "citizen_scientist";
+  return "enjoy";
+}
+
+/** actor_id から直接階層を求める便宜関数(projectContribution を1回呼ぶだけ・二重投影なし)。 */
+export async function tierOf(s: TruthStore, actorId: string): Promise<ContributorTier> {
+  const { axes } = await projectContribution(s, actorId);
+  const scores = { research: axes.research.score, capital: axes.capital.score, development: axes.development.score } as Record<Axis, number>;
+  return tier(scores);
 }
 
 // 貢献イベントを append する共有ヘルパ(github-webhook-routes.ts はそれ以前から独自に

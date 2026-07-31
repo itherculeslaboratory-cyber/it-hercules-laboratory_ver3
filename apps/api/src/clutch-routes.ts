@@ -193,6 +193,7 @@ clutchRoutes.post("/clutches", async (c) => {
     "container_label",
     "placement_id",
     "lineage_id", // V3-IND-34 複数系統並行管理タグ(promote で子個体へ継承)
+    "project_id", // V3-IND-23 projectHub拡張(任意)
   ] as const) {
     if (body[k] !== undefined) data[k] = body[k];
   }

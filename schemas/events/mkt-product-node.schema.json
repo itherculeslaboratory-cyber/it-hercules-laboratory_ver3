@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-product-node.schema.json",
+  "title": "Market ProductNode event (ihl.mkt.product_node.v1)",
+  "description": "飼育用品を科学的に評価する ProductNode の append-only イベント（V3-MKT-44）。Truth キー truth/ihl.mkt.product_node.v1/<product_id>.json。出品(mkt-listing)は取引が終われば寿命が尽きるが、商品としての評価は残り続けるため、mkt-listing に相乗りさせず独立イベント型とする（design19 T1-7 案A）。成功率/失敗率/価格履歴は保存せず、obs-capture(product_ref)とind-life-eventを材料に投影(その場計算)で導出する。affiliate_url はアフィリエイトを付けたいユーザーの自分URL(self)。付けないユーザーは運営URL(operator・既定)だが、実URLは本スキーマ導入時点では未配線（人間ゲート）。paper_refs は cite-ref.schema.json への相対 $ref で関連論文を参照する（新しい参照型を発明しない）。",
+  "x_ihl_req": "V3-MKT-44",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-7",
+  "type": "object",
+  "required": ["product_id", "name", "category", "affiliate_mode", "created_at"],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "商品の一意キー（ULID）。"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "商品名。"
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1,
+      "description": "商品カテゴリ（自由記述）。"
+    },
+    "affiliate_mode": {
+      "type": "string",
+      "enum": ["operator", "self"],
+      "description": "operator=運営URL(報酬はプラチナコインと貢献度) / self=出品者自身のアフィリエイトURL。既定は operator。"
+    },
+    "affiliate_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "アフィリエイトURL（任意・affiliate_mode=self のとき使用。未設定のまま出荷可＝空の時はリンクを出さない）。"
+    },
+    "paper_refs": {
+      "type": "array",
+      "items": { "$ref": "cite-ref.schema.json" },
+      "description": "関連論文への参照（cite-ref 共用型・任意）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（任意）。"
+    }
+  },
+  "additionalProperties": false
+}

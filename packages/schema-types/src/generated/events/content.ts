@@ -182,7 +182,11 @@ export interface CitationReferenceCiteRefSharedType {
     | "precedent"
     | "fork"
     | "url"
-    | "book";
+    | "book"
+    | "listing_engagement"
+    | "trade_private"
+    | "trade_public_exchange"
+    | "market_rating";
   /**
    * 引用先の一意キー（type ごとの ID 空間）。
    */

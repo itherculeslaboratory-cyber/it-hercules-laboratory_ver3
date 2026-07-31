@@ -33,13 +33,14 @@
 |---|---|---|
 | `w1-fnd` | fnd+cst+i18(13+13) | `apps/api/src/{env.ts,kv,batch*,truth-backup-connector,telemetry-merge,costs-routes,i18n*,script-driver*}*`, `libs/datalake/**`, `tests/{fnd,cst,i18,foundation,costs,datalake,script-driver}*`(★批評致命2反映: `env`→`env.ts`。`env-import-routes.ts`はw1-obsの明示所有。★2026-07-31 w2: `script-driver*`追加=V3-FND-20実装先・61代目HQ裁定(c)=次波でglob明示割当) |
 | `w1-aut` | aut(12+9) | `apps/api/src/{auth-routes,session,mail,account,consent-routes,handle-routes,profile-routes,settings-routes}*`, `tests/{auth.test,auth-,aut-,account,session,consent,profile,settings,handle}*`(★批評致命2反映: `auth`前方一致が`authz.test.ts`(w1-sec所有)を飲むため限定化) |
-| `w1-sec` | sec(20+18) | `apps/api/src/{authz,denylist,rate-limit,policy,pii*,hmac,key-bundle-routes}*`, `tests/{sec,authz,rate-limit,pii,policy,denylist,hmac}*` |
+| `w1-sec` | sec(20+18) | `apps/api/src/{authz,denylist,rate-limit,policy,pii*,hmac,key-bundle-routes}*`, `tests/{sec,authz,rate-limit,pii,policy,denylist,hmac}*`, `apps/api/src/sandbox-routes.ts`(★2026-08-01 design19 §T1-9・w-aip2追補。Fork/Workflow/Component実行"要求"の事前検証ゲート(Whitelist+Permission+CPU上限+production書込拒否+network拒否)のみ・全72行。FND-31本体(`sandbox-realm-routes.ts`等・未作成)とは中身を共有しない別物) |
 | `w1-obs` | obs(21+19) | `apps/api/src/{observation*,collector-routes,device-routes,env-import-routes,csv-import,freetext-parser,taxon-routes,thumbnail*}*`, `components/collector-switchbot/**`, `components/obs-manifest/**`, `tests/{obs,observation,collector,device,taxon,csv,thumbnail}*` |
 | `w1-mkt` | mkt+oth(19+21) | `apps/api/src/{market*,shop-routes,fee-routes,payjp-connector,gmo*,economy-constants,ledger*,match-routes,github-issues-connector,github-webhook-routes}*`, `tests/{mkt,market,shop,fee,payjp,gmo,ledger,match}*` |
 | `w1-plaza` | bbs+wik(17+19) | `apps/api/src/{plaza*,social-routes,engagement-routes,knowledge*,source-routes,tag-routes,reference-counter}*`, `components/wiki-ingest/**`, `tests/{plaza,bbs,wik,knowledge,social,tag,source,engagement}*` |
 | `w1-gov` | gov+krm(16+24) | `apps/api/src/{gov-routes,proposal-routes,contribution*}*`, `tests/{gov,krm,contribution,proposal,dispute,vote}*` |
 | `w1-ind` | ind+ppr(11+21) | `apps/api/src/{individual-routes,clutch-routes,paper-match*,research*}*`, `tests/{ind,individual,clutch,ppr,paper,research}*` |
-| `w1-aip` | aip対応表(63+18) | 報告書のみ(コード0行) |
+| `w1-aip` | aip対応表(63+18) | `scripts/**`, `.github/**`, リポジトリ直下の起動スクリプト(`start.bat` / `dev-up.ps1` / `dev.ps1`), `tests/` の未帰属ファイル（`cl-01`〜`cl-13` / `check-*` / `ai-*`）, `docs/planning/c8/progress.json`(★2026-08-01 w-aip2発注書・design35 §3 A-3案Aにより「報告書のみ」から性格変更。1手目としてこの艦自身が書き換え=R64-3裁定) |
+| `w-web1` | ui(apps/webロジック層限定・6件) | `apps/web/src/lib/**`, `apps/web/src/renderer/*-utils.ts` と その `*.test.ts` のみ（`renderer.tsx` / `renderer-*.test.tsx` は不可）, `apps/web/e2e/**`(★2026-08-01 design35 §3 A-1案A・w-web1発注書。`apps/web/src/app/**`(画面)・`screen-defs/**`・`package.json`は不可侵のまま。この行はA-3の艦=w-aip2がR64-3裁定により代筆) |
 
 **全艦共通の不可侵**(§7): `apps/api/src/index.ts`・`package.json`(全階層)・`packages/schema-types/src/generated/**`・他艦のglob・`screen-defs/**`(UIは後回し)・`01-requirements/**`(読むのは自由)。
 
@@ -49,7 +50,7 @@
 
 ## tests/ の未帰属ファイルについて(2026-07-31追記・批評R0731-c70cca 重大3是正)
 
-上記の艦別globは既存の `tests/` 全183本のうち約61本(`cl-01`〜`cl-13`系・`check-*`系・`ai-*`系など)をどの艦にも割り当てていない。これらは既存テストの共有編集にあたるため、**触る必要が出た艦は書き換えず手を止め、レビューキュー経由でHQへ差し戻すこと**(計画§175の緩和策に準拠)。同様に `apps/api/src` 側にも `index.ts` を除く11本の未帰属ファイル(`ai-digest-routes.ts`・`ai-kernel.ts`・`culture.ts`・`cusb-routes.ts`・`home-routes.ts`・`index.test.ts`・`intent.ts`・`project-routes.ts`・`sandbox-routes.ts`・`theme-routes.ts`・`ui-constants.ts`)がある。これらの担当を新設・拡張するかどうかはHQの運用裁定事項であり、本ファイルは意図的に未確定のまま記録する(推測で艦を割り当てない)。
+上記の艦別globは既存の `tests/` 全183本のうち約61本(`cl-01`〜`cl-13`系・`check-*`系・`ai-*`系など)をどの艦にも割り当てていない。これらは既存テストの共有編集にあたるため、**触る必要が出た艦は書き換えず手を止め、レビューキュー経由でHQへ差し戻すこと**(計画§175の緩和策に準拠)。同様に `apps/api/src` 側にも `index.ts` を除く10本の未帰属ファイル(`ai-digest-routes.ts`・`ai-kernel.ts`・`culture.ts`・`cusb-routes.ts`・`home-routes.ts`・`index.test.ts`・`intent.ts`・`project-routes.ts`・`theme-routes.ts`・`ui-constants.ts`)がある(★2026-08-01 `sandbox-routes.ts` は design19 §T1-9・w-aip2追補によりw1-secへ帰属確定済みのためこの一覧から除外)。これらの担当を新設・拡張するかどうかはHQの運用裁定事項であり、本ファイルは意図的に未確定のまま記録する(推測で艦を割り当てない)。
 
 ## モジュールの標準構造(全機能対象・2026-07-31訂正)
 

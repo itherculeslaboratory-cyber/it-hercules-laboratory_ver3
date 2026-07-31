@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/mkt-pii-ref.schema.json",
+  "title": "Market PII reference event (ihl.mkt.pii_ref.v1)",
+  "description": "取引PIIの参照(reference)の append-only イベント（V3-MKT-28）。Truth キー truth/ihl.mkt.pii_ref.v1/<trade_id>-<ulid>.json。★PIIの実体（氏名・配送先・振込口座・局留め設定）を一切含まない。実体は削除可能なストア（KV/非truthプレフィクス）に本人プロフィールとして持ち、本イベントは『誰が誰に何を見せているか』の参照権限のみを記録する。action=revoked を append することで『取引完了後の消去』を参照失効として表現する（design19 T1-3 案A）。",
+  "x_ihl_req": "V3-MKT-28",
+  "x_ihl_source": "kits/lane-think/R0731-08b452-REPORT-2026-07-31-g64-design19.md §T1-3",
+  "type": "object",
+  "required": ["trade_id", "owner_actor_id", "slot", "granted_to", "action", "created_at"],
+  "properties": {
+    "trade_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象取引の一意キー。"
+    },
+    "owner_actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "PIIの所有者（本人）の actor_id。"
+    },
+    "slot": {
+      "type": "string",
+      "minLength": 1,
+      "description": "PIIスロット名（例: 氏名/配送先/振込口座/局留め設定。値そのものは含まない）。"
+    },
+    "granted_to": {
+      "type": "string",
+      "minLength": 1,
+      "description": "参照を許可された取引相手の actor_id。"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["granted", "revoked"],
+      "description": "参照権限の付与/失効。revoked が『取引完了後の消去』に相当する。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "発生時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版（任意）。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore } from "@ihl/truth";
 import { weightForEvent } from "../apps/api/src/github-webhook-routes";
-import { FakeR2Bucket, makeEnv } from "./helpers";
+import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
 
 const SECRET = "whsec_test";
 const weightsConfig = JSON.parse(
@@ -60,7 +60,10 @@ describe("POST /api/v1/github/webhook", () => {
     expect(res.status).toBe(401);
   });
 
-  it("正署名 pull_request → 201・contribution.delta は config の pt を反映", async () => {
+  it("正署名 pull_request(未連携login)→ 201・contribution.delta は config の pt を反映・actor_id は github:anonymous プール", async () => {
+    // V3-AUT-38是正: 旧実装は login ごとに `github:${login}` という別アクターを作って
+    // いた(loginの数だけプールが分裂=要件違反)。POST /auth/github/link で連携していない
+    // login からの貢献は、誰の login でも同じ github:anonymous プールへ計上される。
     const bucket = new FakeR2Bucket();
     const res = await post(bucket, PR_BODY, {
       "content-type": "application/json",
@@ -75,8 +78,33 @@ describe("POST /api/v1/github/webhook", () => {
     const data = (stored!.data ?? {}) as Record<string, unknown>;
     expect(data.delta).toBe(weightsConfig.weights.pull_request.pt); // 換算が config 由来
     expect(data.axis).toBe(weightsConfig.weights.pull_request.axis);
-    expect(data.actor_id).toBe("github:octocat");
+    expect(data.actor_id).toBe("github:anonymous");
     expect(data.source).toBe("github");
+  });
+
+  it("V3-AUT-38: POST /auth/github/link で連携済みの login は、以後の webhook が連携先 actor_id へ計上される", async () => {
+    const bucket = new FakeR2Bucket();
+    const linkRes = await app.request(
+      "/api/v1/auth/github/link",
+      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ github_login: "octocat" }) },
+      env(bucket),
+    );
+    expect(linkRes.status).toBe(201);
+    const { actor_id: linkedActorId } = (await linkRes.json()) as { actor_id: string };
+    expect(linkedActorId).toBeTruthy();
+
+    const res = await post(bucket, PR_BODY, {
+      "content-type": "application/json",
+      "X-Hub-Signature-256": sign(PR_BODY),
+      "X-GitHub-Delivery": "deliv-linked-1",
+      "X-GitHub-Event": "pull_request",
+    });
+    expect(res.status).toBe(201);
+    const stored = await new TruthStore(bucket).readEvent(
+      "truth/ihl.economy.contribution_event.v1/gh-deliv-linked-1.json",
+    );
+    const data = (stored!.data ?? {}) as Record<string, unknown>;
+    expect(data.actor_id).toBe(linkedActorId);
   });
 
   it("同一 delivery_id 再送はべき等（409・二重加算しない）", async () => {

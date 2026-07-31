@@ -43,6 +43,18 @@ jobs:
       - name: Typecheck web (V3-AIP-22)
         run: npm run typecheck -w apps/web
 
+      # V3-AIP-49: E2E(Playwright)をCI(Ubuntu)に接続する。従来
+      # docs/planning/c2/e2e-evidence.md:11「ローカル実測のみ（CI 非接続）」だった
+      # ギャップを埋める。apps/web/playwright.config.ts の webServer が wrangler dev
+      # (API・8787)と next dev(web・3000)を自動起動するため、追加のDocker/サーバ起動は
+      # 不要。software GL(swiftshader)は同config側で既に設定済み(GPU無しCI対応)。
+      - name: Install Playwright browsers (chromium only — matches playwright.config.ts)
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: E2E web (Playwright, V3-AIP-49 — CIをUbuntu正とする)
+        run: npm run e2e -w apps/web
+
       # PR-only: if schemas/frozen/ changed, tests/ MUST change too (CL-01..13 形式凍結 — 要件定義書 §6.3).
       - name: Frozen schema change gate
         if: github.event_name == 'pull_request'
@@ -64,11 +76,12 @@ jobs:
             echo "No schemas/frozen/ changes — gate not applicable."
           fi
 
-      # PR-only design gates (V3-AIP-32/36/68): requirement-freeze (裁定参照必須),
-      # commit-message discipline (BASELINE_REF 未設定の間は no-op), dangerous-code
-      # classifier (money/DNS/self-permission — staging 昇格の物理ゲート・§5).
-      # check-rtm は npm run lint 内で実行。
-      - name: Design gate (req-freeze / commit-msg / danger-code)
+      # PR-only design gates (V3-AIP-32/36/68/106 + V3-GOV-25): requirement-freeze
+      # (裁定参照必須), commit-message discipline (BASELINE_REF 未設定の間は no-op),
+      # dangerous-code classifier (money/DNS/self-permission — staging 昇格の物理
+      # ゲート・§5), design-sync(実装コード変更には設計書更新 or 「設計影響なし: 理由」
+      # 宣言を必須化。GOV-25 CMPを合流)。check-rtm は npm run lint 内で実行。
+      - name: Design gate (req-freeze / commit-msg / danger-code / design-sync)
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -77,3 +90,4 @@ jobs:
           node scripts/check-req-freeze.mjs
           node scripts/check-commit-msg.mjs
           node scripts/check-danger-code.mjs
+          node scripts/check-design-sync.mjs

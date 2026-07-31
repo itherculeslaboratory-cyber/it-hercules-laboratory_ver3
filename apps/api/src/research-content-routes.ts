@@ -202,6 +202,29 @@ researchContentRoutes.post("/research/content", async (c) => {
       );
     }
   }
+  // V3-PPR-03 書込側 sections 検証拡張: completeness_pct はクライアント入力値のまま独立に
+  // 保持する既存設計(paper-sections.test.ts「stored value is untouched even though it
+  // disagrees with the computed one」で明示済み)には手を触れない。代わりに、design_only
+  // 骨格(computeSectionsCompleteness)がこれまで検証していなかった構造的な矛盾 —
+  // filled:true なのに text が空(または空白のみ) — を書込時に拒否する(読み側の
+  // sections_completeness_pct 投影は filled フラグのみを信頼して集計するため、filled:true
+  // で本文が空の節が混ざると投影の意味が壊れる)。
+  if (body.sections !== undefined && body.sections !== null) {
+    const sections = body.sections as Record<string, { filled?: boolean; text?: string }>;
+    const badKey = Object.keys(sections).find((k) => {
+      const sec = sections[k];
+      return sec?.filled === true && (typeof sec.text !== "string" || !sec.text.trim());
+    });
+    if (badKey) {
+      return c.json(
+        {
+          error: "INVALID_SECTION_FILLED_WITHOUT_TEXT",
+          details: [`section "${badKey}" has filled=true but empty text`],
+        },
+        400,
+      );
+    }
+  }
   const actorId = c.get("actorId");
   const contentId = typeof body.content_id === "string" && body.content_id ? body.content_id : ulid();
   const data: Record<string, unknown> = {
@@ -305,6 +328,37 @@ researchContentRoutes.get("/research/content/:id/export", async (c) => {
   const format = c.req.query("format") || "html";
   if (format !== "html") return c.json({ error: "UNSUPPORTED_FORMAT", details: ["only format=html is supported (PDF: browser print)"] }, 400);
   return c.html(renderContentHtml(dataOf(ev)));
+});
+
+// truth/ihl.plaza.post.v1/ の型文字列(plaza-routes.ts 内 POST_TYPE の値と同一)。plaza-routes.ts
+// は本艦glob外のため import せず、値のみここで再宣言する(既存の各ファイルが型文字列を都度
+// 定義するのと同じパターン)。
+const PLAZA_POST_TYPE_FOR_REVERSE_LOOKUP = "ihl.plaza.post.v1";
+
+// GET /research/content/:id/cited-by-posts — 論文側の逆引き投影(V3-PPR-08「論文→板」方向)。
+// 板→論文方向は既存 plaza-routes.ts 側(GET /plaza/threads/:thread_id/paper-citations)が
+// cite_refs を集約して提供済み。逆に「この論文を引用している投稿」を求めるには、post 側から
+// paper_id への索引が存在しないため全 plaza post を listEvents(prefix) で全件走査するしかない
+// (store.ts のキー構造は channel/thread/post 単位の prefix のみを持ち、cite先paper_idからの
+// 逆引き索引を持たない・不変条項① 派生値は都度再計算に従いここで毎回集計する。indexがある
+// かのように書かない=O(n))。査読コメント層(BBSレビュー)は新規スキーマを作らず既存
+// plaza-post をそのまま使う設計(bridgeplan J1-3)のため、ここでは cite_refs 集約のみ行う。
+researchContentRoutes.get("/research/content/:id/cited-by-posts", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const ev = await s.readEvent(contentKey(id));
+  if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const allPosts = (await s.listEvents(`truth/${PLAZA_POST_TYPE_FOR_REVERSE_LOOKUP}/`)).map(dataOf);
+  const citingPosts = allPosts
+    .filter((p) =>
+      ((p.cite_refs as CiteRef[] | undefined) ?? []).some((ref) => ref.type === "paper" && ref.id === id))
+    .map((p) => ({
+      post_id: String(p.post_id ?? ""),
+      thread_id: String(p.thread_id ?? ""),
+      channel: String(p.channel ?? ""),
+    }))
+    .sort((a, b) => a.post_id.localeCompare(b.post_id));
+  return c.json({ content_id: id, citing_posts: citingPosts });
 });
 
 // POST /research/content/:id/tags — 確認 POST でのみ tag_event を append（WIK-14）。

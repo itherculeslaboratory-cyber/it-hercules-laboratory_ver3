@@ -46,4 +46,15 @@ describe("V3-MKT-52 検索/フィルタAPI(cursor pagination)", () => {
     const page = (await (await get(env, sellerH, "/market/listings")).json()) as { next_cursor?: string };
     expect(page.next_cursor).toBeUndefined();
   });
+
+  it("V3-MKT-52(w-mkt2追記): ?country= で完全一致(大小無視)フィルタできる", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const sellerH = bearer(await issueSessionToken("pag-seller3", SESSION_SECRET));
+    await post(env, sellerH, "/market/listings", { title: "JP出品", country: "JP" });
+    await post(env, sellerH, "/market/listings", { title: "US出品", country: "US" });
+    const page = (await (await get(env, sellerH, "/market/listings?country=jp")).json()) as {
+      listings: { title: string; country?: string }[];
+    };
+    expect(page.listings.map((l) => l.title)).toEqual(["JP出品"]);
+  });
 });

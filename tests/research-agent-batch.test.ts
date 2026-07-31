@@ -11,11 +11,14 @@ import {
   distillWiki,
   generateNewspaper,
   runBatchOnce,
+  computeMinorGap,
+  detectMinorGaps,
 } from "../apps/api/src/research-agent-batch";
 
 const CONTENT_TYPE = "ihl.research.content.v1";
 const TASK_TYPE = "ihl.research.task_node.v1";
 const WIKI_TYPE = "ihl.research.wiki_node.v1";
+const CYCLE_NODE_TYPE = "ihl.ppr.cycle_node.v1";
 const NOW = new Date("2026-07-11T21:00:00Z");
 
 function section(text = "") {
@@ -181,6 +184,50 @@ describe("PPR-17 newspaper generation + routes", () => {
   it("no newspaper is generated when there are no task nodes", async () => {
     const s = new TruthStore(new FakeR2Bucket());
     expect(await generateNewspaper(s, NOW)).toBeNull();
+  });
+});
+
+describe("V3-KRM-15 MinorGapDetector — tag-count only, no embedding/AI", () => {
+  it("computeMinorGap: all 3 viewpoint tags present -> no gap (null)", () => {
+    const tags = new Set(["failure_case", "ethics", "cost"]);
+    expect(computeMinorGap("P-x", tags, 10)).toBeNull();
+  });
+
+  it("computeMinorGap: missing tags list the exact gap + inverse-normalized scarcity score", () => {
+    const gap = computeMinorGap("P-x", new Set(["cost"]), 3);
+    expect(gap).not.toBeNull();
+    expect(gap!.missing_viewpoints).toEqual(["failure_case", "ethics"]);
+    expect(gap!.data_scarcity_score).toBeCloseTo(1 / 4, 6); // 1/(1+linked_count)
+    expect(gap!.linked_count).toBe(3);
+  });
+
+  it("computeMinorGap: 0 linked observations/papers -> scarcity score is 1 (maximally scarce)", () => {
+    const gap = computeMinorGap("P-x", new Set(), 0);
+    expect(gap!.data_scarcity_score).toBe(1);
+  });
+
+  it("detectMinorGaps: untagged paper gets a research_gap cycle-node + a data_gap task; idempotent on rerun", async () => {
+    const s = new TruthStore(new FakeR2Bucket());
+    await seedPaper(s, { content_id: "P-gap-1" }); // no tags, no citations -> all 3 viewpoints missing
+
+    const first = await detectMinorGaps(s, NOW);
+    expect(first.gaps_found).toBe(1);
+    expect(first.nodes_created).toBe(1);
+    expect(first.tasks_created).toBe(1);
+
+    const nodes = (await s.listEvents(`truth/${CYCLE_NODE_TYPE}/`)).map((e) => e.data as Record<string, unknown>);
+    expect(nodes.length).toBe(1);
+    expect(nodes[0].node_type).toBe("research_gap");
+    expect((nodes[0].subject_ref as { type: string; id: string }).id).toBe("P-gap-1");
+
+    const gapTasks = (await tasks(s)).filter((t) => t.source_kind === "data_gap");
+    expect(gapTasks.length).toBe(1);
+
+    // rerun: deterministic node_id/task_id -> put-if-absent conflict -> 0 new inserts.
+    const second = await detectMinorGaps(s, NOW);
+    expect(second.gaps_found).toBe(1); // still detected (gap condition unchanged)
+    expect(second.nodes_created).toBe(0);
+    expect(second.tasks_created).toBe(0);
   });
 });
 
