@@ -24097,7 +24097,7 @@
   },
   {
     "id": "V3-FND-22",
-    "statement": "APIは統一エンベロープ形式(data/meta{requestId,timestamp}/error)で応答し、決定論的ページング・スナップショットバージョン管理・whitelist化された明示エラーコード(UNIVERSE_NOT_FOUND/SNAPSHOT_NOT_FOUND/INVALID_FILTER等)を持つ。API本数は保存(GET/POST)中心の最小(6〜8本程度)に抑えロジックを持たない薄いパイプ(受信→不変条件チェック→Command変換→applyCommand→R2 append、Workers1ファイル完結)とし、未実装APIは501スタブで先行定義する。",
+    "statement": "APIは統一エンベロープ形式(data/meta{requestId,timestamp}/error)で応答し、whitelist化された明示エラーコード(UNIVERSE_NOT_FOUND/SNAPSHOT_NOT_FOUND/INVALID_FILTER等)を持つ。【2026-08-01分割(review-queue R0801-41f081-fnd22scope FND-1=○)】原文にあった残り4条項(決定論的ページング/スナップショットバージョン管理/API本数6〜8本の薄いパイプ/501スタブ先行定義)はV3-FND-36〜39として独立要件に採番し直した(出典=本要件の原文自体)。原文全文はgit履歴(本コミット直前のregistry.json)に残る。",
     "category": "基盤/インフラ",
     "kind": "機能要件",
     "scores": {
@@ -24178,6 +24178,256 @@
     "req_status": "確定",
     "wave": "第2波",
     "wave_why": "tier_v2=B→第2波(desire台帳未掲載)",
+    "hold": false
+  },
+  {
+    "id": "V3-FND-36",
+    "statement": "APIは決定論的ページングを持つ。【2026-08-01分割(FND-1=○)】元V3-FND-22原文の該当節「決定論的ページング…を持つ」を忠実に転記して独立要件化した。ページングの具体アルゴリズム(cursor方式か等)はFND-22原文に規定が無く、本要件にも未規定のまま残す(創作しない)。",
+    "category": "基盤/インフラ",
+    "kind": "機能要件",
+    "scores": {
+      "bv": {
+        "v": 3,
+        "why": "一貫したAPI契約はOSS利用者と保守性に寄与(元V3-FND-22のbvを踏襲)"
+      },
+      "ui": {
+        "v": 2,
+        "why": "ページング結果の一貫性(元V3-FND-22のuiを踏襲)"
+      },
+      "dep": {
+        "v": 3,
+        "why": "一覧系APIが従う(元V3-FND-22のdepを踏襲)"
+      },
+      "diff": {
+        "v": 2,
+        "why": "決定論的ページングの実装自体は容易(元V3-FND-22のdiffを踏襲)"
+      }
+    },
+    "philosophy": [
+      "10年コスト最小",
+      "Truth-append-only",
+      "その他思想",
+      "批評家ゲート"
+    ],
+    "trust": "中",
+    "human_confirm": false,
+    "novelty": "不明",
+    "status_in_ver2": "不明",
+    "sources": [
+      {
+        "src_file": "01-requirements/registry.json (V3-FND-22原文・分割前)",
+        "evidence": "「決定論的ページング・スナップショットバージョン管理・whitelist化された明示エラーコード(...)を持つ。」の該当節",
+        "trust": "中",
+        "date": "2026-03-14"
+      },
+      {
+        "src_file": "00-hq/review-queue/R0801-41f081-fnd22scope-2026-08-01.json (user_ruling.answers.FND-1=o)",
+        "evidence": "ifYes: 「残り条項(決定論的ページング/スナップショット版管理/API 6〜8本の薄いパイプ/501スタブ)をそれぞれ新規要件として採番します(出典は現FND-22の原文=採番済み文書なので出典実在)」",
+        "trust": "高",
+        "date": "2026-08-01"
+      }
+    ],
+    "superseded": null,
+    "conflict": null,
+    "ambiguity": "分割前のV3-FND-22は本条項単独のscores/v1_score/tier_v2を持たず(6条項束ねての評価だったため)、分割時に記録役が元要件の値をそのまま踏襲した。ユーザー本人が本条項単独で再評価した値ではない。",
+    "group": "g01-基盤コスト",
+    "v1_score": 12,
+    "v1_tier": "B",
+    "ds": 3,
+    "score_v2": 27,
+    "tier_v2": "B",
+    "req_status": "確定",
+    "wave": "第2波",
+    "wave_why": "元V3-FND-22のtier_v2=B→第2波を分割後も踏襲(desire台帳未掲載)",
+    "hold": false
+  },
+  {
+    "id": "V3-FND-37",
+    "statement": "APIはスナップショットバージョン管理を持つ。【2026-08-01分割(FND-1=○)】元V3-FND-22原文の該当節「スナップショットバージョン管理…を持つ」を忠実に転記して独立要件化した。バージョン管理の具体方式(番号体系・保持期間等)はFND-22原文に規定が無く、本要件にも未規定のまま残す(創作しない)。",
+    "category": "基盤/インフラ",
+    "kind": "機能要件",
+    "scores": {
+      "bv": {
+        "v": 3,
+        "why": "一貫したAPI契約はOSS利用者と保守性に寄与(元V3-FND-22のbvを踏襲)"
+      },
+      "ui": {
+        "v": 2,
+        "why": "スナップショット指定結果の一貫性(元V3-FND-22のuiを踏襲)"
+      },
+      "dep": {
+        "v": 3,
+        "why": "スナップショット参照系APIが従う(元V3-FND-22のdepを踏襲)"
+      },
+      "diff": {
+        "v": 2,
+        "why": "バージョン管理自体の実装は容易(元V3-FND-22のdiffを踏襲)"
+      }
+    },
+    "philosophy": [
+      "10年コスト最小",
+      "Truth-append-only",
+      "その他思想",
+      "批評家ゲート"
+    ],
+    "trust": "中",
+    "human_confirm": false,
+    "novelty": "不明",
+    "status_in_ver2": "不明",
+    "sources": [
+      {
+        "src_file": "01-requirements/registry.json (V3-FND-22原文・分割前)",
+        "evidence": "「決定論的ページング・スナップショットバージョン管理・whitelist化された明示エラーコード(...)を持つ。」の該当節",
+        "trust": "中",
+        "date": "2026-03-14"
+      },
+      {
+        "src_file": "00-hq/review-queue/R0801-41f081-fnd22scope-2026-08-01.json (user_ruling.answers.FND-1=o)",
+        "evidence": "ifYes: 「残り条項(決定論的ページング/スナップショット版管理/API 6〜8本の薄いパイプ/501スタブ)をそれぞれ新規要件として採番します(出典は現FND-22の原文=採番済み文書なので出典実在)」",
+        "trust": "高",
+        "date": "2026-08-01"
+      }
+    ],
+    "superseded": null,
+    "conflict": null,
+    "ambiguity": "分割前のV3-FND-22は本条項単独のscores/v1_score/tier_v2を持たず(6条項束ねての評価だったため)、分割時に記録役が元要件の値をそのまま踏襲した。ユーザー本人が本条項単独で再評価した値ではない。",
+    "group": "g01-基盤コスト",
+    "v1_score": 12,
+    "v1_tier": "B",
+    "ds": 3,
+    "score_v2": 27,
+    "tier_v2": "B",
+    "req_status": "確定",
+    "wave": "第2波",
+    "wave_why": "元V3-FND-22のtier_v2=B→第2波を分割後も踏襲(desire台帳未掲載)",
+    "hold": false
+  },
+  {
+    "id": "V3-FND-38",
+    "statement": "API本数は保存(GET/POST)中心の最小(6〜8本程度)に抑えロジックを持たない薄いパイプ(受信→不変条件チェック→Command変換→applyCommand→R2 append、Workers1ファイル完結)とする。【2026-08-01分割(FND-1=○)】元V3-FND-22原文の該当節を忠実に転記して独立要件化した。★実測との矛盾を正直に記録する: 2026-08-01時点でapps/api/src配下(index.ts除く)のエンドポイント定義は533本(実測)であり、本条項(6〜8本程度)と正面から矛盾している。矛盾を解消するAPI集約の設計判断は本分割の範囲外(出典=review-queue R0801-41f081-fnd22scope ifNo節)。",
+    "category": "基盤/インフラ",
+    "kind": "機能要件",
+    "scores": {
+      "bv": {
+        "v": 3,
+        "why": "一貫したAPI契約はOSS利用者と保守性に寄与(元V3-FND-22のbvを踏襲)"
+      },
+      "ui": {
+        "v": 2,
+        "why": "直接UIに出にくい(元V3-FND-22のuiを踏襲)"
+      },
+      "dep": {
+        "v": 3,
+        "why": "全APIクライアントが従う(元V3-FND-22のdepを踏襲)"
+      },
+      "diff": {
+        "v": 2,
+        "why": "実測533本との乖離が大きく、達成するには他の確定要件の実装形を大きく変える必要がある(元V3-FND-22のdiffを踏襲した値だが、実測判明後は過小評価の可能性が高い。数値の見直しはHQ判断)"
+      }
+    },
+    "philosophy": [
+      "10年コスト最小",
+      "Truth-append-only",
+      "その他思想",
+      "批評家ゲート"
+    ],
+    "trust": "中",
+    "human_confirm": false,
+    "novelty": "不明",
+    "status_in_ver2": "不明",
+    "sources": [
+      {
+        "src_file": "01-requirements/registry.json (V3-FND-22原文・分割前)",
+        "evidence": "「API本数は保存(GET/POST)中心の最小(6〜8本程度)に抑えロジックを持たない薄いパイプ(受信→不変条件チェック→Command変換→applyCommand→R2 append、Workers1ファイル完結)とし」の該当節",
+        "trust": "中",
+        "date": "2026-03-18"
+      },
+      {
+        "src_file": "00-hq/proposals/R0801-41f081-DESIGN-2026-08-01-g66-envdesign.md §5-0",
+        "evidence": "「API本数を6〜8本に抑える」は実測535本の現状(その後fnd22scopeカードで533本に確定)と真っ向から矛盾している、との指摘",
+        "trust": "高",
+        "date": "2026-08-01"
+      },
+      {
+        "src_file": "00-hq/review-queue/R0801-41f081-fnd22scope-2026-08-01.json (user_ruling.answers.FND-1=o)",
+        "evidence": "ifYes: 「残り条項(...)をそれぞれ新規要件として採番します」/ ifNo: 「6〜8本を本気で達成するなら533本のAPIを集約する大改造の設計判断が別途必要」",
+        "trust": "高",
+        "date": "2026-08-01"
+      }
+    ],
+    "superseded": null,
+    "conflict": "実測533本(2026-08-01)と本条項の目標値(6〜8本程度)が正面から矛盾する。矛盾の解消(集約する/前提を棄却する)は本分割の範囲外でHQ判断待ち。",
+    "ambiguity": "分割前のV3-FND-22は本条項単独のscores/v1_score/tier_v2を持たず(6条項束ねての評価だったため)、分割時に記録役が元要件の値をそのまま踏襲した。ユーザー本人が本条項単独で再評価した値ではない。diffスコアは実測533本判明前の値をそのまま踏襲しており、実態(大改造相当)を反映していない可能性が高い。",
+    "group": "g01-基盤コスト",
+    "v1_score": 12,
+    "v1_tier": "B",
+    "ds": 3,
+    "score_v2": 27,
+    "tier_v2": "B",
+    "req_status": "確定",
+    "wave": "第2波",
+    "wave_why": "元V3-FND-22のtier_v2=B→第2波を分割後も踏襲(desire台帳未掲載)",
+    "hold": false
+  },
+  {
+    "id": "V3-FND-39",
+    "statement": "未実装APIは501スタブで先行定義する。【2026-08-01分割(FND-1=○)】元V3-FND-22原文の該当節「未実装APIは501スタブで先行定義する」を忠実に転記して独立要件化した。",
+    "category": "基盤/インフラ",
+    "kind": "機能要件",
+    "scores": {
+      "bv": {
+        "v": 3,
+        "why": "一貫したAPI契約はOSS利用者と保守性に寄与(元V3-FND-22のbvを踏襲)"
+      },
+      "ui": {
+        "v": 2,
+        "why": "未実装箇所が明示される(元V3-FND-22のuiを踏襲)"
+      },
+      "dep": {
+        "v": 3,
+        "why": "全APIクライアントが従う(元V3-FND-22のdepを踏襲)"
+      },
+      "diff": {
+        "v": 2,
+        "why": "501スタブの先行定義自体は実装容易(元V3-FND-22のdiffを踏襲)"
+      }
+    },
+    "philosophy": [
+      "10年コスト最小",
+      "Truth-append-only",
+      "その他思想",
+      "批評家ゲート"
+    ],
+    "trust": "中",
+    "human_confirm": false,
+    "novelty": "不明",
+    "status_in_ver2": "不明",
+    "sources": [
+      {
+        "src_file": "01-requirements/registry.json (V3-FND-22原文・分割前)",
+        "evidence": "「未実装APIは501スタブで先行定義する。」の該当節",
+        "trust": "中",
+        "date": "2026-03-14"
+      },
+      {
+        "src_file": "00-hq/review-queue/R0801-41f081-fnd22scope-2026-08-01.json (user_ruling.answers.FND-1=o)",
+        "evidence": "ifYes: 「残り条項(決定論的ページング/スナップショット版管理/API 6〜8本の薄いパイプ/501スタブ)をそれぞれ新規要件として採番します(出典は現FND-22の原文=採番済み文書なので出典実在)」",
+        "trust": "高",
+        "date": "2026-08-01"
+      }
+    ],
+    "superseded": null,
+    "conflict": null,
+    "ambiguity": "分割前のV3-FND-22は本条項単独のscores/v1_score/tier_v2を持たず(6条項束ねての評価だったため)、分割時に記録役が元要件の値をそのまま踏襲した。ユーザー本人が本条項単独で再評価した値ではない。",
+    "group": "g01-基盤コスト",
+    "v1_score": 12,
+    "v1_tier": "B",
+    "ds": 3,
+    "score_v2": 27,
+    "tier_v2": "B",
+    "req_status": "確定",
+    "wave": "第2波",
+    "wave_why": "元V3-FND-22のtier_v2=B→第2波を分割後も踏襲(desire台帳未掲載)",
     "hold": false
   },
   {
