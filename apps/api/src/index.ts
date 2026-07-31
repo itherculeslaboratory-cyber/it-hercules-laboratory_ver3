@@ -102,6 +102,48 @@ const PUBLIC_ROUTES = [
   // own secret key before recording anything — a forged body alone matches
   // nothing real.
   "/api/v1/fees/payjp-webhook",
+  // R65-7(第22回裁定 V3-AUT-15・route-matrix.csv観測READ10行): 観測データの検索・一覧・
+  // 詳細を未ログインでも閲覧可能にする。visibility:privateの観測はデータレベルで別途ゲート
+  // される(observation-routes.ts captureVisibleTo・V3-OBS-54)。「routeがpublic」≠「データが
+  // public」。
+  // ★★この配列は`c.req.path`の完全一致(.includes)でしか判定しておらず、HTTPメソッドを
+  // 区別しない。そのため以下2つの制約がある(2026-07-31実測: npx vitest run
+  // tests/cl-04-route-matrix.test.ts で確認済み):
+  //   (a) 動的セグメント({capture_id}等)を含む5行は、この行追加だけでは実401挙動を変えら
+  //       れない。実際にゲートを開くにはapp.use("*", ...)内の判定ロジック自体の変更(w-aut2
+  //       報告書§4-3提案=isObservationReadPath方式)が要るが、それは本行追加の範囲外
+  //       (R65-7はPUBLIC_ROUTESへの行追加のみ許可)につき、この艦では未着手。CSV/テスト側の
+  //       記録用途としてここに列挙のみ行う: templates/{template_id}・{capture_id}・
+  //       {capture_id}/image・{capture_id}/reanalysis-manifest・{capture_id}/species-
+  //       suggestionsの5行は下記に列挙しているが機能しない。
+  //   (b) "/api/v1/observation/templates"はGET(公開対象・route-017)とPOST(テンプレ
+  //       append・route-026・protected)が同一パスを共有しており、ここに追加するとPOSTの
+  //       認証もメソッド区別なく素通りしてしまう(実機確認済み: 追加した状態でnpx vitest run
+  //       するとPOST /observation/templatesが401ではなく400=認証ゲートを通過した証拠を返した)。
+  //       これは「公開してよいものだけを公開する」という本裁定の目的に反する書込エンドポイントの
+  //       意図しない公開化になるため、この艦は意図的に追加していない(R65-7の行追加のみ許可の
+  //       範囲では安全に実現できない=isObservationReadPath等メソッド区別可能な判定への変更が先)。
+  //   (c) この配列に載ると、`app.use("*", ...)`の以降のCookie/Bearer解決処理自体が丸ごと
+  //       スキップされる(=401を返さないだけでなく、actorIdが正規ログイン済みリクエストでも
+  //       一切セットされなくなる)。POST /observation/searchはpersonalize=true時に
+  //       c.get("actorId")で学習済み好み(match preference)を引くため(observation-routes.ts:708)、
+  //       この行を追加すると**ログイン済みユーザーのpersonalizeが恒久的に無効化される**という
+  //       意図しない機能退行が起きる(実機確認済み: tests/observation-ext.test.ts の
+  //       「好みブレンドが embedding 完全同点の2候補を分ける」がこの行の追加だけで再現性100%で
+  //       赤くなった。search route自体はactorId=undefinedを正しくハンドリングするが、
+  //       "ハンドリングする"と"常にundefinedにされる"は別物)。route-matrix.csvのinfra-route-024
+  //       (POST /observation/search)は既存裁定でpublicと記録されているが、この副作用は
+  //       この艦が今回初めて発見したものであり、「公開してよいものだけを公開する」の趣旨に
+  //       照らして安全側に倒し、この艦は意図的に追加していない(差し戻し候補・後述)。
+  "/api/v1/observation/targets/catalog",
+  "/api/v1/observation/targets/search",
+  "/api/v1/observation/measurement-dictionary",
+  // ↓ここから5行は動的セグメントを含む(上記(a)参照・現状はこの一致方式では機能しない)
+  "/api/v1/observation/templates/{template_id}",
+  "/api/v1/observation/{capture_id}",
+  "/api/v1/observation/{capture_id}/image",
+  "/api/v1/observation/{capture_id}/reanalysis-manifest",
+  "/api/v1/observation/{capture_id}/species-suggestions",
 ];
 
 // CORS (design-k7 FND-11 §1.5). credentials=true → `*` is forbidden; only an origin

@@ -10,10 +10,15 @@ status: active
 ## 要件(再掲)
 
 > ユーザーコード/ドライバー実行はサンドボックス境界(Extism/Docker/CUSB/WebAssembly/vm)で
-> 完全隔離実行し、本番DBは読み取り専用・テストDBは破壊可能・外部通信不可・CPU/メモリ制限を
-> 課す。失敗時は400を返す。ノーコード利用者はGrapesJS+Blockly、上級者はMonaco+JSON、開発者は
-> GitHubでForkを作り、Fork実行安全はWhitelist(Component/API/Workflow)+Sandbox+Permission制御で
+> 完全隔離実行し、本番DBは読み取り専用・テストDBは破壊可能・こちら側の実行基盤における外部通信不可・
+> CPU/メモリ制限を課す。失敗時は400を返す。ノーコード利用者はGrapesJS+Blockly、上級者はMonaco+JSON、
+> 開発者はGitHubでForkを作り、Fork実行安全はWhitelist(Component/API/Workflow)+Sandbox+Permission制御で
 > 担保する。
+>
+> ★2026-07-31 R64-9確定: 実行基盤は「利用者自身のローカルDocker方式(C案)」で確定(ユーザー本人案、
+> 2026-05-31から一貫の「鍵と実行を利用者側へ追い出す」思想=A-8-aと同型)。QuickJS-WASM/Extism部品導入は
+> SANDBOXCHEAP-1(○90点)により許可済みとして温存し破棄しない。ただし今は導入しない — 発動トリガーは
+> 「持ち込みリクエスト1件、かつローカルでは足りない(他の利用者にも使わせたい)要望であること」の成立時。
 
 srs.md の検証キーは「400」のみ(受入条件が「拒否時 400 を返すこと」に絞られている)。
 

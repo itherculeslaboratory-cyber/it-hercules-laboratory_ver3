@@ -102,6 +102,7 @@ status: active
 | F-2(V3-UIX-59・S1具体化+前倒し) | 修正承認 | R136/S1 | statement追記(【R136/S1】)。wave 第2波→第1波。req_status不変(既に確定(修正))。sources追記 |
 | F-2(V3-BBS-16・S2具体化+前倒し) | 修正承認 | R136/S2 | statement追記(【R136/S2】)。req_status 確定→確定(修正)。wave 第2波→第1波。sources追記 |
 | F-2(V3-BBS-26・B処置=不採用化) | 修正承認(superseded化) | R136/S5・B | statement追記。superseded欄にV3-BBS-38(S5)への置換を記載。req_status 確定→確定(修正)。wave不変(第2波)。sources追記 |
+| F-2(V3-BBS-26・close追記・2026-07-31) | close(実装なし) | 本行の R136/S5・B(superseded化)を根拠に close | design19(`kits\lane-think\R0731-08b452-REPORT-2026-07-31-g64-design19.md` T1-8)が実測で「registry自身が不採用と記録済み(本行のsuperseded=V3-BBS-38)」を再確認し close を推奨。design35(`kits\lane-think\R0731-573d7f-REPORT-2026-07-31-design35.md` §5)が記録艦へclose記録を割当。V3-AIP-92のclose(R64-5)と同型 — 「実装済み」とは書かない・BBS-26として実装すると不採用要件を実装したことになる(design19 T1-8欠点1)。progress.json側の反映はprogress-merge艦の担当(この記録艦は触らない) |
 | F-2(V3-AIP-105/106/107・V3-BBS-37/38) | 新規採番(5件) | R136/S3・S4・S5・S6・S7 | §4。DRAFT-f2-requirements-2026-07-19.md §2 S3/S4/S6/S7(AIP)・S4/S5(BBS)を根拠に採番 |
 | F-2 §3-C(V3-AIP-87/V3-GOV-25/V3-FND-06/07) | 記録のみ(第2波維持) | R136 | §2-4。registry変更なし |
 | F-2 §4-4(commit gate/git tag運用/worktree掃除) | 記録のみ(C9実装レーンへ) | R136 | §2-5。registry変更なし |

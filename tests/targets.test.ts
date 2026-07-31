@@ -99,13 +99,16 @@ describe("OBS-02 tree navigation path", () => {
 });
 
 describe("OBS-02 auth + validation", () => {
-  it("unauthenticated → 401", async () => {
+  // R65-7(2026-07-31・第22回裁定V3-AUT-15): PII非依存の分類カタログ検索のため公開化
+  // (route-matrix.csv infra-route-025・index.ts PUBLIC_ROUTES追加)。旧「未ログイン→401」
+  // 期待値をpublic化後の実際の契約に合わせて更新した。
+  it("unauthenticated → 200(V3-AUT-15により公開)", async () => {
     const res = await app.request(
       "/api/v1/observation/targets/search",
       { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "name", query: "x" }) },
       makeEnv(),
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
   });
 
   it("unknown mode → 400", async () => {

@@ -103,10 +103,14 @@ describe("CL-04 route matrix (107 rows)", () => {
     for (const r of rows) expect(["public", "protected"]).toContain(r.access);
   });
 
-  // 2026-08-01 w-aut2(第22回裁定 V3-AUT-15/14/16): 観測データ閲覧(検索・一覧・詳細)11行を
+  // 2026-08-01 w-aut2(第22回裁定 V3-AUT-15/14/16): 観測データ閲覧(検索・一覧・詳細)を
   // protected→public へ緩和(route-matrix.csv 参照)。書込系(capture/measurement/commit/
   // upload/template append/dictionary-extensions)は protected のまま(V3-AUT-14 deny-list)。
-  it("public = auth magic-link/verify/verify-code/session + payjp-webhook + 観測READ 11 paths", () => {
+  // 2026-07-31 R65-5是正: infra-route-097(GET /observation/export)はpublic化を取消し
+  // protectedへ戻した(裁定文言「検索・一覧・詳細」にエクスポートは含まれず、可視性フィルタ
+  // 皆無で全ユーザーの全観測データが未ログインで流出するため)。監査根拠=
+  // R0731-1ff12e-AUDIT-2026-07-31-g65-publicroutes.md
+  it("public = auth magic-link/verify/verify-code/session + payjp-webhook + 観測READ 10 paths(exportを除く)", () => {
     const publicPaths = new Set(rows.filter((r) => r.access === "public").map((r) => r.path));
     expect([...publicPaths].sort()).toEqual([
       "/api/v1/auth/magic-link",
@@ -114,7 +118,6 @@ describe("CL-04 route matrix (107 rows)", () => {
       "/api/v1/auth/verify",
       "/api/v1/auth/verify-code",
       "/api/v1/fees/payjp-webhook",
-      "/api/v1/observation/export",
       "/api/v1/observation/measurement-dictionary",
       "/api/v1/observation/search",
       "/api/v1/observation/targets/catalog",

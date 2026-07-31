@@ -162,7 +162,7 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/research/quadrant,VPS,Workers,W2,infra-route-094,protected,implemented,V3-PPR-07 観測データ4象限モデル(n11/n10/n01/n00)で研究空白領域を検出・逆/裏/対偶を機械生成+仮説論文タイトル/要旨案
 —,POST,/api/v1/research/auto-draft,VPS,Workers,W2,infra-route-095,protected,implemented,V3-PPR-20 PaperSectionsV1拡張・統一フォーマット観測データ(measurements[])のみからconditions節+完了率を自動生成(非永続プレビュー)
 —,GET,/api/v1/research/content/{id}/export,VPS,Workers,W2,infra-route-096,protected,implemented,V3-PPR-23 論文(章構成+引用+図表)を自己完結HTMLへ変換・PDFはブラウザ標準印刷機能を再利用(新規依存を追加しない)
-—,GET,/api/v1/observation/export,VPS,Workers,W2,infra-route-097,public,implemented,V3-PPR-12 全capture measurements[]をCSVへ決定論シリアライズ(研究者向け全データダウンロード)・実解析は端末側ローカル計算でサーバ負荷ゼロ★V3-AUT-15により public 化(一覧/エクスポート系)
+—,GET,/api/v1/observation/export,VPS,Workers,W2,infra-route-097,protected,implemented,V3-PPR-12 全capture measurements[]をCSVへ決定論シリアライズ(研究者向け全データダウンロード)・実解析は端末側ローカル計算でサーバ負荷ゼロ★R65-5によりpublic化を取消(2026-07-31): V3-AUT-15裁定文言「検索・一覧・詳細」にエクスポートは含まれず、可視性フィルタ皆無(captureVisibleTo呼び出しゼロ・observation-routes.ts:956-963)のため全ユーザーの全観測データが未ログインで流出する。監査根拠=R0731-1ff12e-AUDIT-2026-07-31-g65-publicroutes.md
 —,GET,/api/v1/knowledge/cell/{id},VPS,Workers,W2,infra-route-098,protected,implemented,V3-WIK-20 意図/系譜/被引用を1クエリで返す横断投影・既存cite_refs/cited_paper_ids/citations/forked_fromを束ねる決定論(常駐グラフDBなし)
 —,POST,/api/v1/wiki/lint,VPS,Workers,W2,infra-route-099,protected,implemented,V3-WIK-07 月次Lint(矛盾/孤立ページ/古い記述/リンク切れ)を手動実行しWIK-01 wiki_node(level=lint_log)へlog.md形式で記録・月次cron配線は人間ゲート
 —,GET,/api/v1/wiki/lint-log,VPS,Workers,W2,infra-route-100,protected,implemented,V3-WIK-07 月次Lint実行履歴(created_at降順)

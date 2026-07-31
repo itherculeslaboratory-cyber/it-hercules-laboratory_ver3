@@ -894,6 +894,11 @@ obsRoutes.get("/observation/species-candidates/external-ids", async (c) => {
 // 提示のみ)。CLIP/Vision未設定(既定)でもヒューリスティックのみで必ず完走する。
 obsRoutes.get("/observation/:capture_id/species-suggestions", async (c) => {
   const captureId = c.req.param("capture_id");
+  // R65-6: 詳細route(route-012)と同型の可視性ゲート。非公開は存在ごと404で隠す。
+  const capture = await store(c).readEvent(`truth/${CAPTURE_TYPE}/${captureId}.json`);
+  if (!capture || !captureVisibleTo(dataOf(capture), c.get("actorId"))) {
+    return c.json({ error: "NOT_FOUND" }, 404);
+  }
   const queryVec = await loadVector(c.env.TRUTH, captureId);
   if (!queryVec) return c.json({ error: "QUERY_EMBEDDING_NOT_FOUND" }, 404);
   const heuristic = await heuristicSpeciesCandidatesFromVector(store(c), c.env.TRUTH, queryVec, captureId);
@@ -1305,6 +1310,11 @@ obsRoutes.post("/observation/:capture_id/reanalyze", async (c) => {
 // (OBS-48), append order preserved.
 obsRoutes.get("/observation/:capture_id/reanalysis-manifest", async (c) => {
   const captureId = c.req.param("capture_id");
+  // R65-6: 詳細route(route-012)と同型の可視性ゲート。非公開は存在ごと404で隠す。
+  const capture = await store(c).readEvent(`truth/${CAPTURE_TYPE}/${captureId}.json`);
+  if (!capture || !captureVisibleTo(dataOf(capture), c.get("actorId"))) {
+    return c.json({ error: "NOT_FOUND" }, 404);
+  }
   const analyses = (await store(c).listEvents(`truth/${ANALYSIS_TYPE}/${captureId}-`)).map(dataOf);
   analyses.sort((a, b) => String(a.analysis_id).localeCompare(String(b.analysis_id)));
   return c.json({ capture_id: captureId, count: analyses.length, analyses });
