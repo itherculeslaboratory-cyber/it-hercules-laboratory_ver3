@@ -1459,6 +1459,11 @@ obsRoutes.get("/observation/:capture_id/image/:photo_id", async (c) => {
   if (!capture || !captureVisibleTo(dataOf(capture), c.get("actorId"))) {
     return c.json({ error: "NOT_FOUND" }, 404);
   }
+  // R65-11(公開化と同時修正・設計R0731-9c2323 §6-3/R0731-6c8982 §5-1): photo_id が
+  // この capture_id のものかを検証する。未検証だと、公開 capture の id を1つ知るだけで
+  // 未ログインで任意の photo_id(他の非公開 captureの写真も含む)を取得できてしまう。
+  const photoEvent = await store(c).readEvent(`truth/${PHOTO_TYPE}/${captureId}-${photoId}.json`);
+  if (!photoEvent) return c.json({ error: "NOT_FOUND" }, 404);
   const obj = await c.env.TRUTH.get(`media/photo/${photoId}`);
   if (!obj) return c.json({ error: "NOT_FOUND" }, 404);
   // OBS-38 低コスト改善①: 元画像も photo_id 毎に不変・URL再利用可能(重複fetch削減)。

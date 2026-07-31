@@ -123,9 +123,14 @@ describe("§1 whitelist + subset stages", () => {
 });
 
 describe("§1 auth + validation", () => {
-  it("unauthenticated search → 401", async () => {
+  // R65-7/R65-9(2026-07-31): POST /observation/search は観測READの公開10本
+  // (infra-route-024)に入り、matchedRoutes方式のミドルウェアで未ログインでも
+  // 到達できるようになった(旧: 401 deny-by-default)。actorId が undefined でも
+  // route自体は正常応答する(personalize等のactorId依存箇所はR0731-9c2323 §4で
+  // 全件確認済み・可視性フィルタは captureVisibleTo が担う)。
+  it("unauthenticated search → 401ではない(公開READ・R65-7)", async () => {
     const res = await post("/api/v1/observation/search", { domain: "biology" }, makeEnv(), JSON_HEADERS);
-    expect(res.status).toBe(401);
+    expect(res.status).not.toBe(401);
   });
 
   it("query_capture_id with no embedding manifest → 400", async () => {

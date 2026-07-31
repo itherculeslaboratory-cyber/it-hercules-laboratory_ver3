@@ -138,9 +138,13 @@ describe("GET /observation/{capture_id}/species-suggestions route", () => {
     expect(res.status).toBe(404);
   });
 
-  it("unauthenticated -> 401 (deny-by-default)", async () => {
+  // R65-7/R65-9(2026-07-31): このrouteは観測READの公開10本(infra-route-083)に入り、
+  // matchedRoutes方式のミドルウェアで未ログインでも到達できるようになった(旧: 401
+  // deny-by-default)。未知の capture_id は「routeがpublic」≠「データがpublic」で
+  // 404(存在ごと隠す・captureVisibleTo)になる — これが新しい deny 挙動。
+  it("unauthenticated + 存在しない capture -> 404(routeは公開・dataは非公開/不在)", async () => {
     const { env } = ctx();
     const res = await app.request("/api/v1/observation/x/species-suggestions", {}, env);
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(404);
   });
 });

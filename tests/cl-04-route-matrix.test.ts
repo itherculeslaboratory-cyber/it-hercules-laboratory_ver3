@@ -125,7 +125,7 @@ describe("CL-04 route matrix (107 rows)", () => {
       "/api/v1/observation/templates",
       "/api/v1/observation/templates/{template_id}",
       "/api/v1/observation/{capture_id}",
-      "/api/v1/observation/{capture_id}/image",
+      "/api/v1/observation/{capture_id}/image/{photo_id}",
       "/api/v1/observation/{capture_id}/reanalysis-manifest",
       "/api/v1/observation/{capture_id}/species-suggestions",
     ]);

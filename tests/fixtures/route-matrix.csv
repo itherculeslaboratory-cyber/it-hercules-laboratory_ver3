@@ -85,7 +85,7 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/auth/verify-code,VPS,Workers,W2,infra-route-072,public,implemented,V3-AUT-46(round-16 OQ-ONB-03)magic-linkと同一OTPの数字コード(6桁)verify・email+code自体が資格情報でPUBLIC・ワンタイム性/試行回数制限はroute内で担保
 —,GET,/api/v1/home/summary,VPS,Workers,W2,infra-route-011,protected,implemented,今日の要約 近接/超過/観測中 投影(C5 K1・design-k1 §1.1)
 —,GET,/api/v1/observation/{capture_id},VPS,Workers,W2,infra-route-012,public,implemented,観測詳細投影(既存 reuse・design-k1 §1.1)★V3-AUT-15(第22回裁定)により public 化・visibility:private 個体はw-obs2側でデータ非公開ゲート(V3-OBS-54連携・「routeがpublic」と「データがpublic」は別)
-—,GET,/api/v1/observation/{capture_id}/image,VPS,Workers,W2,infra-route-013,public,implemented,画像は /image/{photo_id} で配信・512px サムネ /thumbnail/{photo_id} 追加(OBS-23)★V3-AUT-15により public 化(同上の私的データ別ゲート前提)
+—,GET,/api/v1/observation/{capture_id}/image/{photo_id},VPS,Workers,W2,infra-route-013,public,implemented,画像は /image/{photo_id} で配信・512px サムネ /thumbnail/{photo_id} 追加(OBS-23)★V3-AUT-15により public 化(同上の私的データ別ゲート前提)
 —,GET,/api/v1/observation/{capture_id}/reanalysis-manifest,VPS,Workers,W2,infra-route-014,public,implemented,再解析マニフェスト(OBS-48・新 analysis_id append 非上書き)★V3-AUT-15により public 化
 —,GET,/api/v1/observation/measurement-dictionary,VPS,Workers,W2,infra-route-015,public,implemented,item_hash 登録辞書(OBS-18)★V3-AUT-15により public 化(一覧系・個体非依存の共有辞書)
 —,GET,/api/v1/observation/targets/catalog,VPS,Workers,W2,infra-route-016,public,implemented,ローカル分類ツリー+QID(OBS-02)★V3-AUT-15により public 化(一覧系・個体非依存)

@@ -67,7 +67,7 @@ import { researchAgentBatchRoutes, handleResearchScheduled } from "./research-ag
 import { NEWSPAPER_CRON_UTC } from "./research-constants";
 import { handleScheduled } from "./batch";
 import { costsRoutes } from "./costs-routes";
-import { checkRateLimit, WRITE_RATE_LIMIT_PER_MINUTE, WRITE_QUOTA_PER_DAY } from "./rate-limit";
+import { checkRateLimit, clientIp, WRITE_RATE_LIMIT_PER_MINUTE, WRITE_QUOTA_PER_DAY } from "./rate-limit";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -102,49 +102,33 @@ const PUBLIC_ROUTES = [
   // own secret key before recording anything — a forged body alone matches
   // nothing real.
   "/api/v1/fees/payjp-webhook",
-  // R65-7(第22回裁定 V3-AUT-15・route-matrix.csv観測READ10行): 観測データの検索・一覧・
-  // 詳細を未ログインでも閲覧可能にする。visibility:privateの観測はデータレベルで別途ゲート
-  // される(observation-routes.ts captureVisibleTo・V3-OBS-54)。「routeがpublic」≠「データが
-  // public」。
-  // ★★この配列は`c.req.path`の完全一致(.includes)でしか判定しておらず、HTTPメソッドを
-  // 区別しない。そのため以下2つの制約がある(2026-07-31実測: npx vitest run
-  // tests/cl-04-route-matrix.test.ts で確認済み):
-  //   (a) 動的セグメント({capture_id}等)を含む5行は、この行追加だけでは実401挙動を変えら
-  //       れない。実際にゲートを開くにはapp.use("*", ...)内の判定ロジック自体の変更(w-aut2
-  //       報告書§4-3提案=isObservationReadPath方式)が要るが、それは本行追加の範囲外
-  //       (R65-7はPUBLIC_ROUTESへの行追加のみ許可)につき、この艦では未着手。CSV/テスト側の
-  //       記録用途としてここに列挙のみ行う: templates/{template_id}・{capture_id}・
-  //       {capture_id}/image・{capture_id}/reanalysis-manifest・{capture_id}/species-
-  //       suggestionsの5行は下記に列挙しているが機能しない。
-  //   (b) "/api/v1/observation/templates"はGET(公開対象・route-017)とPOST(テンプレ
-  //       append・route-026・protected)が同一パスを共有しており、ここに追加するとPOSTの
-  //       認証もメソッド区別なく素通りしてしまう(実機確認済み: 追加した状態でnpx vitest run
-  //       するとPOST /observation/templatesが401ではなく400=認証ゲートを通過した証拠を返した)。
-  //       これは「公開してよいものだけを公開する」という本裁定の目的に反する書込エンドポイントの
-  //       意図しない公開化になるため、この艦は意図的に追加していない(R65-7の行追加のみ許可の
-  //       範囲では安全に実現できない=isObservationReadPath等メソッド区別可能な判定への変更が先)。
-  //   (c) この配列に載ると、`app.use("*", ...)`の以降のCookie/Bearer解決処理自体が丸ごと
-  //       スキップされる(=401を返さないだけでなく、actorIdが正規ログイン済みリクエストでも
-  //       一切セットされなくなる)。POST /observation/searchはpersonalize=true時に
-  //       c.get("actorId")で学習済み好み(match preference)を引くため(observation-routes.ts:708)、
-  //       この行を追加すると**ログイン済みユーザーのpersonalizeが恒久的に無効化される**という
-  //       意図しない機能退行が起きる(実機確認済み: tests/observation-ext.test.ts の
-  //       「好みブレンドが embedding 完全同点の2候補を分ける」がこの行の追加だけで再現性100%で
-  //       赤くなった。search route自体はactorId=undefinedを正しくハンドリングするが、
-  //       "ハンドリングする"と"常にundefinedにされる"は別物)。route-matrix.csvのinfra-route-024
-  //       (POST /observation/search)は既存裁定でpublicと記録されているが、この副作用は
-  //       この艦が今回初めて発見したものであり、「公開してよいものだけを公開する」の趣旨に
-  //       照らして安全側に倒し、この艦は意図的に追加していない(差し戻し候補・後述)。
-  "/api/v1/observation/targets/catalog",
-  "/api/v1/observation/targets/search",
-  "/api/v1/observation/measurement-dictionary",
-  // ↓ここから5行は動的セグメントを含む(上記(a)参照・現状はこの一致方式では機能しない)
-  "/api/v1/observation/templates/{template_id}",
-  "/api/v1/observation/{capture_id}",
-  "/api/v1/observation/{capture_id}/image",
-  "/api/v1/observation/{capture_id}/reanalysis-manifest",
-  "/api/v1/observation/{capture_id}/species-suggestions",
 ];
+
+// R65-7(第22回裁定 V3-AUT-15): 観測データの READ(検索・一覧・詳細)は未ログインでも見られる。
+// ★上の PUBLIC_ROUTES とは判定方式が違う ── こちらは「生URLの完全一致」ではなく
+// 「Hono が実際に解決した route パターン + メソッド」で判定する(設計 R0731-9c2323 §2-2 /
+// R0731-6c8982 §2-2 採用)。理由は3つとも実測に基づく:
+//   (a) 動的セグメント: 文字列 "/api/v1/observation/{capture_id}" が生URLと一致することはない。
+//   (b) メソッド: GET /observation/templates は公開だが POST(テンプレ追記)は保護のまま。
+//       生URL一致方式はメソッドを見ないので、両方を一度に開けてしまう。
+//   (c) 静的兄弟の巻き込み: {capture_id} を正規表現 [^/]+ で書くと
+//       GET /observation/export(R65-5 で public 化を取り消した route)・/activity-log・
+//       /datasources まで一致してしまう。Hono のルータは静的 route を優先して解決するため、
+//       ルータの答えを使えばこの穴は最初から開かない。
+// 値の形は「<METHOD> <Hono に登録された route パス>」。route-matrix.csv の path 列とは
+// 表記が違う({capture_id} ではなく :capture_id)ので、CSV からのコピペは不可。
+const PUBLIC_READ_ROUTES = new Set([
+  "GET /api/v1/observation/:capture_id",                      // infra-route-012
+  "GET /api/v1/observation/:capture_id/image/:photo_id",      // infra-route-013
+  "GET /api/v1/observation/:capture_id/reanalysis-manifest",  // infra-route-014(R65-6でゲート追加済)
+  "GET /api/v1/observation/measurement-dictionary",           // infra-route-015(参照データ)
+  "GET /api/v1/observation/targets/catalog",                  // infra-route-016(参照データ)
+  "GET /api/v1/observation/templates",                        // infra-route-017(参照データ)
+  "GET /api/v1/observation/templates/:template_id",           // infra-route-018(参照データ)
+  "POST /api/v1/observation/search",                          // infra-route-024
+  "POST /api/v1/observation/targets/search",                  // infra-route-025(参照データ)
+  "GET /api/v1/observation/:capture_id/species-suggestions",  // infra-route-083(R65-6でゲート追加済)
+]);
 
 // CORS (design-k7 FND-11 §1.5). credentials=true → `*` is forbidden; only an origin
 // present in the env allowlist is echoed. Registered BEFORE the auth gate so (a) an
@@ -208,6 +192,20 @@ function revokedResponse(c: { json: (body: unknown, status: number) => Response 
 app.use("*", async (c, next) => {
   if (PUBLIC_ROUTES.includes(c.req.path)) return next();
 
+  // R65-7: 観測 READ の公開判定(方式は PUBLIC_READ_ROUTES の注記を参照)。
+  // ★ここでは return しない。public でも「401 を返さない」だけにして、下の Cookie/Bearer
+  //   解決は必ず通す ── ログイン済みなら actorId を立てる。これを飛ばすと
+  //   POST /observation/search の personalize(projectPreferenceWeights が c.get("actorId")
+  //   を使う・observation-routes.ts:708)が、ログイン済みでも恒久的に無効化される。
+  // ★matchedRoutes は一致した登録 route を登録順に返す。method !== "ALL" の先頭が実際に
+  //   応答するハンドラ(ALL は app.use のミドルウェア)。一致が1つも無い未知パスは false
+  //   → 既存の「未知 route も 401 が先行」(CL-04)を壊さない。
+  // ponytail: c.req.matchedRoutes は v4 で deprecated だが動く。v5 へ上げる時に
+  //   `import { matchedRoutes } from "hono/route"` へ差し替える(同じ内部 matchResult を読む)。
+  const matchedTarget = c.req.matchedRoutes.find((r) => r.method !== "ALL");
+  const publicRead =
+    !!matchedTarget && PUBLIC_READ_ROUTES.has(`${matchedTarget.method} ${matchedTarget.path}`);
+
   const secret = c.env?.SESSION_SECRET;
 
   // roles claim(V3-AUT-22)を安全に取り出す(非配列/非文字列要素は捨てる)。
@@ -226,10 +224,15 @@ app.use("*", async (c, next) => {
     const p = await verifySessionToken(cookieTok, secret);
     if (p) {
       const rv = await revocationOf(c.env.AUTH_DENYLIST, p.sub, p.iat);
-      if (rv.revoked) return revokedResponse(c, rv.reason);
-      c.set("actorId", p.sub);
-      c.set("roles", rolesOf(p));
-      return next();
+      // 公開 READ では失効/BAN を 401/403 にせず「匿名」に落とす(不変条件II: actorId は
+      // 立てない=機能面 fail-closed・閲覧面のみ fail-open)。
+      if (rv.revoked) {
+        if (!publicRead) return revokedResponse(c, rv.reason);
+      } else {
+        c.set("actorId", p.sub);
+        c.set("roles", rolesOf(p));
+        return next();
+      }
     }
   }
 
@@ -242,10 +245,14 @@ app.use("*", async (c, next) => {
       const p = await verifySessionToken(bearer, secret);
       if (p) {
         const rv = await revocationOf(c.env.AUTH_DENYLIST, p.sub, p.iat);
-        if (rv.revoked) return revokedResponse(c, rv.reason);
-        c.set("actorId", p.sub);
-        c.set("roles", rolesOf(p));
-        return next();
+        // Cookie 分岐と同じ形(§2-4-1/2): 公開 READ では失効/BAN を落とさず匿名に通す。
+        if (rv.revoked) {
+          if (!publicRead) return revokedResponse(c, rv.reason);
+        } else {
+          c.set("actorId", p.sub);
+          c.set("roles", rolesOf(p));
+          return next();
+        }
       }
     }
     if (c.env?.DEV_TOKEN && bearer === c.env.DEV_TOKEN) {
@@ -255,19 +262,26 @@ app.use("*", async (c, next) => {
     }
   }
 
+  // 資格情報が無い/期限切れ/失効 → 公開 READ は匿名として通す。
+  if (publicRead) return next();
   if (presentedV1Token) return c.json({ error: "INVALID_TOKEN" }, 401);
   return c.json({ error: "AUTH_REQUIRED" }, 401);
 });
 
-// V3-SEC-58: 書込系(R2 Truth append)レート制限+ユーザー別クォータ。deny-by-default 直後
-// (actorId 確定後)の単一 choke point — 個別 route を触らず全 POST/PUT/PATCH/DELETE を
-// 一括ガードする(root-cause fix: 各 route に都度 guard を書かない)。actorId 未確定(理論上
-// 到達しない・上の gate で既に 401 済み)は素通り。RATE_LIMIT 未バインドは checkRateLimit が
-// no-op degrade(既存 AUTH_DENYLIST/AUTH_CODE_STATE と同じ規約・テストへの影響なし)。
+// V3-SEC-58: 書込系(R2 Truth append)レート制限+ユーザー別クォータ。deny-by-default 直後の
+// 単一 choke point — 個別 route を触らず全 POST/PUT/PATCH/DELETE を一括ガードする
+// (root-cause fix: 各 route に都度 guard を書かない)。R65-10: actorId が未確定なのは公開 READ
+// の書込route(POST /observation/search 等)を匿名で叩いた場合のみ(protected route は上の
+// 認証ゲートで既に401済みなのでここに来る時は actorId が必ず立っている)。その場合は IP 単位
+// で同じバケットに乗せる(下記)。RATE_LIMIT 未バインドは checkRateLimit が no-op degrade
+// (既存 AUTH_DENYLIST/AUTH_CODE_STATE と同じ規約・テストへの影響なし)。
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 app.use("*", async (c, next) => {
-  const actorId = c.get("actorId");
-  if (!WRITE_METHODS.has(c.req.method) || !actorId) return next();
+  if (!WRITE_METHODS.has(c.req.method)) return next();
+  // R65-10: 公開 READ の書込route(POST /observation/search 等)は匿名でも叩けるため、
+  // actorId が無ければ IP(clientIp・既存 rate-limit.ts のCF-Connecting-IP/XFF解決を再利用)
+  // へフォールバックして同じバケットに乗せる(新しい仕組みは作らない)。
+  const actorId = c.get("actorId") ?? `ip:${clientIp(c.req)}`;
 
   const minuteBucket = Math.floor(Date.now() / 60_000);
   const perMinute = await checkRateLimit(
