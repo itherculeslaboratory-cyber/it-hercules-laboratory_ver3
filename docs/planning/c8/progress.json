@@ -4268,8 +4268,10 @@
     "tier": "A",
     "lane": "L4-knowledge",
     "scope": "best-effort",
-    "status": "in_progress",
-    "commits": [],
+    "status": "done",
+    "commits": [
+      "ad4d644"
+    ],
     "tc": [
       "tests/paper-match.test.ts describe(\"V3-PPR-08 buildCitationEdges (双方向リンク + tombstone・pure fn)\")",
       "tests/paper-match.test.ts GET /research/content/:id/citation-graph route TC",
@@ -4278,7 +4280,7 @@
       "tests/research-content.test.ts describe(\"V3-PPR-08 GET /research/content/:id/cited-by-posts\")",
       "tests/research-content.test.ts describe(\"V3-PPR-08 GET /research/content/:id/citation-count\")"
     ],
-    "note": "(w2-ind Wave2部分実装) paper-match.ts buildCitationEdges(純関数)+ GET /research/content/{id}/citation-graph。[2026-08-01橋渡し波(R0731-7b0c89)追記] plaza-routes.tsに GET /plaza/threads/:thread_id/paper-citations(板→論文方向・読み取り専用投影)を追加。[2026-08-01 w-plaza2追記] bridgeplan J1-3の指示どおりcitation-linkイベント経由へ寄せた: POST /plaza/postsがcite_refs(type=paper)を含む投稿を作成すると自動でcitation-link行をappendするよう配線(appendCitationLink・INSERT ONLY)。GET .../paper-citationsはcitation-linkのprefix scan(via_citation_link)も合算(後方互換維持)。査読コメントは既存plaza-postをそのまま使う(新規スキーマなし)。板側はこれで型F3点が揃った。[2026-08-01 w-ind2追記] 論文側の逆引き投影を追加: GET /research/content/:id/cited-by-posts(research-content-routes.ts)。post_id→paper_idの索引が無いため全plaza postをO(n)全件走査しcite_refs一致を集める設計とコード内コメントで正直に明記。論文→板の逆参照フィールドをcontent.schema.json側に持たせるかどうかの設計判断は依然未確定のためin_progressのまま。[2026-07-31 g65-countapi追記] 「引用リンクの一覧は取れるが件数を返す経路が無い」を解消: GET /research/content/:id/citation-count(research-content-routes.ts)を追加。citation-linkのキー(truth/ihl.citation.link.v1/<content_id>/<link_id>.json)を直接prefix scanして数える(projectPaperCitationsForThreadと同じ都度再計算原則・全件走査ではなくcontent_id prefixで直接絞れる分より単純)。テストでハンドラを外すと該当ケースが404で赤くなることを確認済み。既存noteにある『論文→板の逆参照フィールドをcontent.schema.jsonに持たせるかの設計判断が未確定』は本作業のスコープ外のため未解決のまま残る(statusをdoneへは上げない)。[2026-08-01 67代目HQ適用] 本entryはR0731-45e3f5報告の提出JSON行をprogress-merge.mjsで適用したもの(refpath艦R0801-6859a3が未反映を検出)。"
+    "note": "(w2-ind Wave2部分実装) paper-match.ts buildCitationEdges(純関数)+ GET /research/content/{id}/citation-graph。[2026-08-01橋渡し波(R0731-7b0c89)追記] plaza-routes.tsに GET /plaza/threads/:thread_id/paper-citations(板→論文方向・読み取り専用投影)を追加。[2026-08-01 w-plaza2追記] bridgeplan J1-3の指示どおりcitation-linkイベント経由へ寄せた: POST /plaza/postsがcite_refs(type=paper)を含む投稿を作成すると自動でcitation-link行をappendするよう配線(appendCitationLink・INSERT ONLY)。GET .../paper-citationsはcitation-linkのprefix scan(via_citation_link)も合算(後方互換維持)。査読コメントは既存plaza-postをそのまま使う(新規スキーマなし)。板側はこれで型F3点が揃った。[2026-08-01 w-ind2追記] 論文側の逆引き投影を追加: GET /research/content/:id/cited-by-posts(research-content-routes.ts)。post_id→paper_idの索引が無いため全plaza postをO(n)全件走査しcite_refs一致を集める設計とコード内コメントで正直に明記。論文→板の逆参照フィールドをcontent.schema.json側に持たせるかどうかの設計判断は依然未確定のためin_progressのまま。[2026-07-31 g65-countapi追記] 「引用リンクの一覧は取れるが件数を返す経路が無い」を解消: GET /research/content/:id/citation-count(research-content-routes.ts)を追加。citation-linkのキー(truth/ihl.citation.link.v1/<content_id>/<link_id>.json)を直接prefix scanして数える(projectPaperCitationsForThreadと同じ都度再計算原則・全件走査ではなくcontent_id prefixで直接絞れる分より単純)。テストでハンドラを外すと該当ケースが404で赤くなることを確認済み。既存noteにある『論文→板の逆参照フィールドをcontent.schema.jsonに持たせるかの設計判断が未確定』は本作業のスコープ外のため未解決のまま残る(statusをdoneへは上げない)。[2026-08-01 67代目HQ適用] 本entryはR0731-45e3f5報告の提出JSON行をprogress-merge.mjsで適用したもの(refpath艦R0801-6859a3が未反映を検出)。[2026-08-01 g68-refs2/S2追記(68代目HQ適用)] citation-linkの本番書き込み経路は3本になった(plaza投稿時discussed_in/fork-template時derived_from/next-generation時derived_from)。世代スコープのテスト在り・2057件全緑(ゲートR0801-287c33で全6スイート再検算一致)。★正直記録: 生まれたてのgen1/fork子のcitation_countは自身のderived_fromリンクを1件数える(裁定R0801-9398e1 §4。V3-AIP-109側の課題としてS3 T4で除外予定)。表示UIは未接続(apps/webからのcitation-count呼び出しはgrep 0件・2026-08-01実測)。"
   },
   {
     "id": "V3-PPR-11",
@@ -8665,5 +8667,39 @@
     "commits": [],
     "tc": [],
     "note": ""
+  },
+  {
+    "id": "V3-AIP-108",
+    "title": "データ(content等)が更新された回数(更新回数)を記録する(UR-44)",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "done",
+    "commits": [
+      "ad4d644"
+    ],
+    "tc": [
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")"
+    ],
+    "note": "[2026-08-01 g68-refs2/S2] 更新回数は lineage_meta.generation として実装(専用カウンタは作っていない=109と同一機構・設計R0801-436936 §3の第一原則)。POST /research/content/:id/next-generation(paper限定・protected)を2回叩くと generation が 0→1→2 になるテスト在り・2057件全緑。狭いゲートR0801-287c33=条件付き可(コード動作の誤り0件)・条件は全て是正済み(R0801-35ac10)または裁定済み(R0801-9398e1)。★正直記録: 「戻す」操作で更新回数が増えるか否かは未回答カードREF-1(R0801-436936-refrestore)の裁定による(裁定までは revert方式=戻すと+1 の暫定)。lineage_metaを持たない旧レコードへの初回next-generationは仮想root扱い(parent_uuid省略の裁定R0801-9398e1 R-1はS3 T0で適用予定・generation値自体は正)。表示UIは未接続(apps/webからの呼び出しはgrep 0件・2026-08-01実測)。"
+  },
+  {
+    "id": "V3-AIP-109",
+    "title": "更新のたびに次世代データ化・参照/引用回数は新世代で0から数え直し・前世代とカウントは消えずいつでも戻せる(UR-44)",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": "L4",
+    "scope": "required",
+    "status": "in_progress",
+    "commits": [
+      "ad4d644"
+    ],
+    "tc": [
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")"
+    ],
+    "note": "[2026-08-01 g68-refs2/S2] 世代=別content実体(世代ごとにcontent_id/envelope.idが別)として実装。世代スコープカウントは別実体化の帰結であり専用の集計コードは持たない(都度再計算のまま・設計R0801-436936 §3案2-A)。gen1のcitation-countがgen0と独立のテスト・gen0のcitation-count不変/reference-count+1のテスト在り(+1は§2案1-A③の仕様=機械証言。裁定R0801-9398e1 §3で設計の「不変」誤記を訂正済み)。★in_progressの理由(doneにしない根拠・設計§7の遷移条件): ①S3(generations一括ビュー+イベント件数実測)未了 ②仮想rootのparent_uuid省略(裁定R-1)未適用 ③生まれたてのgen1のcitation_countが自身のderived_fromを数えて1になる問題(裁定§4・要件逐語「0から再カウント」に反する)のS3 T4是正が未了 ④復元方式は未回答カードREF-1/REF-2の裁定待ち(S4)。"
   }
 ]
