@@ -270,6 +270,12 @@ researchContentRoutes.post("/research/content", async (c) => {
     const refEv = await s.readEvent(contentKey(refId));
     if (refEv && typeof refEv.id === "string") inputEventIds.push(refEv.id);
   }
+  // gen0 刻印(裁定R0801-9398e1 R-5・S3 T1): 新規レコードは以後すべて実在 uuid を持つ root として
+  // 生まれる(親を渡さない=generation:0)。仮想root(R-1)は増やさない前進策。next-generation 側と
+  // 同じ規約で lineage_meta 自身は hash 対象から外す(ここでは data に未設定なので除去は不要=
+  // OPTIONAL_KEYS に lineage_meta は含まれていない)。サーバ算出のみ・クライアント body からは
+  // 受け取らない(V3-AUT-17 の actor_id 強制刻印と同じ思想)。
+  data.lineage_meta = await computeLineageMeta(data);
   const provenanceExtra = inputEventIds.length ? { input_event_ids: inputEventIds } : undefined;
   const res = await s.putEventAt(
     contentKey(contentId),
@@ -427,8 +433,12 @@ researchContentRoutes.get("/research/content/:id/cited-by-posts", async (c) => {
 // (plaza-routes.ts appendCitationLink)ため、projectPaperCitationsForThread(plaza-routes.ts:308)
 // と同型の prefix scan で数える(そちらは板→論文の逆引きのため全件走査だが、こちらは content_id
 // が既にキーの prefix なので直接絞れる=同じ「index を持たず都度再計算」原則をより単純に満たす)。
+// derived_from(系譜の辺)は被引用数に数えない=引用(人証言)と系譜(機械証言)を混ぜない
+// (裁定R0801-9398e1 §4。次世代/fork-template が自分の親子関係を自分の被引用として自己計上して
+// いた欠陥の是正。V3-AIP-109の逐語「新世代で0から再カウント」に実装を合わせる)。
 export async function countCitationLinksForContent(s: TruthStore, contentId: string): Promise<number> {
-  return (await s.listEvents(`truth/${CITATION_LINK_TYPE_FOR_COUNT}/${contentId}/`)).length;
+  const links = (await s.listEvents(`truth/${CITATION_LINK_TYPE_FOR_COUNT}/${contentId}/`)).map(dataOf);
+  return links.filter((l) => l.link_kind !== "derived_from").length;
 }
 
 // GET /research/content/:id/citation-count — 被引用リンク件数(V3-PPR-08「板→論文」方向で
@@ -483,9 +493,23 @@ researchContentRoutes.post("/research/content/:id/next-generation", async (c) =>
   // 新規の数え方は発明しない・既存ヘルパの再利用のみ)。
   const oldContentForHash: Record<string, unknown> = { ...oldData };
   delete oldContentForHash.lineage_meta;
-  const oldLineage =
-    (oldData.lineage_meta as LineageMeta | undefined) ?? (await computeLineageMeta(oldContentForHash));
+  // 親が lineage_meta を持つ実在の root か、持たない旧レコード(=仮想root)かを先に確定する。
+  const hasRecordedParent = oldData.lineage_meta !== undefined;
+  const oldLineage = hasRecordedParent
+    ? (oldData.lineage_meta as LineageMeta)
+    : await computeLineageMeta(oldContentForHash);
   const lineageMeta = await computeLineageMeta(newData, oldLineage);
+  // 仮想root(親が lineage_meta を持たない旧レコード)の uuid はどこにも永続化されないため、
+  // parent_uuid / ancestor_chain を書くと「永久に解決できない ID」になる(Truth は INSERT ONLY で
+  // 修復不能)。schema は root で両者の省略を許しているので、正直に省略する(裁定 R0801-9398e1 R-1)。
+  // ★不変条件: parent_uuid が在る ⇔ 親レコード自身が lineage_meta を持つ。
+  //   「generation > 0 ならば parent_uuid が在る」は成り立たない(裁定 R-2)。
+  // ★親子関係そのものは失われない: provenance.input_event_ids(旧 envelope.id)/ derived_from
+  //   citation-link / 応答の parent_content_id の3経路で永続化されている(裁定 R-3)。
+  if (!hasRecordedParent) {
+    delete lineageMeta.parent_uuid;
+    delete lineageMeta.ancestor_chain;
+  }
   newData.lineage_meta = lineageMeta;
 
   // provenance.input_event_ids に旧 envelope.id を積む(§2案1-A③・サーバ解決=偽造不可)。
@@ -513,6 +537,107 @@ researchContentRoutes.post("/research/content/:id/next-generation", async (c) =>
   ).catch(() => {});
 
   return c.json({ content_id: newContentId, generation: lineageMeta.generation, parent_content_id: id }, 201);
+});
+
+// generationOf/isGenerationEdge/findDerivedFromParent — GET .../generations の判別規則ヘルパ
+// (裁定R0801-9398e1 §2-6-3)。derived_from の辺を「世代の辺」と見なすのは、子が lineage_meta を
+// 持ち、かつ 子.generation === 親.generation+1(親が lineage_meta を持たない旧レコードなら親を
+// 0と見なす)を満たすときに限る。これを満たさない derived_from は fork(paper-match-routes.ts の
+// fork-template が同じ link_kind:"derived_from" を書く)として世代一覧に載せない。
+function generationOf(data: Record<string, unknown>): number {
+  const lm = data.lineage_meta as LineageMeta | undefined;
+  return lm ? lm.generation : 0;
+}
+function isGenerationEdge(childData: Record<string, unknown>, parentData: Record<string, unknown>): boolean {
+  const childLineage = childData.lineage_meta as LineageMeta | undefined;
+  if (!childLineage) return false;
+  return childLineage.generation === generationOf(parentData) + 1;
+}
+async function findDerivedFromParent(s: TruthStore, contentId: string): Promise<string | undefined> {
+  const links = (await s.listEvents(`truth/${CITATION_LINK_TYPE_FOR_COUNT}/${contentId}/`)).map(dataOf);
+  const link = links.find((l) => l.link_kind === "derived_from");
+  return link ? String((link.target_ref as { id?: string } | undefined)?.id ?? "") : undefined;
+}
+
+// GET /research/content/:id/generations — 世代横断ビュー(親設計R0801-436936 §3案2-A c・
+// 裁定R0801-9398e1 T2)。系譜の照合キーは uuid ではなく derived_from citation-link(裁定R-3)。
+// 上へ: 自ノードの prefix scan で親を辿る(安い)。下へ: truth/ihl.citation.link.v1/ の全走査に
+// なる(既存 GET /research/content/:id/cited-by-posts と同型・index があるかのように書かない=
+// O(n))。lineage_recorded は「その世代が実際に lineage_meta を持つか」を正直に返す(旧レコード
+// root は generation:0/lineage_recorded:false=推定値であることを明示・誇張ゼロ規約)。
+researchContentRoutes.get("/research/content/:id/generations", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const startEv = await s.readEvent(contentKey(id));
+  if (!startEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+
+  // 上へ: 世代の辺だけを辿って root を見つける。
+  let rootId = id;
+  for (;;) {
+    const curEv = await s.readEvent(contentKey(rootId));
+    if (!curEv) break;
+    const curData = dataOf(curEv);
+    const parentId = await findDerivedFromParent(s, rootId);
+    if (!parentId) break;
+    const parentEv = await s.readEvent(contentKey(parentId));
+    if (!parentEv) break;
+    const parentData = dataOf(parentEv);
+    if (!isGenerationEdge(curData, parentData)) break;
+    rootId = parentId;
+  }
+
+  // 下へ: derived_from リンク全件を1度だけ読み、target_ref.id -> content_id[] の候補マップを
+  // 作ってから世代の辺だけを BFS で辿る(O(n)全走査は1回のみ)。
+  const allLinks = (await s.listEvents(`truth/${CITATION_LINK_TYPE_FOR_COUNT}/`))
+    .map(dataOf)
+    .filter((l) => l.link_kind === "derived_from");
+  const childCandidatesOf = new Map<string, string[]>();
+  for (const link of allLinks) {
+    const parentId = String((link.target_ref as { id?: string } | undefined)?.id ?? "");
+    const childId = String(link.content_id ?? "");
+    if (!parentId || !childId) continue;
+    childCandidatesOf.set(parentId, [...(childCandidatesOf.get(parentId) ?? []), childId]);
+  }
+
+  type GenItem = {
+    generation: number;
+    content_id: string;
+    reference_count: number;
+    citation_count: number;
+    lineage_recorded: boolean;
+  };
+  async function toItem(contentId: string, ev: Record<string, unknown>, data: Record<string, unknown>): Promise<GenItem> {
+    return {
+      generation: generationOf(data),
+      content_id: contentId,
+      reference_count: await projectReferenceCounter(s, String(ev.id)),
+      citation_count: await countCitationLinksForContent(s, contentId),
+      lineage_recorded: data.lineage_meta !== undefined,
+    };
+  }
+
+  const rootEv = await s.readEvent(contentKey(rootId));
+  if (!rootEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const rootData = dataOf(rootEv);
+  const items: GenItem[] = [await toItem(rootId, rootEv, rootData)];
+  const visited = new Set<string>([rootId]);
+  const queue: { id: string; data: Record<string, unknown> }[] = [{ id: rootId, data: rootData }];
+  while (queue.length) {
+    const cur = queue.shift() as { id: string; data: Record<string, unknown> };
+    for (const childId of childCandidatesOf.get(cur.id) ?? []) {
+      if (visited.has(childId)) continue;
+      const childEv = await s.readEvent(contentKey(childId));
+      if (!childEv) continue;
+      const childData = dataOf(childEv);
+      if (!isGenerationEdge(childData, cur.data)) continue;
+      visited.add(childId);
+      items.push(await toItem(childId, childEv, childData));
+      queue.push({ id: childId, data: childData });
+    }
+  }
+
+  items.sort((a, b) => a.generation - b.generation || a.content_id.localeCompare(b.content_id));
+  return c.json({ content_id: id, generations: items });
 });
 
 // POST /research/content/:id/tags — 確認 POST でのみ tag_event を append（WIK-14）。

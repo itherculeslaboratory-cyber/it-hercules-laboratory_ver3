@@ -8,6 +8,29 @@ import app from "../apps/api/src/index";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv, makeEnvelope } from "./helpers";
 
 const RESEARCH_TAG_TYPE = "ihl.research.tag_event.v1";
+const RESEARCH_CONTENT_TYPE = "ihl.research.content.v1";
+const RESEARCH_CONTENT_SCHEMA = "schemas/events/content.schema.json";
+
+// T1(g68-refs3・裁定R0801-9398e1 R-5)適用後は POST /research/content が常に lineage_meta(gen0)
+// を刻むため、HTTP 経由では「lineage_meta を持たない旧レコード(仮想root)」を新規に作れなくなる
+// (発注書 T1-5 の想定どおり)。仮想rootの分岐(R-1/R-6)は消えていないので、生イベントを直接
+// truth/ に置いて legacy 形を再現する(seedSystemTag と同型・route を経由しない best-effort seed)。
+async function seedLegacyContent(bucket: FakeR2Bucket, body: Record<string, unknown>): Promise<void> {
+  const data: Record<string, unknown> = {
+    actor_id: "legacy-seed",
+    created_at: "2026-01-01T00:00:00.000Z",
+    schema_version: "1",
+    ...body,
+  };
+  const env = makeEnvelope({
+    type: RESEARCH_CONTENT_TYPE,
+    dataschema: RESEARCH_CONTENT_SCHEMA,
+    provenance: { generator_kind: "human", actor_id: "legacy-seed" },
+    data,
+  });
+  const res = await new TruthStore(bucket).putEventAt(`truth/${RESEARCH_CONTENT_TYPE}/${data.content_id}.json`, env);
+  expect(res.status).toBe("inserted");
+}
 
 function post(bucket: FakeR2Bucket, path: string, body: unknown): Promise<Response> {
   return app.request(
@@ -548,9 +571,9 @@ describe("V3-AIP-108/109 POST /research/content/:id/next-generation (世代機�
     // gen0: 板からの引用1件のみ(citation-linkは content_id 単位のキー空間なので gen1 作成時に
     // gen1 の名前空間へ積まれる derived_from リンクは gen0 側には現れない=独立の証明)。
     expect(gen0Count).toEqual({ content_id: "GEN-CIT-0", citation_count: 1 });
-    // gen1: next-generation 作成時に積まれた自身の derived_from リンク1件のみ(gen0への板引用は
-    // gen1 側には現れない=双方向で独立)。
-    expect(gen1Count).toEqual({ content_id: gen1Id, citation_count: 1 });
+    // gen1: 生まれたてで人からの引用はゼロ(derived_from=系譜の辺は被引用に数えない・
+    // 裁定R0801-9398e1 §4是正。T4適用前は自分の derived_from を自分で数えて1を返していた)。
+    expect(gen1Count).toEqual({ content_id: gen1Id, citation_count: 0 });
   });
 
   it("gen0 の reference-count は gen1 作成で +1 される(input_event_ids刻印の帰結・消失や二重計上が無いことの確認)", async () => {
@@ -591,6 +614,88 @@ describe("V3-AIP-108/109 POST /research/content/:id/next-generation (世代機�
       makeEnv(bucket),
     );
     expect(res.status).toBe(401);
+  });
+
+  it("仮想root(lineage_metaを持たない旧レコード)に next-generation すると gen1 は generation=1 だが parent_uuid/ancestor_chain を持たない(裁定R0801-9398e1 R-1)", async () => {
+    const bucket = new FakeR2Bucket();
+    // T1適用後は POST /research/content が常に lineage_meta(gen0)を刻むため、HTTP経由では
+    // lineage_meta を持たない旧レコードを新規に作れない(発注書T1-5)。生イベント直接書き込みで
+    // 「世代機構より前に作られた既存レコード」を再現する(仮想root分岐=R-6は消えていない)。
+    await seedLegacyContent(bucket, paperBody("GEN-VROOT-1"));
+    const gen1Res = await post(bucket, "/api/v1/research/content/GEN-VROOT-1/next-generation", { title: "Gen v1" });
+    expect(gen1Res.status).toBe(201);
+    const gen1Body = (await gen1Res.json()) as { content_id: string; generation: number };
+    expect(gen1Body.generation).toBe(1);
+
+    const detail = await (await get(bucket, `/api/v1/research/content/${gen1Body.content_id}`)).json();
+    expect((detail as { lineage_meta?: Record<string, unknown> }).lineage_meta).toBeDefined();
+    expect((detail as { lineage_meta: Record<string, unknown> }).lineage_meta.parent_uuid).toBeUndefined();
+    expect((detail as { lineage_meta: Record<string, unknown> }).lineage_meta.ancestor_chain).toBeUndefined();
+  });
+});
+
+describe("V3-AIP-108/109 GET /research/content/:id/generations (世代横断ビュー・設計R0801-436936 §3案2-A c・裁定R0801-9398e1 T2)", () => {
+  const paperBody = (contentId: string, title = "Gen view paper") => ({
+    content_id: contentId, content_type: "paper", title,
+    sections: {
+      purpose: { filled: false, text: "" }, hypothesis: { filled: false, text: "" },
+      conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+      phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+    },
+    completeness_pct: 0,
+  });
+
+  it("3世代を作ると、どの世代のidから叩いても1回のレスポンスで全世代のカウントが取れる", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("GV-0"));
+    const gen1Res = await post(bucket, "/api/v1/research/content/GV-0/next-generation", { title: "v1" });
+    const { content_id: gen1Id } = (await gen1Res.json()) as { content_id: string };
+    const gen2Res = await post(bucket, `/api/v1/research/content/${gen1Id}/next-generation`, { title: "v2" });
+    const { content_id: gen2Id } = (await gen2Res.json()) as { content_id: string };
+
+    type GenItem = { generation: number; content_id: string; reference_count: number; citation_count: number; lineage_recorded: boolean };
+    for (const queryId of ["GV-0", gen1Id, gen2Id]) {
+      const res = await get(bucket, `/api/v1/research/content/${queryId}/generations`);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { content_id: string; generations: GenItem[] };
+      expect(body.generations.map((g) => g.generation)).toEqual([0, 1, 2]);
+      expect(body.generations.map((g) => g.content_id)).toEqual(["GV-0", gen1Id, gen2Id]);
+      expect(body.generations.map((g) => g.lineage_recorded)).toEqual([true, true, true]);
+      // T4是正(裁定R0801-9398e1 §4)後は derived_from(系譜の辺)を被引用に数えないため、
+      // 板からの引用が一切無いこのテストでは全世代の citation_count が0(V3-AIP-109の
+      // 「新世代で0から再カウント」の逐語どおり・誰も引用していないなら0が正直な数字)。
+      expect(body.generations.map((g) => g.citation_count)).toEqual([0, 0, 0]);
+    }
+  });
+
+  it("fork-template で作った子は generations に現れない(derived_from を fork と世代で混同しない)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("GV-FORK-0"));
+    const forkRes = await post(bucket, "/api/v1/research/content/GV-FORK-0/fork-template", {});
+    expect(forkRes.status).toBe(201);
+    const { content_id: forkChildId } = (await forkRes.json()) as { content_id: string };
+
+    const res = await get(bucket, "/api/v1/research/content/GV-FORK-0/generations");
+    const body = (await res.json()) as { generations: { content_id: string }[] };
+    expect(body.generations.map((g) => g.content_id)).toEqual(["GV-FORK-0"]);
+    expect(body.generations.map((g) => g.content_id)).not.toContain(forkChildId);
+  });
+
+  it("未認証だと401(protected route のまま・新routeはPUBLIC_ROUTESに載せない)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("GV-AUTH-1"));
+    const res = await app.request(
+      "/api/v1/research/content/GV-AUTH-1/generations",
+      { method: "GET" },
+      makeEnv(bucket),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("存在しない content_id は404", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await get(bucket, "/api/v1/research/content/nope/generations");
+    expect(res.status).toBe(404);
   });
 });
 
