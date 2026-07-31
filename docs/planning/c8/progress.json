@@ -8683,7 +8683,7 @@
     "tc": [
       "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")"
     ],
-    "note": "[2026-08-01 g68-refs2/S2] 更新回数は lineage_meta.generation として実装(専用カウンタは作っていない=109と同一機構・設計R0801-436936 §3の第一原則)。POST /research/content/:id/next-generation(paper限定・protected)を2回叩くと generation が 0→1→2 になるテスト在り・2057件全緑。狭いゲートR0801-287c33=条件付き可(コード動作の誤り0件)・条件は全て是正済み(R0801-35ac10)または裁定済み(R0801-9398e1)。★正直記録: 「戻す」操作で更新回数が増えるか否かは未回答カードREF-1(R0801-436936-refrestore)の裁定による(裁定までは revert方式=戻すと+1 の暫定)。lineage_metaを持たない旧レコードへの初回next-generationは仮想root扱い(parent_uuid省略の裁定R0801-9398e1 R-1はS3 T0で適用予定・generation値自体は正)。表示UIは未接続(apps/webからの呼び出しはgrep 0件・2026-08-01実測)。"
+    "note": "[2026-08-01 g68-refs2/S2] 更新回数は lineage_meta.generation として実装(専用カウンタは作っていない=109と同一機構・設計R0801-436936 §3の第一原則)。POST /research/content/:id/next-generation(paper限定・protected)を2回叩くと generation が 0→1→2 になるテスト在り・2057件全緑。狭いゲートR0801-287c33=条件付き可(コード動作の誤り0件)・条件は全て是正済み(R0801-35ac10)または裁定済み(R0801-9398e1)。★正直記録: 「戻す」操作で更新回数が増えるか否かは未回答カードREF-1(R0801-436936-refrestore)の裁定による(裁定までは revert方式=戻すと+1 の暫定)。lineage_metaを持たない旧レコードへの初回next-generationは仮想root扱い(parent_uuid省略の裁定R0801-9398e1 R-1はS3 T0で適用済み(4d4d936)・generation値自体は正)。表示UIは未接続(apps/webからの呼び出しはgrep 0件・2026-08-01実測)。"
   },
   {
     "id": "V3-AIP-109",
@@ -8693,13 +8693,15 @@
     "tier": "A",
     "lane": "L4",
     "scope": "required",
-    "status": "in_progress",
+    "status": "done",
     "commits": [
-      "ad4d644"
+      "ad4d644",
+      "4d4d936"
     ],
     "tc": [
-      "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")"
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")",
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 GET /research/content/:id/generations\")"
     ],
-    "note": "[2026-08-01 g68-refs2/S2] 世代=別content実体(世代ごとにcontent_id/envelope.idが別)として実装。世代スコープカウントは別実体化の帰結であり専用の集計コードは持たない(都度再計算のまま・設計R0801-436936 §3案2-A)。gen1のcitation-countがgen0と独立のテスト・gen0のcitation-count不変/reference-count+1のテスト在り(+1は§2案1-A③の仕様=機械証言。裁定R0801-9398e1 §3で設計の「不変」誤記を訂正済み)。★in_progressの理由(doneにしない根拠・設計§7の遷移条件): ①S3(generations一括ビュー+イベント件数実測)未了 ②仮想rootのparent_uuid省略(裁定R-1)未適用 ③生まれたてのgen1のcitation_countが自身のderived_fromを数えて1になる問題(裁定§4・要件逐語「0から再カウント」に反する)のS3 T4是正が未了 ④復元方式は未回答カードREF-1/REF-2の裁定待ち(S4)。"
+    "note": "[2026-08-01 g69/S3でdone化] S2(ad4d644)=世代を別content実体として実装(世代ごとにcontent_id/envelope.idが別・専用集計コードなし=都度再計算・設計R0801-436936 §3案2-A)。S3(4d4d936・狭いゲートR0801-36ddfc条件付き可=コミット対象2ファイルへの是正指摘0件)で前回in_progress根拠4点のうち①②③を解消: ①GET /research/content/:id/generations(全世代のgeneration/content_id/reference_count/citation_count/lineage_recordedを1レスポンスで返す・fork混同防止の判別規則=世代差+1・protected既定・O(n)明記) ②仮想rootのparent_uuid/ancestor_chain省略を適用(裁定R0801-9398e1 R-1〜R-3・新規レコードは全てgen0刻印で仮想rootを増やさない=T1) ③citation_countからderived_from(系譜の辺)を除外しgen1は0から数え始める(T4・要件逐語「新たにカウントし始める」に一致。自壊検証で旧挙動[0,1,1]→現行[0,0,0]をゲート艦が実測=空回りなし)。テスト2062全緑・6スイート再検算一致(ゲート実測)。イベント件数実測はローカル永続ストア無し(FakeR2Bucket)のため計測不能の理由を記録(報告書R0801-578d62 §10)。★doneの正直記録(残る論点=旧④): 「いつでも戻せる」は暫定revert方式(旧内容で次世代を積む=Gitのrevert同型・追加部品ゼロ)で成立。戻す操作で更新回数を増やさない現行ポインタ方式(S4)へ寄せるかは未回答カードREF-1(R0801-436936-refrestore)の裁定による(カード自身が非ブロッキングを明記)。REF-2(世代=別ID実体の是非)が×の場合はS2/S3成果を採用せず設計へ差し戻す(カード明記)。表示UIは未接続(apps/webからの呼び出しはgrep 0件・2026-08-01 S2時点実測・S3もweb不触)。"
   }
 ]
