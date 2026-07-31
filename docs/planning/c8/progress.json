@@ -220,7 +220,7 @@
     "status": "blocked",
     "commits": [],
     "tc": [],
-    "note": "裁定待ち—実質解消提案: V3-AIP-92が前提とするBuilder(文明編集ツール)経由のKernel編集/OSDefinition差し替え一本道パイプラインは、round-16裁定で棄却済みのBuilder中心アーキテクチャに依拠している。推奨=(a) 既存codegenパイプライン(schemas/→generated一方向・npm run codegen:check GATE・scripts/codegen-*.mjs群)を『危険なDiffの拒否・検証・再現性』の機能的等価物として充足扱いとし、Builder UIそのものの新設は不要と裁定する。"
+    "note": "裁定待ち—実質解消提案: V3-AIP-92が前提とするBuilder(文明編集ツール)経由のKernel編集/OSDefinition差し替え一本道パイプラインは、round-16裁定で棄却済みのBuilder中心アーキテクチャに依拠している。推奨=(a) 既存codegenパイプライン(schemas/→generated一方向・npm run codegen:check GATE・scripts/codegen-*.mjs群)を『危険なDiffの拒否・検証・再現性』の機能的等価物として充足扱いとし、Builder UIそのものの新設は不要と裁定する。 / 【2026-07-31 64代目HQ裁定R64-5(RULING-2026-07-31-gen64-hqrulings.md)によりclose裁定】close理由=round-16裁定によりBuilder中心アーキという前提が消滅したため。★「実装済み」「done(実装)」ではない。★status語彙の前例調査(記録艦): progress.json全587件のstatus値はdone/todo/in_progress/blockedの4種のみで、『close』『棄却』『充足扱い』に相当するstatus値の前例は0件だった(note文中に『充足扱い』の語を含む既存例はあるが、その例(本エントリ自身の既存note)もstatusはblockedのまま変更されていない)。よって語彙を発明せずstatus=blockedのまま維持し、note追記のみに留める。status変更の要否はHQへ差し戻す。"
   },
   {
     "id": "V3-AIP-93",
