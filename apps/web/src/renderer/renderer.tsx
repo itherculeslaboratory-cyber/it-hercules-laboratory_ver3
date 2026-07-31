@@ -11,7 +11,7 @@ import React, {
 } from "react";
 import QRCode from "qrcode";
 import { cn } from "@/lib/cn";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, unwrapEnvelope } from "@/lib/api";
 import { ApiError, mapError } from "@/lib/error-messages";
 import { shouldOfferTranslation, translateOnDemand } from "@/lib/ugc-translate";
 import { makeResolver, type Catalogs } from "@/lib/i18n-resolve";
@@ -435,7 +435,7 @@ function defaultExecute(onNavigate?: (to: string, query?: Record<string, string>
           : res.status;
       throw new ApiError(code);
     }
-    return ct.includes("application/json") ? await res.json() : undefined;
+    return ct.includes("application/json") ? unwrapEnvelope(await res.json()) : undefined;
   };
 }
 

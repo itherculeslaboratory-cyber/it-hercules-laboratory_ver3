@@ -20,10 +20,17 @@ export type EnvelopeBody = { data: unknown; meta: EnvelopeMeta } | { error: unkn
 export function wrapEnvelope(body: unknown, status: number, requestId: string): EnvelopeBody {
   const meta: EnvelopeMeta = { requestId, timestamp: new Date().toISOString() };
   if (status >= 400 && body !== null && typeof body === "object" && "error" in (body as Record<string, unknown>)) {
-    return { error: (body as Record<string, unknown>).error, meta };
+    return { ...(body as Record<string, unknown>), meta } as EnvelopeBody;
   }
   return { data: body, meta };
 }
+
+/**
+ * mount 済みでもここに載っていない route は包まない(段階導入の allowlist)。
+ * キー形式は index.ts の PUBLIC_READ_ROUTES と同じ `${method} ${path}`(route pattern)。
+ * 初期値は空 Set = 常に inert(既存応答形状は不変)。
+ */
+export const ENVELOPE_ROUTES: Set<string> = new Set();
 
 /**
  * 全 route の JSON 応答を統一エンベロープへ包む Hono middleware。既存 route は c.json(...) を
@@ -34,6 +41,10 @@ export function responseEnvelope(): MiddlewareHandler {
   return async (c: Context, next) => {
     const requestId = ulid();
     await next();
+    // ponytail: c.req.matchedRoutes は v4 で deprecated だが動く(index.ts:212-213 と同文)。
+    //   v5 へ上げる時に `import { matchedRoutes } from "hono/route"` へ差し替える。
+    const target = c.req.matchedRoutes.find((r) => r.method !== "ALL");
+    if (!target || !ENVELOPE_ROUTES.has(`${target.method} ${target.path}`)) return;
     const contentType = c.res.headers.get("content-type") ?? "";
     if (!contentType.includes("application/json")) return;
     let body: unknown;

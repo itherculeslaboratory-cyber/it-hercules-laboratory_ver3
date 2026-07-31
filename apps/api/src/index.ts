@@ -68,8 +68,10 @@ import { NEWSPAPER_CRON_UTC } from "./research-constants";
 import { handleScheduled } from "./batch";
 import { costsRoutes } from "./costs-routes";
 import { checkRateLimit, clientIp, WRITE_RATE_LIMIT_PER_MINUTE, WRITE_QUOTA_PER_DAY } from "./rate-limit";
+import { responseEnvelope } from "./response-envelope-middleware";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+app.use("*", responseEnvelope());
 
 // CL-04 deny-by-default: ONLY these paths are public. Everything else —
 // including unknown routes — hits the auth gate first (401 before 404).

@@ -3,7 +3,7 @@
 // (ihl.ui.template.v1・theme-routes.ts 実在)。renderer.tsx の defaultExecute と同じ
 // same-origin(/api/v1/...)+ credentials:"include" 規約で叩く(HttpOnly セッション cookie
 // を流すため)。誇張ゼロ: 返ってきたフィールドだけを扱い、無ければ空配列。
-import { apiUrl } from "@/lib/api";
+import { apiUrl, unwrapEnvelope } from "@/lib/api";
 
 // GET /market/templates が返す1行(rankTemplates の投影・fork グラフ由来 fork_count/score)。
 export interface RankedTemplate {
@@ -34,7 +34,7 @@ async function call(path: string, init?: RequestInit): Promise<unknown> {
   const res = await fetch(apiUrl(path), { credentials: "include", ...init });
   if (!res.ok) throw new Error(`api ${res.status}`);
   const ct = res.headers.get("content-type") ?? "";
-  return ct.includes("application/json") ? res.json() : undefined;
+  return ct.includes("application/json") ? unwrapEnvelope(await res.json()) : undefined;
 }
 
 function jsonInit(method: string, body: unknown): RequestInit {
