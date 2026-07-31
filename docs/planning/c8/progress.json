@@ -7735,11 +7735,13 @@
     "lane": "L4",
     "scope": "required",
     "status": "done",
-    "commits": [],
+    "commits": [
+      "262aa71"
+    ],
     "tc": [
       "tests/research-content.test.ts describe(\"V3-AIP-45 GET /research/content/:id/reference-count\")"
     ],
-    "note": "[w1-aip 型C対応表] 既存機構が満たす: tests/ai-view.test.ts(04-traceability/rtm.md:20。二層ビュー human/machine + 参照カウンタ都度再計算)。[2026-07-31 g65-countapi追記] projectReferenceCounter(reference-counter.ts:11)の呼び出し元がテストのみで実アプリから到達不能だった状態(R65-16)を解消: GET /research/content/:id/reference-count(research-content-routes.ts)を追加し、既存関数をそのまま呼ぶだけの薄いHTTPハンドラで配線した(新しい数え方は発明していない・protected既定のまま)。カウント対象はcontent_idではなくreadEventで解決したenvelope.id(理由は本報告書「判断」節1参照)。テストでハンドラを外すと該当ケースが404で赤くなることを確認済み(型F3点=コード/テスト/progress行 が揃った)。現時点で研究content宛にinput_event_idsを書く経路が他に無いため実測値は常に0(配線は正・参照元がまだ無いだけ=別スコープのギャップとして正直に記録)。[2026-08-01 67代目HQ適用] 本entryはR0731-45e3f5報告の提出JSON行をprogress-merge.mjsで適用したもの(refpath艦R0801-6859a3が未反映を検出)。"
+    "note": "[w1-aip 型C対応表] 既存機構が満たす: tests/ai-view.test.ts(04-traceability/rtm.md:20。二層ビュー human/machine + 参照カウンタ都度再計算)。[2026-07-31 g65-countapi追記] projectReferenceCounter(reference-counter.ts:11)の呼び出し元がテストのみで実アプリから到達不能だった状態(R65-16)を解消: GET /research/content/:id/reference-count(research-content-routes.ts)を追加し、既存関数をそのまま呼ぶだけの薄いHTTPハンドラで配線した(新しい数え方は発明していない・protected既定のまま)。カウント対象はcontent_idではなくreadEventで解決したenvelope.id(理由は本報告書「判断」節1参照)。テストでハンドラを外すと該当ケースが404で赤くなることを確認済み(型F3点=コード/テスト/progress行 が揃った)。現時点で研究content宛にinput_event_idsを書く経路が他に無いため実測値は常に0(配線は正・参照元がまだ無いだけ=別スコープのギャップとして正直に記録)。[2026-08-01 67代目HQ適用] 本entryはR0731-45e3f5報告の提出JSON行をprogress-merge.mjsで適用したもの(refpath艦R0801-6859a3が未反映を検出)。[2026-08-01 g67-refs1/S1追記(68代目HQ適用)] reference-countは実測値が0以外になる書き込み経路を持つ(経路: fork-template / content作成時のpaper引用。provenance.input_event_idsはサーバがreadEventで解決して刻印=クライアントから偽造不能・設計R0801-436936 §1-3)。実測値常に0の状態は解消(新規テストで1以上を実測・2051件全緑・自壊検証で数字系3件赤化を実装艦とゲート艦R0801-2748efが独立確認)。表示UIは未接続(apps/webからのreference-count呼び出しはgrep 0件・2026-08-01実測)。"
   },
   {
     "id": "V3-AIP-46",
