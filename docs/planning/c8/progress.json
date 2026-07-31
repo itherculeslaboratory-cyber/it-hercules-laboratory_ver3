@@ -2807,7 +2807,7 @@
       "apps/api/src/knowledge-article-routes.ts (buildArticlePack/POST /knowledge/article-pack)",
       "tests/knowledge-article.test.ts"
     ],
-    "note": "[w3-aip実測] 技術記事生成器キーワードgrepは文書系7件のみ・生成器コード0件を再確認。[design35 §A-3(2026-07-31)再配属] 生成物の置き場がknowledge*=w1-plazaのglob内と判定・w-plaza2へ移管(lane変更はこの再配属を反映・維持)。[2026-08-01 w-plaza2追記] knowledge-article-routes.ts新規実装(buildArticlePack/POST /knowledge/article-pack)。テスト8件全PASS。index.ts未mount(HQ検収時にapp.route(\"/api/v1\", knowledgeArticleRoutes)の追加が必要)。[2026-08-01 g64-progressmerge・R64-11] w-plaza2はprogress.jsonを直接編集しdoneへ変更したが、GATE(R0731-06e192)中-4で『index.ts未マウントのため実アプリから到達不能』な状態でdoneとする妥当性が未裁定として明記されている。本バッチの他ID(FND-31/GOV-05等)でも『未マウント=実際には機能していない』は一貫してin_progress据え置きとしているため、整合性を優先しdoneへの昇格はrevertしin_progressとする(判断が要った箇所・HQ再確認を推奨)。"
+    "note": "[w3-aip実測] 技術記事生成器キーワードgrepは文書系7件のみ・生成器コード0件を再確認。[design35 §A-3(2026-07-31)再配属] 生成物の置き場がknowledge*=w1-plazaのglob内と判定・w-plaza2へ移管(lane変更はこの再配属を反映・維持)。[2026-08-01 w-plaza2追記] knowledge-article-routes.ts新規実装(buildArticlePack/POST /knowledge/article-pack)。テスト8件全PASS。index.ts未mount(HQ検収時にapp.route(\"/api/v1\", knowledgeArticleRoutes)の追加が必要)。[2026-08-01 g64-progressmerge・R64-11] w-plaza2はprogress.jsonを直接編集しdoneへ変更したが、GATE(R0731-06e192)中-4で『index.ts未マウントのため実アプリから到達不能』な状態でdoneとする妥当性が未裁定として明記されている。本バッチの他ID(FND-31/GOV-05等)でも『未マウント=実際には機能していない』は一貫してin_progress据え置きとしているため、整合性を優先しdoneへの昇格はrevertしin_progressとする(判断が要った箇所・HQ再確認を推奨)。 [2026-07-31 R65-2・記録艦] route未mount(index.ts に grep 0件)のため実アプリから到達不能(既存noteのin_progress据え置き判断を再確認)。"
   },
   {
     "id": "V3-AIP-103",
@@ -3050,10 +3050,10 @@
     "status": "done",
     "commits": [],
     "tc": [
-      "apps/api/src/plaza-dispute-routes.ts",
-      "tests/plaza-dispute.test.ts"
+      "apps/api/src/gov-routes.ts",
+      "tests/gov-dispute.test.ts"
     ],
-    "note": "R0731 w2-plaza新規実装。POST /plaza/disputes(tag/reason必須・自分の投稿は指摘不可)+二者間room(POST /plaza/disputes/:id/messages・当事者2名のみ書込・誰でも閲覧可)。market-flag-routes.tsのコメントが『掲示板側は指摘機能自体が未実装』と明記していた配線先。index.ts mount未反映(HQ検収時適用)。"
+    "note": "R0731 w2-plaza新規実装。POST /plaza/disputes(tag/reason必須・自分の投稿は指摘不可)+二者間room(POST /plaza/disputes/:id/messages・当事者2名のみ書込・誰でも閲覧可)。market-flag-routes.tsのコメントが『掲示板側は指摘機能自体が未実装』と明記していた配線先。index.ts mount未反映(HQ検収時適用)。 [2026-07-31 tc差し替え・記録艦] 旧tc(plaza-dispute-routes.ts/plaza-dispute.test.ts)はR64-1で削除済み。/gov/disputes(category=board)へ移植されたtests/gov-dispute.test.ts:120-124の移植コメントで確認。gov-routes.tsはindex.tsで mount 済み(index.ts:413)。"
   },
   {
     "id": "V3-BBS-08",
@@ -3066,10 +3066,10 @@
     "status": "done",
     "commits": [],
     "tc": [
-      "apps/api/src/plaza-dispute-routes.ts",
-      "tests/plaza-dispute.test.ts"
+      "apps/api/src/gov-routes.ts",
+      "tests/gov-dispute.test.ts"
     ],
-    "note": "R0731 w2-plaza新規実装。reduceDisputeStatus(1ヶ月合意なしでforce_closed・accept存在でresolved_agreed)・maybeApplyUnresolvedClosePenalty(未解決クローズ5の倍数でカルマ-1・appendKarma直接呼び出し=Fibonacciモデルとは別径路)・maybeChargeDisputeIndictmentFee(30回でPT-1・GOV-10と同値だが掲示板側は独立カウント)。修正表示切替は既存plaza-post.correction_ofをそのまま再利用(新規フィールド無し)。評価異議申立てのtarget_type=ratingにも対応(respondent_id明示指定)。index.ts mount未反映。"
+    "note": "R0731 w2-plaza新規実装。reduceDisputeStatus(1ヶ月合意なしでforce_closed・accept存在でresolved_agreed)・maybeApplyUnresolvedClosePenalty(未解決クローズ5の倍数でカルマ-1・appendKarma直接呼び出し=Fibonacciモデルとは別径路)・maybeChargeDisputeIndictmentFee(30回でPT-1・GOV-10と同値だが掲示板側は独立カウント)。修正表示切替は既存plaza-post.correction_ofをそのまま再利用(新規フィールド無し)。評価異議申立てのtarget_type=ratingにも対応(respondent_id明示指定)。index.ts mount未反映。 [2026-07-31 tc差し替え・記録艦] 旧tc(plaza-dispute-routes.ts/plaza-dispute.test.ts)はR64-1で削除済み。/gov/disputes(category=board)へ移植されたtests/gov-dispute.test.ts:120-124の移植コメントで確認。gov-routes.tsはindex.tsで mount 済み(index.ts:413)。"
   },
   {
     "id": "V3-BBS-11",
@@ -3143,13 +3143,13 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "best-effort",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "apps/api/src/plaza-dm-routes.ts",
       "tests/plaza-dm.test.ts"
     ],
-    "note": "R0731 w2-plaza新規実装。POST/GET /plaza/dm/threads・POST/GET /plaza/dm/threads/:id/messages。context_type(trade/international_trade/appeal/research/market/general)で汎用コミュニケーションレイヤーとして設計(各ドメインからの配線は各ドメインglob担当)。last_message_atは投影で都度導出(専用フィールド永続化なし)。index.ts mount未反映。"
+    "note": "R0731 w2-plaza新規実装。POST/GET /plaza/dm/threads・POST/GET /plaza/dm/threads/:id/messages。context_type(trade/international_trade/appeal/research/market/general)で汎用コミュニケーションレイヤーとして設計(各ドメインからの配線は各ドメインglob担当)。last_message_atは投影で都度導出(専用フィールド永続化なし)。index.ts mount未反映。 [2026-07-31 R65-8・記録艦] route未mount(index.ts に grep 0件・plazaDmRoutes)のため実アプリから到達不能。批評艦(R0731-0f0e8f)指摘・記録艦が1件ずつ実測確認・誤検知0件。doneからin_progressへ降格。"
   },
   {
     "id": "V3-BBS-25",
@@ -3178,7 +3178,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "[2026-07-31 close(実装なし)・記録艦] round-18(R136/S5・B処置)でV3-BBS-38へsuperseded済み。design19 T1-8実測により再確認・design35 §5が記録割当。BBS-26として実装すると不採用要件を実装したことになるため実装しない。AIP-92のclose(R64-5)と同型。"
   },
   {
     "id": "V3-BBS-32",
@@ -3201,14 +3201,14 @@
     "tier": "C",
     "lane": "L4-knowledge",
     "scope": "best-effort",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "apps/api/src/plaza-constants.ts (AI_ASSISTED_TAG)",
       "apps/api/src/plaza-stats-routes.ts (ai_generation_rate)",
       "tests/plaza-stats.test.ts"
     ],
-    "note": "R0731 w3-plaza新規実装。62代目HQ検収是正(AI生成率が完全未開示だった指摘)を解消。plaza-post.schema.json凍結によりAI著者性を示すフィールドが無いため、tags[]規約(ai_assisted)で一次信号を定義した。未対応クライアントの場合は正直に0%を返す(捏造ゼロ)。『文化スコア』は引き続き正本未確定のため対象外(w2から据え置き)。"
+    "note": "R0731 w3-plaza新規実装。62代目HQ検収是正(AI生成率が完全未開示だった指摘)を解消。plaza-post.schema.json凍結によりAI著者性を示すフィールドが無いため、tags[]規約(ai_assisted)で一次信号を定義した。未対応クライアントの場合は正直に0%を返す(捏造ゼロ)。『文化スコア』は引き続き正本未確定のため対象外(w2から据え置き)。 [2026-07-31 R65-8・記録艦] route未mount(index.ts に grep 0件・plazaStatsRoutes)のため実アプリから到達不能。批評艦(R0731-0f0e8f)指摘・記録艦が1件ずつ実測確認・誤検知0件。doneからin_progressへ降格。"
   },
   {
     "id": "V3-CST-03",
@@ -3873,12 +3873,12 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "best-effort",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "tests/mkt-21-intl-shipping.test.ts"
     ],
-    "note": "market-intl-shipping-routes.ts新規。mkt-listing.schema拡張は生成物再生成が艦外のため見送り、未登録追加イベント型(listing_intl)で実装。index.ts未マウント(挿入行はREPORT §6)"
+    "note": "market-intl-shipping-routes.ts新規。mkt-listing.schema拡張は生成物再生成が艦外のため見送り、未登録追加イベント型(listing_intl)で実装。index.ts未マウント(挿入行はREPORT §6) [2026-07-31 R65-8・記録艦] route未mount(index.ts に grep 0件・marketIntlShippingRoutes)のため実アプリから到達不能。批評艦(R0731-0f0e8f)指摘・記録艦が1件ずつ実測確認・誤検知0件。doneからin_progressへ降格。"
   },
   {
     "id": "V3-MKT-24",
@@ -3916,12 +3916,12 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "best-effort",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "tests/mkt-34-67-platinum-symbol.test.ts"
     ],
-    "note": "購入権(100PT・先着1名・KARMA_BAN_THRESHOLD未満で自動失効)まで実装。第2段階(現金決済)は金銭実行=人間ゲートにつき意図的に未実装。index.ts未マウント(挿入行はREPORT §6)"
+    "note": "購入権(100PT・先着1名・KARMA_BAN_THRESHOLD未満で自動失効)まで実装。第2段階(現金決済)は金銭実行=人間ゲートにつき意図的に未実装。index.ts未マウント(挿入行はREPORT §6) [2026-07-31 R65-8・記録艦] route未mount(index.ts に grep 0件・marketPlatinumSymbolRoutes)のため実アプリから到達不能。批評艦(R0731-0f0e8f)指摘・記録艦が1件ずつ実測確認・誤検知0件。doneからin_progressへ降格。"
   },
   {
     "id": "V3-MKT-41",
@@ -4909,13 +4909,13 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "best-effort",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "apps/api/src/plaza-template-routes.ts",
       "tests/plaza-template.test.ts"
     ],
-    "note": "R0731 w2-plaza新規実装。POST /plaza/templates(root)+/fork(公開・進化対象)+/copy(個人・非公開)。projectTemplateLineageがforked_fromを遡ってfork系譜のみを再構成(copyは系譜対象外)。既存plaza FORK_TYPE(BBS-29・board/post用)とは責務分離のため別イベント型を新設。index.ts mount未反映。"
+    "note": "R0731 w2-plaza新規実装。POST /plaza/templates(root)+/fork(公開・進化対象)+/copy(個人・非公開)。projectTemplateLineageがforked_fromを遡ってfork系譜のみを再構成(copyは系譜対象外)。既存plaza FORK_TYPE(BBS-29・board/post用)とは責務分離のため別イベント型を新設。index.ts mount未反映。 [2026-07-31 R65-8・記録艦] route未mount(index.ts に grep 0件・plazaTemplateRoutes)のため実アプリから到達不能。批評艦(R0731-0f0e8f)指摘・記録艦が1件ずつ実測確認・誤検知0件。doneからin_progressへ降格。"
   },
   {
     "id": "V3-WIK-35",
@@ -6431,12 +6431,12 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "best-effort",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "tests/mkt-34-67-platinum-symbol.test.ts"
     ],
-    "note": "requireRole(\"operator\",\"admin\")(authz.ts既存規約を再利用)でsymbol新規発行を保護。market-platinum-symbol-routes.ts"
+    "note": "requireRole(\"operator\",\"admin\")(authz.ts既存規約を再利用)でsymbol新規発行を保護。market-platinum-symbol-routes.ts [2026-07-31 R65-8・記録艦] route未mount(index.ts に grep 0件・marketPlatinumSymbolRoutes)のため実アプリから到達不能。批評艦(R0731-0f0e8f)指摘・記録艦が1件ずつ実測確認・誤検知0件。doneからin_progressへ降格。"
   },
   {
     "id": "V3-OTH-09",
