@@ -1,6 +1,6 @@
 // R65-13/R65-15: 批評ゲート是正(kits\lane-research\R0731-5c93fc-GATE-2026-07-31-g65-authmw.md)
 // の条件A/C + 中4を固定する回帰網。
-// T1(条件A・R65-13): PUBLIC_READ_ROUTES(export済み)と route-matrix.csv の観測public行が
+// T1(条件A・R65-13): PUBLIC_READ_ROUTES(export済み)と route-matrix.csv のpublic行 − PUBLIC_ROUTES が
 //   双方向に集合等価であること(片側にだけ足すと赤くなること)。
 // T2(条件C・R65-15): PUBLIC_ROUTES(webhook/認証系)の POST は書込レート制限(IPクォータ)の
 //   対象にならないこと(変更前の挙動=素通り、へ正確に戻したことの確認)。
@@ -8,7 +8,7 @@
 //   意図した fail-closed 挙動を固定する。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import app, { PUBLIC_READ_ROUTES } from "../apps/api/src/index";
+import app, { PUBLIC_READ_ROUTES, PUBLIC_ROUTES } from "../apps/api/src/index";
 import { memoryKV } from "../apps/api/src/kv";
 import { makeEnv } from "./helpers";
 
@@ -34,11 +34,16 @@ function toMatchedRouteKey(r: Row): string {
   return `${r.method} ${r.path.replace(/\{([^}]+)\}/g, ":$1")}`;
 }
 
-describe("R65-13 T1: PUBLIC_READ_ROUTES ⇔ route-matrix.csv(観測public)は双方向に集合等価", () => {
+describe("R65-13 T1: PUBLIC_READ_ROUTES ⇔ route-matrix.csv(public行 − PUBLIC_ROUTES)は双方向に集合等価", () => {
   it("双方向一致(片側漏れ0件)", () => {
+    // CSVの access=public は2機構の合算 ── ①PUBLIC_ROUTES(生URL完全一致・ゲートごと素通り)
+    // ②PUBLIC_READ_ROUTES(matchedRoutes方式・セッション解決は必ず通す)。①を引いた残りが
+    // ②と一致すべき集合。旧実装は「/api/v1/observation/ で始まる」という代理指標で②を
+    // 近似していたが、R66-1 で observation 外の "POST /api/v1/cusb" が②に入り恒久赤化した。
+    // ①は静的パスのみなので、{...} を含むCSVの動的行が誤って引かれることはない。
     const csvSet = new Set(
       loadMatrix()
-        .filter((r) => r.access === "public" && r.path.startsWith("/api/v1/observation/"))
+        .filter((r) => r.access === "public" && !PUBLIC_ROUTES.includes(r.path))
         .map(toMatchedRouteKey),
     );
     const codeSet = PUBLIC_READ_ROUTES;

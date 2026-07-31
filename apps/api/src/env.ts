@@ -30,6 +30,13 @@ export type Bindings = {
   // of registered collector public keys. The signature IS the credential
   // (design-c3 §3) — an unregistered collector_id is rejected 401.
   COLLECTOR_PUBLIC_KEYS?: string;
+  // V3-OBS-70 段階1: Docker中間層(無人プロセス)がC-USBへ push するための Ed25519
+  // 公開鍵登録。JSON map { "<extension_id>": { "public_key_pem": "...", "actor_id": "..." } }。
+  // collector と違い、C-USB は取り込みイベントを人間(鍵の登録者)に帰属させる必要があるため
+  // (design R0731-060798 §4-2)、pem だけでなく actor_id も持つ。秘密鍵はユーザーPC上の
+  // コンテナにのみ存在し、ここには公開鍵しか置かない。段階2(セルフサービス登録)までは
+  // このenvへの追加は運営(wrangler env)が行う — cusb-routes.ts 冒頭コメント参照。
+  CUSB_DEVICE_KEYS?: string;
   // GMO sunabar 照合(design-c4 §2)。retired 2026-07-17 round-16(gmo-connector.ts 冒頭
   // 参照)— route 非マウント後は接続層単体 TC 用に型だけ残置。MODE=sunabar(既定・無料
   // sandbox)|live(人間ゲートまで throw). TOKEN1/ACCOUNT_ID は READ(入出金明細 poll)用。

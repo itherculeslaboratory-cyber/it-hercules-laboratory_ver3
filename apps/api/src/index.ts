@@ -75,7 +75,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 // including unknown routes — hits the auth gate first (401 before 404).
 // Public = /health + the 3 auth entry routes (magic-link/verify/session).
 // logout is PROTECTED (§1.3): you must hold a session to end it.
-const PUBLIC_ROUTES = [
+export const PUBLIC_ROUTES = [
   "/health",
   "/api/v1/auth/magic-link",
   "/api/v1/auth/verify",
@@ -132,6 +132,11 @@ export const PUBLIC_READ_ROUTES = new Set([
   "POST /api/v1/observation/search",                          // infra-route-024
   "POST /api/v1/observation/targets/search",                  // infra-route-025(参照データ)
   "GET /api/v1/observation/:capture_id/species-suggestions",  // infra-route-083(R65-6でゲート追加済)
+  // ★下行はreadでなくwrite(V3-OBS-70 署名push)。optional-auth目的の登録で、認証の強制
+  // (署名 or セッション必須=401)はroute内で行う(R66-1/R66-9)。PUBLIC_ROUTES側に置くと
+  // セッション解決ごとスキップされ既存経路が壊れる(批評R0801-c16d84 A5実測)。
+  // readでない項目が3つ目に入ったらSet改名を検討。
+  "POST /api/v1/cusb",                                        // infra-route-117(R66-1)
 ]);
 
 // CORS (design-k7 FND-11 §1.5). credentials=true → `*` is forbidden; only an origin

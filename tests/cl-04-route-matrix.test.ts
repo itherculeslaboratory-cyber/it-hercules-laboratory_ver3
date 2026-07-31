@@ -63,7 +63,10 @@
 //        採ったため統合時に113へ採番替え)= 105 → 同レーン(V3-UIX-82・検索
 //        グラフビュー)が +1 route(infra-route-114: GET /individuals/{id}/graph・
 //        protected)= 106 → last-four レーン(C8・V3-WIK-28 AIセッション閲覧)が
-//        +1 route(infra-route-115: POST /research/ai-sessions・protected)= 107。
+//        +1 route(infra-route-115: POST /research/ai-sessions・protected)= 107 →
+//        批評ゲートR0801-c16d84中2(g66-wave1fix是正)が既存mount済みだが未登録だった
+//        +1 route(infra-route-116: GET /plaza/node/{post_id}・protected)= 108 →
+//        R66-9(g66-finalize)が +1 route(infra-route-117: POST /cusb・public)= 109。
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
@@ -94,9 +97,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (107 rows)", () => {
-  it("has exactly 107 route rows", () => {
-    expect(rows.length).toBe(107);
+describe("CL-04 route matrix (109 rows)", () => {
+  it("has exactly 109 route rows", () => {
+    expect(rows.length).toBe(109);
   });
 
   it("access column is only public|protected", () => {
@@ -110,13 +113,18 @@ describe("CL-04 route matrix (107 rows)", () => {
   // protectedへ戻した(裁定文言「検索・一覧・詳細」にエクスポートは含まれず、可視性フィルタ
   // 皆無で全ユーザーの全観測データが未ログインで流出するため)。監査根拠=
   // R0731-1ff12e-AUDIT-2026-07-31-g65-publicroutes.md
-  it("public = auth magic-link/verify/verify-code/session + payjp-webhook + 観測READ 10 paths(exportを除く)", () => {
+  // 2026-08-01 R66-9(g66-finalize): POST /api/v1/cusb を追加(infra-route-117)。
+  // ゲート層はPUBLIC_READ_ROUTES登録によりpublic(R66-1)だが、route自身は署名3点か
+  // セッションのどちらか必須(R66-9・無提示は401 AUTH_REQUIRED)— 観測READ各行とは
+  // 「無条件公開」の意味が違うが、CSVのaccess列上はinfra-route-024と同じpublic表記。
+  it("public = auth magic-link/verify/verify-code/session + payjp-webhook + cusb(署名/セッション必須) + 観測READ 10 paths(exportを除く)", () => {
     const publicPaths = new Set(rows.filter((r) => r.access === "public").map((r) => r.path));
     expect([...publicPaths].sort()).toEqual([
       "/api/v1/auth/magic-link",
       "/api/v1/auth/session",
       "/api/v1/auth/verify",
       "/api/v1/auth/verify-code",
+      "/api/v1/cusb",
       "/api/v1/fees/payjp-webhook",
       "/api/v1/observation/measurement-dictionary",
       "/api/v1/observation/search",

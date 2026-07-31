@@ -13,12 +13,15 @@ export const collectorRoutes = new Hono<{ Bindings: Bindings; Variables: Variabl
 
 const INGEST_TYPE = "ihl.collector.ingest.v1";
 
-function b64ToBytes(b64: string): Uint8Array {
+// Exported for reuse by cusb-routes.ts (C-USB device-signature path, OBS-70
+// stage 1) — same Ed25519-signature-is-the-credential protocol, no reason to
+// re-derive it.
+export function b64ToBytes(b64: string): Uint8Array {
   return Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
 }
 
 // Import an Ed25519 public key from an SPKI PEM (same armor as the C1 fixture).
-async function importPublicKey(pem: string): Promise<CryptoKey> {
+export async function importPublicKey(pem: string): Promise<CryptoKey> {
   const b64 = pem.replace(/-----(BEGIN|END) PUBLIC KEY-----/g, "").replace(/\s+/g, "");
   return crypto.subtle.importKey("spki", b64ToBytes(b64), { name: "Ed25519" }, false, ["verify"]);
 }

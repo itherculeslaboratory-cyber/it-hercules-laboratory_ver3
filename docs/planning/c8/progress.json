@@ -4227,7 +4227,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "[2026-08-01 w-obs2] ★差し戻し: design35/bridgeplanに4点セット設計(2案比較・副作用・推す案・実装先)が存在せず、Docker中間層の実装方法自体が未設計。git statusで新規のDockerfile.dev/docker-compose.yml等を確認したが内容はローカル開発サンドボックス化(別要件)でありOBS-70(外部ゲーム観測データ取り込み)とは無関係と確認した。推測で埋めず考える役(lane-think)へ差し戻す(fleet\\waiting\\lane-think-2026-08-01.json登録予定・progressmerge艦確認時点で未作成のためHQ側の対応が必要)。"
+    "note": "[2026-08-01 w-obs2] ★差し戻し: design35/bridgeplanに4点セット設計(2案比較・副作用・推す案・実装先)が存在せず、Docker中間層の実装方法自体が未設計。git statusで新規のDockerfile.dev/docker-compose.yml等を確認したが内容はローカル開発サンドボックス化(別要件)でありOBS-70(外部ゲーム観測データ取り込み)とは無関係と確認した。推測で埋めず考える役(lane-think)へ差し戻す(fleet\\waiting\\lane-think-2026-08-01.json登録予定・progressmerge艦確認時点で未作成のためHQ側の対応が必要)。加えて CUSB_DEVICE_KEYS を wrangler secret put で投入し .env.platform.example に型を追記するまで、本番では全device署名が401 CUSB_DEVICE_UNKNOWN(実装済みだが本番未有効=R65-14の区別)。"
   },
   {
     "id": "V3-OBS-71",

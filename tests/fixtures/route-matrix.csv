@@ -70,9 +70,11 @@
 #   別途データレベルでゲートする(V3-OBS-54・w-obs2実装)。「routeがpublic」≠「データがpublic」。
 #   ★★index.ts(全艦不可侵)側のゲート実装(PUBLIC_ROUTESの拡張)はHQ適用待ち(w-aut2報告書
 #   「HQへの提案」節に具体diffを提示済み)。このCSV変更のみでは実際の401挙動はまだ変わらない。
-# access: public = auth 3 route (magic-link/verify/session, 重複行含む) + verify-code
-#   + payjp-webhook + 観測READ 11行(infra-route-012/013/014/015/016/017/018/024/025/083/097・
-#   2026-08-01 V3-AUT-15) / 他は全て protected (deny-by-default)
+# access: public = ①PUBLIC_ROUTES(index.ts・生URL完全一致でゲート素通り: auth 3 route
+#   (magic-link/verify/session, 重複行含む) + verify-code + payjp-webhook)
+#   + ②PUBLIC_READ_ROUTES(index.ts・matchedRoutes方式でセッション解決は必ず通す:
+#   観測READ 10行(infra-route-012/013/014/015/016/017/018/024/025/083・2026-08-01 V3-AUT-15)
+#   + cusb 1行(POST /api/v1/cusb・R66-1)) の合算 / 他は全て protected (deny-by-default)
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
 —,GET,/api/v1/auth/session,VPS,Workers,W2,infra-route-001,public,implemented,
 —,POST,/api/v1/auth/magic-link,VPS,Workers,W2,infra-route-002,public,implemented,
@@ -181,3 +183,5 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,GET,/api/v1/users/{actor}/individuals,VPS,Workers,W2,infra-route-113,protected,implemented,V3-UIX-68 透明性の文化: 他者のマイページでその人の作品(個体一覧)を全て見れる公開版(GET /users/{actor}/profile と同型・ロジックは本人用 GET /individuals と共用)・080/081は先に基盤コスト/AIP-67レーンが採ったため統合時に113へ採番替え
 —,GET,/api/v1/individuals/{id}/graph,VPS,Workers,W2,infra-route-114,protected,implemented,V3-UIX-82 検索グラフビュー: 血縁(buildPedigree再利用)+画像類似(observation-routes.tsのloadVector/cosineSimilarity再利用)のnodes/edgesを都度再計算で返す。UIのSVGノード描画は別途(データ投影のみ実装)
 —,POST,/api/v1/research/ai-sessions,VPS,Workers,W2,infra-route-115,protected,implemented,V3-WIK-28 AIセッション閲覧: Cursor等のローカルAIセッションログ(JSONL/markdown)を既存content(chat_log)へ決定論正規化して取り込み(adaptGithubSourceと同型)・content_idはsha256(source:session_ref)導出で再投入は409(重複しない)・常駐DB接続はしない(手順書に従い抽出したテキストを渡すのみ)。閲覧(一覧/本文)は既存GET /research/chat-index・/research/content/{id}を再利用
+—,GET,/api/v1/plaza/node/{post_id},VPS,Workers,W2,infra-route-116,protected,implemented,BBS-25統一ビュー(読み取り専用・plaza-routes.ts:1301)・mount済みで稼働中・批評ゲートR0801-c16d84中2により本CSV(cl-04公開/保護照合表)に未登録だった行を追加
+—,POST,/api/v1/cusb,VPS,Workers,W2,infra-route-117,public,implemented,V3-OBS-70 段階1 C-USB device-signature push。認証ゲート層ではPUBLIC_READ_ROUTES登録によりpublic(R66-1)だが、route冒頭で署名3点かセッションのどちらか必須のガードを持つ(R66-9・未提示は401 AUTH_REQUIRED)。access=publicはinfra-route-024と同じ「ゲート免除だがroute自身は無条件公開ではない」型
