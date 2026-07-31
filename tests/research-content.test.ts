@@ -392,6 +392,66 @@ describe("V3-AIP-45 GET /research/content/:id/reference-count (既存 projectRef
     );
     expect(res.status).toBe(401);
   });
+
+  // g67-refs1(設計R0801-436936 §2案1-A・§7 S1完了条件①②): 書き込み経路を実際に足したので、
+  // 経路を経由すると reference-count が実測で1以上になることを確認する(配線ではなく数字が
+  // 動くことの証明・§7「本番で有効」の定義)。
+  it("引用付き content を POST → reference-count が1以上になる(citations[].type=paper 経路)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "REFW-SRC-1", content_type: "article", title: "source" });
+    const res = await createContent(bucket, {
+      content_id: "REFW-DST-1", content_type: "article", title: "citer",
+      citations: [{ type: "paper", id: "REFW-SRC-1", label: "src" }],
+    });
+    expect(res.status).toBe(201);
+    const count = await get(bucket, "/api/v1/research/content/REFW-SRC-1/reference-count");
+    expect(await count.json()).toEqual({ content_id: "REFW-SRC-1", reference_count: 1 });
+  });
+
+  it("cited_paper_ids 経路でも reference-count が1以上になる(citations と重複排除される)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "REFW-SRC-2", content_type: "article", title: "source" });
+    const res = await createContent(bucket, {
+      content_id: "REFW-DST-2", content_type: "article", title: "citer",
+      cited_paper_ids: ["REFW-SRC-2"],
+      citations: [{ type: "paper", id: "REFW-SRC-2", label: "same target(dedup 確認)" }],
+    });
+    expect(res.status).toBe(201);
+    const count = await get(bucket, "/api/v1/research/content/REFW-SRC-2/reference-count");
+    // citations と cited_paper_ids が同一 target を指しても2重計上しない(集合で重複排除・設計§9-5)。
+    expect(await count.json()).toEqual({ content_id: "REFW-SRC-2", reference_count: 1 });
+  });
+
+  it("存在しない引用先は best-effort で無視され、書き込み自体は失敗しない", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await createContent(bucket, {
+      content_id: "REFW-DST-3", content_type: "article", title: "citer",
+      citations: [{ type: "paper", id: "REFW-NOPE", label: "not found" }],
+    });
+    expect(res.status).toBe(201); // 解決できない引用先があっても本体の書き込みは道連れにしない
+  });
+
+  it("fork-template 後、元 paper の reference-count が+1になる(paper-match-routes.ts経路)", async () => {
+    const bucket = new FakeR2Bucket();
+    const paperBody = {
+      content_id: "REFW-TMPL-1", content_type: "paper", title: "Template",
+      sections: {
+        purpose: { filled: false, text: "" }, hypothesis: { filled: false, text: "" },
+        conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+        phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+      },
+      completeness_pct: 0,
+    };
+    await createContent(bucket, paperBody);
+    const before = await (await get(bucket, "/api/v1/research/content/REFW-TMPL-1/reference-count")).json();
+    expect(before).toEqual({ content_id: "REFW-TMPL-1", reference_count: 0 });
+
+    const forkRes = await post(bucket, "/api/v1/research/content/REFW-TMPL-1/fork-template", {});
+    expect(forkRes.status).toBe(201);
+
+    const after = await (await get(bucket, "/api/v1/research/content/REFW-TMPL-1/reference-count")).json();
+    expect(after).toEqual({ content_id: "REFW-TMPL-1", reference_count: 1 });
+  });
 });
 
 describe("V3-PPR-08 GET /research/content/:id/citation-count (被引用リンク件数の集計・一覧しか無かった状態を解消)", () => {

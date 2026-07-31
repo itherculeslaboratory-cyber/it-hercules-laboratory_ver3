@@ -34,7 +34,16 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
 function contentKey(contentId: string): string {
   return `truth/${CONTENT_TYPE}/${contentId}.json`;
 }
-function envelope(type: string, schema: string, actorId: string, data: Record<string, unknown>) {
+// provenanceExtra(任意・g67-refs1・設計R0801-436936 §2案1-A): observation-routes.ts:84-102 と
+// 同型の任意 provenance 拡張引数。既存呼び出し(引数省略)は無改変で通る(後方互換)。V3-AUT-17の
+// actor_id刻印は維持したまま input_event_ids 等を追記できるよう、上書きではなくマージする。
+function envelope(
+  type: string,
+  schema: string,
+  actorId: string,
+  data: Record<string, unknown>,
+  provenanceExtra?: Record<string, unknown>,
+) {
   return {
     specversion: "1.0",
     id: ulid(),
@@ -43,7 +52,7 @@ function envelope(type: string, schema: string, actorId: string, data: Record<st
     time: new Date().toISOString(),
     dataschema: schema,
     // V3-AUT-17: session principal を provenance に刻印（POST /events と同一）。
-    provenance: { generator_kind: "human", actor_id: actorId },
+    provenance: { generator_kind: "human", actor_id: actorId, ...provenanceExtra },
     data,
   };
 }
@@ -237,7 +246,33 @@ researchContentRoutes.post("/research/content", async (c) => {
     schema_version: SCHEMA_VERSION,
   };
   for (const k of OPTIONAL_KEYS) if (body[k] !== undefined) data[k] = body[k];
-  const res = await store(c).putEventAt(contentKey(contentId), envelope(CONTENT_TYPE, CONTENT_SCHEMA, actorId, data));
+  // g67-refs1(設計R0801-436936 §2案1-A・§9-5): 引用先 paper の envelope.id をサーバ側で解決し
+  // provenance.input_event_ids へ埋める(§1-3: クライアントは envelope.id を知り得ないためサーバ
+  // 解決が唯一の経路)。入力は citations[].type==="paper" を主、cited_paper_ids を従とし、
+  // 集合で重複排除する。解決できない content_id は best-effort で落とす(plaza-routes.ts の
+  // citation-link append と同じ規約=本体の書き込みを道連れにしない)。
+  const s = store(c);
+  const referencedIds = new Set<string>();
+  if (Array.isArray(body.citations)) {
+    for (const ref of body.citations as { type?: string; id?: string }[]) {
+      if (ref?.type === "paper" && typeof ref.id === "string" && ref.id) referencedIds.add(ref.id);
+    }
+  }
+  if (Array.isArray(body.cited_paper_ids)) {
+    for (const id of body.cited_paper_ids as unknown[]) {
+      if (typeof id === "string" && id) referencedIds.add(id);
+    }
+  }
+  const inputEventIds: string[] = [];
+  for (const refId of referencedIds) {
+    const refEv = await s.readEvent(contentKey(refId));
+    if (refEv && typeof refEv.id === "string") inputEventIds.push(refEv.id);
+  }
+  const provenanceExtra = inputEventIds.length ? { input_event_ids: inputEventIds } : undefined;
+  const res = await s.putEventAt(
+    contentKey(contentId),
+    envelope(CONTENT_TYPE, CONTENT_SCHEMA, actorId, data, provenanceExtra),
+  );
   if (res.status === "invalid") return c.json({ error: "INVALID_CONTENT", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_CONTENT", key: res.key }, 409);
   return c.json({ content_id: contentId, key: res.key }, 201);

@@ -76,7 +76,9 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
 function contentKey(id: string): string {
   return `truth/${CONTENT_TYPE}/${id}.json`;
 }
-function envelope(actorId: string, data: Record<string, unknown>) {
+// provenanceExtra(任意・g67-refs1・設計R0801-436936 §2案1-A①): research-content-routes.ts の
+// envelope() と同型のマージ方式(actor_id 刻印は維持したまま input_event_ids 等を追記できる)。
+function envelope(actorId: string, data: Record<string, unknown>, provenanceExtra?: Record<string, unknown>) {
   return {
     specversion: "1.0",
     id: ulid(), // §2.2: envelope.id は毎回 ULID。決定論キーは storage key 側のみ。
@@ -84,7 +86,7 @@ function envelope(actorId: string, data: Record<string, unknown>) {
     type: CONTENT_TYPE,
     time: new Date().toISOString(),
     dataschema: CONTENT_SCHEMA,
-    provenance: { generator_kind: "human", actor_id: actorId },
+    provenance: { generator_kind: "human", actor_id: actorId, ...provenanceExtra },
     data,
   };
 }
@@ -273,7 +275,12 @@ paperMatchRoutes.post("/research/content/:id/fork-template", async (c) => {
   };
   if (conditions) newData.conditions = conditions;
   if (claims !== undefined) newData.claims = claims;
-  const createRes = await s.putEventAt(contentKey(newContentId), envelope(actorId, newData));
+  // g67-refs1(設計§2案1-A①): fork 元 paper の envelope.id(sourceEv.id・既に readEvent 済み)を
+  // provenance.input_event_ids に積む。これで reference-count がその日から0以外になる(設計§2)。
+  const createRes = await s.putEventAt(
+    contentKey(newContentId),
+    envelope(actorId, newData, { input_event_ids: [sourceEv.id as string] }),
+  );
   if (createRes.status === "invalid") return c.json({ error: "INVALID_CONTENT", details: createRes.errors }, 400);
   if (createRes.status === "conflict") return c.json({ error: "DUPLICATE_CONTENT", key: createRes.key }, 409);
 
