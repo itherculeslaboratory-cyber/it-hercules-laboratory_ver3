@@ -350,6 +350,100 @@ describe("V3-PPR-08 GET /research/content/:id/cited-by-posts (論文側の逆引
   });
 });
 
+describe("V3-AIP-45 GET /research/content/:id/reference-count (既存 projectReferenceCounter を呼ぶだけ・呼び出し経路が無かった状態を解消)", () => {
+  it("0件のとき0を返す", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "REF-1", content_type: "article", title: "x" });
+    const res = await get(bucket, "/api/v1/research/content/REF-1/reference-count");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ content_id: "REF-1", reference_count: 0 });
+  });
+
+  it("N件のときNを返す(provenance.input_event_ids で lineage 引用する2件をseed)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "REF-2", content_type: "article", title: "x" });
+    const stored = (await new TruthStore(bucket).readEvent("truth/ihl.research.content.v1/REF-2.json")) as { id: string };
+    for (let i = 0; i < 2; i++) {
+      await new TruthStore(bucket).putEvent(makeEnvelope({
+        id: ulid(),
+        provenance: { generator_kind: "agent", agent_name: "claude-code", input_event_ids: [stored.id] },
+      }));
+    }
+    // 別 target を引用する1件は数えない(誤カウント防止の確認)。
+    await new TruthStore(bucket).putEvent(makeEnvelope({
+      id: ulid(),
+      provenance: { generator_kind: "agent", agent_name: "claude-code", input_event_ids: [ulid()] },
+    }));
+    const res = await get(bucket, "/api/v1/research/content/REF-2/reference-count");
+    expect(await res.json()).toEqual({ content_id: "REF-2", reference_count: 2 });
+  });
+
+  it("存在しない content_id は404", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await get(bucket, "/api/v1/research/content/nope/reference-count");
+    expect(res.status).toBe(404);
+  });
+
+  it("未認証だと401(protected route のまま・PUBLIC_READ_ROUTES に足していない)", async () => {
+    const res = await app.request(
+      "/api/v1/research/content/REF-1/reference-count",
+      { method: "GET" },
+      makeEnv(new FakeR2Bucket()),
+    );
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("V3-PPR-08 GET /research/content/:id/citation-count (被引用リンク件数の集計・一覧しか無かった状態を解消)", () => {
+  const paperBody = (contentId: string) => ({
+    content_id: contentId, content_type: "paper", title: "Cited paper",
+    sections: {
+      purpose: { filled: false, text: "" }, hypothesis: { filled: false, text: "" },
+      conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+      phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+    },
+    completeness_pct: 0,
+  });
+
+  it("0件のとき0を返す", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("CIT-1"));
+    const res = await get(bucket, "/api/v1/research/content/CIT-1/citation-count");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ content_id: "CIT-1", citation_count: 0 });
+  });
+
+  it("N件のときNを返す(2スレから引用されたcitation-linkをprefix scanで数える)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("CIT-2"));
+    await post(bucket, "/api/v1/plaza/posts", {
+      channel: "c-cit", board_kind: "guide", topic: "t1", body: "見て", cite_refs: [{ type: "paper", id: "CIT-2" }],
+    });
+    await post(bucket, "/api/v1/plaza/posts", {
+      channel: "c-cit", board_kind: "guide", topic: "t2", body: "見て2", cite_refs: [{ type: "paper", id: "CIT-2" }],
+    });
+    const res = await get(bucket, "/api/v1/research/content/CIT-2/citation-count");
+    expect(await res.json()).toEqual({ content_id: "CIT-2", citation_count: 2 });
+  });
+
+  it("存在しない content_id は404", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await get(bucket, "/api/v1/research/content/nope/citation-count");
+    expect(res.status).toBe(404);
+  });
+
+  it("未認証だと401(protected route のまま・PUBLIC_READ_ROUTES に足していない)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("CIT-3"));
+    const res = await app.request(
+      "/api/v1/research/content/CIT-3/citation-count",
+      { method: "GET" },
+      makeEnv(new FakeR2Bucket()),
+    );
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("V3-PPR-03 POST /research/content: filled:true な section の text 空は400で拒否", () => {
   it("filled:true かつ text が空文字だと INVALID_SECTION_FILLED_WITHOUT_TEXT で400", async () => {
     const bucket = new FakeR2Bucket();

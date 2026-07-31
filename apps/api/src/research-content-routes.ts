@@ -11,6 +11,7 @@ import type { Bindings, Variables } from "./env";
 import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN, PAPER_SECTIONS } from "./research-constants";
 import { computeSectionsCompleteness, type SectionState } from "./paper-match";
 import { citeUrl, type CiteRef } from "./plaza-routes";
+import { projectReferenceCounter } from "./reference-counter";
 
 export const researchContentRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -275,6 +276,21 @@ researchContentRoutes.get("/research/content/:id", async (c) => {
   return c.json({ ...data, tags, ...extra });
 });
 
+// GET /research/content/:id/reference-count — V3-AIP-45 参照回数。projectReferenceCounter
+// (reference-counter.ts・実装済み・都度再計算)をそのまま呼ぶだけ(新しい数え方は作らない)。
+// カウント対象は「この content イベントを provenance.input_event_ids で lineage 引用している
+// 他イベントの数」であり、対象は content_id ではなく envelope 自体の id(ev.id) — content_id は
+// createContent 側で envelope.id とは別に発行される(このファイル冒頭 envelope() 参照)ため、
+// 呼び出し前に readEvent で実際の envelope.id を解決する。
+researchContentRoutes.get("/research/content/:id/reference-count", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const ev = await s.readEvent(contentKey(id));
+  if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const count = await projectReferenceCounter(s, String(ev.id));
+  return c.json({ content_id: id, reference_count: count });
+});
+
 // escapeHtml — UGC を HTML へ埋め込む前の最小エスケープ(XSS 対策・PPR-23 export)。
 function escapeHtml(v: unknown): string {
   return String(v ?? "").replace(/[&<>"']/g, (ch) => (
@@ -334,6 +350,10 @@ researchContentRoutes.get("/research/content/:id/export", async (c) => {
 // は本艦glob外のため import せず、値のみここで再宣言する(既存の各ファイルが型文字列を都度
 // 定義するのと同じパターン)。
 const PLAZA_POST_TYPE_FOR_REVERSE_LOOKUP = "ihl.plaza.post.v1";
+// truth/ihl.citation.link.v1/ の型文字列(plaza-routes.ts 内 CITATION_LINK_TYPE の値と同一・
+// appendCitationLink 参照)。plaza-routes.ts は本艦glob外のため import せず、値のみここで
+// 再宣言する(直上の PLAZA_POST_TYPE_FOR_REVERSE_LOOKUP と同じ既存パターン)。
+const CITATION_LINK_TYPE_FOR_COUNT = "ihl.citation.link.v1";
 
 // GET /research/content/:id/cited-by-posts — 論文側の逆引き投影(V3-PPR-08「論文→板」方向)。
 // 板→論文方向は既存 plaza-routes.ts 側(GET /plaza/threads/:thread_id/paper-citations)が
@@ -359,6 +379,27 @@ researchContentRoutes.get("/research/content/:id/cited-by-posts", async (c) => {
     }))
     .sort((a, b) => a.post_id.localeCompare(b.post_id));
   return c.json({ content_id: id, citing_posts: citingPosts });
+});
+
+// countCitationLinksForContent — content_id ごとの被引用リンク件数(V3-PPR-08)。citation-link
+// は truth/ihl.citation.link.v1/<content_id>/<link_id>.json でキー付けされている
+// (plaza-routes.ts appendCitationLink)ため、projectPaperCitationsForThread(plaza-routes.ts:308)
+// と同型の prefix scan で数える(そちらは板→論文の逆引きのため全件走査だが、こちらは content_id
+// が既にキーの prefix なので直接絞れる=同じ「index を持たず都度再計算」原則をより単純に満たす)。
+export async function countCitationLinksForContent(s: TruthStore, contentId: string): Promise<number> {
+  return (await s.listEvents(`truth/${CITATION_LINK_TYPE_FOR_COUNT}/${contentId}/`)).length;
+}
+
+// GET /research/content/:id/citation-count — 被引用リンク件数(V3-PPR-08「板→論文」方向で
+// 記録される citation-link を content_id 単位に集計)。/cited-by-posts が一覧を返すのに対し、
+// こちらは件数のみを返す(呼び出し元が「何回引用されたか」だけ欲しい場合に全件走査を強いない)。
+researchContentRoutes.get("/research/content/:id/citation-count", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const ev = await s.readEvent(contentKey(id));
+  if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const count = await countCitationLinksForContent(s, id);
+  return c.json({ content_id: id, citation_count: count });
 });
 
 // POST /research/content/:id/tags — 確認 POST でのみ tag_event を append（WIK-14）。
