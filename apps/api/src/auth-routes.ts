@@ -31,6 +31,24 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// V3-AUT-22是正(2026-07-31 第20回裁定): ロール集合は operator/administrator の2値に確定
+// (逐語「administratorで行きましょう。」)。administrator の任命はサーバー設定に管理者
+// メールアドレスを1行登録する方式(逐語「楽でいいですね。」)。ADMIN_EMAILS はカンマ区切り
+// のメール一覧(正規化済みemailと比較)。未設定/空なら現状(誰も administrator にならない)
+// と同じ挙動。operator の付与元はこの波でも未確定のため付与しない(未確定のまま権限を
+// 生やさない)。env.ts の Bindings 型(w1-fnd 所有・w3-aut のglob外)へ ADMIN_EMAILS の
+// 正式追加は未実施 — 関数側の構造的部分型で未追加でも動作する(Workers env は実行時は
+// 単なるオブジェクトのため型追加なしでも実害なし)。HQ適用時に env.ts へ
+// `ADMIN_EMAILS?: string;` を追加することを推奨(報告書R0731-4837db参照)。
+function rolesForEmail(env: { ADMIN_EMAILS?: string }, email: string): string[] {
+  const csv = env.ADMIN_EMAILS ?? "";
+  const admins = csv
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return admins.includes(email) ? ["administrator"] : [];
+}
+
 function bearerToken(auth: string | undefined): string {
   const h = auth ?? "";
   return h.startsWith("Bearer ") ? h.slice(7) : "";
@@ -114,7 +132,7 @@ authRoutes.post("/verify", async (c) => {
   // V3-AUT-09: 初回検証でオープン登録(アカウント行を put-if-absent・2回目以降は
   // 既存キーとの衝突を無視するidempotent no-op)。独立サインアップ画面は持たない。
   await ensureAccount(store, actorId);
-  const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
+  const session = await issueSessionToken(actorId, c.env.SESSION_SECRET, rolesForEmail(c.env, payload.email));
   setCookie(c, "ihl_session", session, {
     httpOnly: true,
     secure: true,
@@ -190,7 +208,7 @@ authRoutes.post("/verify-code", async (c) => {
   }
   // V3-AUT-09: /verify と同じオープン登録(idempotent no-op が2回目以降)。
   await ensureAccount(codeStore, actorId);
-  const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
+  const session = await issueSessionToken(actorId, c.env.SESSION_SECRET, rolesForEmail(c.env, email));
   setCookie(c, "ihl_session", session, {
     httpOnly: true,
     secure: true,
@@ -254,7 +272,13 @@ authRoutes.post("/dev-login", async (c) => {
       },
     });
   }
-  const session = await issueSessionToken(actorId, c.env.SESSION_SECRET);
+  // dev actor は固定 email "dev@ihl.local" — ADMIN_EMAILS に明示登録されない限り
+  // administrator にはならない(通常のテスト/開発フローで意図せず管理者権限が付くのを防ぐ)。
+  const session = await issueSessionToken(
+    actorId,
+    c.env.SESSION_SECRET,
+    rolesForEmail(c.env, "dev@ihl.local"),
+  );
   setCookie(c, "ihl_session", session, {
     httpOnly: true,
     secure: true,

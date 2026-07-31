@@ -1,12 +1,16 @@
-// C5 K1 観測機器 API (design-k1 §1.1 / V3-OBS-31). PROTECTED. A device binds to a
-// placement, NOT an individual — an individual-binding request is 400 (the
-// obs-device schema carries no individual ref; the route rejects it explicitly
-// before Truth). The provider API key is AES-GCM encrypted (api_key_ciphertext);
-// the plaintext key is NEVER appended to Truth and NEVER returned — a hard
-// security boundary, not a simplification. The AES key is derived from an env
-// secret (SESSION_SECRET; test uses the fixed dev secret). Real provider keys are
-// a human gate — only a dummy provider's testConnection + the crypto path ship.
-// envelope()/store()/dataOf() inlined per the projectLedger precedent (批評家#3).
+// C5 K1 観測機器 API (design-k1 §1.1 / V3-OBS-31 / V3-SEC-03). PROTECTED. A device
+// binds to a placement, NOT an individual — an individual-binding request is 400
+// (the obs-device schema carries no individual ref; the route rejects it
+// explicitly before Truth). The provider API key is a HARD server-side secrecy
+// boundary (V3-SEC-03: サーバー側に一切保持・使用せず) — the server never stores
+// it, encrypted or otherwise, and never derives a key from an env secret to do so
+// (第20回裁定DK-1: サーバー側AES-GCM保管を廃止). The client holds the plaintext
+// key and supplies it per-request via the `x-device-api-key` header only when it
+// wants to exercise the provider connection (POST /devices/:id/test); the server
+// uses it transiently in that single request and never persists it to Truth or
+// anywhere else. Real providers are a human gate — only a dummy provider's
+// testConnection ships. envelope()/store()/dataOf() inlined per the
+// projectLedger precedent (批評家#3).
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
@@ -36,45 +40,6 @@ function envelope(actorId: string, data: Record<string, unknown>) {
   };
 }
 
-// ── AES-GCM api-key crypto (env-secret-derived key) ─────────────────────────────
-async function deviceAesKey(secret: string): Promise<CryptoKey> {
-  const material = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode("ihl.device.apikey.v1|" + secret),
-  );
-  return crypto.subtle.importKey("raw", material, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
-}
-function b64encode(u8: Uint8Array): string {
-  let s = "";
-  for (const b of u8) s += String.fromCharCode(b);
-  return btoa(s);
-}
-function b64decode(s: string): Uint8Array {
-  const bin = atob(s);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return u8;
-}
-export async function encryptApiKey(secret: string, plaintext: string): Promise<string> {
-  const key = await deviceAesKey(secret);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext)),
-  );
-  const packed = new Uint8Array(iv.length + ct.length);
-  packed.set(iv);
-  packed.set(ct, iv.length);
-  return b64encode(packed);
-}
-export async function decryptApiKey(secret: string, ciphertext: string): Promise<string> {
-  const key = await deviceAesKey(secret);
-  const packed = b64decode(ciphertext);
-  const iv = packed.slice(0, 12);
-  const ct = packed.slice(12);
-  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
-  return new TextDecoder().decode(pt);
-}
-
 // Reject any attempt to bind a device to an individual (OBS-31: placement only).
 function bindsIndividual(body: Record<string, unknown>): boolean {
   const sref = body.subject_ref;
@@ -84,11 +49,12 @@ function bindsIndividual(body: Record<string, unknown>): boolean {
 }
 
 // ── dummy provider (real providers = human gate) ────────────────────────────────
-// Deterministic auto-discovery derived from the device id — proves the encrypted
-// key round-trips (decrypt succeeds) without any real provider network call.
+// Deterministic auto-discovery derived from the device id — proves the
+// per-request client-supplied key is usable without any real provider network
+// call. No server-side storage or decryption is involved (V3-SEC-03).
 function dummyTestConnection(deviceId: string, apiKey: string | null): { ok: boolean; discovered: string[] } {
   return {
-    ok: apiKey !== null, // a stored key that decrypts = connectable
+    ok: apiKey !== null, // a key was supplied on this request = connectable
     discovered: apiKey ? [`sensor-${deviceId.slice(0, 6)}-a`, `sensor-${deviceId.slice(0, 6)}-b`] : [],
   };
 }
@@ -96,7 +62,10 @@ function dummyTestConnection(deviceId: string, apiKey: string | null): { ok: boo
 // ── routes ─────────────────────────────────────────────────────────────────────
 
 // POST /devices — register a device (OBS-31). placement binding OK; individual
-// binding → 400. api_key (if given) is encrypted; plaintext never persisted.
+// binding → 400. No api_key field is accepted here at all (V3-SEC-03/DK-1): the
+// server never stores a provider key, so registration carries no key material.
+// The client supplies the key later, per-call, only when it wants to exercise
+// POST /devices/:id/test.
 deviceRoutes.post("/devices", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
@@ -113,17 +82,15 @@ deviceRoutes.post("/devices", async (c) => {
   };
   if (typeof body.placement_ref === "string") data.placement_ref = body.placement_ref;
   if (typeof body.started_on === "string") data.started_on = body.started_on; // 開始日のみ
-  if (typeof body.api_key === "string" && body.api_key) {
-    data.api_key_ciphertext = await encryptApiKey(c.env.SESSION_SECRET, body.api_key);
-  }
   const res = await store(c).putEventAt(`truth/${DEVICE_TYPE}/${deviceId}.json`, envelope(actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_DEVICE", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_DEVICE", key: res.key }, 409);
   return c.json({ device_id: deviceId, provider: data.provider }, 201);
 });
 
-// GET /devices — list with display_name; the plaintext key and its ciphertext are
-// NOT exposed (OBS-31: raw ID / api_key 平文非露出).
+// GET /devices — list with display_name. No key-related field is exposed
+// (V3-SEC-03: the server holds no key material to report on — there is no
+// has_api_key flag anymore because the server has no way to know).
 deviceRoutes.get("/devices", async (c) => {
   const actorId = c.get("actorId");
   const rows = (await store(c).listEvents(`truth/${DEVICE_TYPE}/`))
@@ -135,7 +102,6 @@ deviceRoutes.get("/devices", async (c) => {
       provider: d.provider,
       placement_ref: d.placement_ref ?? null,
       started_on: d.started_on ?? null,
-      has_api_key: typeof d.api_key_ciphertext === "string",
     }));
   return c.json({ devices: rows });
 });
@@ -248,8 +214,11 @@ deviceRoutes.get("/devices/:id/poll-interval", async (c) => {
 });
 
 // POST /devices/{id}/test — dummy provider connection test + auto-discovery
-// (OBS-31). Decrypts the stored key (exercising the crypto path); real provider
-// keys are a human gate and are not invoked here.
+// (OBS-31 / V3-SEC-03). The server holds no stored key: the caller supplies the
+// provider key per-call via the `x-device-api-key` header. It is used only for
+// this single request's dummyTestConnection call and is never written to Truth
+// or anywhere else — no server-side persistence, encrypted or otherwise. Real
+// provider keys are a human gate and are not invoked here.
 deviceRoutes.post("/devices/:id/test", async (c) => {
   const deviceId = c.req.param("id");
   const actorId = c.get("actorId");
@@ -257,10 +226,7 @@ deviceRoutes.post("/devices/:id/test", async (c) => {
   if (!rec) return c.json({ error: "NOT_FOUND" }, 404);
   const d = dataOf(rec);
   if (d.actor_id !== actorId) return c.json({ error: "NOT_FOUND" }, 404); // 本人スコープ
-  let apiKey: string | null = null;
-  if (typeof d.api_key_ciphertext === "string") {
-    apiKey = await decryptApiKey(c.env.SESSION_SECRET, d.api_key_ciphertext);
-  }
+  const apiKey = c.req.header("x-device-api-key") ?? null;
   const result = dummyTestConnection(deviceId, apiKey);
   // never echo the plaintext key back — only the connection outcome.
   return c.json({ device_id: deviceId, provider: d.provider, ...result });

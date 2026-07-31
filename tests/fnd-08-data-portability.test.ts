@@ -8,6 +8,7 @@ import {
   createRestorePoint,
   listRestorePoints,
   exportActorData,
+  exportActorDataAsCsv,
 } from "../apps/api/src/truth-backup-connector";
 
 function ev(type: string, actorId: string) {
@@ -69,5 +70,46 @@ describe("V3-FND-08 exportActorData", () => {
     const bundle = await exportActorData(s, "nobody", new Date("2026-07-31T00:00:00Z"));
     expect(bundle.event_count).toBe(0);
     expect(bundle.events).toEqual([]);
+  });
+});
+
+describe("V3-FND-08 exportActorDataAsCsv (w3-fnd follow-up)", () => {
+  it("emits a header row plus one row per matching event", async () => {
+    const s = new TruthStore(new FakeR2Bucket());
+    await s.putEvent(ev("ihl.test.sample.v1", "u1"));
+    await s.putEvent(ev("ihl.test.sample.v1", "u2"));
+
+    const csv = await exportActorDataAsCsv(s, "u1", new Date("2026-07-31T00:00:00Z"));
+    const lines = csv.split("\n");
+    expect(lines[0]).toBe("id,type,time,data");
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toContain("ihl.test.sample.v1");
+  });
+
+  it("returns only the header row for an actor with no data", async () => {
+    const s = new TruthStore(new FakeR2Bucket());
+    const csv = await exportActorDataAsCsv(s, "nobody", new Date("2026-07-31T00:00:00Z"));
+    expect(csv).toBe("id,type,time,data");
+  });
+
+  it("escapes commas, quotes, and newlines in the data column", async () => {
+    const s = new TruthStore(new FakeR2Bucket());
+    await s.putEvent({
+      specversion: "1.0",
+      id: ulid(),
+      source: "apps/api",
+      type: "ihl.test.sample.v1",
+      time: "2026-07-31T00:00:00Z",
+      provenance: { generator_kind: "agent", agent_name: "claude-code" },
+      data: { actor_id: "u1", note: 'has,comma and "quote"' },
+    });
+
+    const csv = await exportActorDataAsCsv(s, "u1", new Date("2026-07-31T00:00:00Z"));
+    const lines = csv.split("\n");
+    expect(lines).toHaveLength(2);
+    const dataCol = lines[1];
+    // the data column is a single quoted CSV field (starts/ends with ") even though
+    // its content is itself a JSON string containing a comma and an escaped quote.
+    expect(dataCol).toMatch(/^[^,]+,[^,]+,[^,]+,".*"$/);
   });
 });

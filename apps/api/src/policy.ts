@@ -268,6 +268,99 @@ export function hammingDistance(a: bigint, b: bigint): number {
 /** 既定の盗用疑い閾値(較正knob)。距離がこれ以下なら「ひっそり警告」対象。 */
 export const IMAGE_REUSE_SUSPECT_THRESHOLD = 10;
 
+// ── V3-SEC-43 追加: 成長曲線・EXIF・特徴点の整合性検知+ひっそり警告のevent記録 ──
+// (2026-07-31 w3-sec 是正: 62代目HQ検収是正 R0731-14f1df 中1「dHashのみでは要件の
+// 中核=成長曲線/EXIF/特徴点整合性/event記録が未実装」を受けて追加。dHash同様、画像
+// デコードそのもの(EXIF抽出・特徴点検出)は対象外とし、既にobs/mkt側が抽出済みの
+// 構造化データを受け取って矛盾検知する純関数のみ提供する。)
+export interface ExifSnapshot {
+  captured_at: string; // ISO8601
+  device_model?: string;
+}
+
+/** 同一個体の継続撮影として時系列・撮影デバイス系列が矛盾しないか(すり替え疑い検知の1本目)。 */
+export function checkExifConsistency(prior: ExifSnapshot, next: ExifSnapshot): boolean {
+  if (Date.parse(next.captured_at) < Date.parse(prior.captured_at)) return false; // 時系列逆行
+  if (prior.device_model && next.device_model && prior.device_model !== next.device_model) return false;
+  return true;
+}
+
+export interface GrowthCurvePoint {
+  observed_at: string;
+  size_cm: number;
+}
+
+/** 成長曲線は単調非減少が前提(許容誤差込み)。急激な縮小は別個体すり替え疑い(2本目)。 */
+export function checkGrowthCurveConsistency(
+  points: readonly GrowthCurvePoint[],
+  shrinkToleranceCm = 0.5,
+): boolean {
+  const sorted = [...points].sort((a, b) => Date.parse(a.observed_at) - Date.parse(b.observed_at));
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].size_cm < sorted[i - 1].size_cm - shrinkToleranceCm) return false;
+  }
+  return true;
+}
+
+/** 特徴点(斑紋・体表パターン等)の一致率判定。特徴点抽出自体は呼び出し側の責務(3本目)。 */
+export function checkFeaturePointConsistency(
+  a: readonly (readonly [number, number])[],
+  b: readonly (readonly [number, number])[],
+  matchToleranceCm: number,
+  minMatchRatio = 0.6,
+): boolean {
+  if (a.length === 0 || b.length === 0) return false;
+  let matched = 0;
+  for (const [ax, ay] of a) {
+    if (b.some(([bx, by]) => Math.hypot(ax - bx, ay - by) <= matchToleranceCm)) matched++;
+  }
+  return matched / a.length >= minMatchRatio;
+}
+
+export type ImageReuseFlagReason =
+  | "dhash_similar"
+  | "exif_inconsistent"
+  | "growth_curve_inconsistent"
+  | "feature_point_mismatch";
+
+export interface ImageReuseSilentWarning {
+  event_type: "image_reuse_suspect";
+  reasons: readonly ImageReuseFlagReason[];
+  flagged_at: string;
+}
+
+/**
+ * 「公開処刑せず、ひっそり警告してeventに記録する」の記録形を一本化する(4本目)。
+ * 呼び出し側(obs/mkt)はこの戻り値をそのまま Truth へ putEvent すればよい。
+ */
+export function buildImageReuseSilentWarning(
+  reasons: readonly ImageReuseFlagReason[],
+  flaggedAt: string,
+): ImageReuseSilentWarning {
+  return { event_type: "image_reuse_suspect", reasons, flagged_at: flaggedAt };
+}
+
+// ── V3-SEC-47 追加: DM個別取引禁止判定・IP/デバイス指紋 ────────────────────────
+// (2026-07-31 w3-sec 是正: 62代目HQ検収是正 R0731-14f1df 重大2「DM取引禁止・
+// デバイス指紋がgrep0件」を受けて追加。DM本文の検知経路自体・指紋の呼び出し配線は
+// plaza/ind側の担当globのため、判定ロジックのみをここに一本化する。)
+const DM_TRADE_TRIGGER_PATTERN =
+  /(coin|karma|価値|コイン|カルマ).{0,15}(送|渡|あげ|払|trade|transfer)|(送|渡|あげ|払|trade|transfer).{0,15}(coin|karma|価値|コイン|カルマ)/i;
+
+/** 取引はプラットフォーム内限定。DM本文にvalue/coin授受のトリガー文言があれば拒否。 */
+export function isDmTradeAllowed(messageText: string): boolean {
+  return !DM_TRADE_TRIGGER_PATTERN.test(messageText);
+}
+
+/** IP/デバイス指紋 = SHA-256(clientIp + userAgent)。derivePublicUserId(pii.mjs)と同一のWebCrypto-only規約。 */
+export async function deriveDeviceFingerprint(clientIp: string, userAgent: string): Promise<string> {
+  const bytes = new TextEncoder().encode(`${clientIp}:${userAgent}`);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  let hex = "";
+  for (const b of digest) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
 // ── V3-SEC-50 保護アセット(ブランド資産)NG設定 ───────────────────────────
 export type ProtectedAssetKind = "brand" | "general" | "observation";
 export type AssetUseKind = "video_generation" | "ui_generation" | "rag_search" | "ai_training";

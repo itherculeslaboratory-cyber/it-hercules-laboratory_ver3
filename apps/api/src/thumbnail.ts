@@ -27,8 +27,16 @@ async function ensureWasm(): Promise<void> {
       const { readFile } = await import("node:fs/promises");
       const { createRequire } = await import("node:module");
       const req = createRequire(import.meta.url);
-      const mod = async (spec: string) =>
-        new WebAssembly.Module(await readFile(req.resolve(spec)));
+      // workers-types declares WebAssembly.Module `abstract` (Workers forbids
+      // dynamic wasm compilation from bytes — modules must come from a static
+      // import/binding). That's a real platform restriction, but it doesn't
+      // apply here: this branch only runs under Node (isNode guard above),
+      // where the real global WebAssembly.Module is concrete and constructible.
+      // Reflect.construct sidesteps the TS-level "new on abstract class" check
+      // (its target type is plain Function, abstract-ness is TS-only) without
+      // an `as`/`any` cast — the runtime call is identical to `new Module(bytes)`.
+      const mod = async (spec: string): Promise<WebAssembly.Module> =>
+        Reflect.construct(WebAssembly.Module, [await readFile(req.resolve(spec))]);
       await initJpegDec(await mod("@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm"));
       await initJpegEnc(await mod("@jsquash/jpeg/codec/enc/mozjpeg_enc.wasm"));
       await initPngDec(await mod("@jsquash/png/codec/pkg/squoosh_png_bg.wasm"));
@@ -78,9 +86,12 @@ export async function generateThumbnail(
   contentType: string,
 ): Promise<Thumbnail> {
   await ensureWasm();
+  // TS5.7のArrayBufferジェネリック化 + @jsquash側の型が未追従のため明示変換
+  // (Uint8Array<ArrayBufferLike> ではなく具体的な ArrayBuffer を要求する)。
+  // new Uint8Array(bytes) はコピーを作り、その .buffer は常に具体的な ArrayBuffer。
   const image = isPng(bytes, contentType)
-    ? await decodePng(bytes)
-    : await decodeJpeg(bytes, { preserveOrientation: true });
+    ? await decodePng(new Uint8Array(bytes).buffer)
+    : await decodeJpeg(new Uint8Array(bytes).buffer, { preserveOrientation: true });
   const target = longEdgeTarget(image.width, image.height);
   const resized =
     target.width === image.width && target.height === image.height

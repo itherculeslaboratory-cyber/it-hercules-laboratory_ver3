@@ -10,16 +10,16 @@
 
 ## サマリー
 
-- 全体: █████████████░░░░░░░ 65%（380/587）
-- 第1波必達(required): ████████████████░░░░ 82%（298/364）
-- 第2波(best-effort): ███████░░░░░░░░░░░░░ 37%（82/223）
+- 全体: █████████████░░░░░░░ 67%（394/587）
+- 第1波必達(required): █████████████████░░░ 84%（299/357）
+- 第2波(best-effort): █████████░░░░░░░░░░░ 44%（95/215）
 
 | status | 件数 |
 |---|---|
-| 未着手(todo) | 122 |
-| 着手中(in_progress) | 70 |
+| 未着手(todo) | 121 |
+| 着手中(in_progress) | 57 |
 | ブロック中(裁定待ち/照会待ち/人間ゲート)(blocked) | 15 |
-| 完了(done) | 380 |
+| 完了(done) | 394 |
 | 検証済(verified) | 0 |
 
 ## blocked 一覧(裁定待ち/照会待ち/人間ゲート)
@@ -49,14 +49,15 @@
 | lane | 進捗 |
 |---|---|
 | CSV | ████████████████████ 100%（1/1） |
-| L1/PAY | ██████████████░░░░░░ 72%（64/89） |
-| L3/L4-auth | █████████████░░░░░░░ 67%（28/42） |
-| L4 | █████████████████░░░ 83%（108/130） |
-| L4-gov | █████████████░░░░░░░ 63%（47/75） |
-| L4-knowledge | ██████████████░░░░░░ 70%（53/76） |
-| L4-obs | ███████████████░░░░░ 74%（68/92） |
+| L1/PAY | ███████████████░░░░░ 73%（65/89） |
+| L3/L4-auth | ██████████████░░░░░░ 69%（29/42） |
+| L4 | ███████████████████░ 94%（108/115） |
+| L4-gov | ███████████████░░░░░ 73%（55/75） |
+| L4-knowledge | ███████████████░░░░░ 73%（56/77） |
+| L4-obs | ███████████████░░░░░ 76%（69/91） |
 | L5-video | ░░░░░░░░░░░░░░░░░░░░ 0%（0/24） |
 | L6-ui | ████░░░░░░░░░░░░░░░░ 19%（11/58） |
+| w1-aip | ░░░░░░░░░░░░░░░░░░░░ 0%（0/15） |
 
 ## lane 別明細
 
@@ -144,7 +145,7 @@
 | V3-MKT-16 | 代金支払期限2週間+売り手手動クローズ+カルマ罰則 | best-effort | todo | — |
 | V3-MKT-17 | 合意キャンセル特別扱い+判例(Y03-Y07)蓄積 | best-effort | todo | — |
 | V3-MKT-21 | 国際配送from×to R2 JSON+標本限定+総額表示 | best-effort | done | — |
-| V3-MKT-24 | 落札されなかった出品の自動再出品(値下げ方向) | best-effort | in_progress | — |
+| V3-MKT-24 | 落札されなかった出品の自動再出品(値下げ方向) | best-effort | done | — |
 | V3-MKT-26 | 公開Q&A(RAG提示)+ほめボード | best-effort | todo | — |
 | V3-MKT-28 | 取引時PII暗号化保持+完了後消去 | best-effort | todo | — |
 | V3-MKT-34 | プラチナ象徴(Symbol)二段階購入(購入権+現金実物購入) | best-effort | done | — |
@@ -181,7 +182,7 @@
 | V3-AUT-16 | 観測検索スコープはScope A（コミュニティ）とし、ログイン済ユーザーは全観測… | required | blocked | — |
 | V3-AUT-17 | 書き込み・個人設定(commit・命名・個体・デバイス等)はuseActorId… | required | done | — |
 | V3-AUT-18 | 個体QRはihl://individual/<id>のアプリスキームdeep l… | required | done | — |
-| V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | in_progress | 987c5c3 |
+| V3-AUT-19 | 保護APIはBearer JWTを要求し、無Bearer/不正=401 UNAU… | required | done | 987c5c3 |
 | V3-AUT-20 | APIエラーは機械可読なerrorコードで返し、クライアントはそれをユーザー向け… | required | done | 987c5c3 |
 | V3-AUT-22 | admin系ルートのroleゲート・devツール既定off・Capability… | required | in_progress | — |
 | V3-AUT-45 | レガシー register/locale/complete-onboarding… | required | done | — |
@@ -223,9 +224,6 @@
 | V3-AIP-10 | 設計・DOC作業を4段階(1フォルダ構成→2設計書構成→3設計作成→3b網… | required | done | — |
 | V3-AIP-101 | 完成報告の実機検証義務(AI完成報告恐怖症対策): AI は「できました」… | required | done | — |
 | V3-AIP-104 | 写真解析/embedding計算の実行場所設計: 撮影後の写真解析・embedd… | required | done | 912941e, ed2c13a |
-| V3-AIP-105 | file-board-registry の board_thread_id 列を実運用化す… | required | in_progress | — |
-| V3-AIP-106 | 実装コードを変更するPRは、対応する設計書§の同時更新、または理由付き… | required | in_progress | — |
-| V3-AIP-107 | リリースごとにgit tag+リリースノート(GitHub Releases)を発… | required | in_progress | — |
 | V3-AIP-11 | 設計書憲法の不変原則を守る：同一トピックに正本を1つに固定(C1)、情… | required | done | — |
 | V3-AIP-12 | REQは1機能200–400行を目安に意図と測定可能な受入基準のみ書き、A… | required | done | — |
 | V3-AIP-13 | 詳細設計はv3を唯一のDET正本とし旧版は1行stub化してアーカイブm… | required | done | — |
@@ -249,7 +247,6 @@
 | V3-AIP-31 | 人間ゲート/human-in-the-loopを必須とする：ワンクリック全自動を… | required | done | b88a0f6 |
 | V3-AIP-32 | 要件は一度凍結したら変更はCR(変更要求)のみ：抜けが見つかったら§9… | required | done | — |
 | V3-AIP-33 | 要件の正本階層を憲法>採用REQ(accepted_requirements.… | required | done | — |
-| V3-AIP-34 | コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を… | required | in_progress | 124027b, fc2fada |
 | V3-AIP-35 | 意図駆動開発ISP(Intent→Spec→Implementation)を正… | required | done | — |
 | V3-AIP-36 | 全変更で意図↔仕様↔コミット↔文明史(R2)を紐付け、意図メタデータ… | required | done | — |
 | V3-AIP-37 | 改善履歴・改善サイクルはGitHub(PR/Discussions/BOARD.… | required | done | — |
@@ -260,8 +257,6 @@
 | V3-AIP-45 | データ設計をAIのRAG検索・引用で最大限活用できる形へ最適化する(… | required | done | — |
 | V3-AIP-46 | OSS/importを最大活用し車輪の再発明をしない：各サブシステムをOS… | required | done | — |
 | V3-AIP-48 | 完成の定義は「欲しい機能が実際に使え、データが保管され、エラーが無… | required | done | — |
-| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用する：backend unit/fronten… | required | in_progress | 124027b, a0c631d |
-| V3-AIP-50 | テストを要件・詳細設計から体系的に生成する(要件→TC表→pytes… | required | in_progress | 124027b |
 | V3-AIP-52 | 機能追加は機能単位のプチウォーターフォール(micro-waterfall… | required | done | — |
 | V3-AIP-53 | 一般的なウォーターフォール型で要件定義・詳細設計・UI設計・テスト… | required | done | — |
 | V3-AIP-54 | ver1を「完璧」に仕上げてから同一品質バー(同DoD・同Tier体系)… | required | done | — |
@@ -277,7 +272,6 @@
 | V3-AIP-66 | git運用ルール：ユーザーが明示的に指示しない限りcommitしない、… | required | done | — |
 | V3-AIP-67 | GitHub Issues(label=improvement/feature-… | required | done | 55f7fc7 |
 | V3-AIP-68 | ユーザーが機能を改善・開発した際に本番同様に結合・試用できるサンド… | required | done | — |
-| V3-AIP-70 | 本番apps/webは編集禁止(読み取り専用参照)、apps/ui-parts-… | required | todo | — |
 | V3-AIP-76 | AIプロンプト・評価軸・文化テンプレート(UIテーマ/掲示板構造/評… | required | done | — |
 | V3-AIP-78 | 大量タスクを夜間overnight/週次実行パックとしてAI(Auto余力)に切… | required | done | 4883f25 |
 | V3-AIP-80 | システムの「外側」(UI Schema/思想/宣言書Manifesto/技術思… | required | done | — |
@@ -314,25 +308,17 @@
 | V3-FND-30 | MVP v1スコープを明確化する:マーケット(#06)・マチアプ(… | required | in_progress | — |
 | V3-FND-34 | バッチ/cron失敗の監視・ハートビート通知: 月次Fibonacci消込等のバ… | required | done | c5ecd17 |
 | V3-FND-35 | 外部依存の交換可能アダプタNFR: 決済(PAY.JP/PayPay/銀行)・配… | required | done | 8eb8358, f3ebe59 |
-| V3-AIP-100 | 使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)が… | best-effort | in_progress | — |
-| V3-AIP-102 | 技術記事投稿パック: システム案・思想を複数技術サイトへ投稿できる「コピペ完結」… | best-effort | in_progress | — |
-| V3-AIP-103 | マルチ SNS 自動投稿オーケストレーション: 1 コンテンツを Instagr… | best-effort | in_progress | — |
 | V3-AIP-47 | 独自UIを発明する前に必ずOSS事例調査(ライセンス/流用範囲/効果)を設計フェ… | best-effort | done | — |
 | V3-AIP-51 | E2E詳細化には要件定義書だけでは不足で、ユーザー入力(HQ判断/シナリオ)とP… | best-effort | done | — |
 | V3-AIP-58 | やるべきタスクとその依存順序を00-マスター実行順.mdに集約しチャット毎に追記… | best-effort | done | — |
 | V3-AIP-62 | 実装をフェーズ0(要件確定)→1(プロトタイプ)→2(条件リクエスト/フォーク)… | best-effort | done | — |
-| V3-AIP-71 | 非エンジニアでも実行できるワンクリック/コピペ起動を用意する：ホストにNodeを… | best-effort | in_progress | — |
 | V3-AIP-73 | エージェントに実装を委ねる際はRAGに基づく思想理解に沿った改善は事前確認不要で… | best-effort | done | — |
-| V3-AIP-75 | 生成物(画像・字幕・タイトル・タグ・台本等)はすべてユーザーのOK/NG評価と理… | best-effort | in_progress | — |
 | V3-AIP-79 | 段階的リリースを取り最小核(観測してデータが取れる+個体ページ閲覧+Issue風… | best-effort | done | — |
 | V3-AIP-81 | 世界(DB+API)とUI(文化)をリポジトリレベルで分離しWorld=不変/U… | best-effort | done | — |
 | V3-AIP-82 | AIはUIコードや世界を直接書かず(World/UIのJSON(AST)またはC… | best-effort | done | — |
-| V3-AIP-86 | コンテンツ生成AI(要約・モデレーション・司法アシスタント・判例生成等)のプロン… | best-effort | todo | — |
-| V3-AIP-87 | 現状の実装から現在の仕様書をJSONで自動生成し(実装/過去HTML→設計の逆流… | best-effort | in_progress | — |
 | V3-AIP-88 | 仕様統合の優先順位ルールを「現在の実装仕様<旧設計書<新アイディア<マイクロカー… | best-effort | done | — |
 | V3-AIP-89 | コード構造をKernel(物理法則/API・データ・計算・観測)・Feature… | best-effort | done | — |
 | V3-AIP-91 | 実装は依存関係の積み上げ順(userid→観測→そのデータを使う多機能→変換→台… | best-effort | done | — |
-| V3-AIP-95 | AI推論の切替をAI_MODE=stub\|prod/LOCALAI_ENABLE… | best-effort | in_progress | — |
 | V3-CST-03 | AI運用コストを最適化する:調査タスクは上位モデルで直接回さず下位モデルで実行、… | best-effort | done | — |
 | V3-FND-06 | 世界状態を immutable な snapshot として保存し、上書きせず版… | best-effort | done | — |
 | V3-FND-07 | 文明全体の状態を定期(四半期等)に Era Snapshot として R2 へ保… | best-effort | done | — |
@@ -407,18 +393,18 @@
 | V3-SEC-08 | public_user_id=SHA256(user_id+secret_salt)不可逆ハッシュ化 | best-effort | done | — |
 | V3-SEC-10 | サンドボックス連番ID再割当・変換表はローカルのみR2非保存 | best-effort | done | — |
 | V3-SEC-12 | PII直書き防止・局留め連絡先事前登録・取引相手限定参照 | best-effort | done | — |
-| V3-SEC-21 | 利用規約 法的版/やさしい版/動画 三形態 | best-effort | in_progress | — |
-| V3-SEC-22 | ToS条文↔動画 resolver層(terms_version+section_id+media_kind) | best-effort | in_progress | — |
-| V3-SEC-23 | terms_version版管理・再同意フロー・scroll gate・暗黙同意廃止 | best-effort | in_progress | — |
-| V3-SEC-25 | 利用規約/プライバシー法務ドラフト+人間確認チェックリスト(docs/legal) | best-effort | in_progress | — |
-| V3-SEC-27 | IHL独立ToS/Privacy新規作成(civ-os流用禁止) | best-effort | in_progress | — |
+| V3-SEC-21 | 利用規約 法的版/やさしい版/動画 三形態 | best-effort | done | — |
+| V3-SEC-22 | ToS条文↔動画 resolver層(terms_version+section_id+media_kind) | best-effort | done | — |
+| V3-SEC-23 | terms_version版管理・再同意フロー・scroll gate・暗黙同意廃止 | best-effort | done | — |
+| V3-SEC-25 | 利用規約/プライバシー法務ドラフト+人間確認チェックリスト(docs/legal) | best-effort | done | — |
+| V3-SEC-27 | IHL独立ToS/Privacy新規作成(civ-os流用禁止) | best-effort | done | — |
 | V3-SEC-29 | 収集項目明記・広告目的不使用・行動ログ用途限定 | best-effort | done | — |
 | V3-SEC-35 | 外部AIモデル再学習に使わない構造宣言 | best-effort | done | — |
 | V3-SEC-37 | OSS/テンプレート取り込みライセンス管理(CC-BY/no-redistribute/GPL) | best-effort | done | — |
 | V3-SEC-39 | Markdown本文XSSサニタイズ・翻訳結果もXSS入口にしない | best-effort | done | — |
-| V3-SEC-43 | 投稿画像の知覚ハッシュによる盗用・すり替え検知 | best-effort | in_progress | — |
-| V3-SEC-44 | QR2系統(公開用平文/観測管理用AES-256-GCM+Ed25519署名) | best-effort | in_progress | — |
-| V3-SEC-47 | サーバー側価値操作強制(role=system・UNIQUE制約・レート制限・DM取引禁止) | best-effort | in_progress | — |
+| V3-SEC-43 | 投稿画像の知覚ハッシュによる盗用・すり替え検知 | best-effort | done | — |
+| V3-SEC-44 | QR2系統(公開用平文/観測管理用AES-256-GCM+Ed25519署名) | best-effort | done | — |
+| V3-SEC-47 | サーバー側価値操作強制(role=system・UNIQUE制約・レート制限・DM取引禁止) | best-effort | done | — |
 | V3-SEC-48 | Kernel入口JSON構造バリデーション・permissions強制・Universe物理分離 | best-effort | in_progress | — |
 | V3-SEC-50 | 保護アセット(ブランド資産)NG設定・種別明示指定・観測データ保護対象外 | best-effort | done | — |
 
@@ -475,7 +461,7 @@
 | V3-BBS-04 | 全画面分の掲示板スレッド(公式説明スレ+愚痴スレ、125画面×2=250スレ)を… | best-effort | todo | — |
 | V3-BBS-06 | 掲示板の紛争解決は『通報』ではなく『指摘』ボタンとし、指摘タグ選択と理由記入を必… | best-effort | done | — |
 | V3-BBS-08 | 指摘への合意が得られた場合、被指摘者が修正表現を提案し指摘者が了承すると元発言の… | best-effort | done | — |
-| V3-BBS-11 | 掲示板は自然言語検索で先に既存の適合掲示板へ誘導・提案し(複数候補)、結果が十分… | best-effort | in_progress | — |
+| V3-BBS-11 | 掲示板は自然言語検索で先に既存の適合掲示板へ誘導・提案し(複数候補)、結果が十分… | best-effort | done | — |
 | V3-BBS-12 | 掲示板作成はAIがタイトル・タグ・説明・目的のたたき台を自動記入し、ユーザーがク… | best-effort | done | — |
 | V3-BBS-15 | 通報システムは導入せず、法律に反する言動があれば即BAN、それ以外はコミュニティ… | best-effort | done | — |
 | V3-BBS-16 | 開発掲示板はOS/システムのフォルダ構造・ファイル構成と同じ階層・同粒度で用意し… | best-effort | done | — |
@@ -485,7 +471,8 @@
 | V3-BBS-25 | 掲示板(BBS)はフルDiscourse実装ではなくスレッド/投稿をJSONLイ… | best-effort | in_progress | — |
 | V3-BBS-26 | GitHub掲示板柱は自前掲示板UIを作り込まず、GitHub Discussi… | best-effort | todo | — |
 | V3-BBS-32 | 思想・構造・哲学を公知化する技術宣言書(Technical Manifesto)… | best-effort | todo | — |
-| V3-BBS-33 | 掲示板統計(投稿数推移・アクティブユーザー・文化スコア・時間帯ヒートマップ・タグ… | best-effort | in_progress | — |
+| V3-BBS-33 | 掲示板統計(投稿数推移・アクティブユーザー・文化スコア・時間帯ヒートマップ・タグ… | best-effort | done | — |
+| V3-OBS-33 | 環境観測は2層とし、Tier A(ガバナンスイベント)はINSERT ONLYを… | best-effort | done | — |
 | V3-PPR-05 | AI査読パイプラインの段階1〜5(構造・欠損・再現性・整合性・統計)を決定論コー… | best-effort | done | — |
 | V3-PPR-08 | 引用(Citation)を独立エンティティとして扱い、掲示板↔論文↔観測↔論文↔… | best-effort | in_progress | — |
 | V3-PPR-10 | 解析エンジンをセマンティックバージョニングで凍結(Major=論文単位で固定/M… | best-effort | done | — |
@@ -573,7 +560,7 @@
 | V3-IND-09 | マチアプに、価値観の精度を上げるPairwise比較画面(記載済み②)の前段とし… | best-effort | blocked | — |
 | V3-IND-11 | 色などの見た目を画像解析しユーザーの好みを統計学習して「理想個体に近づくにはどの… | best-effort | blocked | — |
 | V3-IND-14 | 個体一覧(A1)はキーワード・種族・形態・状態(生体/蛹/幼虫/死亡/標本)・テ… | best-effort | done | 65d7a00 |
-| V3-IND-16 | 生体の一生をイベントログ(bio.created/moved/scheduled… | best-effort | in_progress | — |
+| V3-IND-16 | 生体の一生をイベントログ(bio.created/moved/scheduled… | best-effort | done | — |
 | V3-IND-17 | 個体観測データは死亡・失敗も正式ステータス(alive/dead/failed、… | best-effort | done | — |
 | V3-IND-23 | 研究プロジェクト(projectId/P100)を中心に論文・個体・マット・製造… | best-effort | in_progress | — |
 | V3-IND-26 | 成体の成長を追う4D Viewerは3D(体重X/体長Y/成長速度Z)+時間(s… | best-effort | blocked | — |
@@ -583,7 +570,6 @@
 | V3-OBS-12 | ヘラクレス標準撮影チャンバー(40×40cm級マットグレー箱・CRI/Ra95以上6500K固定LED…) | best-effort | done | — |
 | V3-OBS-13 | 甲虫色彩計測標準規格BPCMS v1.0を凍結制定する。ただし観測の生画像は無補正で保存し… | best-effort | done | — |
 | V3-OBS-30 | デバイスのデータ取得間隔をデフォルト/一括上書き/複数選択/個別デバイスの4階層… | best-effort | done | — |
-| V3-OBS-33 | 環境観測は2層とし、Tier A(ガバナンスイベント)はINSERT ONLYを… | best-effort | todo | — |
 | V3-OBS-34 | 占有(Occupancy)参照モデルとして個体・観測対象ごとに環境ファイルを増殖… | best-effort | done | — |
 | V3-OBS-38 | 画像表示のパフォーマンス・コストを段階的に最適化する。まず低コスト改善(サムネイ… | best-effort | done | — |
 | V3-OBS-40 | 観測登録APIはフロントの偽sessionId生成でなく、バックエンドが実際のs… | best-effort | done | — |
@@ -691,3 +677,23 @@
 | V3-UIX-75 | UIは知識が無くても小学生でもぱっと見で使えるよう機能を詰め込みすぎずシンプル・… | best-effort | todo | — |
 | V3-UIX-78 | 価値観テンプレート(タグセット、ユーザーが追加/削除/変更/フォーク可能)で各項… | best-effort | todo | — |
 | V3-UIX-79 | pairwise好み入力は既定Nラウンド(N=10)で収束させ、現在ラウンド/上… | best-effort | todo | — |
+
+### w1-aip
+
+| id | title | scope | status | commits |
+|---|---|---|---|---|
+| V3-AIP-100 | 使用者もAIファーストにする: エンドユーザーの代理AIエージェント | aip | in_progress | — |
+| V3-AIP-102 | 技術記事投稿パック | aip | in_progress | — |
+| V3-AIP-103 | マルチSNS自動投稿オーケストレーション | aip | in_progress | — |
+| V3-AIP-105 | file-board-registryのboard_thread_id列を実運用化 | aip | in_progress | — |
+| V3-AIP-106 | 実装コード変更PRは設計書§同時更新または理由付き宣言を必須化 | aip | in_progress | — |
+| V3-AIP-107 | リリースごとにgit tag+リリースノート発行 | aip | in_progress | — |
+| V3-AIP-34 | 仕様書中心設計(Spec-Driven) | aip | in_progress | — |
+| V3-AIP-49 | テスト文化を全レイヤー緑前提で運用 | aip | in_progress | — |
+| V3-AIP-50 | テストを要件・詳細設計から体系的に生成 | aip | in_progress | — |
+| V3-AIP-70 | 本番apps/webは編集禁止・apps/ui-partsで作業 | aip | todo | — |
+| V3-AIP-71 | 非エンジニアでもワンクリック/コピペ起動 | aip | in_progress | — |
+| V3-AIP-75 | 生成物のOK/NG評価と理由付けループ | aip | in_progress | — |
+| V3-AIP-86 | 生成AIプロンプトの中立仕様 | aip | todo | — |
+| V3-AIP-87 | 実装から仕様書を自動生成する逆生成パイプライン | aip | in_progress | — |
+| V3-AIP-95 | AI推論の切替をAI_MODE=stub\|prod等で制御 | aip | in_progress | — |

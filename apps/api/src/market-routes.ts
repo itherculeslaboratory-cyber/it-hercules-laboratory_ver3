@@ -555,6 +555,9 @@ async function settleDueAuctions(
       };
   const res = await s.putEventAt(`truth/${TXN_TYPE}/auction-settle-${listingId}.json`, systemTxnEnvelope(id, data));
   if (res.status !== "inserted") return events; // 既に自己修復済み(冪等)
+  // V3-MKT-24(w3-mkt): 入札なしで delist が新規確定した時だけ、relist-policy が
+  // 宣言されていれば自動再出品を発火する(w2-mkt で持ち越された配線=下記コメント参照)。
+  if (!best) await autoRelistIfDelisted(s, listingId, now);
   return [...events, data as unknown as TxnEvent];
 }
 
@@ -999,15 +1002,79 @@ marketRoutes.post("/market/offers", async (c) => {
 // を additionalProperties:false のまま直接拡張すると precompile 済み validator の
 // 再生成(packages/truth/src/generated/validators.cjs・全ドメイン共通の生成物)が
 // 要り本波の glob 外になるため、この設計を踏襲した)。
-// [残作業として正直に明記]: ここまでの実装は「再出品ルールを宣言する」
-// (POST .../relist-policy)と「次回価格を純関数で計算する」(nextRelistPrice)まで。
-// settleDueAuctions の「入札なし→delist」枝から実際に新しい listing を自動生成する
-// 配線(再出品の自動発火そのもの)は本波の残り時間内に安全に検証しきれなかったため
-// 未接続(次回価格計算は動くが、呼び出す cron/自己修復トリガーが無い=手動で
-// relist-policy を読み、next-price を使って POST /market/listings を呼べば同じ結果に
-// 到達できるが「自動」ではない)。持ち越しとして報告書に明記する。
+// w2-mkt で持ち越された配線(settleDueAuctions の「入札なし→delist」枝から自動発火)は
+// w3-mkt で接続済み(下記 autoRelistIfDelisted・呼び出し元=settleDueAuctions)。
 const RELIST_POLICY_TYPE = "ihl.mkt.relist_policy.v1";
 const RELIST_POLICY_SCHEMA = "schemas/events/mkt-relist-policy.schema.json";
+// V3-MKT-24(w3-mkt): 再出品チェーンの回数カウント(from_listing_id をキーにした
+// put-if-absent・1つの delist から生む relist は高々1件=settleDueAuctions 側の
+// auction-settle-${listingId} 冪等キーで既に「1回だけ」呼ばれることが保証されている)。
+const RELIST_EVENT_TYPE = "ihl.mkt.relist_event.v1";
+const RELIST_EVENT_SCHEMA = "schemas/events/mkt-relist-event.schema.json";
+
+async function relistCountFor(s: TruthStore, listingId: string): Promise<number> {
+  const ev = await s.readEvent(`truth/${RELIST_EVENT_TYPE}/${listingId}.json`);
+  if (!ev) return 0;
+  const d = dataOf(ev);
+  return typeof d.relist_count === "number" ? d.relist_count : 0;
+}
+
+// V3-MKT-24(w3-mkt): 対象 listing が relist-policy を宣言していれば、次回価格
+// (nextRelistPrice)で新しい listing を自動生成し、relist_event に鎖(from→to +
+// この listing 自身の relist_count)を記録する。未宣言(policy=null)ならオプトイン
+// していないので何もしない(delist のまま=既存挙動を壊さない)。
+async function autoRelistIfDelisted(s: TruthStore, listingId: string, now: Date): Promise<void> {
+  const policy = await readRelistPolicy(s, listingId);
+  if (!policy) return;
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  if (!listingEv) return;
+  const listing = dataOf(listingEv);
+  const currentPrice = typeof listing.price === "number" ? listing.price : 0;
+  const priorCount = await relistCountFor(s, listingId);
+  if (policy.maxRelistCount !== null && priorCount + 1 > policy.maxRelistCount) return; // 上限到達
+  const nextPrice = nextRelistPrice(currentPrice, {
+    maxRelistCount: policy.maxRelistCount,
+    discountMode: policy.discountMode,
+    discountValue: policy.discountValue,
+    floorPrice: policy.floorPrice,
+  });
+  if (nextPrice === null) return; // 下限到達=再出品しない(delist のまま)
+
+  const newListingId = ulid();
+  const newData: Record<string, unknown> = {
+    listing_id: newListingId,
+    actor_id: listing.actor_id,
+    title: listing.title,
+    price: nextPrice,
+    created_at: now.toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  if (typeof listing.description === "string") newData.description = listing.description;
+  if (typeof listing.species_id === "string") newData.species_id = listing.species_id;
+  if (typeof listing.lang === "string") newData.lang = listing.lang;
+  const createRes = await s.putEvent(envelope(newListingId, String(listing.actor_id), newData));
+  if (createRes.status !== "inserted") return; // 異常時は静かに諦める(delist 自体は既に確定済み)
+
+  const eventId = ulid();
+  const eventData: Record<string, unknown> = {
+    relist_event_id: eventId,
+    from_listing_id: listingId,
+    to_listing_id: newListingId,
+    relist_count: priorCount + 1,
+    created_at: now.toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  await s.putEventAt(`truth/${RELIST_EVENT_TYPE}/${listingId}.json`, {
+    specversion: "1.0",
+    id: eventId,
+    source: "apps/api",
+    type: RELIST_EVENT_TYPE,
+    time: now.toISOString(),
+    dataschema: RELIST_EVENT_SCHEMA,
+    provenance: { generator_kind: "agent", agent_name: "market-relist" },
+    data: eventData,
+  });
+}
 
 async function readRelistPolicy(s: TruthStore, listingId: string): Promise<
   { maxRelistCount: number | null; discountMode: RelistDiscountMode; discountValue: number; floorPrice: number | null } | null

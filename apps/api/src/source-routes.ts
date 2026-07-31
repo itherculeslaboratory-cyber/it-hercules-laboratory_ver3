@@ -14,7 +14,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { bucketize, type TelemetryBucket } from "./telemetry-merge";
+import { bucketize, TELEMETRY_BUCKET_MS, type TelemetryBucket } from "./telemetry-merge";
 import { DEVICE_TYPE } from "./device-routes";
 
 export const sourceRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -651,6 +651,55 @@ function telemetryKey(b: TelemetryBucket, source: string): string {
   return `truth/${TELEMETRY_TYPE}/${seg(b.device_id)}-${seg(b.metric)}-${b.bucket_start_ms}-${seg(source)}.json`;
 }
 
+// V3-OBS-33: Tier B (センサーテレメトリ) は「値変化またはハートビート間隔超過時のみ
+// 条件付きINSERT」で差分挿入する(行UPSERT/UPDATEは採らない・put-if-absentのINSERT ONLY
+// は維持したまま、書き込む/書き込まないの判断を追加する層)。ハートビート間隔は要件文に
+// 具体値の指定が無いため、5分バケット×12=1時間を既定値として置く(判断が要った箇所・
+// 報告書参照)。
+export const TELEMETRY_HEARTBEAT_MS = TELEMETRY_BUCKET_MS * 12; // 1 hour
+
+function telemetryPrefix(deviceId: string, metric: string): string {
+  const seg = (s: string) => encodeURIComponent(s).replace(/-/g, "%2D");
+  return `truth/${TELEMETRY_TYPE}/${seg(deviceId)}-${seg(metric)}-`;
+}
+
+/**
+ * V3-OBS-33: find the most recently written bucket (any source) strictly
+ * before `beforeBucketStartMs` for this device+metric, via prefix scan
+ * (no resident index — same reuse-first constraint as projectTelemetryLatest).
+ */
+async function findPriorTelemetryBucket(
+  st: TruthStore,
+  deviceId: string,
+  metric: string,
+  beforeBucketStartMs: number,
+): Promise<{ bucket_start_ms: number; mean: number } | null> {
+  const prefix = telemetryPrefix(deviceId, metric);
+  const events = (await st.listEvents(prefix)).map(dataOf);
+  let best: { bucket_start_ms: number; mean: number } | null = null;
+  for (const d of events) {
+    const bs = Number(d.bucket_start_ms);
+    if (!Number.isFinite(bs) || bs >= beforeBucketStartMs) continue;
+    if (!best || bs > best.bucket_start_ms) best = { bucket_start_ms: bs, mean: Number(d.mean) };
+  }
+  return best;
+}
+
+/**
+ * V3-OBS-33 条件付きINSERT判定(純関数・pure): 直前バケットが無ければ書く(初回)。
+ * 値が変化していれば書く。値が同じでもハートビート間隔を超えていれば書く(生存確認)。
+ * それ以外(値不変 かつ 間隔内)は skip。
+ */
+export function shouldInsertTelemetryBucket(
+  current: { bucket_start_ms: number; mean: number },
+  prior: { bucket_start_ms: number; mean: number } | null,
+  heartbeatMs: number = TELEMETRY_HEARTBEAT_MS,
+): boolean {
+  if (!prior) return true;
+  if (current.mean !== prior.mean) return true;
+  return current.bucket_start_ms - prior.bucket_start_ms >= heartbeatMs;
+}
+
 /**
  * Shared bucketized-telemetry writer (V3-OBS-32 / V3-FND-18). Both the generic
  * POST /telemetry route (source="manual") and the CSV import route
@@ -666,12 +715,39 @@ export async function ingestTelemetryBuckets(
   buckets: TelemetryBucket[],
   source: string,
   opts: { dryRun?: boolean } = {},
-): Promise<{ written: number; skipped_duplicate: number; invalid: string[] }> {
+): Promise<{ written: number; skipped_duplicate: number; skipped_unchanged: number; invalid: string[] }> {
   let written = 0;
   let skippedDuplicate = 0;
+  let skippedUnchanged = 0;
   const invalid: string[] = [];
   for (const b of buckets) {
     const key = telemetryKey(b, source);
+    // V3-OBS-33: put-if-absent(既存key衝突=skipped_duplicate)より前の層として、
+    // 値変化もハートビート超過も無ければそもそも書かない(差分挿入)。重複(同じ
+    // データが既に在る)と差分未変更(値が変わっていない)は別の事象なので別カウンタ
+    // skipped_unchanged に計上する(2026-07-31 w3fix是正: 従来はskipped_duplicateへ
+    // 合流させていたが、V3-OBS-32ゴールデンフィクスチャの「重複=0」期待値を差分
+    // 未変更157件が汚染して壊れた)。
+    // ★source="csv"(V3-OBS-32 CSVインポート)は差分挿入の対象から除外する
+    // (2026-07-31 w3fix・判断が要った箇所): 実データ hub3-7e.csv は同一値が
+    // 複数分連続する(実測: 300行スライスで366バケット中157バケットが「直前と
+    // 値不変」)。V3-OBS-32は「取り込んだ全行をそのまま書く」という既存の凍結
+    // ゴールデンフィクスチャの前提で先に確定しており、V3-OBS-33(本ラウンド新設の
+    // ハートビート間引き)がその後から同じ共有関数に差分挿入を挿入したことで
+    // written が 366→209 に減り、written===expectedBuckets.length というOBS-32の
+    // 期待と、dry-run(差分判定なし)とreal(差分判定あり)のwritten不一致(67 vs 78)
+    // の両方を壊していた。差分挿入(間引き)は「センサーの定期ポーリング」向けの
+    // 生存確認目的の機能であり、CSV一括インポート(過去データの全量取込)には
+    // 意味論的に馴染まない — インポートは「そのファイルに書かれている行を
+    // そのまま反映する」という利用者の期待に合わせ、csvソースは対象外とした。
+    const applyDifferentialInsert = source !== "csv";
+    const prior = applyDifferentialInsert
+      ? await findPriorTelemetryBucket(st, b.device_id, b.metric, b.bucket_start_ms)
+      : null;
+    if (applyDifferentialInsert && !shouldInsertTelemetryBucket({ bucket_start_ms: b.bucket_start_ms, mean: b.mean }, prior)) {
+      skippedUnchanged += 1;
+      continue;
+    }
     if (opts.dryRun) {
       const existing = await st.readEvent(key);
       if (existing) skippedDuplicate += 1;
@@ -693,7 +769,7 @@ export async function ingestTelemetryBuckets(
     else if (res.status === "conflict") skippedDuplicate += 1;
     else invalid.push(...res.errors);
   }
-  return { written, skipped_duplicate: skippedDuplicate, invalid };
+  return { written, skipped_duplicate: skippedDuplicate, skipped_unchanged: skippedUnchanged, invalid };
 }
 
 export interface TelemetrySnapshot {
@@ -756,7 +832,7 @@ sourceRoutes.post("/telemetry", async (c) => {
   const validRowCount = buckets.reduce((n, b) => n + b.count, 0);
 
   const st = store(c);
-  const { written, skipped_duplicate, invalid } = await ingestTelemetryBuckets(st, actorId, buckets, "manual");
+  const { written, skipped_duplicate, skipped_unchanged, invalid } = await ingestTelemetryBuckets(st, actorId, buckets, "manual");
   if (invalid.length > 0) return c.json({ error: "INVALID_TELEMETRY", details: invalid }, 400);
-  return c.json({ written, skipped_duplicate, skipped_invalid: rows.length - validRowCount }, 202);
+  return c.json({ written, skipped_duplicate, skipped_unchanged, skipped_invalid: rows.length - validRowCount }, 202);
 });

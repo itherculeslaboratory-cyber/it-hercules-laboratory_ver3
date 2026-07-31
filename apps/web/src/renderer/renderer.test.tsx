@@ -1366,6 +1366,25 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     expect(onAction).toHaveBeenCalledWith({ kind: "api", method: "POST", path: "/api/v1/auth/logout" });
   });
 
+  // V3-UIX-39(第21回裁定・hold解除): ドロワー集約ナビ・大分類7区分。
+  it("V3-UIX-39: drawer nav opens with the 7 top-level categories, 2 marked pending", async () => {
+    const onAction = vi.fn(async (action: Action) => {
+      if (action.path === "/api/v1/auth/session") return { authenticated: true, actor_id: "a1" };
+      return undefined;
+    });
+    render(<Renderer def={shellDef()} onAction={onAction} />);
+    const menuBtn = await screen.findByRole("button", { name: "メニュー" });
+    expect(screen.queryByRole("link", { name: "マーケット" })).not.toBeInTheDocument();
+    fireEvent.click(menuBtn);
+    expect(screen.getByRole("link", { name: "観測登録" })).toHaveAttribute("href", "/s/obs-domain-select");
+    expect(screen.getByRole("link", { name: "マーケット" })).toHaveAttribute("href", "/s/market-trade");
+    expect(screen.getByRole("link", { name: "検索" })).toHaveAttribute("href", "/s/obs-search");
+    expect(screen.getByRole("link", { name: "知の広場" })).toHaveAttribute("href", "/s/knowledge-hub");
+    expect(screen.getByRole("link", { name: "プロフィール" })).toHaveAttribute("href", "/me/me.html");
+    expect(screen.getByText("変換(リンク先未定義)")).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("OS(リンク先未定義)")).toHaveAttribute("aria-disabled", "true");
+  });
+
   // HDR-1(c9-structure-canon.md §1/§1c・R112/R115)ヘッダー観測対象セレクタ。
   // 閉じている間は<dialog>の中身(h2.civ-heading含む)をDOMに一切出さないこと
   // が必須契約 — 出したままだと screen-sweep.spec.ts(e2e)の

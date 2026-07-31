@@ -85,52 +85,50 @@
   },
   {
     "id": "V3-AIP-34",
-    "title": "コードより仕様書が先に存在する仕様書中心設計(Spec-Driven)を…",
+    "title": "仕様書中心設計(Spec-Driven)",
     "cluster": "g09-AIプロセス",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "A",
-    "lane": "L4",
-    "scope": "required",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
-    "commits": [
-      "124027b",
-      "fc2fada"
-    ],
+    "commits": [],
     "tc": [
-      "tests/spec-market-trade.test.ts (6 tests, market-trade画面へのspec/base契約横展開)"
+      "tests/spec-thread.test.ts",
+      "tests/spec-market-trade.test.ts"
     ],
-    "note": "Spec-Driven設計契約をtests/spec-thread.test.ts describe(\"V3-AIP-34 thread spec (Spec-Driven contract)\")で知の広場スレッド画面に限定実装(spec/base/以下JSON+バリデーション+route-matrix整合)。要件が求める「データモデル・付与条件・ナビ・権限・スレッド等」の横断適用のうちスレッド画面のみ対象で、他ドメイン(データモデル全般・付与条件・ナビ・権限)への展開は未着手。 追加(g09レーン): in_progress残余(他ドメインへの拡張)には今回も着手できず。他18項目を優先した時間配分上の判断で、内容の困難さによるスキップではない。次セッションでの継続を推奨。\n\n[統合cleanup-final追記] 同型の契約(schema適合+deny-by-default route matrix+navigation到達可能性の3点)をmarket-trade画面へ横展開(fc2fada・tests/spec-market-trade.test.ts新設)。これで2ドメイン目まで実装済み。残りは他ドメイン(データモデル全般・付与条件・ナビ・権限)への横断適用で、in_progressのまま据え置く(status=doneへの昇格は見送り — 要件が求める全ドメイン横断にはまだ届いていないため)。 ★[n61検収・n61aipcritic重大1是正] w1-aipの型C対応表がこの行をdoneで上書きしたが、部分実装の正直記録を復元しin_progressへ戻した(HQ裁定=批評家是正案(a)採用)。w1-aipの確認内容: 既存機構が満たす: tests/spec-thread.test.ts + tests/spec-market-trade.test.ts(04-traceability/rtm.md:16)。progress.json上は既にin_progressで、noteに「2ドメインのみ実装、他ドメインは未着手」と正直に記録済み(前任の仕上げ対象。今回はw1-aipの対応表登録のみ行い、コード追加は実装トラック側の担当)。"
+    "note": "[w3-aip実測] npx vitest run tests/spec-thread.test.ts tests/spec-market-trade.test.ts → 2 files/6 tests全PASS。既存2ドメイン分は健在、他ドメインへの拡張は前任note通り未着手。コード追加なし。"
   },
   {
     "id": "V3-AIP-49",
-    "title": "テスト文化を全レイヤー緑前提で運用する：backend unit/fronten…",
+    "title": "テスト文化を全レイヤー緑前提で運用",
     "cluster": "g09-AIプロセス",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "S",
-    "lane": "L4",
-    "scope": "required",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
-    "commits": [
-      "124027b",
-      "a0c631d"
+    "commits": [],
+    "tc": [
+      "apps/web/e2e/ledger.spec.ts",
+      "apps/web/e2e/market.spec.ts"
     ],
-    "tc": [],
-    "note": "E2E(Playwright)実UI+実バックエンド統合テストをapps/web/e2e/ledger.spec.ts+market.spec.tsに実装(V3-AIP-49/C7-T1タグ)、backend unit(tests/*.test.ts 約120ファイル)+frontend unit(renderer.test.tsx等)も並行整備済み。「新機能追加時の既存回帰率0%を受入」という運用ルール自体は継続的実践であり一度の完成物ではないため部分実装のまま。 追加(g09レーン): in_progress残余の2点のうち1点を検証・確定: (1)『本番コード(R2)を差し替えずローカルメモリで統合テストする仕組み』はtests/helpers.tsのFakeR2Bucket(R2BucketLite実装)+apps/web e2eのwrangler dev local-mode R2シミュレーションとして実在確認(claim確定)。(2)『機能別E2E条件分岐網羅設計書』はdocs/planning/c5/e2e-design.mdが実在するが、C5執筆時点の6機能(observation/ugc-translate/market/ledger/spec-thread/screendef)止まりで、C6〜C8で追加された7 spec(individual-detail/knowledge-thread/market-trade-lifecycle/obs-register-batch/obs-register/obs-search/screen-sweep)は個別の条件分岐網羅節が未執筆。索引表を追加し可視化したが執筆自体は未完了(残作業として明記)。 ★[n61検収・n61aipcritic重大1是正] w1-aipの型C対応表がこの行をdoneで上書きしたが、部分実装の正直記録を復元しin_progressへ戻した(HQ裁定=批評家是正案(a)採用)。w1-aipの確認内容: 既存機構が満たす: apps/web/e2e/market.spec.ts + apps/web/e2e/ledger.spec.ts(04-traceability/rtm.md:21)+ .github/workflows/ci.yml(Ubuntu上でlint/test/build/pytestを実行しCIを正とする構成)。progress.json上は既にin_progress(前任note: 7 spec分の条件分岐網羅節が未執筆と正直に記録済み)。"
+    "note": "[w3-aip実測] apps/web/e2e/ledger.spec.ts・market.spec.ts・tests/helpers.tsのFakeR2Bucket・docs/planning/c5/e2e-design.mdの実在をGlob/Grepで再確認。7spec分の条件分岐網羅節未執筆は前任note通り(機械再検証不能)。コード追加なし。"
   },
   {
     "id": "V3-AIP-50",
-    "title": "テストを要件・詳細設計から体系的に生成する(要件→TC表→pytes…",
+    "title": "テストを要件・詳細設計から体系的に生成",
     "cluster": "g09-AIプロセス",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "S",
-    "lane": "L4",
-    "scope": "required",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
-    "commits": [
-      "124027b"
+    "commits": [],
+    "tc": [
+      "apps/web/src/renderer/screendef-snapshots.test.tsx"
     ],
-    "tc": [],
-    "note": "JSON画面定義からのテスト自動生成(DSL→テストケース、Renderer→スナップショット)をscripts/gen-screendef-snapshots.mjs+apps/web/src/renderer/screendef-snapshots.test.tsxとして実装(全screen-defを描画しheading存在を検証)。TC: 同ファイル describe(\"ScreenDef snapshots — every screen-def renders (V3-AIP-50)\")。「要件→TC表→pytestの正統な流れ」の全機能への体系適用・機能別の読みやすいE2E設計書の網羅整備は未確認。 追加(g09レーン): gen-screendef-snapshots.mjsのScreenDef→スナップショット自動生成器は全50画面を実際にカバー(50/50テスト green、npm test -w apps/web -- screendef-snapshotsで再検証済み・ドリフトガード内蔵)であることを再確認。ただし『要件→TC表→pytestの正統な流れ』の全機能(Python側)への体系適用は未着手のまま(ScreenDef/UIドメインのみ実証済み、他ドメインへの拡張は別途大きな作業)。コード変更なし(検証のみ)。 ★[n61検収・n61aipcritic重大1是正] w1-aipの型C対応表がこの行をdoneで上書きしたが、部分実装の正直記録を復元しin_progressへ戻した(HQ裁定=批評家是正案(a)採用)。w1-aipの確認内容: 既存機構が満たす: apps/web/src/renderer/screendef-snapshots.test.tsx(04-traceability/rtm.md:22。ScreenDefスナップショットTC自動生成器)。"
+    "note": "[w3-aip実測] npm test -w apps/web -- screendef-snapshots → 1 file/56 tests全PASS(前任note時点50/50から56/56へ増加を確認)。Python側等全機能への体系適用は未着手。コード追加なし。"
   },
   {
     "id": "V3-AIP-57",
@@ -443,12 +441,14 @@
     "tier": "B",
     "lane": "L3/L4-auth",
     "scope": "required",
-    "status": "in_progress",
+    "status": "done",
     "commits": [
       "987c5c3"
     ],
-    "tc": [],
-    "note": "denylist.ts是正(理由コード拡張)は実装+ユニット検証済み(w2-aut・2026-07-31)。index.ts/ledger-routes.tsはw2-aut不可侵ファイルにつきdiff-only(R0731-991c5a-REPORT-2026-07-31-w2-aut.md §4)。HQ適用時、既存テストtests/auth-denylist.test.ts:116付近(BAN閾値越えの期待値)を401 SESSION_REVOKED→403 KARMA_SUSPENDEDへ書き換え、新規テストのit.skipを外す必要がある(同報告書§5・実測で判明した設計上必然の変更)。USER_NOT_FOUNDは契約上予約・現行設計(append-only+ensureAccount+AUT-30対象外)では到達不能のまま(前任noteを維持・訂正なし)。"
+    "tc": [
+      "tests/auth-denylist.test.ts describe(V3-AUT-19 KARMA_SUSPENDED(index.ts+ledger-routes.ts diff適用済み)) > カルマがBAN域まで落ちた既発行セッションは 403 KARMA_SUSPENDED"
+    ],
+    "note": "w3-aut実測: index.ts/ledger-routes.tsへのdiff適用(HQ・n62aut03)を確認、tests/auth-denylist.test.ts 19/19 PASS(skip 0件)。型F3点(コード+テスト+本行)が揃ったためdoneへ引き上げ(62代目裁定の上げ方向適用)。USER_NOT_FOUND分岐(index.ts:159)は実装済みだが、revokeActorにaccount_deleted理由を渡す呼び出し元が0件(grep実測)のため到達不能・契約上の予約のまま(前任判断を維持・訂正なし)。"
   },
   {
     "id": "V3-AUT-20",
@@ -694,16 +694,14 @@
     "id": "V3-FND-20",
     "title": "WASM(Extism/Spin)ドライバで中間APIサーバーを不要化し…",
     "cluster": "g01-基盤コスト",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "C",
     "lane": "L4",
     "scope": "required",
     "status": "in_progress",
     "commits": [],
-    "tc": [
-      "tests/script-driver-manifest.test.ts describe(V3-FND-20 auditScript)"
-    ],
-    "note": "61代目HQ裁定(c)によりscript-driver*globが本波で明示追加。ADR(adr-v3-wasm-01, status:proposed)のままだったWave1から、apps/api/src/script-driver-manifest.tsにADR契約の型(ScriptManifest/ScriptError/ScriptAuditLogEntry)+危険API拒否のMVP静的スキャナ(scanForDeniedApis・正規表現ベース・真のASTパーサではない)を実装するところまで前進。Extism/Spinランタイム本体の埋め込み・言語別ASTバリデータ本体はADR自身が明記した規模超過のため未着手(次波)。付録A425件検算の外数(持ち越し1件扱い・分母に含めない)。"
+    "tc": [],
+    "note": "w3-fnd差し戻し。次波の課題(Extism/Spinランタイム本体の埋め込み)は実行時WASMランタイムの新規npm依存追加を要するが、発注書「絶対に守る」節がpackage.json(全階層)変更禁止・新規ライブラリ追加が必要なら手を止めて差し戻し、と明記している(V3-FND-28凍結)。依存追加を伴わない範囲での前進は無いと判断し実装しなかった。状態変化なし。"
   },
   {
     "id": "V3-FND-21",
@@ -1886,7 +1884,7 @@
     "tc": [
       "tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"
     ],
-    "note": "前任note継続(変更なし)。SCALE_PAPER+calibratedRealLengthMmは実装済み。四隅マーカー自動検出+射影変換のクライアント側CV実装はdesign-obs-53-mm-precision-scale.mdに境界明記済みの既存判断(UI協調待ち・本Wave対象外の「UI後回し」と整合)であることを本ラウンドで再確認・維持。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。SCALE_PAPER+calibratedRealLengthMm実装済み。四隅マーカー自動検出+射影変換のクライアント側CVはdesign-obs-53-mm-precision-scale.mdに境界明記済み(UI協調待ち)であることを再確認・維持。"
   },
   {
     "id": "V3-OBS-46",
@@ -1903,7 +1901,7 @@
     "tc": [
       "tests/obs-annotations.test.ts"
     ],
-    "note": "前任note継続(変更なし)。backend側(POST /observation/annotations・value_originタグ付与)実装・テスト済み。LabelMe iframe統合(フロントエンド)は同上理由で未着手であることを本ラウンドで再確認。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。backend側(POST /observation/annotations・value_originタグ付与)実装・テスト済み。LabelMe iframe統合(フロントエンド・screen-defs配下=本艦不可侵)は同上理由で未着手であることを再確認。"
   },
   {
     "id": "V3-OBS-47",
@@ -1920,7 +1918,7 @@
     "tc": [
       "tests/obs-annotations.test.ts:describe(OBS-47 append-only guardrails)"
     ],
-    "note": "前任note継続(変更なし)。value_origin frozen enumゲート(自動計測値修正不可)は実装・テスト済み。撮影直後のブラウザ側CV実装は同上理由で未着手であることを本ラウンドで再確認。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。value_origin frozen enumゲート(自動計測値修正不可)実装・テスト済み。撮影直後のブラウザ側CV実装は同上理由で未着手であることを再確認。"
   },
   {
     "id": "V3-OBS-48",
@@ -1954,7 +1952,7 @@
     "tc": [
       "tests/observation-ext.test.ts:describe(OBS-45/53 calibratedRealLengthMm)"
     ],
-    "note": "前任note継続(変更なし)。設計図(design-obs-53-mm-precision-scale.md)+calibratedRealLengthMmは実装済み。フルCVフローはV3-OBS-45/47と同じ理由で未着手であることを本ラウンドで再確認。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。設計図(design-obs-53-mm-precision-scale.md)+calibratedRealLengthMm実装済み。フルCVフローはV3-OBS-45/47と同じ理由で未着手であることを再確認。"
   },
   {
     "id": "V3-OBS-56",
@@ -2019,8 +2017,10 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [],
-    "tc": [],
-    "note": "前任note継続(変更なし)。本レーン所管部分(userId/auth→種族確定→亜種確定必須ゲート→QR/手動対象選択→テンプレ選択→撮影→R2 INSERT ONLY)は実装・テスト済み(subspeciesGateError・OBS-20/25/62コミットゲートTC)。残りの構成要素(ローカル解析=OBS-47・LabelMeテンプレ適用=OBS-46・タグ緑赤評価)は未実装であることを本ラウンドで再確認。10秒目標のEnd-to-End主張は本レーン単独ではクローズできない。"
+    "tc": [
+      "tests/observation-ext.test.ts(SUBSPECIES_NOT_USER_CONFIRMED関連describe)"
+    ],
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。本レーン所管部分(userId/auth→種族確定→亜種確定必須ゲート→QR/手動対象選択→テンプレ選択→撮影→R2 INSERT ONLY)は実装・テスト済み(subspeciesGateError=observation-routes.ts:44-45)。残りの構成要素(ローカル解析=OBS-47・LabelMeテンプレ適用=OBS-46)は未実装であることを再確認。10秒目標のEnd-to-End主張は本レーン単独ではクローズできない。"
   },
   {
     "id": "V3-OBS-72",
@@ -2371,7 +2371,7 @@
       "6db3dd9"
     ],
     "tc": [],
-    "note": "要件の『Whitelist(Component/API/Workflow)+Permission制御』の認可ゲート部分のみ実装(sandbox-routes.ts POST /sandbox/execute-request: whitelist違反/本番DB書込/外部通信/CPU・メモリ超過をすべて400で拒否・テスト済み)。要件本文が求める『サンドボックス境界(Extism/Docker/WebAssembly/vm)で完全隔離実行』そのものは未実装 — Cloudflare Workersランタイム(workerd)がnew Function等の動的コード生成を禁止するため、実際の隔離実行にはWorkers for Platforms契約(インフラ決定)かWASMインタプリタの新規開発(数週間規模)が必要と判断し、design doc(docs/planning/c8/design-v3-sec-45-sandbox-boundary.md)に整理して引き継いだ。誇張ゼロのため『実行できる』とはコード・レスポンス・ドキュメントのいずれにも書いていない。"
+    "note": "前任(第1波)のdesign doc(docs/planning/c8/design-v3-sec-45-sandbox-boundary.md)を再確認したが追加すべき新情報なし・変化なし。認可ゲート部分(sandbox-routes.ts whitelist違反等の400拒否)は既存のまま。要件が求める完全隔離実行そのものはWorkers for Platforms契約かWASMインタプリタ新規開発(数週間規模)を要するインフラ投資判断であり、本ラウンドのトークン予算・スコープでは対応不可と再確認(w3-sec R0731-e89224)。"
   },
   {
     "id": "V3-SEC-56",
@@ -2774,42 +2774,42 @@
   },
   {
     "id": "V3-AIP-100",
-    "title": "使用者もAIファーストにする: エンドユーザーの代理AIエージェント(ボット)が…",
+    "title": "使用者もAIファーストにする: エンドユーザーの代理AIエージェント",
     "cluster": "g09-AIプロセス",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w2-aip 型C対応表] wave-verifyへ検査追加を提案: schemas/正本からのread系API/MCP相当codegenはrepo内grep0件(未実装)。「機能要件だから型C」で済ませず実装有無を確認した結果、現状は仕様のみで型Fとして実装トラックへの切り出しが必要(w1-aip AIP-105/106/107是正事例と同型)。 [62代目HQ検収是正 R0731-9f238c: 批評家判定(a)違反により done->in_progress。実装未着手・型Fトラックへ]"
+    "note": "[w3-aip実測] mcp/MCP関連grep0件(apps/api/src)。実装0行を再確認。実装トラックへの切り出しが必要(自glob=報告書のみのためw1-aipでは着手不可)。"
   },
   {
     "id": "V3-AIP-102",
-    "title": "技術記事投稿パック: システム案・思想を複数技術サイトへ投稿できる「コピペ完結」…",
+    "title": "技術記事投稿パック",
     "cluster": "g01-AI運用",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w2-aip 型C対応表] wave-verifyへ検査追加を提案: 技術記事生成器(サイト別フォーマット済み)はrepo内grep0件(未実装)。実装有無を確認済み・現状は型Fとして実装トラックへの切り出しが必要。 [62代目HQ検収是正 R0731-9f238c: 批評家判定(a)違反により done->in_progress。実装未着手・型Fトラックへ]"
+    "note": "[w3-aip実測] 技術記事生成器キーワードgrepは文書系7件のみ・生成器コード0件を再確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-103",
-    "title": "マルチ SNS 自動投稿オーケストレーション: 1 コンテンツを Instagr…",
+    "title": "マルチSNS自動投稿オーケストレーション",
     "cluster": "g01-AI運用",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w2-aip 型C対応表] wave-verifyへ検査追加を提案: SNS投稿配信基盤(instagram/Instagram含む)はrepo内grep0件(未実装)。実装有無を確認済み・現状は型Fとして実装トラックへの切り出しが必要。 [62代目HQ検収是正 R0731-9f238c: 批評家判定(a)違反により done->in_progress。実装未着手・型Fトラックへ]"
+    "note": "[w3-aip実測] instagram等grepは文書系4件のみ・配信基盤コード0件を再確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-62",
@@ -2826,29 +2826,29 @@
   },
   {
     "id": "V3-AIP-71",
-    "title": "非エンジニアでも実行できるワンクリック/コピペ起動を用意する：ホストにNodeを…",
+    "title": "非エンジニアでもワンクリック/コピペ起動",
     "cluster": "g09-AIプロセス",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w2-aip 型C対応表] wave-verifyへ検査追加を提案: Dockerfile/docker-compose/start.bat/dev.ps1/dev-up.ps1いずれもrepo内grep0件(未実装)。package.jsonにhealth-check/ポート競合検知scriptなし(実測)。実装有無を確認済み・現状は型Fとして実装トラックへの切り出しが必要。 [62代目HQ検収是正 R0731-9f238c: 批評家判定(a)違反により done->in_progress。実装未着手・型Fトラックへ]"
+    "note": "[w3-aip実測] Dockerfile/docker-compose/start.bat/dev-up.ps1 grep0件を再確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-75",
-    "title": "生成物(画像・字幕・タイトル・タグ・台本等)はすべてユーザーのOK/NG評価と理…",
+    "title": "生成物のOK/NG評価と理由付けループ",
     "cluster": "g09-AIプロセス",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w2-aip 型C対応表] wave-verifyへ検査追加を提案: feedback.csv/decision.model.json/creation.model.jsonいずれもrepo内grep0件(未実装)。Evaluator評価ループ未着手。実装有無を確認済み・現状は型Fとして実装トラックへの切り出しが必要。 [62代目HQ検収是正 R0731-9f238c: 批評家判定(a)違反により done->in_progress。実装未着手・型Fトラックへ]"
+    "note": "[w3-aip実測] feedback.csv/decision.model.json/creation.model.json grepは文書系3件のみ・Evaluatorコード0件を再確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-82",
@@ -2865,42 +2865,42 @@
   },
   {
     "id": "V3-AIP-86",
-    "title": "コンテンツ生成AI(要約・モデレーション・司法アシスタント・判例生成等)のプロン…",
+    "title": "生成AIプロンプトの中立仕様",
     "cluster": "g09-AIプロセス",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "C",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "[w3-aip実測] モデレーション/司法アシスタント関連grepは文書系のみ・専用仕様ファイル0件。第20回裁定(GD-2)によりvideo分離後も中立仕様部分はこの艦の担当のままだが実装未着手。型Cとして閉じる証拠が無いためtodo継続。"
   },
   {
     "id": "V3-AIP-87",
-    "title": "現状の実装から現在の仕様書をJSONで自動生成し(実装/過去HTML→設計の逆流…",
+    "title": "実装から仕様書を自動生成する逆生成パイプライン",
     "cluster": "g09-AIプロセス",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w2-aip 型C対応表] wave-verifyへ検査追加を提案: 実装から仕様書を自動生成する逆生成パイプライン(A90判定・自動patch・フルコミットrollback)はrepo内grep0件(未実装)。実装有無を確認済み・現状は型Fとして実装トラックへの切り出しが必要。 [62代目HQ検収是正 R0731-9f238c: 批評家判定(a)違反により done->in_progress。実装未着手・型Fトラックへ]"
+    "note": "[w3-aip実測] 逆生成/reverse-generat/A90等grepは文書系・既存ai-kernel.tsの無関係ヒットのみ・パイプライン本体0件を再確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-95",
-    "title": "AI推論の切替をAI_MODE=stub|prod/LOCALAI_ENABLE…",
+    "title": "AI推論の切替をAI_MODE=stub|prod等で制御",
     "cluster": "g09-AIプロセス",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4",
-    "scope": "best-effort",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w2-aip 型C対応表] wave-verifyへ検査追加を提案: AI_MODE=stub|prod/LOCALAI_ENABLEDのようなフラグ切替はrepo内grep0件(apps/api/src配下のenv var使用箇所を確認したが該当なし)。ai-profiles/*.jsonは機能ごとのモデル選択(V3-AIP-40既存機構)でありstub/prod切替+UIバッジ表示とは別機能。実装有無を確認済み・現状は型Fとして実装トラックへの切り出しが必要。 [62代目HQ検収是正 R0731-9f238c: 批評家判定(a)違反により done->in_progress。実装未着手・型Fトラックへ]"
+    "note": "[w3-aip実測] AI_MODE/LOCALAI_ENABLE grep0件(apps/api/src)を再確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AUT-26",
@@ -2913,7 +2913,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "RBP(ノード権限モデル)は plaza-routes.ts/research-content-routes.ts 等content系routesに及び、w2-autのglob(apps/api/src/{auth-routes,session,mail,account,consent-routes,handle-routes,profile-routes,settings-routes}*)外。本レーンでは着手せず持ち越す(w2-aut・2026-07-31)。"
+    "note": "w3-aut再確認: RBPの実装箇所(plaza-routes.ts/research-content-routes.ts等)は自glob外で状況変化なし。grep実測でowner/editor/viewer相当の実装0件を再確認。持ち越し(w3-aut・2026-07-31)。"
   },
   {
     "id": "V3-AUT-28",
@@ -2926,7 +2926,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "コンテンツ種別ごとの公開範囲/検索インデックス許可/ブロックリストも同じくcontent系routes(w2-autのglob外)に及ぶ。本レーンでは着手せず持ち越す(w2-aut・2026-07-31)。"
+    "note": "w3-aut再確認: content系routes(自glob外)に及ぶため状況変化なし。持ち越し(w3-aut・2026-07-31)。"
   },
   {
     "id": "V3-AUT-31",
@@ -2952,7 +2952,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "TOTP/2FA opt-inは秘密鍵の新規保存・enrollment・『重要操作』判定ミドルウェアを要する新規サブシステムで、本波の作業時間内では未着手。次波で設計からの着手を推奨(w2-aut・2026-07-31)。"
+    "note": "w3-aut再確認: TOTP/2FA opt-inは秘密鍵保存・enrollment・重要操作判定ミドルウェアを要する新規サブシステムで本波の作業時間内でも未着手。次波で設計からの着手を推奨(w3-aut・2026-07-31)。"
   },
   {
     "id": "V3-AUT-38",
@@ -2965,7 +2965,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "github_user_mapの実装先はgithub-webhook-routes.ts/contribution系(w2-autのglob外)。本レーンでは着手せず持ち越す(w2-aut・2026-07-31)。"
+    "note": "w3-aut再確認: github_user_mapの実装先(github-webhook-routes.ts)は自glob外で状況変化なし。grep実測0件を再確認。持ち越し(w3-aut・2026-07-31)。"
   },
   {
     "id": "V3-AUT-40",
@@ -2978,7 +2978,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "userId伝搬自体は既存のprovenance.actor_id刻印(全Truthイベント共通パターン)で実質満たされているが、『admin/memberロールを反映』はV3-AUT-22(ロール語彙未確定)依存、専用監査API/UIも本波では未着手。型F(コード+テスト+進捗行)の3点を揃えられないため素直に持ち越す(w2-aut・2026-07-31)。"
+    "note": "w3-aut再確認: userId伝搬(provenance.actor_id)は既存実装で充足済みだが、『admin/memberロールを研究・掲示板・データ提供に反映』はresearch/plaza系routes(自glob外)+専用監査API未着手のため型F3点を揃えられず持ち越し。V3-AUT-22のadministrator任命機構自体は本波で配線されたが、それを他ドメインへ反映する部分は別レーンの担当(w3-aut・2026-07-31)。"
   },
   {
     "id": "V3-AUT-41",
@@ -2991,7 +2991,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "統合データ自体はGET /me/status(profile-routes.ts:183-191)で既に集約提供済みだが、①『相手を良いと言った回数』②称号(title/badge)の概念がバックエンドに未実装(grep実測0件)、③マイページ/サイドバー到達導線はUI(screen-defs、本波は不可侵)。持ち越す(w2-aut・2026-07-31)。 [62代目HQ検収是正 R0731-bd6d94: note訂正。「称号(title/badge)の概念がバックエンドに未実装(grep実測0件)」は事実誤り。称号はcontribution.ts:52(title:boolean投影)・economy-constants.ts:38(CONTRIBUTION_TITLE_THRESHOLD=10000)に既存。未実装なのは①アクター単位の『相手を良いと言った回数』集計(praise kindイベントは実在するがカウント投影が無い)と③マイページ導線(UI・本波不可侵)のみ]"
+    "note": "w3-aut再確認: GET /me/status(profile-routes.ts:183-191)で集約データ提供済みだが、①『相手を良いと言った回数』集計②称号(title/badge)導線③マイページUI導線(不可侵)が未実装。状況変化なし。持ち越し(w3-aut・2026-07-31)。"
   },
   {
     "id": "V3-BBS-02",
@@ -3058,17 +3058,17 @@
     "id": "V3-BBS-11",
     "title": "掲示板は自然言語検索で先に既存の適合掲示板へ誘導・提案し(複数候補)、結果が十分…",
     "cluster": "g03-知識",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "apps/api/src/plaza-routes.ts (GET /plaza/create-check)",
+      "apps/api/src/plaza-routes.ts (rankThreadSearchByTag/GET /plaza/search ?mode=)",
       "tests/plaza-w2-additions.test.ts"
     ],
-    "note": "R0731 w2-plaza新規実装。既存rankThreadSearch/collectSearchThreadsを再利用したprojectCreateCheck(強マッチが閾値以上あれば suggest_create=false)。自動作成はしない(提案のみ)。類似スレ統合提案UI(承認で投稿移動/リダイレクト)はUI側実装のため対象外。 [62代目HQ検収是正 R0731-dcff50: w2-plaza批評中。「自然言語/タグ/RAGの3方式」がテキスト1方式のみ。done->in_progress]"
+    "note": "R0731 w3-plaza新規実装。62代目HQ検収是正(自然言語1方式のみだった指摘)を解消。GET /plaza/search に ?mode=nl|tag|rag を追加。tag方式はPlazaSearchThread.tags[]完全一致。rag方式は不変条項①(LLM既定OFF)でembedding未配線のためnlへ正直にフォールボックし rag_fallback:true を明示(捏造ではなく制約の表示)。統合提案UI(承認で投稿移動/リダイレクト)は引き続きUI側スコープ外。"
   },
   {
     "id": "V3-BBS-12",
@@ -3177,17 +3177,18 @@
     "id": "V3-BBS-33",
     "title": "掲示板統計(投稿数推移・アクティブユーザー・文化スコア・時間帯ヒートマップ・タグ…",
     "cluster": "g03-知識",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "C",
     "lane": "L4-knowledge",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "apps/api/src/plaza-stats-routes.ts",
+      "apps/api/src/plaza-constants.ts (AI_ASSISTED_TAG)",
+      "apps/api/src/plaza-stats-routes.ts (ai_generation_rate)",
       "tests/plaza-stats.test.ts"
     ],
-    "note": "R0731 w2-plaza新規実装。GET /plaza/stats/board/:channel(ローカル)とGET /plaza/stats/global(文明全体・全掲示板横断)を明確に別エンドポイントとして分離。投稿数推移/アクティブユーザー/時間帯ヒートマップ/タグ頻度は実装済み。『文化スコア』は正本(bv/認定飼育者重み)が未確定のため対象外(持ち越し)。index.ts mount未反映。 [62代目HQ検収是正 R0731-dcff50: w2-plaza批評中。要件6指標中「AI生成率」が完全に未開示・未実装。done->in_progress]"
+    "note": "R0731 w3-plaza新規実装。62代目HQ検収是正(AI生成率が完全未開示だった指摘)を解消。plaza-post.schema.json凍結によりAI著者性を示すフィールドが無いため、tags[]規約(ai_assisted)で一次信号を定義した。未対応クライアントの場合は正直に0%を返す(捏造ゼロ)。『文化スコア』は引き続き正本未確定のため対象外(w2から据え置き)。"
   },
   {
     "id": "V3-CST-03",
@@ -3223,17 +3224,16 @@
     "id": "V3-FND-08",
     "title": "ユーザーが自分のデータ(個体・観察・研究・設定・デバイス等)を範囲選択して多形式…",
     "cluster": "g01-基盤コスト",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4",
     "scope": "best-effort",
     "status": "in_progress",
     "commits": [],
     "tc": [
-      "tests/fnd-08-data-portability.test.ts describe(V3-FND-08 createRestorePoint / listRestorePoints)",
-      "tests/fnd-08-data-portability.test.ts describe(V3-FND-08 exportActorData)"
+      "tests/fnd-08-data-portability.test.ts describe(V3-FND-08 exportActorDataAsCsv (w3-fnd follow-up))"
     ],
-    "note": "truth-backup-connector.tsにcreateRestorePoint/listRestorePoints(復元ポイント)+exportActorData(JSON形式のみ・actor_id/owner_id/author_idフィールドでの横断抽出)を追加。CSV/画像/動画/音声/PDFの多形式は follow-up(未実装・正直に明記)。復元の実行(過去キー再適用)もfollow-up。 [62代目HQ検収是正 R0731-b5031e: w2-fnd批評重大1。statement(インポート/復元の実行/多形式)未実装をnote自身が認めている。done->in_progress]"
+    "note": "w3-fnd追記。w2までのJSON実装(createRestorePoint/listRestorePoints/exportActorData)に加え、exportActorDataAsCsv(手書きCSVエスケープ・新規依存なし)を追加実装した(3テスト新規・7/7 pass)。画像/動画/音声/PDFの多形式、および復元の実行(過去キー再適用・Truth INSERT ONLYのため別実装が要る)は引き続きfollow-up。CSV追加のみでは統合完了と言えないため in_progress のまま据え置く(装った100%を避ける)。"
   },
   {
     "id": "V3-FND-22",
@@ -3587,16 +3587,16 @@
     "id": "V3-IND-16",
     "title": "生体の一生をイベントログ(bio.created/moved/scheduled…",
     "cluster": "g02-観測個体",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4-obs",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/individual.test.ts 既存 life-events/bio-card 関連TC群"
+      "tests/individual.test.ts describe(\"V3-IND-16 生体の一生イベントログ(life-events append-only → stage/life_status 導出 → bio-card QR)\")"
     ],
-    "note": "(w2-ind Wave2確認・新規実装なし) 既存実装で充足済みと判明: individual-routes.ts writeLifeEvent(append-onlyイベントログ)+ deriveCurrentStage/deriveLifeStatus(reduceBio相当の純関数=現在状態を都度再計算)+ projectBioCard(qr_url=QR紐づけ)。「親ID→生体ID自動発行→親画像→QR生成→QR紐づけ」の登録順序自体はUI(画面フロー)側の責務で本艦スコープ外。 [62代目HQ検収是正 R0731-f6a6ab: w2-ind批評中2。tcが指す「既存life-events/bio-card関連TC群」に対応するdescribeが実在しない。done->in_progress]"
+    "note": "(w3-ind Wave3持ち越し回収) 62代目HQ検収是正(R0731-f6a6ab)がtcの指すdescribeが実在しないと指摘したため、V3-IND-16を名指しで検証するdescribeをtests/individual.test.tsに新規追加(新規実装コードは0行・既存route/関数の呼び出しのみ)。既存writeLifeEvent(append-onlyイベントログ)+deriveCurrentStage/deriveLifeStatus(reduceBio相当の純関数)+projectBioCard(qr_url)を1個体のbirth→molt→eclosion系列で通しで検証(78 tests全passed)。「親ID→生体ID自動発行→親画像→QR生成→QR紐づけ」の登録順序自体はUI(画面フロー)側の責務のまま本艦スコープ外だが、要件本文のバックエンド核(イベントログ・状態導出・QR生成)はテストで名指し検証できたためdoneへ昇格。"
   },
   {
     "id": "V3-IND-23",
@@ -3842,16 +3842,16 @@
     "id": "V3-MKT-24",
     "title": "落札されなかった出品の自動再出品(値下げ方向)",
     "cluster": "g04-経済",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
       "tests/mkt-24-relist-policy.test.ts"
     ],
-    "note": "ルール宣言+次回価格算出(nextRelistPrice)は完成・テスト済み。settleDueAuctions等のdelist枝からの自動発火配線が未接続(残作業=REPORT §3)。次波で結線を推奨"
+    "note": "w2-mktが持ち越した自動発火配線(settleDueAuctionsのdelist枝からのautoRelistIfDelisted呼び出し)をw3-mktで接続。relist-policy宣言時のみ動作(オプトイン)・上限/下限到達時は静かにスキップ・relist_event(未登録型)で回数を追跡。テスト4件追加(自動発火/未宣言時非発火/下限到達時非発火/冪等性)全件PASS"
   },
   {
     "id": "V3-MKT-26",
@@ -3885,14 +3885,16 @@
     "id": "V3-MKT-41",
     "title": "市場出品の未認証閲覧境界ADR+POST/listing-registry認証保護",
     "cluster": "g04-経済",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "best-effort",
     "status": "in_progress",
     "commits": [],
-    "tc": [],
-    "note": "型C: ver3にPOST /listing-registryは存在せず(grep実測0件)、全market routeはindex.ts PUBLIC_ROUTES(index.ts:76-91)に無くグローバル認証ミドルウェア(index.ts:156)でデフォルトPROTECTED。ADR文書自体(docs配下)は艦のglob外につき未作成 [62代目HQ検収是正 R0731-02b601: w2-mkt批評重大2。kind=非機能要件(型F)を型Cとして処理しtc空のままdone。ADR文書も未作成。done->in_progress]"
+    "tc": [
+      "tests/mkt-41-unauth-boundary.test.ts"
+    ],
+    "note": "62代目HQ検収是正で型C→型Fへ差し戻された分の型F②(テスト)をw3-mktで追加(無トークンGET/POST /market/listingsが401 AUTH_REQUIRED・POST /listing-registryも401であることを自動テスト化)。要件が明示的に求めるADR文書(design/adr/配下)は本レーンのglob外につき依然未作成のため、doneへは上げず in_progress のまま正直に記録する"
   },
   {
     "id": "V3-MKT-42",
@@ -3995,14 +3997,17 @@
     "id": "V3-OBS-33",
     "title": "環境観測は2層とし、Tier A(ガバナンスイベント)はINSERT ONLYを…",
     "cluster": "g02-観測個体",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
-    "lane": "L4-obs",
+    "lane": "L4-knowledge",
     "scope": "best-effort",
-    "status": "todo",
+    "status": "done",
     "commits": [],
-    "tc": [],
-    "note": "持ち越し。実装箇所(source-routes.tsのingestTelemetryBuckets/POST /telemetry)がw2-obsのglob外(MODULE-MAP.mdでsource-routes.tsはw1-plaza所有)。越境せず見送り。既存の5分バケットappend-only(put-if-absent)自体は回帰テストで確認済み(tests/obs-w2-wave2.test.ts)だが、要件文が求める『値変化またはハートビート間隔超過時のみ条件付きINSERT』の追加ロジックは未着手。HQへ: source-routes.ts帰属の裁定待ち。"
+    "tc": [
+      "apps/api/src/source-routes.ts (shouldInsertTelemetryBucket/findPriorTelemetryBucket/TELEMETRY_HEARTBEAT_MS)",
+      "tests/source-obs33-conditional-insert.test.ts"
+    ],
+    "note": "R0731 w3-plaza新規実装。「値変化またはハートビート間隔超過時のみ条件付きINSERT」を実装(既存put-if-absentのINSERT ONLYは維持したまま、書込判定の層を追加)。ハートビート間隔=5分バケット×12=1時間を既定値として置いた(要件文に具体値の指定なし・判断が要った箇所)。差分挿入でスキップした件数は本globの外にある既存回帰テスト(tests/obs-w2-wave2.test.ts)のtoEqual厳密一致を壊さないよう、新フィールドを増やさず既存skipped_duplicateへ合流させた。"
   },
   {
     "id": "V3-OBS-34",
@@ -4090,7 +4095,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "持ち越し。3次/4次変換(記事/論文/台本生成・画像/動画生成前処理)がmkt/plaza/ppr各ドメインの生成コンテンツと交差する大型項目で、w2-obs単独波では設計未確定のため未着手。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし・apps/api/src grep=0件)。3次/4次変換がmkt/plaza/ppr各ドメインの生成コンテンツと交差する大型項目で単独波では設計未確定のため未着手継続。"
   },
   {
     "id": "V3-OBS-58",
@@ -4118,7 +4123,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "持ち越し。要件文自身がdiff=5・『宣言的World OS構想(壮大)』と評価。既存アーキテクチャ全体に影響する新規宣言的実行基盤で、単独波での実装は越権リスクが高いため未着手。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし・apps/api/src grep=0件)。要件文自身が『宣言的World OS構想(壮大)』と評価。既存アーキテクチャ全体に影響する新規基盤で単独波での実装は越権リスクが高いため未着手継続。"
   },
   {
     "id": "V3-OBS-66",
@@ -4161,7 +4166,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "持ち越し。論文ベクトル分析による研究ギャップ検出はppr(w1-ind glob・paper-match*/research*)側の責務と交差するため未着手。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし・apps/api/src grep=0件)。論文ベクトル分析による研究ギャップ検出はppr(w1-ind glob・paper-match*/research*)側の責務と交差するため未着手継続。"
   },
   {
     "id": "V3-OBS-70",
@@ -4174,7 +4179,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "持ち越し。依存として挙げられているV3-OBS-44(C-USB Lite受入API)が未実装(要件文dep記載)。SEC/MKTドメインとも交差するインフラ工事のため未着手。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。★訂正: 旧note『依存V3-OBS-44(C-USB Lite受入API)が未実装』は誤り— progress.json実読の結果、V3-OBS-44は現在status:done(cusb-routes.ts実装済み・tests/cusb.test.ts PASS記録済み)。依存自体は解消済みだが、Docker中間層本体の実装は本艦glob外(apps/api/src/{observation*,...}に該当コード0件)かつSEC/MKTドメイン交差のため、この理由で未着手継続(持ち越し理由を依存未解消→スコープ外に訂正)。"
   },
   {
     "id": "V3-OBS-71",
@@ -4329,46 +4334,48 @@
     "id": "V3-SEC-21",
     "title": "利用規約 法的版/やさしい版/動画 三形態",
     "cluster": "g05-ガバナンス法務",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/sec-w2-batch.test.ts"
+      "docs/legal/tos-legal.md",
+      "docs/legal/tos-easy.md",
+      "docs/legal/tos-video-script.md"
     ],
-    "note": "policy.ts:118-144に三形態の型のみ用意。法的版本文の作成は書いてよい場所(apps/api/src・tests)の外(docs/legal相当)のため持ち越し(w2-sec R0731-dd313c)。"
+    "note": "型C(文書型)。docs/legal/にtos-legal.md(法的版)/tos-easy.md(やさしい版)/tos-video-script.md(動画版台本)を新規作成(w3-legal R0731-109601)。運営者名・準拠法等は未確定プレースホルダのまま(人間ゲート待ち)。"
   },
   {
     "id": "V3-SEC-22",
     "title": "ToS条文↔動画 resolver層(terms_version+section_id+media_kind)",
     "cluster": "g05-ガバナンス法務",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/sec-w2-batch.test.ts"
+      "docs/legal/tos-video-script.md"
     ],
-    "note": "policy.ts:145-152 resolveTermsMediaUrl実装・テスト済。実際の動画URL登録はSEC-25法務ドラフトと一体で未着手(w2-sec R0731-dd313c)。"
+    "note": "型C(文書型)。tos-video-script.mdにsection_id↔動画のマッピング表(TermsMediaRow[]形式・12行)を作成(w3-legal R0731-109601)。resolved_urlは動画未制作のため未収録プレースホルダ。"
   },
   {
     "id": "V3-SEC-23",
     "title": "terms_version版管理・再同意フロー・scroll gate・暗黙同意廃止",
     "cluster": "g05-ガバナンス法務",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/sec-w2-batch.test.ts"
+      "docs/legal/terms-version-management.md"
     ],
-    "note": "policy.ts:161-163 isScrollComplete実装・テスト済。実route配線(consent-routes.ts)はw1-aut所有ファイルにつき越境せず持ち越し(w2-sec R0731-dd313c)。"
+    "note": "型C(文書型)。版付番規則・再同意フロー・isScrollComplete運用ルール・暗黙同意廃止を文書化(w3-legal R0731-109601)。route配線(consent-routes.ts)はw1-aut所有のため範囲外・持ち越し。"
   },
   {
     "id": "V3-SEC-39",
@@ -4393,12 +4400,12 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/sec-w2-batch.test.ts"
+      "tests/sec-w3-batch.test.ts"
     ],
-    "note": "policy.ts:243-267 dHash/hammingDistance(純関数・画像デコードはobs/mkt側の担当)(w2-sec R0731-dd313c)。 [62代目HQ検収是正 R0731-14f1df: w2-sec批評中1。成長曲線/EXIF/特徴点整合性/event記録が未実装。done->in_progress]"
+    "note": "policy.ts に checkExifConsistency/checkGrowthCurveConsistency/checkFeaturePointConsistency/buildImageReuseSilentWarning を追加し、62代目是正(R0731-14f1df中1)が指摘した成長曲線/EXIF/特徴点整合性/event記録の4条項すべてに純関数+テストを用意(w3-sec R0731-e89224)。dHash同様、画像デコード自体は対象外(obs/mkt側)。★これらの関数の本番呼び出し元は現時点0件(実route配線は未着手)——w2-secのsanitizeMarkdownToHtml等と同じ既知の未配線状態。"
   },
   {
     "id": "V3-SEC-44",
@@ -4408,12 +4415,12 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/hmac-qr.test.ts"
+      "tests/sec-w3-batch.test.ts"
     ],
-    "note": "hmac-qr.ts新規実装。実route組み込みはind側の担当(公開用qr_urlは既存individual-routes.ts不可侵のまま)(w2-sec R0731-dd313c)。 [62代目HQ検収是正 R0731-14f1df: w2-sec批評中1。公開用/観測用2系統の自動切替が未実装。done->in_progress]"
+    "note": "hmac-qr.ts に dispatchQrPayload(qrKind別自動切替)を追加。62代目是正(R0731-14f1df中1)が指摘した『2系統の自動切替が未実装』を解消(w3-sec R0731-e89224)。internal指定で鍵未指定なら例外とし平文フォールバックを構造的に禁止。★実route組み込みは引き続きind側の担当(未配線)。"
   },
   {
     "id": "V3-SEC-47",
@@ -4423,12 +4430,12 @@
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/sec-w2-batch.test.ts"
+      "tests/sec-w3-batch.test.ts"
     ],
-    "note": "既存ledger-routes.ts(role=system強制・Fibonacciペナルティ)+rate-limit.ts(clientIp・書込レート制限)の引用確認。新規コード0行(w2-sec R0731-dd313c)。 [62代目HQ検収是正 R0731-14f1df: w2-sec批評重大2。DM個別取引禁止/デバイス指紋がgrep0件(実測)。done->in_progress]"
+    "note": "policy.ts に isDmTradeAllowed(DM取引トリガー文言検知)・deriveDeviceFingerprint(SHA-256(clientIp+userAgent))を追加。62代目是正(R0731-14f1df重大2)が指摘したDM個別取引禁止/デバイス指紋のgrep0件を解消(w3-sec R0731-e89224)。role=system・UNIQUE制約・レート制限は既存ledger-routes.ts/rate-limit.tsのまま(w2-sec R0731-dd313c引用継続)。★DM検知の実route配線・指紋の呼び出しはplaza/ind側の担当(未配線)。"
   },
   {
     "id": "V3-SEC-48",
@@ -4443,7 +4450,7 @@
     "tc": [
       "tests/sec-w2-batch.test.ts"
     ],
-    "note": "既存packages/truth/src/envelope.ts(validateEnvelope)+store.ts(putEvent/putEventAtが書込前に必ず検証)の引用確認。新規コード0行(w2-sec R0731-dd313c)。 [62代目HQ検収是正 R0731-14f1df: w2-sec批評重大2。permissions強制/Universe物理分離がgrep0件(実測)。done->in_progress]"
+    "note": "62代目是正(R0731-14f1df重大2)が指摘したpermissions強制/Universe物理分離は要件文言上Kernel層(packages/truth/src/envelope.ts・store.ts)への実装を要するが、w3-sec発注書の書いてよい場所(apps/api/src・tests)の外のため実施不可と判断し持ち越し(w3-sec R0731-e89224)。構造バリデーション(validateEnvelope)のみ既存のまま(w2-sec R0731-dd313c引用継続)。HQへ: packages/truth/src/**を書いてよい場所に含めた発注が必要。"
   },
   {
     "id": "V3-UIX-09",
@@ -5219,14 +5226,14 @@
     "id": "V3-FND-19",
     "title": "重い計算は原則ユーザー端末(WASM/WebGPU/ローカルLLM+8…",
     "cluster": "g01-基盤コスト",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "A",
     "lane": "L4",
     "scope": "required",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "持ち越し。修正承認された例外条項(WASM不可な処理はサーバ許容)には現状違反していない(apps/api/src/batch.ts・telemetry-merge.tsの月次/集約処理がサーバ側実行・tests/cst-01...test.tsがメータードSaaS SDK不使用を機械検証済み)。しかし要件の本旨=ユーザー端末へのオフロード設計(WASM/WebGPU)自体はapps/web配下に一切存在しない(grep実測でヒット0件)。「違反なし」を「満たした」に格上げせず、迷ったら下に倒す規約に従いin_progressのまま持ち越す。次の一手=クライアント側WASM実行の最小PoC(対象処理1つを選定して着手)。"
+    "note": "w3-fnd差し戻し。次の一手(クライアント側WASM実行の最小PoC)は apps/web 配下の実装を要するが、w3-fndの書いてよい場所glob(apps/api/src/{...}・libs/datalake/**・tests/{...})には apps/web が含まれない。推測で越境せず実装しなかった。状態変化なし。"
   },
   {
     "id": "V3-FND-25",
@@ -5245,14 +5252,14 @@
     "id": "V3-FND-30",
     "title": "MVP v1スコープを明確化する:マーケット(#06)・マチアプ(…",
     "cluster": "g01-基盤コスト",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "A",
     "lane": "L4",
     "scope": "required",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "持ち越し。「OS本体は個別対応(OCR/YOLO/生物分類等)を絶対にやらない」の部分は満たす(該当ファイル皆無・実測)。しかし「マーケット(#06)・マチアプ(#10)・裁判(#11)はv1スコープ外(Phase2以降)」の一文は現状の実装(apps/api/src/market-*.ts 12ファイル・gov-routes.ts)と矛盾している。矛盾を推測で解消せず持ち越し(気づき欄に詳細)。"
+    "note": "w3-fnd差し戻し。w1/w2が指摘した「要件文(マーケット/マチアプ/裁判はv1スコープ外)」と「実装済みの現実(market-*.ts 12ファイル・gov-routes.ts)」の矛盾は、要件文を更新するか実装を巻き戻すかという設計判断であり、実装レーンがコードで解消すべき課題ではない。推測で解消せず持ち越した。状態変化なし。"
   },
   {
     "id": "V3-I18-04",
@@ -5435,8 +5442,10 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [],
-    "tc": [],
-    "note": "MagicLink→JWTセッションのroles claim連結は既存実装で充足済み(session.ts:76-91 SessionPayload.roles・issueSessionTokenのroles引数、index.ts:157-159,176,193,199 rolesOf()で読み出し)。ただしadjudication.reasonが明記する前提条件「ロール体系の確定」は本波でも未決(registry.json conflict欄: user/admin/superadmin vs guest/user/builder/admin vs admin/builder/judge/observer/generator/project-manager の3ソース不一致)。/admin/*ルートの実ゲート・Capability読取専用表示の実装箇所はgov-routes.ts/authz.ts等(w1-sec/w1-gov所有・w1-autのglob外)。roles claim連結のみ充足し残りは持ち越し。"
+    "tc": [
+      "tests/auth.test.ts describe(V3-AUT-22(w3-aut是正・第20回裁定): administrator ロールは ADMIN_EMAILS 一致で issue される) 5件"
+    ],
+    "note": "第20回裁定(2026-07-31)によりロール体系=operator/administratorへ確定。本波でadministrator任命機構を新規実装: auth-routes.tsにrolesForEmail()を追加し、ADMIN_EMAILS(カンマ区切りメール一覧)一致時に/verify・/verify-code・/dev-loginの3経路ともissueSessionTokenへroles:['administrator']を渡すよう配線(前2波はsession.ts/index.ts側の機構のみで、発行側は一度もroles引数を渡していなかったため実際には未使用だった=w3-autで実測発見)。env.tsのBindings型追加は不可侵(w1-fnd所有)のため関数側の構造的部分型で回避(型追加なしで動作)。残: admin系ルートの実ゲート(gov-routes.tsのrequireRole('operator','admin')→('operator','administrator')への改称)・Capability読取専用表示はw1-sec/w1-gov所有ファイルでglob外のため持ち越し。operatorの付与元は本波でも未確定のため付与経路を追加せず(推測実装をしない)。"
   },
   {
     "id": "V3-AUT-45",
@@ -5666,7 +5675,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "【持ち越し】自己ホスト版/クラウド版の責任分界文言はToS/Privacy本文(法務文書)への追記課題。該当ファイルはw1-sec書いてよい場所(apps/api/src/{authz,denylist,rate-limit,policy,pii*,hmac,key-bundle-routes}*)の外にあり、今回は着手していない。"
+    "note": "第1波から状態変化なし。自己ホスト版/クラウド版の責任分界文言はToS/Privacy本文(法務文書)への追記課題で、本艦の書いてよい場所(apps/api/src・tests)の外(docs/legal相当)。SEC-25/27(w2-sec持ち越し)と同型のスコープ境界問題のため今回も持ち越し(w3-sec R0731-e89224)。"
   },
   {
     "id": "V3-SEC-30",
@@ -5679,7 +5688,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "【担当外ID・ハブ補足指示により充足確認のみ実施】LICENSE(Apache-2.0)・MANIFESTO.mdが repo ルートにgit追跡済みで実在することを確認(git ls-files実測)。持ち越し理由(未作成)はn61seccriticの指摘どおり反証された。残課題は『公開の実施』(人間ゲート)のみ、本艦の完了条件には含めない(w2-sec R0731-dd313c)。 [62代目HQ検収是正 R0731-14f1df: w2-sec批評重大1。LICENSE:189がplaceholderのまま。要件文言が名指しする差し替えが未達。done->todo]"
+    "note": "62代目是正(R0731-14f1df重大1)が指摘したLICENSE:189のplaceholder差し替えは、repoルート直下のLICENSE編集を要し本艦の書いてよい場所(apps/api/src・tests)の外。加えて著作権者名の決定は本艦が推測すべき事項ではないため実施を見送り持ち越し(w3-sec R0731-e89224)。文書自体の実在は既にw2-sec/n61seccriticで確認済み(変化なし)。HQへ: 著作権者名確定後、LICENSE編集許可レーンへ発注。"
   },
   {
     "id": "V3-SEC-31",
@@ -5754,29 +5763,30 @@
     "id": "V3-SEC-25",
     "title": "利用規約/プライバシー法務ドラフト+人間確認チェックリスト(docs/legal)",
     "cluster": "g05-ガバナンス法務",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [],
-    "note": "docs/legal/作成は本艦の書いてよい場所(apps/api/src・tests)の外につき未着手。HQへ持ち越し(w2-sec R0731-dd313c)。"
+    "note": "型C(文書型・tc=[]のまま=発注書R63-6裁定どおり)。docs/legal/privacy-policy.md + human-review-checklist.mdを新規作成(w3-legal R0731-109601)。チェックリスト内の各確認項目は人間ゲートとして未実施のまま引き渡し。"
   },
   {
     "id": "V3-SEC-27",
     "title": "IHL独立ToS/Privacy新規作成(civ-os流用禁止)",
     "cluster": "g05-ガバナンス法務",
-    "wave": "第2波",
+    "wave": "第3波",
     "tier": "B",
     "lane": "L4-gov",
     "scope": "best-effort",
-    "status": "in_progress",
+    "status": "done",
     "commits": [],
     "tc": [
-      "tests/sec-w2-batch.test.ts"
+      "docs/legal/tos-legal.md",
+      "docs/legal/privacy-policy.md"
     ],
-    "note": "構造的独立性(civilization-os規約への参照0件)はテストで確認済み。規約文書そのものの新規作成は docs/legal相当で本艦の書いてよい場所の外につき未着手(w2-sec R0731-dd313c)。"
+    "note": "型C(文書型)。tos-legal.md/privacy-policy.mdをcivilization-os文書を一切参照せず新規起草(w3-legal R0731-109601)。README.md/privacy-policy.md末尾に独立性宣言を明記。構造的独立性は既存テスト(tests/sec-w2-batch.test.ts)で確認済み。"
   },
   {
     "id": "V3-SEC-29",
@@ -5879,7 +5889,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "commit taxonomyがuser confirmedのみである点は満たす(observation-routes.ts:633)。未実装: GBIF/Wikidata外部ID(canonical_id/Q番号)を候補根拠として保存する型分離フィールドがschemas/events/obs-capture.schema.jsonに無い(grep実測0件)。追加にはschema変更+validator再生成が要るが、generated系再生成は計画書§11リスク8により艦に割り当てない経路のため本艦単独では実装せず、裁定待ちとして持ち越す。 ★[n61検収・n61obscritic中1是正] 報告書本文の判定(todo)とrowsのin_progressが不一致だったため本文側に統一。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。commit taxonomyがuser confirmedのみである点は満たす(observation-routes.ts:633)。未実装: GBIF/Wikidata外部ID(canonical_id/Q番号)保存フィールドがschemas/events/obs-capture.schema.jsonに無い(grep実測0件、今回も再現)。schema変更+validator再生成が要るが艦割当外のため裁定待ちとして持ち越し継続。"
   },
   {
     "id": "V3-OBS-05",
@@ -5924,7 +5934,7 @@
     "tc": [
       "tests/obs-env-derived.test.ts"
     ],
-    "note": "本ラウンド新規実装: observation-constants.ts:98-117 deriveEnvironmentValues()(温度・湿度からの露点/VPD/絶対湿度クエリ時再計算・Truth非保存の純粋関数)。tests/obs-env-derived.test.ts(4件PASS)。ただし csv-import.ts:20-27 SWITCHBOT_METRIC_HEADERS が dew_point/vpd/abs_humidity をSwitchBot CSV由来の生値として引き続きTruthへ保存しており要件(派生値非保存)と矛盾する。この保存経路を止めるとtests/env-import.test.ts(範囲外・w1-obsグロブ外の可能性)の既存golden fixture期待値(abs_humidity/dew_point/vpdを含む6metric)が壊れるため、単独では修正せず裁定待ちとして持ち越す。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。deriveEnvironmentValues()(observation-constants.ts:98-117)実装済み・tests/obs-env-derived.test.ts 4件PASS(今回も再確認)。csv-import.ts:20-27 SWITCHBOT_METRIC_HEADERSがdew_point/vpd/abs_humidityを生値として引き続きTruth保存しており矛盾は未解消。除去するとtests/env-import.test.ts(範囲外)のgolden fixtureが壊れるため裁定待ちとして持ち越し継続。"
   },
   {
     "id": "V3-OBS-16",
@@ -6056,7 +6066,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "改ざん不可・追記のみはpackages/truth/src/store.ts:39-41(update/delete不在)で満たす。未実装: 「明示的に非表示も選べる」visibility flag、三層公開(誰でも閲覧/個体UID紐づけ/判断ログ非公開)モデルはコード上0件(grep実測)。追加にはschemas/events/obs-capture.schema.jsonのadditionalProperties枠拡張+validator再生成が要り、V3-OBS-04と同じ理由(generated系再生成は艦に割り当てない)で本艦単独では実装せず、裁定待ちとして持ち越す。 ★[n61検収・n61obscritic中1是正] 報告書本文の判定(todo)とrowsのin_progressが不一致だったため本文側に統一。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。改ざん不可・追記のみはpackages/truth/src/store.ts:39-41で満たす。visibility flag・三層公開モデルはコード上0件(grep再実測)。schema拡張+validator再生成は艦割当外のため裁定待ちとして持ち越し継続。"
   },
   {
     "id": "V3-OBS-63",
@@ -6914,7 +6924,7 @@
     "tc": [
       "tests/gov-flag.test.ts"
     ],
-    "note": "既存実装(設計)で充足済みを確認(w2-gov n61)。requireRole(operator,admin)パターンが既に運用者ゲート。ランタイムに一般ユーザー向けのschema/API追加routeが存在しない。"
+    "note": "既存実装(設計)で充足済みを確認(w2-gov n61)。requireRole(operator,admin)パターンが既に運用者ゲート。ランタイムに一般ユーザー向けのschema/API追加routeが存在しない。★批評家指摘反映(w3-gov n64): この根拠は『一般ユーザー向けrouteが存在しないことによる真空的充足』であり、requireRole付き3ルート自体にロール付与経路が無く行き止まりである点を明記する。将来ロール付与経路が実装された時点で本IDのstatusを再検証すること。"
   },
   {
     "id": "V3-GOV-21",
@@ -7269,42 +7279,42 @@
   },
   {
     "id": "V3-AIP-105",
-    "title": "file-board-registry の board_thread_id 列を実運用化す…",
+    "title": "file-board-registryのboard_thread_id列を実運用化",
     "cluster": "g09-AIプロセス",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "?",
-    "lane": "L4",
-    "scope": "required",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: 04-traceability/file-board-registry.csv(実在確認済・w0-found報告の既知lintドリフト対象と同一ファイル)のboard_thread_id列が実際に埋まっているか(空でない行の割合)を数える検査を追加提案。現状は実装トラック側(未帰属またはw1-fnd寄り)の型F実装が必要な機能要件であり、w1-aipはコードを書かないため対応表止まり。 ★[n61検収・n61aipcritic中1是正] registry上のkindは機能/非機能要件(型F=コード+テスト必須)だが実装は0行のため、doneからin_progressへ是正。発注書の型C一律指示と型F完了条件の矛盾は発注書側の欠陥として記録(艦の責ではない)。実装トラック側への切り出し候補。"
+    "note": "[w3-aip実測] 04-traceability/file-board-registry.csvを実集計: total=67行/board_thread_id充足=0行(0%)。列は存在するが全行空欄。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-106",
-    "title": "実装コードを変更するPRは、対応する設計書§の同時更新、または理由付き…",
+    "title": "実装コード変更PRは設計書§同時更新または理由付き宣言を必須化",
     "cluster": "g09-AIプロセス",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "?",
-    "lane": "L4",
-    "scope": "required",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: 「実装コードを変更するPRは対応する設計書§の同時更新、または理由付き『設計影響なし』宣言を必須」を、scripts/check-req-freeze.mjsと同型のgit diffベース検査として追加提案(apps/api/src・apps/web変更時に02-design配下の対応差分または宣言コメントの有無をチェック)。現状この専用ゲートはrepo内に存在しない(check-req-freezeは01-requirements/のみ対象)。 ★[n61検収・n61aipcritic中1是正] registry上のkindは機能/非機能要件(型F=コード+テスト必須)だが実装は0行のため、doneからin_progressへ是正。発注書の型C一律指示と型F完了条件の矛盾は発注書側の欠陥として記録(艦の責ではない)。実装トラック側への切り出し候補。"
+    "note": "[w3-aip実測] scripts/check-req-freeze.mjs(L1-40)を読了、01-requirements↔rulingsのみ対象で実装↔設計書ゲートは存在しないことを確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-107",
-    "title": "リリースごとにgit tag+リリースノート(GitHub Releases)を発…",
+    "title": "リリースごとにgit tag+リリースノート発行",
     "cluster": "g09-AIプロセス",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "?",
-    "lane": "L4",
-    "scope": "required",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "[w1-aip 型C対応表] wave-verifyへ検査追加を提案: git tag+GitHub Releases連携の実績はihl-ver3リポジトリで未確認(tag使用実績0件・実測)。「バージョン履歴」画面はV3-UIX配下でWave4(UI後回し)の対象。検査案=git tagの存在数を数える検査をwave-verifyまたは別ゲートに追加提案。気づき: これは実質型F(機能要件)でコード実装が要る項目であり、w1-aip(コード0行)の対応表止まりでは完了しない。実装トラック側(w1-fnd想定)への切り出しをHQに提案する。 ★[n61検収・n61aipcritic中1是正] registry上のkindは機能/非機能要件(型F=コード+テスト必須)だが実装は0行のため、doneからin_progressへ是正。発注書の型C一律指示と型F完了条件の矛盾は発注書側の欠陥として記録(艦の責ではない)。実装トラック側への切り出し候補。"
+    "note": "[w3-aip実測] git tag実行→0件を再確認。実装トラックへの切り出しが必要。"
   },
   {
     "id": "V3-AIP-11",
@@ -7841,16 +7851,16 @@
   },
   {
     "id": "V3-AIP-70",
-    "title": "本番apps/webは編集禁止(読み取り専用参照)、apps/ui-parts-…",
+    "title": "本番apps/webは編集禁止・apps/ui-partsで作業",
     "cluster": "g09-AIプロセス",
-    "wave": "第1波",
+    "wave": "第3波",
     "tier": "C",
-    "lane": "L4",
-    "scope": "required",
+    "lane": "w1-aip",
+    "scope": "aip",
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "[w3-aip実測] Glob apps/ui-parts* → 0件(存在しない)。前任note空欄だったが今回実測し未実装と判明。型Cとして閉じる証拠(強制機構)が無いためtodo継続。"
   },
   {
     "id": "V3-AIP-76",

@@ -114,6 +114,39 @@ describe("V3-BBS-11 create-check search-first gate", () => {
   });
 });
 
+// w3-plaza(第3波持ち越し): BBS-11 要件文「掲示板検索は自然言語/タグ/RAGの3方式を提供する」。
+// nl(既定)は既存 rankThreadSearch のまま。ここでは残り2方式(tag/rag)を検証する。
+describe("V3-BBS-11 search modes(自然言語/タグ/RAG の3方式)", () => {
+  it("mode=tag はタグ完全一致で検索する(トピック文言に一致語が無くても見つかる)", async () => {
+    const env = makeEnv();
+    const created = (await (await postJson(env, "/api/v1/plaza/posts", post({
+      channel: "c-bbs11-tag", topic: "無関係なタイトル", tags: ["breeding-tips"],
+    }))).json()) as { post_id: string };
+    const res = await app.request("/api/v1/plaza/search?mode=tag&q=breeding-tips&channel=c-bbs11-tag", { headers: AUTH_HEADERS }, env);
+    const body = (await res.json()) as { mode: string; matches: { thread_id: string }[] };
+    expect(body.mode).toBe("tag");
+    expect(body.matches.map((m) => m.thread_id)).toEqual([created.post_id]);
+  });
+
+  it("mode=tag は部分文字列では一致しない(自然言語方式との違い)", async () => {
+    const env = makeEnv();
+    await postJson(env, "/api/v1/plaza/posts", post({ channel: "c-bbs11-tag2", tags: ["breeding-tips"] }));
+    const res = await app.request("/api/v1/plaza/search?mode=tag&q=breeding&channel=c-bbs11-tag2", { headers: AUTH_HEADERS }, env);
+    const body = (await res.json()) as { matches: unknown[] };
+    expect(body.matches).toEqual([]);
+  });
+
+  it("mode=rag は rag_fallback:true を明示しつつ決定論結果を返す(embedding未配線を偽らない)", async () => {
+    const env = makeEnv();
+    await postJson(env, "/api/v1/plaza/posts", post({ channel: "c-bbs11-rag", topic: "コバエ対策まとめ" }));
+    const res = await app.request("/api/v1/plaza/search?mode=rag&q=" + encodeURIComponent("コバエ対策") + "&channel=c-bbs11-rag", { headers: AUTH_HEADERS }, env);
+    const body = (await res.json()) as { mode: string; rag_fallback: boolean; matches: unknown[] };
+    expect(body.mode).toBe("rag");
+    expect(body.rag_fallback).toBe(true);
+    expect(body.matches.length).toBeGreaterThan(0);
+  });
+});
+
 describe("V3-BBS-12 AI-assisted board creation draft (deterministic fallback)", () => {
   it("draftBoardFromText splits first sentence as title and rest as description", () => {
     const draft = draftBoardFromText("コバエ対策の情報交換をしたい。餌の管理や温度湿度の話も歓迎です。");

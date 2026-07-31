@@ -86,11 +86,11 @@ describe("FND-18 telemetry ingest route (idempotent merge)", () => {
     ];
     const res1 = await post(app, env, "/api/v1/telemetry", { rows });
     expect(res1.status).toBe(202);
-    expect(await res1.json()).toEqual({ written: 1, skipped_duplicate: 0, skipped_invalid: 2 });
+    expect(await res1.json()).toEqual({ written: 1, skipped_duplicate: 0, skipped_unchanged: 0, skipped_invalid: 2 });
 
     // resend the same valid rows -> same bucket key -> put-if-absent 409 -> duplicate
     const res2 = await post(app, env, "/api/v1/telemetry", { rows });
-    expect(await res2.json()).toEqual({ written: 0, skipped_duplicate: 1, skipped_invalid: 2 });
+    expect(await res2.json()).toEqual({ written: 0, skipped_duplicate: 1, skipped_unchanged: 0, skipped_invalid: 2 });
   });
 
   it("hyphenated device/metric pairs do not collide on the Truth key (a-b,c vs a,b-c)", async () => {
@@ -102,7 +102,7 @@ describe("FND-18 telemetry ingest route (idempotent merge)", () => {
     const res = await post(app, env, "/api/v1/telemetry", { rows });
     expect(res.status).toBe(202);
     // both buckets persist as distinct events — no false skipped_duplicate data loss
-    expect(await res.json()).toEqual({ written: 2, skipped_duplicate: 0, skipped_invalid: 0 });
+    expect(await res.json()).toEqual({ written: 2, skipped_duplicate: 0, skipped_unchanged: 0, skipped_invalid: 0 });
     const keys = [...bucket.objects.keys()].filter((k) => k.startsWith("truth/ihl.src.telemetry.v1/"));
     expect(keys).toHaveLength(2);
   });

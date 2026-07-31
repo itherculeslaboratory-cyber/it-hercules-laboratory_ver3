@@ -280,3 +280,48 @@ describe("C2 auth — session state + middleware paths", () => {
     expect(res.headers.get("set-cookie") ?? "").toMatch(/Max-Age=0/i);
   });
 });
+
+describe("V3-AUT-22(w3-aut是正・第20回裁定): administrator ロールは ADMIN_EMAILS 一致で issue される", () => {
+  it("ADMIN_EMAILS に含まれる email で verify すると、発行セッションに roles=['administrator'] が載る", async () => {
+    const env = { ...makeEnv(), ADMIN_EMAILS: "boss@example.com, other@example.com" };
+    const { cookie } = await login("boss@example.com", env);
+    const token = cookie.split("=")[1];
+    const payload = await verifySessionToken(token, SESSION_SECRET);
+    expect(payload?.roles).toEqual(["administrator"]);
+  });
+
+  it("ADMIN_EMAILS 未設定(既定)なら roles claim は載らない(現状と同じ挙動)", async () => {
+    const { cookie } = await login("nobody@example.com");
+    const token = cookie.split("=")[1];
+    const payload = await verifySessionToken(token, SESSION_SECRET);
+    expect(payload?.roles).toBeUndefined();
+  });
+
+  it("ADMIN_EMAILS 設定下でも一覧に無い email は administrator にならない", async () => {
+    const env = { ...makeEnv(), ADMIN_EMAILS: "boss@example.com" };
+    const { cookie } = await login("nobody@example.com", env);
+    const token = cookie.split("=")[1];
+    const payload = await verifySessionToken(token, SESSION_SECRET);
+    expect(payload?.roles).toBeUndefined();
+  });
+
+  it("大文字/前後空白の混じった ADMIN_EMAILS でも正規化済み email と一致すれば administrator になる", async () => {
+    const env = { ...makeEnv(), ADMIN_EMAILS: "  Boss@Example.com , " };
+    const { cookie } = await login("  BOSS@example.COM  ", env);
+    const token = cookie.split("=")[1];
+    const payload = await verifySessionToken(token, SESSION_SECRET);
+    expect(payload?.roles).toEqual(["administrator"]);
+  });
+
+  it("/dev-login の dev actor(dev@ihl.local)は ADMIN_EMAILS 未設定時は administrator にならない", async () => {
+    const res = await app.request(
+      "/api/v1/auth/dev-login",
+      { method: "POST", headers: JSON_HEADERS },
+      makeEnv(),
+    );
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    const token = setCookie.split(";")[0].split("=")[1];
+    const payload = await verifySessionToken(token, SESSION_SECRET);
+    expect(payload?.roles).toBeUndefined();
+  });
+});

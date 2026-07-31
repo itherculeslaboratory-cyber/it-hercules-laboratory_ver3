@@ -317,6 +317,7 @@ export interface PlazaSearchThread {
   post_count: number;
   latest_at: string;
   species_id?: string; // HDR-1(A1#4): root投稿代表値(スレのヘッダー観測対象narrowing用)。
+  tags: string[]; // BBS-11: タグ方式検索の対象(全投稿のtags[]を合算・重複除去)。
 }
 
 export async function collectSearchThreads(s: TruthStore, channel?: string, speciesFilter?: string): Promise<PlazaSearchThread[]> {
@@ -325,12 +326,15 @@ export async function collectSearchThreads(s: TruthStore, channel?: string, spec
   const threads = new Map<string, PlazaSearchThread>();
   for (const p of posts) {
     const tid = str(p.thread_id);
-    const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), post_count: 0, latest_at: "" };
+    const t = threads.get(tid) ?? { thread_id: tid, topic: str(p.topic), post_count: 0, latest_at: "", tags: [] as string[] };
     t.post_count += 1;
     if (str(p.created_at) > t.latest_at) t.latest_at = str(p.created_at);
     if (str(p.post_id) === tid) {
       t.topic = str(p.topic); // root post の topic を代表値に採る。
       if (typeof p.species_id === "string") t.species_id = p.species_id;
+    }
+    for (const tag of Array.isArray(p.tags) ? p.tags : []) {
+      if (typeof tag === "string" && !t.tags.includes(tag)) t.tags.push(tag);
     }
     threads.set(tid, t);
   }
@@ -430,7 +434,29 @@ export function rankThreadSearch(
   return scored.slice(0, 5);
 }
 
-// GET /plaza/search?q=<text>&channel=<optional>&species=<optional> — 決定論スレ検索投影。
+// rankThreadSearchByTag — BBS-11「タグ方式」。クエリをタグそのもの(完全一致・大小無視)
+// として thread.tags[] に照合する。自然言語方式(rankThreadSearch)とは別の軸(表記ゆれに
+// 強い代わりに言い換えには弱い)なのであえて別関数のまま保つ(統合しない)。
+export function rankThreadSearchByTag(
+  threads: PlazaSearchThread[],
+  query: string,
+): (PlazaSearchThread & { score: number })[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const scored = threads
+    .filter((t) => t.tags.some((tag) => tag.toLowerCase() === q))
+    .map((t) => ({ ...t, score: 1000 }));
+  scored.sort((a, b) => (a.latest_at !== b.latest_at ? (a.latest_at < b.latest_at ? 1 : -1) : a.thread_id < b.thread_id ? -1 : 1));
+  return scored.slice(0, 5);
+}
+
+// GET /plaza/search?q=<text>&channel=<optional>&species=<optional>&mode=<nl|tag|rag> —
+// 決定論スレ検索投影。BBS-11「自然言語/タグ/RAGの3方式」: mode省略時はnl(既定・従来動作)。
+// mode=tag はタグ完全一致(rankThreadSearchByTag)。mode=rag は要件文どおり用意するが、
+// embedding/ベクトル検索は不変条項①(LLM既定OFF)によりこのラウンドでは未配線のため、
+// nl方式と同じ決定論ランキングにフォールバックし `rag_fallback:true` を明示する
+// (WIK-24のembedding空スロットと同型のupgrade path・誠実表示のため「RAGで検索した」と
+// 偽らない)。
 // 空 q は空配列(エラーにしない)。読み取り専用・Truth 追記なし。T-70 KNW wave1(知の広場
 // ハブ実物採用): 各マッチに resolved(✔解決済みバッジ表示可否)を同梱。既存
 // projectResolution(BBS-05・OQ-PLZ-03)をマッチ上位5件だけに適用する薄い追加投影
@@ -439,14 +465,16 @@ plazaRoutes.get("/plaza/search", async (c) => {
   const q = c.req.query("q") ?? "";
   const channel = c.req.query("channel") || undefined;
   const species = c.req.query("species") || undefined;
-  if (!q.trim()) return c.json({ query: q, matches: [] });
+  const mode = c.req.query("mode") || "nl";
+  if (!q.trim()) return c.json({ query: q, mode, matches: [] });
   const s = store(c);
   const threads = await collectSearchThreads(s, channel, species);
-  const ranked = rankThreadSearch(threads, q);
+  const ragFallback = mode === "rag";
+  const ranked = mode === "tag" ? rankThreadSearchByTag(threads, q) : rankThreadSearch(threads, q);
   const matches = await Promise.all(
     ranked.map(async (t) => ({ ...t, resolved: (await projectResolution(s, t.thread_id)).resolved })),
   );
-  return c.json({ query: q, matches });
+  return c.json(ragFallback ? { query: q, mode, rag_fallback: true, matches } : { query: q, mode, matches });
 });
 
 // ── 改善要求 優先度キュー(BBS-14)────────────────────────────────────────

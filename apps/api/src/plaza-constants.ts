@@ -26,6 +26,14 @@ export const PAPER_CASE_TAG_PREFIX = "paper_case:";
 export const ENGAGEMENT_KINDS = ["qna", "praise", "solicitation"] as const;
 export const ENGAGEMENT_TAG_PREFIX = "engagement:";
 
+// BBS-33(w3-plaza持ち越し・62代目HQ検収是正R0731-dcff50): 「AI生成率」統計の一次信号。
+// plaza-post.schema.json は additionalProperties:false の凍結スキーマで AI 著者性を示す
+// フィールドが存在しない(本ラウンド glob 外・スキーマ変更不可)ため、BBS-02/28 と同型の
+// tags[] 規約で表現する。BBS-12(POST /plaza/board-draft)のたたき台をそのまま採用して
+// 投稿した場合にクライアント側がこのタグを付ける想定(サーバー側は付与を強制できない —
+// 未対応クライアントの場合は0%と正直に出る。捏造よりは実測ゼロを選ぶ)。
+export const AI_ASSISTED_TAG = "ai_assisted";
+
 // BBS-28: 質問自動分類(研究的/飼育方法/血統管理/矛盾指摘/初心者/無意味)のキーワード辞書。
 // LLM 既定OFF(不変条項①)の決定論フォールバック。実鍵配線後は ai-kernel.ts の
 // classify task へ差し替え可能(upgrade path)。

@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { TruthStore } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { AI_ASSISTED_TAG } from "./plaza-constants";
 
 const POST_TYPE = "ihl.plaza.post.v1";
 
@@ -40,6 +41,7 @@ export interface BoardStats {
   posts_by_day: Record<string, number>; // YYYY-MM-DD -> count(投稿数推移)
   hour_heatmap: number[]; // 24要素(UTC時)。時間帯ヒートマップ
   tag_frequency: Record<string, number>; // タグ使用頻度
+  ai_generation_rate: number; // 0..1(BBS-33)。post_count=0 は 0 を返す(NaN禁止)。
 }
 
 function reduceBoardStats(posts: PostRow[]): BoardStats {
@@ -47,6 +49,7 @@ function reduceBoardStats(posts: PostRow[]): BoardStats {
   const postsByDay: Record<string, number> = {};
   const hourHeatmap = new Array(24).fill(0);
   const tagFrequency: Record<string, number> = {};
+  let aiAssistedCount = 0;
   for (const p of posts) {
     if (p.actor_id) activeUsers.add(p.actor_id);
     const created = str(p.created_at);
@@ -56,6 +59,7 @@ function reduceBoardStats(posts: PostRow[]): BoardStats {
       const hour = new Date(created).getUTCHours();
       if (!Number.isNaN(hour)) hourHeatmap[hour] += 1;
     }
+    if ((p.tags ?? []).includes(AI_ASSISTED_TAG)) aiAssistedCount += 1;
     for (const tag of p.tags ?? []) tagFrequency[tag] = (tagFrequency[tag] ?? 0) + 1;
   }
   return {
@@ -64,6 +68,7 @@ function reduceBoardStats(posts: PostRow[]): BoardStats {
     posts_by_day: postsByDay,
     hour_heatmap: hourHeatmap,
     tag_frequency: tagFrequency,
+    ai_generation_rate: posts.length ? aiAssistedCount / posts.length : 0,
   };
 }
 

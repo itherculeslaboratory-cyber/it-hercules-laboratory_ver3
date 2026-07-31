@@ -71,9 +71,13 @@ envImportRoutes.post("/obs/env-import", async (c) => {
 
   const actorId = c.get("actorId");
   const st = new TruthStore(c.env.TRUTH);
-  const { written, skipped_duplicate, invalid } = await ingestTelemetryBuckets(st, actorId, buckets, ENV_IMPORT_SOURCE, {
-    dryRun,
-  });
+  const { written, skipped_duplicate, skipped_unchanged, invalid } = await ingestTelemetryBuckets(
+    st,
+    actorId,
+    buckets,
+    ENV_IMPORT_SOURCE,
+    { dryRun },
+  );
   if (invalid.length > 0) return c.json({ error: "INVALID_TELEMETRY", details: invalid }, 400);
 
   return c.json(
@@ -85,6 +89,7 @@ envImportRoutes.post("/obs/env-import", async (c) => {
       invalid_rows: parsed.invalid_rows,
       written,
       skipped_duplicate,
+      skipped_unchanged,
       skipped_invalid: skippedInvalidCells,
     },
     dryRun ? 200 : 202,

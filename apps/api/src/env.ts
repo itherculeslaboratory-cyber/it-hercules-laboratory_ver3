@@ -64,6 +64,9 @@ export type Bindings = {
   // なし(縮退・注文自体はブロックしない)。実鍵投入は人間ゲート。
   BASE_EC_API_KEY?: string;
   SHOPIFY_EC_API_KEY?: string;
+  // 管理者判定(auth-routes.ts rolesForEmail)用のカンマ区切りメールアドレス一覧。
+  // 未設定=管理者ロールなし(既定 degrade)。実値投入は人間ゲート(運用設定)。
+  ADMIN_EMAILS?: string;
 };
 
 export type Variables = { actorId: string; roles: string[] };

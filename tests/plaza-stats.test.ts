@@ -54,6 +54,22 @@ describe("V3-BBS-33 board vs global stats separation", () => {
     const app = appAs("alice");
     const res = await app.request("/api/v1/plaza/stats/board/no-such-channel", {}, env);
     expect(res.status).toBe(200);
-    expect((await res.json()) as { post_count: number }).toMatchObject({ post_count: 0, active_user_count: 0 });
+    expect((await res.json()) as { post_count: number; ai_generation_rate: number }).toMatchObject({
+      post_count: 0,
+      active_user_count: 0,
+      ai_generation_rate: 0,
+    });
+  });
+
+  // w3-plaza(第3波持ち越し・62代目HQ検収是正R0731-dcff50): 「AI生成率」統計を tags[]
+  // 規約(AI_ASSISTED_TAG="ai_assisted")で計測する。
+  it("ai_generation_rate = ai_assisted タグ付き投稿の割合(未対応クライアントは0%)", async () => {
+    const env = makeEnv();
+    const app = appAs("alice");
+    await post(app, "/api/v1/plaza/posts", { channel: "board-d", board_kind: "guide", topic: "t1", body: "b", tags: ["ai_assisted"] }, env);
+    await post(app, "/api/v1/plaza/posts", { channel: "board-d", board_kind: "guide", topic: "t2", body: "b" }, env);
+    await post(app, "/api/v1/plaza/posts", { channel: "board-d", board_kind: "guide", topic: "t3", body: "b" }, env);
+    const stats = (await (await app.request("/api/v1/plaza/stats/board/board-d", {}, env)).json()) as { ai_generation_rate: number };
+    expect(stats.ai_generation_rate).toBeCloseTo(1 / 3);
   });
 });

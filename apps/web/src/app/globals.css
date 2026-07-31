@@ -187,6 +187,42 @@ body {
 .civ-scope-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
+
+/* V3-UIX-39(第21回裁定・hold解除)ドロワー集約ナビ。civ-scope-dialogと同型
+ * (ネイティブ<dialog>・トークン追従・Tailwind Preflightのmargin:auto復元)。 */
+.civ-drawer-dialog {
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface);
+  color: var(--civ-text);
+  padding: 0;
+  margin: 0 auto auto 0;
+  max-width: 320px;
+  max-height: 100dvh;
+  height: 100%;
+  width: calc(100% - 48px);
+}
+.civ-drawer-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+.civ-drawer-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.civ-drawer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.civ-drawer-link {
+  display: block;
+  padding: 8px 4px;
+}
 .civ-scope-dialog-body {
   padding: 20px;
   display: flex;

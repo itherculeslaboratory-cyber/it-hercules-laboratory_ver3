@@ -159,9 +159,9 @@ describe("V3-OBS-33 環境観測5分バケット append-only(既存実装の回�
     const rows = [{ device_id: "d1", ts_ms: 0, metric: "temp_c", value: 20 }];
     const buckets = bucketize(rows);
     const first = await ingestTelemetryBuckets(s, "actor-1", buckets, "manual");
-    expect(first).toEqual({ written: 1, skipped_duplicate: 0, invalid: [] });
+    expect(first).toEqual({ written: 1, skipped_duplicate: 0, skipped_unchanged: 0, invalid: [] });
     const second = await ingestTelemetryBuckets(s, "actor-1", buckets, "manual");
-    expect(second).toEqual({ written: 0, skipped_duplicate: 1, invalid: [] });
+    expect(second).toEqual({ written: 0, skipped_duplicate: 1, skipped_unchanged: 0, invalid: [] });
   });
 });
 

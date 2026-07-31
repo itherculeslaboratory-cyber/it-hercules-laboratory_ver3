@@ -126,8 +126,9 @@ export interface ActorExportBundle {
  * ユーザー自身のデータを範囲選択してエクスポートする(V3-FND-08「自分のデータを
  * 範囲選択して...エクスポートでき...データ所有権を保証する」の JSON 実装)。
  * Truth 全体を prefix="truth/" で走査し、既知のオーナーフィールドが actorId と
- * 一致するイベントだけを JSON バンドルとして返す。CSV/画像/動画/音声/PDF 形式は
- * follow-up(このバンドルの上に被せる変換層。本ランでは実装しない)。
+ * 一致するイベントだけを JSON バンドルとして返す。画像/動画/音声/PDF 形式は
+ * follow-up(バイナリ資産の個別ドメイン知識が要るため。本ランでは実装しない)。
+ * CSV は下の exportActorDataAsCsv で第3波にて追加した(w3-fnd)。
  */
 export async function exportActorData(s: TruthStore, actorId: string, now: Date): Promise<ActorExportBundle> {
   const all = await s.listEvents("truth/");
@@ -136,4 +137,32 @@ export async function exportActorData(s: TruthStore, actorId: string, now: Date)
     return OWNER_FIELD_NAMES.some((f) => data[f] === actorId);
   });
   return { actor_id: actorId, exported_at: now.toISOString(), format: "json", event_count: mine.length, events: mine };
+}
+
+// ── V3-FND-08 follow-up(w3-fnd 第3波): CSV 形式 ────────────────────────
+// w1/w2 の note が明記した「多形式は follow-up」のうち、バイナリ資産を伴わない
+// CSV だけを本ランで実装する(画像/動画/音声/PDF はドメイン別バイナリ変換層が要る
+// ため引き続き follow-up・誇張ゼロで正直に持ち越す)。新規依存は追加していない
+// (V3-FND-28 凍結遵守。手書きの最小 CSV エスケープのみ)。
+function csvEscape(value: unknown): string {
+  const s = value === undefined || value === null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  if (s.includes(",") || s.includes("\"") || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+/**
+ * exportActorData と同じ抽出条件で、type/time/data を1行1イベントの CSV 文字列
+ * として返す(ヘッダ行: id,type,time,data)。data は JSON 文字列としてそのまま1列に
+ * 格納する(ネストしたイベント形状ごとに列を可変にしないための最小実装)。
+ */
+export async function exportActorDataAsCsv(s: TruthStore, actorId: string, now: Date): Promise<string> {
+  const bundle = await exportActorData(s, actorId, now);
+  const header = "id,type,time,data";
+  const rows = bundle.events.map((e) => {
+    const row = e as Record<string, unknown>;
+    return [csvEscape(row.id), csvEscape(row.type), csvEscape(row.time), csvEscape(row.data)].join(",");
+  });
+  return [header, ...rows].join("\n");
 }

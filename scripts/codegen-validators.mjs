@@ -29,6 +29,10 @@ const addFormats = require("ajv-formats");
 const standaloneCode = require("ajv/dist/standalone").default;
 
 const OUT = join(ROOT, "packages", "truth", "src", "generated", "validators.cjs");
+// .d.cts (not .d.ts): the consumer imports "./generated/validators.cjs" with an
+// explicit .cjs extension, and TS's Bundler/Node16 moduleResolution matches that
+// extension to a .d.cts declaration file, not a plain .d.ts (2026-07-31 tsc6 T6).
+const DTS_OUT = join(ROOT, "packages", "truth", "src", "generated", "validators.d.cts");
 
 // exportName (valid JS id) -> schema file under schemas/. Fixed order = stable output.
 // Must stay in sync with envelope.ts VALIDATORS map.
@@ -170,11 +174,30 @@ function generate() {
   return banner + standaloneCode(ajv, refs).replace(/\r\n/g, "\n");
 }
 
+// Type declarations for validators.cjs's named exports (2026-07-31 tsc6 T6).
+// Each export is an ajv standalone validate function: (data) => boolean, with an
+// `errors` property ajv populates on failure. Kept in sync with SCHEMAS above —
+// same source list, so a new schema automatically gets its export declared.
+function generateDts() {
+  const banner =
+    "// GENERATED FILE — do not edit by hand.\n" +
+    "// source: SCHEMAS list in scripts/codegen-validators.mjs\n" +
+    "// direction: codegen-validators.mjs -> generated (one-way; re-run to regenerate)\n" +
+    "// regenerate: node scripts/codegen-validators.mjs\n\n" +
+    "export type ValidateFunction = ((data: unknown) => boolean) & {\n" +
+    "  errors?: Array<{ instancePath?: string; message?: string }> | null;\n" +
+    "};\n\n";
+  const decls = SCHEMAS.map(([exportName]) => `export declare const ${exportName}: ValidateFunction;\n`).join("");
+  return banner + decls;
+}
+
 const out = generate();
+const dtsOut = generateDts();
 if (process.argv.includes("--check")) {
   const committed = existsSync(OUT) ? readFileSync(OUT, "utf8").replace(/\r\n/g, "\n") : null;
-  if (committed !== out) {
-    console.error("codegen-validators --check FAILED: packages/truth/src/generated/validators.mjs is out of sync with schemas/.");
+  const committedDts = existsSync(DTS_OUT) ? readFileSync(DTS_OUT, "utf8").replace(/\r\n/g, "\n") : null;
+  if (committed !== out || committedDts !== dtsOut) {
+    console.error("codegen-validators --check FAILED: packages/truth/src/generated/validators.{cjs,d.cts} is out of sync with schemas/.");
     console.error("fix: node scripts/codegen-validators.mjs  (never hand-edit generated files)");
     process.exit(1);
   }
@@ -182,5 +205,7 @@ if (process.argv.includes("--check")) {
 } else {
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, out, "utf8");
+  writeFileSync(DTS_OUT, dtsOut, "utf8");
   console.log(`codegen-validators OK: wrote ${OUT}`);
+  console.log(`codegen-validators OK: wrote ${DTS_OUT}`);
 }

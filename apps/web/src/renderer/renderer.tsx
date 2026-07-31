@@ -6265,6 +6265,92 @@ function HeaderScopeSelector({
   );
 }
 
+// V3-UIX-39(第21回裁定 2026-07-31・hold解除): ドロワー集約ナビ・最大2段・
+// 大分類7区分(観測登録/マーケット/検索/知の広場/変換/OS/プロフィール — 第19回裁定で
+// 「観測」→「観測登録」「掲示板」→「知の広場」に改称済み)。既存の civ-chrome-nav
+// (4リンク)とは別の独立したナビ面として追加する(既存リンクの置換ではない=回帰防止)。
+// ★判断が要った箇所(報告書R0731-bf8032参照): 「変換」「OS」の2区分は screen-defs/*.json
+// 58画面・navigation.json・srs.md のいずれにも対応する画面が存在せず、リンク先を
+// 推測で埋めなかった(リンク先未定義として非活性表示)。残り5区分は既存route実績値を使用。
+// maxDepth=2 は上限であり下限ではないため、サブカテゴリ未定義のこの段では1段のみで
+// 要件を満たす(将来サブカテゴリが定義され次第、ここへtreeを継ぎ足す)。
+const DRAWER_NAV_ITEMS: Array<{ label: string; href: string | null }> = [
+  { label: "観測登録", href: "/s/obs-domain-select" },
+  { label: "マーケット", href: "/s/market-trade" },
+  { label: "検索", href: "/s/obs-search" },
+  { label: "知の広場", href: "/s/knowledge-hub" },
+  { label: "変換", href: null },
+  { label: "OS", href: null },
+  { label: "プロフィール", href: "/me/me.html" },
+];
+
+function DrawerNav() {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const onNativeClose = () => setIsOpen(false);
+    el.addEventListener("close", onNativeClose);
+    return () => el.removeEventListener("close", onNativeClose);
+  }, []);
+  const open = useCallback(() => {
+    setIsOpen(true);
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.showModal === "function") el.showModal();
+    else el.setAttribute("open", "");
+  }, []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.close === "function") el.close();
+    else el.removeAttribute("open");
+  }, []);
+  return (
+    <div className="civ-drawer-nav">
+      <button
+        type="button"
+        className={cn("civ-interactive", "civ-button")}
+        data-variant="ghost"
+        aria-haspopup="dialog"
+        aria-label="メニュー"
+        onClick={open}
+      >
+        ☰
+      </button>
+      <dialog ref={dialogRef} className="civ-drawer-dialog" aria-label="大分類メニュー">
+        {isOpen && (
+          <nav className="civ-drawer-dialog-body" aria-label="大分類ナビゲーション">
+            <h2 className="civ-heading">メニュー</h2>
+            <ul className="civ-drawer-list">
+              {DRAWER_NAV_ITEMS.map((item) =>
+                item.href ? (
+                  <li key={item.label}>
+                    <a className="civ-link civ-drawer-link" href={item.href} onClick={close}>
+                      {item.label}
+                    </a>
+                  </li>
+                ) : (
+                  <li key={item.label}>
+                    <span className="civ-text civ-drawer-link" data-muted="true" aria-disabled="true">
+                      {item.label}(リンク先未定義)
+                    </span>
+                  </li>
+                ),
+              )}
+            </ul>
+            <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="ghost" onClick={close}>
+              閉じる
+            </button>
+          </nav>
+        )}
+      </dialog>
+    </div>
+  );
+}
+
 function AppShellNode({ node }: { node: ScreenNode }) {
   const execute = useContext(ExecuteCtx);
   const layout = useContext(LayoutCtx);
@@ -6340,6 +6426,7 @@ function AppShellNode({ node }: { node: ScreenNode }) {
         <a className="civ-brand" href="/">
           IHL
         </a>
+        {authLoaded && authenticated && <DrawerNav />}
         {authLoaded && authenticated && <HeaderScopeSelector scope={scope} onSaved={setScope} />}
         {authLoaded && authenticated && (
           <nav className="civ-chrome-nav" aria-label="主要ナビゲーション">

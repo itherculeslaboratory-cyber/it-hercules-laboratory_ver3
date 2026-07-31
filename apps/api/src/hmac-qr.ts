@@ -32,9 +32,20 @@ function b64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
+function isCryptoKeyPair(key: CryptoKey | CryptoKeyPair): key is CryptoKeyPair {
+  return "privateKey" in key;
+}
+
 /** AES-256-GCM鍵を新規生成(呼び出し側=内部QR発行者がラップ/保管する)。 */
 export async function generateQrEncryptionKey(): Promise<CryptoKey> {
-  return crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+  // workers-types の generateKey() は対称鍵/鍵ペアを区別しない単一シグネチャ
+  // (Promise<CryptoKey | CryptoKeyPair>)。AES-GCM(対称鍵)は常に CryptoKey を
+  // 返すはずだが、それを`as`で黙らせず型ガードで表明する(想定外なら例外)。
+  const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+  if (isCryptoKeyPair(key)) {
+    throw new Error("generateQrEncryptionKey: expected a symmetric CryptoKey but got a CryptoKeyPair");
+  }
+  return key;
 }
 
 /** Ed25519署名鍵ペアを新規生成(内部QR発行者が保持し、検証側は公開鍵のみ配布)。 */
@@ -88,4 +99,41 @@ export async function openInternalQrToken(
   const valid = await crypto.subtle.verify("Ed25519", signPublicKey, signature, signed);
   if (!valid) return null;
   return decryptQrPayload(token, encKey);
+}
+
+// ── V3-SEC-44 追加: 公開用/観測管理用の自動切替 ───────────────────────────────
+// (2026-07-31 w3-sec 是正: 62代目HQ検収是正 R0731-14f1df 中1「2系統の自動切替が
+// 未実装」を受けて追加。呼び出し側は qrKind を渡すだけでよく、内部用データを
+// 誤って平文発行する経路を型レベルで作れない構造にする。)
+export type QrKind = "public" | "internal";
+
+export interface PublicQrPayload {
+  kind: "public";
+  data: unknown; // 標本・展示向け・暗号化なし・誰でも読み取り可
+}
+
+export interface InternalQrPayload extends SignedEncryptedQrToken {
+  kind: "internal";
+}
+
+export type QrDispatchResult = PublicQrPayload | InternalQrPayload;
+
+/**
+ * qrKind に応じて公開用(平文)/観測管理用(AES-256-GCM暗号化+Ed25519署名)を
+ * 自動で切り替える(V3-SEC-44)。internal 指定時に鍵が渡されなければ例外(平文への
+ * フォールバックを構造的に禁止する = 「自動で切り替える」を安全側に倒した実装)。
+ */
+export async function dispatchQrPayload(
+  qrKind: QrKind,
+  payload: unknown,
+  internalKeys?: { encKey: CryptoKey; signPrivateKey: CryptoKey },
+): Promise<QrDispatchResult> {
+  if (qrKind === "public") {
+    return { kind: "public", data: payload };
+  }
+  if (!internalKeys) {
+    throw new Error("dispatchQrPayload: internal QR requires encKey/signPrivateKey");
+  }
+  const token = await buildInternalQrToken(payload, internalKeys.encKey, internalKeys.signPrivateKey);
+  return { kind: "internal", ...token };
 }

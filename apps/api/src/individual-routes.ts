@@ -802,10 +802,12 @@ export async function projectIndividualProfile(s: TruthStore, id: string) {
   // グラフの X 軸(初回観測からの日数)は capture data 自身に時刻を持たない
   // (envelope.time が唯一の時刻ソース・既存 GET /individuals の last_capture_at
   // と同じ規約)ので、data に time を合成して1個の行として持ち回す。
-  const allCaptures = (await s.listEvents(`truth/${CAPTURE_TYPE}/`)).map((e) => ({
-    ...dataOf(e),
-    time: String(e.time ?? ""),
-  }));
+  const allCaptures = (await s.listEvents(`truth/${CAPTURE_TYPE}/`)).map(
+    (e): Record<string, unknown> => ({
+      ...dataOf(e),
+      time: String(e.time ?? ""),
+    }),
+  );
   const capturesOf = (pid: string) =>
     allCaptures
       .filter((d) => d.subject_ref === `individual/${pid}`)

@@ -400,6 +400,31 @@ describe("IND-15 名刺(bio-card / qr-batch)", () => {
   });
 });
 
+describe("V3-IND-16 生体の一生イベントログ(life-events append-only → stage/life_status 導出 → bio-card QR)", () => {
+  it("birth→molt→eclosion を append-only 記録し、profile が append 順の life_events と導出済み stage/status を返し、bio-card の QR は個体 URL のまま変わらない", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { species: "Extatosoma tiaratum" });
+
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "birth", at: "2026-01-01T00:00:00Z" }, env);
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "molt", at: "2026-02-01T00:00:00Z", detail: { to_stage: "third_late" } }, env);
+    await post(`/api/v1/individuals/${id}/life-events`, { kind: "eclosion", at: "2026-03-01T00:00:00Z" }, env);
+
+    const profile = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as {
+      stage: string | null;
+      status: string;
+      life_events: { kind: string }[];
+    };
+    // deriveCurrentStage/deriveLifeStatus: 直近 molt の to_stage → eclosion で alive へ純関数導出(常駐フィールドなし)。
+    expect(profile.life_events.map((e) => e.kind)).toEqual(["birth", "molt", "eclosion"]);
+    expect(profile.stage).toBe("third_late");
+    expect(profile.status).toBe("alive");
+
+    // bio-card(projectBioCard)は life-events 追加後も qr_url=個体URLのまま安定(QR紐づけの再発行不要)。
+    const card = (await (await get(`/api/v1/individuals/${id}/bio-card`, env)).json()) as { qr_url: string };
+    expect(card.qr_url).toBe(`/individuals/${id}`);
+  });
+});
+
 describe("IND-21 真正性(projectAuthenticity)", () => {
   it("画像 hash + event 連続性で continuity_score=1・登録数vs実在数照合", async () => {
     const { env, bucket } = ctx();
