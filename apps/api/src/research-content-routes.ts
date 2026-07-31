@@ -6,7 +6,7 @@
 // PROTECTED（deny-by-default: PUBLIC_ROUTES に載せない）。投影は都度再計算（常駐 DB 禁止）で
 // proposal-routes.ts の reduceProposal パターンを流用。envelope/store/dataOf は inline。
 import { Hono } from "hono";
-import { TruthStore, ulid, cosineSimilarity, sha256Hex } from "@ihl/truth";
+import { TruthStore, ulid, cosineSimilarity, sha256Hex, computeLineageMeta, type LineageMeta } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN, PAPER_SECTIONS } from "./research-constants";
 import { computeSectionsCompleteness, type SectionState } from "./paper-match";
@@ -34,9 +34,11 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
 function contentKey(contentId: string): string {
   return `truth/${CONTENT_TYPE}/${contentId}.json`;
 }
-// provenanceExtra(任意・g67-refs1・設計R0801-436936 §2案1-A): observation-routes.ts:84-102 と
-// 同型の任意 provenance 拡張引数。既存呼び出し(引数省略)は無改変で通る(後方互換)。V3-AUT-17の
-// actor_id刻印は維持したまま input_event_ids 等を追記できるよう、上書きではなくマージする。
+// provenanceExtra(任意・g67-refs1/g68-refs2・設計R0801-436936 §2案1-A): 同じ「任意provenance
+// 引数」の前例(observation-routes.ts:84-102)に倣うが、V3-AUT-17のactor_id刻印を保つため
+// 置換ではなくマージにした。既存呼び出し(引数省略)は無改変で通る(後方互換)。provenanceExtra
+// は spread を先に置き、generator_kind/actor_id を後から上書きすることで V3-AUT-17 の刻印を
+// 構造的に上書き不能にする(g68-refs2・S1ゲート指摘6-b是正)。
 function envelope(
   type: string,
   schema: string,
@@ -52,7 +54,7 @@ function envelope(
     time: new Date().toISOString(),
     dataschema: schema,
     // V3-AUT-17: session principal を provenance に刻印（POST /events と同一）。
-    provenance: { generator_kind: "human", actor_id: actorId, ...provenanceExtra },
+    provenance: { ...provenanceExtra, generator_kind: "human", actor_id: actorId },
     data,
   };
 }
@@ -389,6 +391,10 @@ const PLAZA_POST_TYPE_FOR_REVERSE_LOOKUP = "ihl.plaza.post.v1";
 // appendCitationLink 参照)。plaza-routes.ts は本艦glob外のため import せず、値のみここで
 // 再宣言する(直上の PLAZA_POST_TYPE_FOR_REVERSE_LOOKUP と同じ既存パターン)。
 const CITATION_LINK_TYPE_FOR_COUNT = "ihl.citation.link.v1";
+// citation-link 書き込み用 dataschema パス(g68-refs2・next-generation の derived_from append)。
+// type 文字列は CITATION_LINK_TYPE_FOR_COUNT と同一・書き込み側は dataschema も要るため別名で持つ
+// (paper-match-routes.ts の CITATION_LINK_SCHEMA と同型)。
+const CITATION_LINK_SCHEMA = "schemas/events/citation-link.schema.json";
 
 // GET /research/content/:id/cited-by-posts — 論文側の逆引き投影(V3-PPR-08「論文→板」方向)。
 // 板→論文方向は既存 plaza-routes.ts 側(GET /plaza/threads/:thread_id/paper-citations)が
@@ -435,6 +441,78 @@ researchContentRoutes.get("/research/content/:id/citation-count", async (c) => {
   if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
   const count = await countCitationLinksForContent(s, id);
   return c.json({ content_id: id, citation_count: count });
+});
+
+// 境界(設計R0801-436936 §5-4): content 実体の内容が変わる = next-generation /
+// 内容は変えずに「これは誤りだ」と外から言う = correction_note(paper-match-routes.ts の
+// ihl.ppr.cycle_node.v1 node_type="correction_note" が担う)。
+//
+// POST /research/content/:id/next-generation — V3-AIP-108(更新回数)/V3-AIP-109(世代スコープ
+// カウント)の世代機構(設計§3案2-A・§7 S2)。fork-template(paper-match-routes.ts:251-321)の
+// 同一系譜版(発明ゼロ)。既存イベントは1バイトも書き換えず、新しい content_id へ新しい
+// envelope を append するだけ(append-only・PPR-25「編集でなく訂正投稿」とは正面衝突しない
+// =update/deleteではなくfork-templateと同型の新規append)。paper 限定(設計§9-3・
+// fork-templateと同じ`content_type !== "paper"`→400に倣って限定側に倒す)。
+researchContentRoutes.post("/research/content/:id/next-generation", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const oldEv = await s.readEvent(contentKey(id));
+  if (!oldEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const oldData = dataOf(oldEv);
+  if (oldData.content_type !== "paper") {
+    return c.json(
+      { error: "CONTENT_TYPE_NOT_SUPPORTED", details: ["next-generation は content_type=paper のみ対象(設計§9-3)"] },
+      400,
+    );
+  }
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const newContentId = ulid();
+  // 旧 data を土台に、body で来たフィールドだけ差し替え(未指定は継承・設計§3(b)手順2)。
+  const newData: Record<string, unknown> = { ...oldData };
+  delete newData.lineage_meta; // 系譜メタは自己参照を避けるため hash 対象から一旦外し、後で再算出する
+  for (const k of OPTIONAL_KEYS) if (body[k] !== undefined) newData[k] = body[k];
+  if (typeof body.title === "string" && body.title) newData.title = body.title;
+  newData.content_id = newContentId;
+  newData.actor_id = actorId; // V3-AUT-17 強制刻印(クライアント指定は無視)
+  newData.created_at = new Date().toISOString();
+
+  // 旧レコードが lineage_meta を持たない(=世代管理が始まる前の既存 content・任意フィールド
+  // なので createContent は書いていない)場合は、旧 data 自身を root(generation:0)として
+  // computeLineageMeta で仮想算出する(既存レコードを書き換えず=Truth append-onlyのまま、
+  // 新規の数え方は発明しない・既存ヘルパの再利用のみ)。
+  const oldContentForHash: Record<string, unknown> = { ...oldData };
+  delete oldContentForHash.lineage_meta;
+  const oldLineage =
+    (oldData.lineage_meta as LineageMeta | undefined) ?? (await computeLineageMeta(oldContentForHash));
+  const lineageMeta = await computeLineageMeta(newData, oldLineage);
+  newData.lineage_meta = lineageMeta;
+
+  // provenance.input_event_ids に旧 envelope.id を積む(§2案1-A③・サーバ解決=偽造不可)。
+  const createRes = await s.putEventAt(
+    contentKey(newContentId),
+    envelope(CONTENT_TYPE, CONTENT_SCHEMA, actorId, newData, { input_event_ids: [oldEv.id as string] }),
+  );
+  if (createRes.status === "invalid") return c.json({ error: "INVALID_CONTENT", details: createRes.errors }, 400);
+  if (createRes.status === "conflict") return c.json({ error: "DUPLICATE_CONTENT", key: createRes.key }, 409);
+
+  // 血統記録(derived_from) — fork-template(paper-match-routes.ts:287-300)と同型。best-effort
+  // (plaza-routes.ts の citation-link append と同じ規約=本体の書き込みを道連れにしない)。
+  const linkId = ulid();
+  await s.putEventAt(
+    `truth/${CITATION_LINK_TYPE_FOR_COUNT}/${newContentId}/${linkId}.json`,
+    envelope(CITATION_LINK_TYPE_FOR_COUNT, CITATION_LINK_SCHEMA, actorId, {
+      link_id: linkId,
+      content_id: newContentId,
+      target_ref: { type: "paper", id },
+      link_kind: "derived_from",
+      actor_id: actorId,
+      created_at: new Date().toISOString(),
+      schema_version: SCHEMA_VERSION,
+    }),
+  ).catch(() => {});
+
+  return c.json({ content_id: newContentId, generation: lineageMeta.generation, parent_content_id: id }, 201);
 });
 
 // POST /research/content/:id/tags — 確認 POST でのみ tag_event を append（WIK-14）。

@@ -504,6 +504,96 @@ describe("V3-PPR-08 GET /research/content/:id/citation-count (被引用リンク
   });
 });
 
+describe("V3-AIP-108/109 POST /research/content/:id/next-generation (世代機構・設計R0801-436936 §3案2-A・§7 S2)", () => {
+  const paperBody = (contentId: string, title = "Gen paper") => ({
+    content_id: contentId, content_type: "paper", title,
+    sections: {
+      purpose: { filled: false, text: "" }, hypothesis: { filled: false, text: "" },
+      conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+      phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+    },
+    completeness_pct: 0,
+  });
+
+  it("2回叩くと generation が 0→1→2 になる(既存レコードの世代は省略=0扱いの起点)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("GEN-1"));
+    const gen1 = await post(bucket, "/api/v1/research/content/GEN-1/next-generation", { title: "Gen paper v1" });
+    expect(gen1.status).toBe(201);
+    const gen1Body = (await gen1.json()) as { content_id: string; generation: number; parent_content_id: string };
+    expect(gen1Body.generation).toBe(1);
+    expect(gen1Body.parent_content_id).toBe("GEN-1");
+
+    const gen2 = await post(bucket, `/api/v1/research/content/${gen1Body.content_id}/next-generation`, { title: "Gen paper v2" });
+    expect(gen2.status).toBe(201);
+    const gen2Body = (await gen2.json()) as { content_id: string; generation: number; parent_content_id: string };
+    expect(gen2Body.generation).toBe(2);
+    expect(gen2Body.parent_content_id).toBe(gen1Body.content_id);
+  });
+
+  it("gen1 の citation-count は gen0 と独立(gen0への引用はgen1に数えない)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("GEN-CIT-0"));
+    const gen1Res = await post(bucket, "/api/v1/research/content/GEN-CIT-0/next-generation", {});
+    const { content_id: gen1Id } = (await gen1Res.json()) as { content_id: string };
+
+    // gen0 を引用する投稿を1件作る(citation-link は gen0 の content_id 宛)。
+    await post(bucket, "/api/v1/plaza/posts", {
+      channel: "c-gencit", board_kind: "guide", topic: "citing gen0", body: "見て",
+      cite_refs: [{ type: "paper", id: "GEN-CIT-0" }],
+    });
+
+    const gen0Count = await (await get(bucket, "/api/v1/research/content/GEN-CIT-0/citation-count")).json();
+    const gen1Count = await (await get(bucket, `/api/v1/research/content/${gen1Id}/citation-count`)).json();
+    // gen0: 板からの引用1件のみ(citation-linkは content_id 単位のキー空間なので gen1 作成時に
+    // gen1 の名前空間へ積まれる derived_from リンクは gen0 側には現れない=独立の証明)。
+    expect(gen0Count).toEqual({ content_id: "GEN-CIT-0", citation_count: 1 });
+    // gen1: next-generation 作成時に積まれた自身の derived_from リンク1件のみ(gen0への板引用は
+    // gen1 側には現れない=双方向で独立)。
+    expect(gen1Count).toEqual({ content_id: gen1Id, citation_count: 1 });
+  });
+
+  it("gen0 の reference-count は gen1 作成で +1 される(input_event_ids刻印の帰結・消失や二重計上が無いことの確認)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("GEN-REF-0"));
+    const before = await (await get(bucket, "/api/v1/research/content/GEN-REF-0/reference-count")).json();
+    expect(before).toEqual({ content_id: "GEN-REF-0", reference_count: 0 });
+
+    await post(bucket, "/api/v1/research/content/GEN-REF-0/next-generation", {});
+
+    const after = await (await get(bucket, "/api/v1/research/content/GEN-REF-0/reference-count")).json();
+    // next-generation は provenance.input_event_ids で gen0 の envelope.id を引用するので
+    // gen0 の reference-count 自体は+1になる(fork-templateと同じ帰結)が、これは gen0 が
+    // 消えず・世代交代で数字が壊れないことの確認(gen1作成"前後"での不変性=作成後にさらに
+    // 変化しないこと)であり二重計上や消失が起きていないことを検証する。
+    expect(after).toEqual({ content_id: "GEN-REF-0", reference_count: 1 });
+  });
+
+  it("content_type=paper 以外は400(設計§9-3・fork-templateと同じ限定)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, { content_id: "GEN-ART-1", content_type: "article", title: "not a paper" });
+    const res = await post(bucket, "/api/v1/research/content/GEN-ART-1/next-generation", {});
+    expect(res.status).toBe(400);
+  });
+
+  it("存在しない content_id は404", async () => {
+    const bucket = new FakeR2Bucket();
+    const res = await post(bucket, "/api/v1/research/content/nope/next-generation", {});
+    expect(res.status).toBe(404);
+  });
+
+  it("未認証だと401(protected route のまま・新routeはPUBLIC_ROUTESに載せない)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("GEN-AUTH-1"));
+    const res = await app.request(
+      "/api/v1/research/content/GEN-AUTH-1/next-generation",
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}) },
+      makeEnv(bucket),
+    );
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("V3-PPR-03 POST /research/content: filled:true な section の text 空は400で拒否", () => {
   it("filled:true かつ text が空文字だと INVALID_SECTION_FILLED_WITHOUT_TEXT で400", async () => {
     const bucket = new FakeR2Bucket();

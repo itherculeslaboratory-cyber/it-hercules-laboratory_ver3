@@ -78,6 +78,8 @@ function contentKey(id: string): string {
 }
 // provenanceExtra(任意・g67-refs1・設計R0801-436936 §2案1-A①): research-content-routes.ts の
 // envelope() と同型のマージ方式(actor_id 刻印は維持したまま input_event_ids 等を追記できる)。
+// provenanceExtra は spread を先に置き、generator_kind/actor_id を後から上書きすることで
+// V3-AUT-17 の刻印を構造的に上書き不能にする(g68-refs2・S1ゲート指摘6-b是正)。
 function envelope(actorId: string, data: Record<string, unknown>, provenanceExtra?: Record<string, unknown>) {
   return {
     specversion: "1.0",
@@ -86,7 +88,7 @@ function envelope(actorId: string, data: Record<string, unknown>, provenanceExtr
     type: CONTENT_TYPE,
     time: new Date().toISOString(),
     dataschema: CONTENT_SCHEMA,
-    provenance: { generator_kind: "human", actor_id: actorId, ...provenanceExtra },
+    provenance: { ...provenanceExtra, generator_kind: "human", actor_id: actorId },
     data,
   };
 }

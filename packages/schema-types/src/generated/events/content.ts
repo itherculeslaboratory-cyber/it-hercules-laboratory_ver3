@@ -117,6 +117,7 @@ export interface Content {
    * どの観測対象（種族）についての論文/記事かを示す任意参照（ヘッダー『観測対象』narrowing の基盤・plaza-post.species_id/SW-1と同型）。project は複数種の content を束ねる箱のため専用フィールドを持たず、GET /research/projects の種族絞り込みは本フィールド経由の project_id 結合で派生判定する。
    */
   species_id?: string;
+  lineage_meta?: LineageMetadataFND15SharedType;
 }
 export interface Section {
   filled: boolean;
@@ -199,4 +200,37 @@ export interface CitationReferenceCiteRefSharedType {
    * post 種別引用のアンカー post_id（任意・permalink フラグメント用）。
    */
   post_id?: string;
+}
+/**
+ * 任意。世代機構(V3-AIP-108/109)の系譜メタ。省略時=世代管理なしの旧レコード。
+ */
+export interface LineageMetadataFND15SharedType {
+  /**
+   * このノードの一意キー（ULID）。
+   */
+  uuid: string;
+  /**
+   * SHA-256((parent?.lineage_hash ?? GENESIS_HASH) + content_hash) の hex。系譜の連鎖ハッシュ。
+   */
+  lineage_hash: string;
+  /**
+   * SHA-256(canonicalJson(content)) の hex。内容の決定論ハッシュ。
+   */
+  content_hash: string;
+  /**
+   * 世代番号。root=0、子=親+1。
+   */
+  generation: number;
+  /**
+   * 親ノードの uuid（root は省略）。
+   */
+  parent_uuid?: string;
+  /**
+   * root から親までの uuid 列（root は空配列相当だが値なしは省略）。
+   */
+  ancestor_chain?: string[];
+  /**
+   * embedding 派生の意味ハッシュ（既定 OFF・通常省略）。
+   */
+  semantic_hash?: string;
 }

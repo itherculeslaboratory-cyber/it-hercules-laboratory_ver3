@@ -17,7 +17,7 @@ export * from "./events/citation-link";
 export * from "./events/citation";
 export * from "./events/cite-ref";
 export * from "./events/condition";
-export type { Content, Section, PaperConditionPEntryPPR02, Claim, Measurement } from "./events/content";
+export type { Content, Section, PaperConditionPEntryPPR02, Claim, Measurement, LineageMetadataFND15SharedType } from "./events/content";
 export * from "./events/culture-template";
 export * from "./events/cusb-ingest";
 export * from "./events/device-binding";
