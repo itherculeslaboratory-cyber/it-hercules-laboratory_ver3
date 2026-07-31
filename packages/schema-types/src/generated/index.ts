@@ -73,6 +73,7 @@ export * from "./events/plaza-resolution";
 export * from "./events/plaza-signal";
 export * from "./events/plaza-stance";
 export * from "./events/plaza-summary";
+export * from "./events/ppr-graph-update";
 export * from "./events/pref-set";
 export * from "./events/project";
 export * from "./events/research-proposal";

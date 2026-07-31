@@ -179,6 +179,38 @@ export function resolveLineage(
   return lineage;
 }
 
+// appendForkContribution — フォーク系譜への貢献度10%分配(V3-MKT-36層3・round-16裁定
+// 「フォーク10%=金銭でなく貢献度の分配」)を1呼び出しで完結させるフック関数。resolveLineage()
+// で forked_from を辿った上流ノード列を求め、UPSTREAM_PERCENT(10%)を均等配分してから
+// appendContribution() を各ノードへ発行する(split計算はapplyContributionDeltaと同じ配分式を
+// 踏襲・コピペ二重化しない)。呼び出し側(market/plaza等のフォークroute・本レーンglob外)は
+// nodes配列(node_id/forked_from)を渡すだけでよい。ancestors 0件時は上流分配なし=nodeIdへ全額。
+export async function appendForkContribution(
+  s: TruthStore,
+  actorId: string,
+  nodes: { node_id: string; forked_from?: string }[],
+  nodeId: string,
+  axis: Axis,
+  delta: number,
+  source: string,
+  sourceRef?: string,
+): Promise<PutEventResult[]> {
+  if (!(delta > 0)) return [];
+  const ancestors = resolveLineage(nodes, nodeId);
+  const upstream = ancestors.length > 0 ? delta * UPSTREAM_PERCENT : 0;
+  const results: PutEventResult[] = [];
+  const own = await appendContribution(s, actorId, nodeId, axis, delta - upstream, source, sourceRef);
+  if (own) results.push(own);
+  if (ancestors.length > 0) {
+    const per = upstream / ancestors.length;
+    for (const ancestorId of ancestors) {
+      const r = await appendContribution(s, actorId, ancestorId, axis, per, source, sourceRef);
+      if (r) results.push(r);
+    }
+  }
+  return results;
+}
+
 // ── PT 影響力投影（KRM-10・非公開＝本人のみ）─────────────────────────────
 export async function listPtEvents(
   s: TruthStore,

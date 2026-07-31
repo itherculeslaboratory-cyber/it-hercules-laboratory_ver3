@@ -37,6 +37,14 @@ export interface ObsCapture {
    */
   species_candidate?: string;
   /**
+   * species_candidate の候補根拠として保存する GBIF canonical_id（V3-OBS-04・任意）。confirmed taxonomy には反映しない(commit taxonomy は user confirmed 値のみ・分類階層は Wikidata 参照で内部に持たない)。
+   */
+  species_candidate_gbif_id?: string;
+  /**
+   * species_candidate の候補根拠として保存する Wikidata Q番号（V3-OBS-04・任意）。confirmed taxonomy には反映しない。
+   */
+  species_candidate_wikidata_qid?: string;
+  /**
    * 種の確定者。常に user（AI 確定は不可・V3-OBS-03）。任意（species_candidate 記入時に付随）。
    */
   species_confirmed_by?: "user";

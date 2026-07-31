@@ -253,6 +253,25 @@ plazaRoutes.get("/plaza/threads/:thread_id", async (c) => {
   return c.json({ ...view, resolution, promotion });
 });
 
+// GET /plaza/threads/:thread_id/paper-citations — スレが引用する論文一覧(V3-PPR-08「掲示板↔
+// 論文」双方向リンクのうち板→論文方向の最小投影)。既存 cite_refs(type=paper)を集約するだけの
+// 薄い読み取り専用投影(新規スキーマ不要・都度再計算)。論文→板方向(査読コメントR2 append-only
+// レイヤーを含む完全な双方向リンク)は content.schema.json 側の変更を要し本艦glob外(w1-plaza所有
+// のplaza-routes.tsのみが本艦の許可範囲・contentスキーマは対象外)のため対象外。差し戻し(考える
+// 役)へ: 論文側からの逆参照フィールド設計は次波の設計判断。
+plazaRoutes.get("/plaza/threads/:thread_id/paper-citations", async (c) => {
+  const threadId = c.req.param("thread_id");
+  const view = await projectThread(store(c), threadId);
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  const paperIds = new Set<string>();
+  for (const p of view.posts) {
+    for (const ref of (p.cite_refs as CiteRef[] | undefined) ?? []) {
+      if (ref.type === "paper") paperIds.add(ref.id);
+    }
+  }
+  return c.json({ thread_id: threadId, paper_ids: [...paperIds] });
+});
+
 // projectChannelThreads — channel 内スレ一覧(thread ごと集約 + board_kind グルーピング・
 // BBS-03 の3板)。channel prefix scan。speciesFilter(HDR-1・A1#4・任意)はスレの
 // root 投稿(thread_id===post_id)の species_id を代表値とみなし完全一致(大小無視)

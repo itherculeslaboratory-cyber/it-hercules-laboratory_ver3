@@ -770,7 +770,7 @@ govRoutes.get("/gov/precedents/:precedent_id", async (c) => {
 // POST /gov/flags — 行政指摘の不使用フラグを append(R2 DELETE せず論理無効化)+ 対象 owner へ
 // grantKarmaCountIncrease(steps=GOV_FLAG_COUNT_STEPS=10)。operator の明示操作時のみ append
 // (自動 poll しない=行政命令服従判断は人間ゲート V3-AIP-31)。
-govRoutes.post("/gov/flags", requireRole("operator", "admin"), async (c) => {
+govRoutes.post("/gov/flags", requireRole("operator", "administrator"), async (c) => {
   // GOV-09 ハード完了条件: K2 の requireRole(authz.ts)を配線済み — operator/admin ロールを
   // 帯びたセッションのみ通過(fail-closed)。DEV_TOKEN(roles=[])・一般セッションは 403。
   // 統一ロール taxonomy の人間裁定が下りても、この 2 role 名は運用者ゲートとして据置可能。

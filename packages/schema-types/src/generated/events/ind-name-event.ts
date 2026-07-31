@@ -25,6 +25,14 @@ export interface IndNameEvent {
    */
   actor_id: string;
   /**
+   * 昇格主体（V3-IND-05）。手動/半自動/自動の別。v1 は完全手動昇格のみのため実質 manual 固定運用だが、v2 の自動候補提示に備えスキーマは3値を許容する（任意）。
+   */
+  actor_type?: "manual" | "semi_auto" | "auto";
+  /**
+   * 昇格理由（V3-IND-05・任意）。血統(親子)表示で最良個体を次世代シリーズ名へ昇格させた根拠を記録する自由記述。
+   */
+  promotion_reason?: string;
+  /**
    * 改名時刻（RFC3339）。当時名再現の時系列キー。
    */
   created_at: string;

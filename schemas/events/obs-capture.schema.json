@@ -40,6 +40,15 @@
       "type": "string",
       "description": "種の候補。ユーザー入力のみ（AI 候補は入れない・V3-OBS-03）。任意。"
     },
+    "species_candidate_gbif_id": {
+      "type": "string",
+      "description": "species_candidate の候補根拠として保存する GBIF canonical_id（V3-OBS-04・任意）。confirmed taxonomy には反映しない(commit taxonomy は user confirmed 値のみ・分類階層は Wikidata 参照で内部に持たない)。"
+    },
+    "species_candidate_wikidata_qid": {
+      "type": "string",
+      "pattern": "^Q[1-9][0-9]*$",
+      "description": "species_candidate の候補根拠として保存する Wikidata Q番号（V3-OBS-04・任意）。confirmed taxonomy には反映しない。"
+    },
     "species_confirmed_by": {
       "const": "user",
       "description": "種の確定者。常に user（AI 確定は不可・V3-OBS-03）。任意（species_candidate 記入時に付随）。"

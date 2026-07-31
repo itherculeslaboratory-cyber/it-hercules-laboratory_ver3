@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/ppr-graph-update.schema.json",
+  "title": "Living Paper graph update history (ihl.research.graph_update.v1)",
+  "description": "Living Paper(V3-PPR-14)のグラフ自動更新履歴 append-only イベント。Truth キー truth/ihl.research.graph_update.v1/<content_id>/<update_id>.json。POST /research/graph/update(paper-match-routes.ts)が返す非永続プレビュー(computeLivingPaperGraph の出力)を、呼び手が確認のうえ本イベントとして追記すると更新履歴になる(content.schema.json 本体は書き換えない・履歴は別イベントストリームとして積む=INSERT ONLY・不変条項③)。graph_snapshot はサーバ算出値のスナップショット(ユーザー直接入力ではない)であり、computeLivingPaperGraph() の出力構造に追随するため厳密な additionalProperties:false 制約は課さない。",
+  "x_ihl_req": "V3-PPR-14",
+  "x_ihl_source": "apps/api/src/paper-match-routes.ts POST /research/graph/update",
+  "type": "object",
+  "required": ["update_id", "content_id", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "update_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "この更新履歴行の一意キー（ULID）。"
+    },
+    "content_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象 Living Paper の content_id（schemas/events/content.schema.json 側の正本を参照）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "更新を確定させた actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "triggered_by": {
+      "type": "string",
+      "description": "この更新の引き金になった観測/イベントの参照（任意・capture_id 等）。"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "更新時点の信頼度（computeLivingPaperGraph().confidence・任意）。"
+    },
+    "observation_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "この更新に使われた観測件数（任意）。"
+    },
+    "graph_snapshot": {
+      "type": "object",
+      "description": "computeLivingPaperGraph() の出力全体（conditions/sections/match/claims/quadrant 等）のスナップショット（任意）。サーバ算出値のキャッシュであり additionalProperties は制限しない。",
+      "additionalProperties": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "更新確定時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

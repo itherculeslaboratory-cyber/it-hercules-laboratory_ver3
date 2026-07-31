@@ -11,9 +11,39 @@ export interface GithubIssue {
   html_url: string;
 }
 
+export interface GithubPull {
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  html_url: string;
+  merged: boolean;
+}
+
+export interface GithubCommit {
+  sha: string;
+  message: string;
+  author: string;
+  html_url: string;
+}
+
+export interface GithubRelease {
+  tag_name: string;
+  name: string;
+  body: string;
+  html_url: string;
+  published_at: string;
+}
+
 export interface GithubIssuesConnector {
   /** labels のいずれかを持つ issue 一覧(state=open 既定)。 */
   listIssues(repo: string, labels: string[]): Promise<GithubIssue[]>;
+  /** PR 一覧(state=open 既定・V3-BBS-38)。 */
+  listPulls(repo: string): Promise<GithubPull[]>;
+  /** default branch の直近コミット一覧(V3-BBS-38)。 */
+  listCommits(repo: string): Promise<GithubCommit[]>;
+  /** Releases 一覧(V3-BBS-38)。 */
+  listReleases(repo: string): Promise<GithubRelease[]>;
 }
 
 export interface GithubIssuesEnv {
@@ -43,18 +73,80 @@ export function parseIssue(raw: unknown): GithubIssue | null {
   };
 }
 
+/** GitHub API の生 PR オブジェクト → GithubPull へ防御的パース。不正形状は null。 */
+export function parsePull(raw: unknown): GithubPull | null {
+  const o = raw as Record<string, unknown> | null;
+  if (!o || typeof o.number !== "number" || typeof o.title !== "string") return null;
+  return {
+    number: o.number,
+    title: o.title,
+    body: typeof o.body === "string" ? o.body : "",
+    state: typeof o.state === "string" ? o.state : "open",
+    html_url: typeof o.html_url === "string" ? o.html_url : "",
+    merged: (o.merged_at ?? null) !== null,
+  };
+}
+
+/** GitHub API の生 commit オブジェクト → GithubCommit へ防御的パース。不正形状は null。 */
+export function parseCommit(raw: unknown): GithubCommit | null {
+  const o = raw as Record<string, unknown> | null;
+  const sha = o && typeof o.sha === "string" ? o.sha : "";
+  if (!sha) return null;
+  const commit = (o!.commit ?? {}) as Record<string, unknown>;
+  const author = (commit.author ?? {}) as Record<string, unknown>;
+  return {
+    sha,
+    message: typeof commit.message === "string" ? commit.message : "",
+    author: typeof author.name === "string" ? author.name : "",
+    html_url: typeof o!.html_url === "string" ? (o!.html_url as string) : "",
+  };
+}
+
+/** GitHub API の生 release オブジェクト → GithubRelease へ防御的パース。不正形状は null。 */
+export function parseRelease(raw: unknown): GithubRelease | null {
+  const o = raw as Record<string, unknown> | null;
+  if (!o || typeof o.tag_name !== "string") return null;
+  return {
+    tag_name: o.tag_name,
+    name: typeof o.name === "string" ? o.name : o.tag_name,
+    body: typeof o.body === "string" ? o.body : "",
+    html_url: typeof o.html_url === "string" ? o.html_url : "",
+    published_at: typeof o.published_at === "string" ? o.published_at : "",
+  };
+}
+
 export function makeGithubIssuesConnector(env: GithubIssuesEnv): GithubIssuesConnector {
   const base = env.GITHUB_API_BASE ?? DEFAULT_API_BASE;
+  const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
+  if (env.GITHUB_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+
+  async function getJson(path: string, errLabel: string): Promise<unknown> {
+    const res = await fetch(`${base}${path}`, { headers });
+    if (!res.ok) throw new Error(`github ${errLabel} HTTP ${res.status}`);
+    return res.json();
+  }
+
   return {
     async listIssues(repo: string, labels: string[]): Promise<GithubIssue[]> {
       const qs = new URLSearchParams({ state: "open", per_page: "100" });
       if (labels.length) qs.set("labels", labels.join(","));
-      const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
-      if (env.GITHUB_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
-      const res = await fetch(`${base}/repos/${repo}/issues?${qs.toString()}`, { headers });
-      if (!res.ok) throw new Error(`github issues HTTP ${res.status}`);
-      const json = await res.json();
+      const json = await getJson(`/repos/${repo}/issues?${qs.toString()}`, "issues");
       return (Array.isArray(json) ? json : []).map(parseIssue).filter((i): i is GithubIssue => i !== null);
+    },
+    async listPulls(repo: string): Promise<GithubPull[]> {
+      const qs = new URLSearchParams({ state: "open", per_page: "100" });
+      const json = await getJson(`/repos/${repo}/pulls?${qs.toString()}`, "pulls");
+      return (Array.isArray(json) ? json : []).map(parsePull).filter((p): p is GithubPull => p !== null);
+    },
+    async listCommits(repo: string): Promise<GithubCommit[]> {
+      const qs = new URLSearchParams({ per_page: "30" });
+      const json = await getJson(`/repos/${repo}/commits?${qs.toString()}`, "commits");
+      return (Array.isArray(json) ? json : []).map(parseCommit).filter((c): c is GithubCommit => c !== null);
+    },
+    async listReleases(repo: string): Promise<GithubRelease[]> {
+      const qs = new URLSearchParams({ per_page: "30" });
+      const json = await getJson(`/repos/${repo}/releases?${qs.toString()}`, "releases");
+      return (Array.isArray(json) ? json : []).map(parseRelease).filter((r): r is GithubRelease => r !== null);
     },
   };
 }

@@ -135,6 +135,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   // プラチナ/代引き/外部EC誘導の3方式)。
   "mkt-store-item": "mktStoreItem",
   "mkt-store-order": "mktStoreOrder",
+  // V3-PPR-14(残課題): Living Paper グラフ自動更新の永続履歴イベント型。
+  "ppr-graph-update": "pprGraphUpdate",
 };
 
 const FROZEN_NAMES = new Set([
@@ -260,6 +262,9 @@ const EVENT_NAMES = new Set([
   "mkt-individual-offer",
   "mkt-store-item",
   "mkt-store-order",
+  // V3-PPR-14 — data validation MUST fire or putEvent stores unchecked data
+  // permanently (Truth is INSERT ONLY, unfixable).
+  "ppr-graph-update",
 ]);
 
 function validatorFor(name: string): ValidateFn {

@@ -748,7 +748,7 @@
       "0c866ff"
     ],
     "tc": [],
-    "note": "市場側(market-flag-routes.ts のユーザー指摘route・gov-stop route両方)には累計30件ごとに1PT消費(reason_code=indictment_fee・カルマΔcountとは別経路・非ブロッキングでPT残高がマイナスになっても指摘自体は拒否しない)を配線しテスト済み(commits内)。掲示板側(「掲示板の指摘」)は現行コードに『掲示板の投稿へ指摘/報告する』というユーザー向けエンドポイント自体が存在しない(plaza-signalはlike/use/retain等のみでflag相当が無い)ため配線先が無く未実装。新規に掲示板指摘機能を丸ごと作るのはスコープ外の推測実装になるため見送った。"
+    "note": "市場側(market-flag-routes.ts のユーザー指摘route・gov-stop route両方)には累計30件ごとに1PT消費(reason_code=indictment_fee・カルマΔcountとは別経路・非ブロッキングでPT残高がマイナスになっても指摘自体は拒否しない)を配線しテスト済み(commits内)。掲示板側(「掲示板の指摘」)は現行コードに『掲示板の投稿へ指摘/報告する』というユーザー向けエンドポイント自体が存在しない(plaza-signalはlike/use/retain等のみでflag相当が無い)ため配線先が無く未実装。新規に掲示板指摘機能を丸ごと作るのはスコープ外の推測実装になるため見送った。[2026-08-01橋渡し波(R0731-7b0c89)追記] 掲示板側実装には plaza-signal.schema.json(signal enum閉鎖)または gov-flag.schema.json(target_type enum閉鎖・GOV-09と意味論が別)の変更が必須と判明したが、本橋渡し艦のV3-GOV-10行の許可ファイルは plaza-routes.ts のみでスキーマ変更は対象外のため、狭glob越境を避けて未実装のまま停止(差し戻し=考える役)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-GOV-11",
@@ -1492,7 +1492,7 @@
     "tc": [
       "tests/market-fees.test.ts"
     ],
-    "note": "w1-mktレーン(持ち越し): 層2(5%維持費税)はV3-MKT-10で完成済み。層1(3%文明OS拠出)はambiguity「3%が最終値か本人再検討中(未確定)」+商用利用検出方式未定のため未接続。層3(フォーク10%貢献度分配)はcomputeFees()の純関数は実装済みだが、実際の配分(applyContributionDelta/resolveLineage)はcontribution.ts(w1-gov所有glob)にあり越境不可のため未接続のまま持ち越し。"
+    "note": "w1-mktレーン(持ち越し): 層2(5%維持費税)はV3-MKT-10で完成済み。層1(3%文明OS拠出)はambiguity「3%が最終値か本人再検討中(未確定)」+商用利用検出方式未定のため未接続。層3(フォーク10%貢献度分配)はcomputeFees()の純関数は実装済みだが、実際の配分(applyContributionDelta/resolveLineage)はcontribution.ts(w1-gov所有glob)にあり越境不可のため未接続のまま持ち越し。[2026-08-01橋渡し波(R0731-7b0c89)追記] contribution.tsに`appendForkContribution()`(resolveLineage+applyContributionDelta+appendContributionを1呼び出しで完結させるフック関数)を新規追加。呼び出し元(market-fork等のroute配線)はWave B1担当艦が着手可能。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-MKT-40",
@@ -2965,7 +2965,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "w3-aut再確認: github_user_mapの実装先(github-webhook-routes.ts)は自glob外で状況変化なし。grep実測0件を再確認。持ち越し(w3-aut・2026-07-31)。"
+    "note": "w3-aut再確認: github_user_mapの実装先(github-webhook-routes.ts)は自glob外で状況変化なし。grep実測0件を再確認。持ち越し(w3-aut・2026-07-31)。[2026-08-01橋渡し波(R0731-7b0c89)追記] github-webhook-routes.tsはglob内だったが、マッピング永続化には新規Truthスキーマ(汎用ID対応表の既存流用先0件)が必須で、V3-AUT-38行の許可ファイルはgithub-webhook-routes.tsのみ(スキーマ対象外)のため狭glob越境を避けて未実装のまま停止(差し戻し=考える役)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-AUT-40",
@@ -3525,7 +3525,7 @@
     "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "(w2-ind Wave2持ち越し) 昇格主体(actor_type)・promotion_reasonの記録にはschemas/events/ind-name-event.schema.json(additionalProperties:false)への新フィールド追加が必要で本艦glob外。手動昇格自体(POST /individuals/{id}/name)は既存route で可能だが、要件が明記する記録項目は未充足のため in_progress のまま。"
+    "note": "(w2-ind Wave2持ち越し) 昇格主体(actor_type)・promotion_reasonの記録にはschemas/events/ind-name-event.schema.json(additionalProperties:false)への新フィールド追加が必要で本艦glob外。手動昇格自体(POST /individuals/{id}/name)は既存route で可能だが、要件が明記する記録項目は未充足のため in_progress のまま。[2026-08-01橋渡し波(R0731-7b0c89)追記] ind-name-event.schema.jsonに actor_type(enum manual/semi_auto/auto)・promotion_reason(string)を追加し再生成済み(schema validation OK)。ライター側(routeコードでの実セット)は本橋渡し艦のglob外のためWave B1担当艦が着手可能。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-IND-06",
@@ -3611,7 +3611,7 @@
     "tc": [
       "project-routes.tsの既存テスト群(project-hub.test.ts)"
     ],
-    "note": "(w2-ind Wave2確認・新規実装なし・境界外読取) project-routes.ts(w2-ind glob外の既存実装。未帰属ファイル一覧にも非該当)のprojectHub(project+content+citation+子Ver集約)+bestVersion(Ver1→2.0のバージョン管理+成長指標平均による効果比較・決定論選定)で要件のバージョン管理部分は充足。個体/マット/ロット/投票への直接リンクはproject-routes.ts自身のコメントが『現行スキーマに直接リンクが無い』と明記する既知の未達(境界外につき本艦では手を入れず)。 [62代目HQ検収是正 R0731-f6a6ab: w2-ind批評重大1。note自身が「個体/マット/ロット/投票への直接リンクは既知の未達」と明記・コード0行。done->in_progress]"
+    "note": "(w2-ind Wave2確認・新規実装なし・境界外読取) project-routes.ts(w2-ind glob外の既存実装。未帰属ファイル一覧にも非該当)のprojectHub(project+content+citation+子Ver集約)+bestVersion(Ver1→2.0のバージョン管理+成長指標平均による効果比較・決定論選定)で要件のバージョン管理部分は充足。個体/マット/ロット/投票への直接リンクはproject-routes.ts自身のコメントが『現行スキーマに直接リンクが無い』と明記する既知の未達(境界外につき本艦では手を入れず)。 [62代目HQ検収是正 R0731-f6a6ab: w2-ind批評重大1。note自身が「個体/マット/ロット/投票への直接リンクは既知の未達」と明記・コード0行。done->in_progress] [2026-08-01橋渡し波(R0731-7b0c89)追記] 個体スキーマ(ind-master.schema.json)にproject_idリンクが無いことを再確認(grep 0件)。追加にはind-master等のスキーマ変更が要るが、V3-IND-23行の許可ファイルはproject-routes.tsのみ(スキーマ対象外)のため狭glob越境を避けて未実装のまま停止(差し戻し=考える役)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-IND-26",
@@ -4226,7 +4226,7 @@
       "tests/paper-match.test.ts describe(\"V3-PPR-08 buildCitationEdges (双方向リンク + tombstone・pure fn)\")",
       "tests/paper-match.test.ts GET /research/content/:id/citation-graph route TC"
     ],
-    "note": "(w2-ind Wave2部分実装) paper-match.ts buildCitationEdges(純関数)+ GET /research/content/{id}/citation-graph。既存content.citations(PPR-23で永続化済みのCiteRef[])のpaper種別引用先の実在確認+tombstone判定(削除・非公開でも本文を壊さず表示)は動作する。ただし要件本文の中核『掲示板↔論文の双方向BBSレビュー層』はplaza-routes.ts(w1-plaza所有)側の実装を要し未着手のため、要件全体としてはin_progressのまま正直に記録する。"
+    "note": "(w2-ind Wave2部分実装) paper-match.ts buildCitationEdges(純関数)+ GET /research/content/{id}/citation-graph。既存content.citations(PPR-23で永続化済みのCiteRef[])のpaper種別引用先の実在確認+tombstone判定(削除・非公開でも本文を壊さず表示)は動作する。ただし要件本文の中核『掲示板↔論文の双方向BBSレビュー層』はplaza-routes.ts(w1-plaza所有)側の実装を要し未着手のため、要件全体としてはin_progressのまま正直に記録する。[2026-08-01橋渡し波(R0731-7b0c89)追記] plaza-routes.tsに GET /plaza/threads/:thread_id/paper-citations(既存cite_refsからtype=paperを集約する読み取り専用投影・板→論文方向)を追加。論文→板の逆参照+査読コメントR2層はcontent.schema.json変更が要るがV3-PPR-08行の許可はplaza-routes.tsのみのため未実装のまま停止(差し戻し=考える役)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-PPR-11",
@@ -4450,7 +4450,7 @@
     "tc": [
       "tests/sec-w2-batch.test.ts"
     ],
-    "note": "62代目是正(R0731-14f1df重大2)が指摘したpermissions強制/Universe物理分離は要件文言上Kernel層(packages/truth/src/envelope.ts・store.ts)への実装を要するが、w3-sec発注書の書いてよい場所(apps/api/src・tests)の外のため実施不可と判断し持ち越し(w3-sec R0731-e89224)。構造バリデーション(validateEnvelope)のみ既存のまま(w2-sec R0731-dd313c引用継続)。HQへ: packages/truth/src/**を書いてよい場所に含めた発注が必要。"
+    "note": "62代目是正(R0731-14f1df重大2)が指摘したpermissions強制/Universe物理分離は要件文言上Kernel層(packages/truth/src/envelope.ts・store.ts)への実装を要するが、w3-sec発注書の書いてよい場所(apps/api/src・tests)の外のため実施不可と判断し持ち越し(w3-sec R0731-e89224)。構造バリデーション(validateEnvelope)のみ既存のまま(w2-sec R0731-dd313c引用継続)。HQへ: packages/truth/src/**を書いてよい場所に含めた発注が必要。[2026-08-01橋渡し波(R0731-7b0c89)追記] packages/truth/src/{envelope.ts,store.ts}が今回は許可されたため着手したが、PutEventResultへ新ステータス(forbidden等)を足すと既存の全呼び出し元(apps/api/src全体・res.status==='invalid'/'conflict'のみ明示チェックしそれ以外を暗黙成功扱いする共通パターン)が権限拒否を成功と誤認する退行を招くと判明。呼び出し元全体の同時改修が要る本質的に狭glob1隻で完結できない変更のため、危険な半端フックは置かず未実装のまま停止(差し戻し=考える役)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-UIX-09",
@@ -5445,7 +5445,7 @@
     "tc": [
       "tests/auth.test.ts describe(V3-AUT-22(w3-aut是正・第20回裁定): administrator ロールは ADMIN_EMAILS 一致で issue される) 5件"
     ],
-    "note": "第20回裁定(2026-07-31)によりロール体系=operator/administratorへ確定。本波でadministrator任命機構を新規実装: auth-routes.tsにrolesForEmail()を追加し、ADMIN_EMAILS(カンマ区切りメール一覧)一致時に/verify・/verify-code・/dev-loginの3経路ともissueSessionTokenへroles:['administrator']を渡すよう配線(前2波はsession.ts/index.ts側の機構のみで、発行側は一度もroles引数を渡していなかったため実際には未使用だった=w3-autで実測発見)。env.tsのBindings型追加は不可侵(w1-fnd所有)のため関数側の構造的部分型で回避(型追加なしで動作)。残: admin系ルートの実ゲート(gov-routes.tsのrequireRole('operator','admin')→('operator','administrator')への改称)・Capability読取専用表示はw1-sec/w1-gov所有ファイルでglob外のため持ち越し。operatorの付与元は本波でも未確定のため付与経路を追加せず(推測実装をしない)。"
+    "note": "第20回裁定(2026-07-31)によりロール体系=operator/administratorへ確定。本波でadministrator任命機構を新規実装: auth-routes.tsにrolesForEmail()を追加し、ADMIN_EMAILS(カンマ区切りメール一覧)一致時に/verify・/verify-code・/dev-loginの3経路ともissueSessionTokenへroles:['administrator']を渡すよう配線(前2波はsession.ts/index.ts側の機構のみで、発行側は一度もroles引数を渡していなかったため実際には未使用だった=w3-autで実測発見)。env.tsのBindings型追加は不可侵(w1-fnd所有)のため関数側の構造的部分型で回避(型追加なしで動作)。残: admin系ルートの実ゲート(gov-routes.tsのrequireRole('operator','admin')→('operator','administrator')への改称)・Capability読取専用表示はw1-sec/w1-gov所有ファイルでglob外のため持ち越し。operatorの付与元は本波でも未確定のため付与経路を追加せず(推測実装をしない)。[2026-08-01橋渡し波(R0731-7b0c89)追記] 残課題のうちgov-routes.tsのrequireRole('operator','admin')→('operator','administrator')への改称のみ本波で完了(gov-routes.ts:773)。Capability読取専用表示・operator付与元は依然未着手のため要件全体はin_progressのまま(型F3点=コード/テスト/progress行のうちテストが本項目については未追加)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-AUT-45",
@@ -5889,7 +5889,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。commit taxonomyがuser confirmedのみである点は満たす(observation-routes.ts:633)。未実装: GBIF/Wikidata外部ID(canonical_id/Q番号)保存フィールドがschemas/events/obs-capture.schema.jsonに無い(grep実測0件、今回も再現)。schema変更+validator再生成が要るが艦割当外のため裁定待ちとして持ち越し継続。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。commit taxonomyがuser confirmedのみである点は満たす(observation-routes.ts:633)。未実装: GBIF/Wikidata外部ID(canonical_id/Q番号)保存フィールドがschemas/events/obs-capture.schema.jsonに無い(grep実測0件、今回も再現)。schema変更+validator再生成が要るが艦割当外のため裁定待ちとして持ち越し継続。[2026-08-01橋渡し波(R0731-7b0c89)追記] obs-capture.schema.jsonに species_candidate_gbif_id(string)・species_candidate_wikidata_qid(pattern Q番号)を追加し再生成済み(schema validation OK)。両方とも「confirmed taxonomyには反映しない」とdescriptionに明記。ライター側(GBIF/Wikidata検索結果を実際にセットするroute)は本橋渡し艦のglob外のためWave B1担当艦が着手可能。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-OBS-05",
@@ -6066,7 +6066,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。改ざん不可・追記のみはpackages/truth/src/store.ts:39-41で満たす。visibility flag・三層公開モデルはコード上0件(grep再実測)。schema拡張+validator再生成は艦割当外のため裁定待ちとして持ち越し継続。"
+    "note": "w3-obs持ち越し回収ラウンドで再検証(コード変更なし)。改ざん不可・追記のみはpackages/truth/src/store.ts:39-41で満たす。visibility flag・三層公開モデルはコード上0件(grep再実測)。schema拡張+validator再生成は艦割当外のため裁定待ちとして持ち越し継続。[2026-08-01橋渡し波(R0731-7b0c89)追記] packages/truth/src/store.tsは自身のコードコメントで明言する完全にドメイン非依存の汎用エンジンであり、OBS固有の三層公開概念を持ち込むと設計原則を壊す。実装場所自体(store.tsか、obs-capture.schema.json側にフィールドを足すか)が設計判断のため実装せず未実装のまま停止(差し戻し=考える役)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-OBS-63",
@@ -6415,7 +6415,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": "差し戻し: 横断スキーマで既存tag-routes.ts/tag-event(w1-plaza所有)と重複しうる。mkt glob内に妥当な置き場が無く担当ドメインの境界不明。HQ裁定要"
+    "note": "差し戻し: 横断スキーマで既存tag-routes.ts/tag-event(w1-plaza所有)と重複しうる。mkt glob内に妥当な置き場が無く担当ドメインの境界不明。HQ裁定要 [2026-08-01橋渡し波(R0731-7b0c89)追記] 2026-07-31第22回裁定(r22delta)で境界解消済み: tag-routes.ts(w1-plaza所有)を直接拡張する形で実装してよいと確定。本橋渡し艦での穴開けは不要になったため未実装(実作業はR0731-690327-ORDER-2026-08-01-w-plaza2.mdへ移管)。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-BBS-01",
@@ -6536,7 +6536,7 @@
       "apps/api/src/plaza-github-routes.ts",
       "tests/plaza-github.test.ts"
     ],
-    "note": "R0731 w1-plaza新規実装(部分)。既存github-issues-connector.ts(Issues読取・w1-mkt所有)を読取importで再配線し、GET /plaza/github/activity?repo=...でIssues一覧をIHL内表示用に返す(ネットワーク失敗はbest-effort・空配列+error同梱)。未実装: PR/commits/Releasesの読取(コネクタ拡張がw1-mkt担当globのため本艦では実装不可・持ち越し理由は報告書参照)。書込系(Issue起票)は要件文どおり第2波+人間ゲート(未着手のままでよい)。index.ts mount未反映(HQ検収時適用)。"
+    "note": "R0731 w1-plaza新規実装(部分)。既存github-issues-connector.ts(Issues読取・w1-mkt所有)を読取importで再配線し、GET /plaza/github/activity?repo=...でIssues一覧をIHL内表示用に返す(ネットワーク失敗はbest-effort・空配列+error同梱)。未実装: PR/commits/Releasesの読取(コネクタ拡張がw1-mkt担当globのため本艦では実装不可・持ち越し理由は報告書参照)。書込系(Issue起票)は要件文どおり第2波+人間ゲート(未着手のままでよい)。index.ts mount未反映(HQ検収時適用)。[2026-08-01橋渡し波(R0731-7b0c89)追記] github-issues-connector.tsに listPulls/listCommits/listReleases(+parsePull/parseCommit/parseRelease)を追加(既存listIssuesと同型の防御的パース)。tsc/既存テスト7件ともpass。呼び出し元(plaza-github-routes.ts等からの実配線)はWave B1担当艦が着手可能。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-WIK-02",
@@ -7076,7 +7076,7 @@
     "tc": [
       "tests/paper-match.test.ts describe(\"V3-PPR-14 computeLivingPaperGraph (pure fn)\")の逆順テスト新規追加分"
     ],
-    "note": "(w2-ind Wave2バグ修正) computeLivingPaperGraphの順序依存バグ(批評家指摘n60indcritic重大2)を修正: mergeMatchAcrossObservations()を新設し、観測ごとにmatchConditionsを個別適用→requiredキーごとに『1件でも満たせば満たす』集合演算へ変更(生値の先着勝ち畳み込みを廃止)。逆順テスト追加・既存35件は無編集のまま通過・コメント契約文言と実装の一致を確認(合格ライン3点満たす)。要件全体(永続履歴Truthイベント型・テンプレfork)はw1-indの持ち越し理由(schemas/+packages/truth変更を要し本艦glob外)がそのまま有効なためstatusはin_progressで据え置き。"
+    "note": "(w2-ind Wave2バグ修正) computeLivingPaperGraphの順序依存バグ(批評家指摘n60indcritic重大2)を修正: mergeMatchAcrossObservations()を新設し、観測ごとにmatchConditionsを個別適用→requiredキーごとに『1件でも満たせば満たす』集合演算へ変更(生値の先着勝ち畳み込みを廃止)。逆順テスト追加・既存35件は無編集のまま通過・コメント契約文言と実装の一致を確認(合格ライン3点満たす)。要件全体(永続履歴Truthイベント型・テンプレfork)はw1-indの持ち越し理由(schemas/+packages/truth変更を要し本艦glob外)がそのまま有効なためstatusはin_progressで据え置き。[2026-08-01橋渡し波(R0731-7b0c89)追記] schemas/events/ppr-graph-update.schema.json(ihl.research.graph_update.v1)を新規作成し、packages/truth/src/envelope.tsのVALIDATOR_NAME/EVENT_NAMESに登録・再生成済み(schema validation OK・tsc OK・envelope関連テスト9件pass)。graph_snapshotフィールドはサーバ算出値のスナップショットとしてadditionalProperties:trueに留めた(判断が要った箇所・報告書参照)。ルート側配線(POST /research/graph/updateでの実append・履歴GET投影)・テンプレfork部分は本橋渡し艦のglob外のためWave B1担当艦が着手可能。詳細=kits/lane-implement/R0731-7b0c89-REPORT-2026-08-01-bridge.md。"
   },
   {
     "id": "V3-IND-17",
