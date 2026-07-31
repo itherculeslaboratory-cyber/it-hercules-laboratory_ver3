@@ -3,6 +3,12 @@
 // 新規 KV namespace の実 wrangler 作成は人間ゲート(HANDOFF §4)— 本ファイルは既存
 // AUTH_DENYLIST/AUTH_CODE_STATE(env.ts)と同じ規約で、未バインド時は no-op(常に許可)に
 // degrade する。ローカル/テストは memoryKV() を渡せば実際にカウントされる。
+// R65-14是正(批評ゲート重大2): ★現時点(2026-07-31)では apps/api/wrangler.toml に
+// `[[kv_namespaces]] binding="RATE_LIMIT"` の宣言が1つも無いため、本番デプロイでは
+// `c.env.RATE_LIMIT` が undefined になり、下記 checkRateLimit は常に no-op(allowed=true)
+// で実質「未実装」と同じ挙動になる。テストが緑なのはテスト側が RATE_LIMIT: memoryKV() を
+// 注入しているから ── 「テストで実装済み」と「本番で有効」を同一視しない。KV namespace の
+// 実作成・wrangler.toml へのbinding追加は人間ゲート(艦はwrangler.tomlを編集しない)。
 // ponytail: 固定ウィンドウ(fixed window)カウンタ — ウィンドウ境界を跨ぐと理論上最大2倍の
 // バーストを許す既知の誤差(スライディングウィンドウ/トークンバケットより単純)。乱用が実測
 // されたら昇格する。キーに window bucket を埋め込むことで TTL 失効=自然なウィンドウ切替。

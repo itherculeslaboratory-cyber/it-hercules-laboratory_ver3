@@ -117,7 +117,11 @@ const PUBLIC_ROUTES = [
 //       ルータの答えを使えばこの穴は最初から開かない。
 // 値の形は「<METHOD> <Hono に登録された route パス>」。route-matrix.csv の path 列とは
 // 表記が違う({capture_id} ではなく :capture_id)ので、CSV からのコピペは不可。
-const PUBLIC_READ_ROUTES = new Set([
+// R65-13是正: export(JSモジュールのexport文)にする。これはHTTP routeを1本も増やさない
+// ── Setの中身(公開/非公開の判定対象)は不変。ハブ指示「exportを永久に対象外」が禁じているのは
+// HTTP route `GET /observation/export`(route-matrix.csv infra-route-097・protected)であり、
+// JSのexport文とは無関係(前艦は両者を取り違えて⑨の実装を誤って見送った)。
+export const PUBLIC_READ_ROUTES = new Set([
   "GET /api/v1/observation/:capture_id",                      // infra-route-012
   "GET /api/v1/observation/:capture_id/image/:photo_id",      // infra-route-013
   "GET /api/v1/observation/:capture_id/reanalysis-manifest",  // infra-route-014(R65-6でゲート追加済)
@@ -270,17 +274,28 @@ app.use("*", async (c, next) => {
 
 // V3-SEC-58: 書込系(R2 Truth append)レート制限+ユーザー別クォータ。deny-by-default 直後の
 // 単一 choke point — 個別 route を触らず全 POST/PUT/PATCH/DELETE を一括ガードする
-// (root-cause fix: 各 route に都度 guard を書かない)。R65-10: actorId が未確定なのは公開 READ
-// の書込route(POST /observation/search 等)を匿名で叩いた場合のみ(protected route は上の
-// 認証ゲートで既に401済みなのでここに来る時は actorId が必ず立っている)。その場合は IP 単位
-// で同じバケットに乗せる(下記)。RATE_LIMIT 未バインドは checkRateLimit が no-op degrade
-// (既存 AUTH_DENYLIST/AUTH_CODE_STATE と同じ規約・テストへの影響なし)。
+// (root-cause fix: 各 route に都度 guard を書かない)。
+// R65-15是正(批評ゲート中3): 直前の記述「protected route は上の認証ゲートで既に401済みなので
+// ここに来る時は actorId が必ず立っている」は事実誤りだった ── PUBLIC_ROUTES(webhook/認証系)
+// は上の認証ゲート(:193)が actorId を立てずに next() するため、webhookのPOSTも actorId 未確定の
+// まま「ここに来る」。よってこのミドルウェアの入口で PUBLIC_ROUTES を明示的に除外し、変更前の
+// 挙動(レート制限を素通り)へ正確に戻す。除外理由: GitHub/PAY.JP webhookは少数の固定IPから届く
+// ため IP単位クォータに乗せると全配信が同一バケットに集約され、429で正規の配信が落ちる
+// (PAY.JPは金銭系)。POST /magic-link は auth-routes.ts 側に既存の専用レート制限
+// (login:magic-link:<ip>)を既に持っており、ここでの二重クォータは共有NAT/社内IPを想定外に
+// 閉め出す。R65-10 の IP フォールバックは、R65-9 で新規公開した観測READの書込route
+// (PUBLIC_READ_ROUTES・POST /observation/search 等)を匿名で叩いた場合にのみ適用する。
+// RATE_LIMIT 未バインドは checkRateLimit が no-op degrade(既存 AUTH_DENYLIST/AUTH_CODE_STATE と
+// 同じ規約・テストへの影響なし)。
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 app.use("*", async (c, next) => {
   if (!WRITE_METHODS.has(c.req.method)) return next();
+  if (PUBLIC_ROUTES.includes(c.req.path)) return next(); // R65-15: webhook/認証系は対象外(素通り)
   // R65-10: 公開 READ の書込route(POST /observation/search 等)は匿名でも叩けるため、
   // actorId が無ければ IP(clientIp・既存 rate-limit.ts のCF-Connecting-IP/XFF解決を再利用)
-  // へフォールバックして同じバケットに乗せる(新しい仕組みは作らない)。
+  // へフォールバックして同じバケットに乗せる(新しい仕組みは作らない)。IPが取れない経路
+  // (clientIp()が"unknown"を返す)は全匿名を単一バケット`ip:unknown`へ集約する意図した
+  // fail-closed(ヘッダを剥がすだけの回避を許さないため。中4・R65-15後段)。
   const actorId = c.get("actorId") ?? `ip:${clientIp(c.req)}`;
 
   const minuteBucket = Math.floor(Date.now() / 60_000);
