@@ -8760,10 +8760,16 @@
     "tier": "A",
     "lane": null,
     "scope": "required",
-    "status": "in_progress",
-    "commits": [],
-    "tc": [],
-    "note": "D-2: ihl.obs.cadence.v1宣言+穴の導出(保存しない)実装済み(g75-s4cadence)。S5(日次ルートへの欠測サマリ同梱)が残るためin_progress。"
+    "status": "done",
+    "commits": [
+      "3f3ac64",
+      "acde999"
+    ],
+    "tc": [
+      "tests/obs-cadence.test.ts",
+      "tests/s3-daily-root.test.ts"
+    ],
+    "note": "S4(ihl.obs.cadence.v1宣言+穴の導出・保存しない・3f3ac64)+S5(GET /chain/rootへ欠測サマリstreams_expected/gap_count/gaps[]同梱・acde999)で完結(76代目HQ判定)。既知の限界(doneを覆さない・S5報告書に記録): stream_kind型フィルタ未実装=複数stream宣言subjectで穴が過小に出うる/streams_receivedは設計書内食い違いにつき未同梱(S10公開時に要再確認)。"
   },
   {
     "id": "V3-KRM-35",
