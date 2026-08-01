@@ -201,7 +201,9 @@ async function main() {
   });
   btnUniverse.addEventListener("click", () => {
     if (!selectedId) return;
-    window.open(`universe.html?focus=${selectedId}`, "_blank");
+    // g81-bundleD: 宇宙ビューはReact化され /s/individual-universe(graph-view
+    // ノード)へ移設された(旧 universe.html は撤去済み)。
+    window.open(`/s/individual-universe?focus=${selectedId}`, "_blank");
   });
 }
 

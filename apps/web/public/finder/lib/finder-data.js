@@ -1,9 +1,12 @@
-// finder-data.js — shared pure functions for finder.html / universe.html
-// (caseB7実物採用・R52). Vanilla-JS port of apps/web/src/renderer/
-// universe-utils.ts + individual-finder-utils.ts (same algorithms, same
-// tie-break/null rules) so both static pages and the renderer screen agree
-// on "世代" / lineage / nearest-neighbour semantics. Kept dependency-free
-// (ES module, no bundler — these pages are served raw from public/).
+// finder-data.js — shared pure functions for finder.html (caseB7実物採用・R52).
+// Vanilla-JS port of apps/web/src/renderer/universe-utils.ts +
+// individual-finder-utils.ts (same algorithms, same tie-break/null rules) so
+// finder.html and the renderer screens agree on "世代" / lineage /
+// nearest-neighbour semantics. Kept dependency-free (ES module, no bundler —
+// this page is served raw from public/). g81-bundleD: the universe.html
+// consumer of this file was replaced by /s/individual-universe (graph-view
+// node・renderer.tsx側はuniverse-utils.tsを直接importする=このファイルを経由
+// しない)。finder.html(一覧・Tabulator)側の消費は変わらず残る。
 // ponytail: no dedicated vitest file for this port (vitest's include glob is
 // src/**/*.test.{ts,tsx} only, and duplicating a public/ import path there
 // would be a scope-creep config change). apps/web/e2e/finder-pro.spec.ts
@@ -164,7 +167,7 @@ export function speciesColor(species) {
   return SPECIES_PALETTE[h % SPECIES_PALETTE.length];
 }
 
-/** 認証ゲート(finder.html/universe.htmlの両方が使う共通処理)。middleware.tsは
+/** 認証ゲート(finder.html が使う処理・g81-bundleD以前はuniverse.htmlも共有していた)。middleware.tsは
  *  ドット付きパス(*.html)を素通しする(next.config.mjsのAPI rewriteと同じ同一
  *  オリジンだが、matcherが `.*\..*` を除外するため静的publicファイルには効かない)
  *  ので、このページ自身がセッションを確認して未認証なら /s/login へ送る。 */

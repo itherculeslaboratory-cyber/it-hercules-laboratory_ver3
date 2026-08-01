@@ -1450,6 +1450,29 @@ a.civ-thumb-card:focus-visible {
   color: var(--civ-text-muted);
   font-size: var(--civ-fs-1);
 }
+/* g81-bundleD: 個体宇宙面(GraphView)。3d-force-graphのcanvasが挿入される固定
+   高さのcontainer。色は全て --civ-* トークン(GraphView.tsx側resolveVarが実値を
+   getComputedStyleで解決してGraphインスタンスへ渡す・raw hexはここにも書かない)。 */
+.civ-graph-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.civ-graph-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.civ-graph-view-canvas {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  border-radius: var(--civ-radius);
+  border: 1px solid var(--civ-border);
+  overflow: hidden;
+  background: var(--civ-bg);
+}
 .civ-board-tag {
   display: inline-flex;
   align-items: center;

@@ -22,6 +22,7 @@ import { loadDuckDb, registerManifest, runResearchQuery } from "@/research/duckd
 import { saveResearchQueryToTruth } from "@/research/truth-query-save";
 import type { ResearchQueryJson } from "@/research/query-generator";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
+import { GraphView, type GraphViewIndividual, type PedigreeLink } from "./graph-view/GraphView";
 import {
   clearBatch,
   loadBatchDraft,
@@ -4540,6 +4541,67 @@ function ResearchPanelNode() {
   );
 }
 
+// g81-bundleD配線: screen-defs/individual-universe.json の node
+// {type:"graph-view"} がこのコンポーネントに委譲する。GraphView(graph-view/
+// GraphView.tsx)は individuals/links を props で受け取るだけの再利用可能な部品
+// (uib09検索グラフビューが同じ形で後から乗る想定)なので、ここでデータ取得
+// (GET /individuals + /individuals/pedigree-links・HeaderScope配線は
+// SearchNavigatorNode と同じ規約)と ?focus=id の受け渡し・
+// 個体詳細への遷移(navigate)だけを配線する。
+function GraphViewNode() {
+  const execute = useContext(ExecuteCtx);
+  const headerScope = useContext(HeaderScopeCtx);
+  const scope = useContext(ScopeCtx);
+  const navigate = useContext(NavigateCtx);
+  const [individuals, setIndividuals] = useState<GraphViewIndividual[]>([]);
+  const [links, setLinks] = useState<PedigreeLink[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [ind, pl] = await Promise.all([
+        execute({
+          kind: "api",
+          method: "GET",
+          path: `/api/v1/individuals${headerScopeQuery(headerScope)}`,
+        }) as Promise<{ individuals?: GraphViewIndividual[] } | undefined>,
+        execute({
+          kind: "api",
+          method: "GET",
+          path: `/api/v1/individuals/pedigree-links${headerScopeQuery(headerScope)}`,
+        }) as Promise<{ links?: PedigreeLink[] } | undefined>,
+      ]);
+      if (!alive) return;
+      setIndividuals(ind?.individuals ?? []);
+      setLinks(pl?.links ?? []);
+      setLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [headerScope.species, headerScope.lineageId]);
+
+  if (!loaded) {
+    return (
+      <p className="civ-text" data-muted="true">
+        読み込み中…
+      </p>
+    );
+  }
+  return (
+    <GraphView
+      individuals={individuals}
+      links={links}
+      focusId={scope.params.focus || null}
+      onOpenDetail={(id) => navigate("individual-detail", { id })}
+      emptyHref="/finder/finder.html"
+      emptyLabel="ファインダーの一覧"
+    />
+  );
+}
+
 // 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/obs-search.json
 // はnode {type:"search-navigator"} 1個のみでこのコンポーネントに委譲。動作影響なし):
 //   GET /individuals + GET /placements 取得 → 保存検索チップ(localStorage)+
@@ -7536,6 +7598,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <ThreadPostsNode node={node} />;
     case "target-navigator":
       return <TargetNavigatorNode />;
+    case "graph-view":
+      return <GraphViewNode />;
     case "link": {
       const href = interpolate(String(p.href ?? p.to ?? "#"), scope);
       return (

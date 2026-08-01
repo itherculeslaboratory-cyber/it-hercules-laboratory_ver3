@@ -1,0 +1,37 @@
+{
+  "screen_id": "individual-universe",
+  "route": "/individual-universe",
+  "title": "個体宇宙ビュー",
+  "layout": "standard",
+  "notes": "g81-bundleD(V3-UIX-82/V3-UIX-83第2段・uib11finderway ○90「同じ部品でかたっくのがとってもいい」)。旧 apps/web/public/finder/universe.{html,js}(caseB7実物・418行)をgraph-viewノード(apps/web/src/renderer/graph-view/GraphView.tsx)へ移設した。3d-force-graphで個体299体規模の宇宙を描画し、種族色分け・選択個体の血統ハイライト(先祖/子孫)・近傍スコープ(★この個体に近い)・個体詳細パネル・個体詳細画面への遷移を持つ。finder.html『★宇宙で見る』ボタンは/s/individual-universe?focus=個体IDへ新タブで遷移する(finder.js側のURLのみ差し替え済み)。graph-viewノードはV3-UIX-82(uib09検索グラフビュー)とも同一部品を共有する設計(未配線・後続波)。落とした機能(誇張ゼロ・報告書に判断根拠あり): 近接ラベル/写真カードのrequestAnimationFrame演出、選択・絞り込みに連動したカメラ自動フレーミング。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "props": {
+        "page_info": {
+          "purpose": "個体を3D空間に配置し、血統や近さで眺める画面。個体ファインダーの一覧と同じデータを別の見方で見られます。",
+          "talk_channel": true
+        }
+      },
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "個体宇宙ビュー", "level": 1 } },
+            {
+              "id": "purpose",
+              "type": "text",
+              "props": { "text": "個体をクリックすると血統ライン(先祖/子孫)がハイライトされます。", "muted": true }
+            },
+            { "id": "graph", "type": "graph-view", "props": {} }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    { "from": "graph", "to_screen_id": "individual-detail", "label": "個体詳細画面を開く(g81-bundleD)" }
+  ]
+}

@@ -3,7 +3,7 @@
   "route": "/individual-finder",
   "title": "個体ファインダー",
   "layout": "standard",
-  "notes": "V3-UIX-83(○75「いいですよ」)第1段(b2think §4-5案3の案2部分=カタログ組み込みのみ・体験は一切変えない)。中身は完成済み静的ページ(/finder/finder.html。ユーザーがround-17で100点評価=user-ruling-2026-07-18-round-17.md:18「これ最高ですよ!絶対にIHLver3に実装する」)への入口。ScreenDefの検査(i18n/トークン/構造ゲート)は静的ページ内部には及ばない。第2段(宇宙ビューのgraph-view化=uib09-(2)と共用)はUIB11-A裁定(review-queue\\R0801-95b347-uib11finderway-2026-08-01.json)待ち。旧`individual-finder`専用ノード型はR54(caseB7直系版採用)で撤去済み(screendef.schema.json:92の撤去注記)につき本画面ではlinkノードで代替した。",
+  "notes": "V3-UIX-83(○75「いいですよ」)第1段(b2think §4-5案3の案2部分=カタログ組み込みのみ・体験は一切変えない)。中身は完成済み静的ページ(/finder/finder.html。ユーザーがround-17で100点評価=user-ruling-2026-07-18-round-17.md:18「これ最高ですよ!絶対にIHLver3に実装する」)への入口。ScreenDefの検査(i18n/トークン/構造ゲート)は静的ページ内部には及ばない。第2段(g81-bundleD・宇宙ビューのgraph-view化=uib09-(2)と共用)はUIB11-A裁定(review-queue\\R0801-95b347-uib11finderway-2026-08-01.json ○90「同じ部品でかたっくのがとってもいい」)を受けて実施済み。宇宙ビューは individual-universe 画面(graph-view ノード)へ移設し、旧 public/finder/universe.* は撤去した(finder.html内『★宇宙で見る』ボタンは新ルート /s/individual-universe?focus=id を直接開く=静的ページ→React境界のため個体ファインダー第1段と同じくlinkノード扱いはせず、finder.js側のURLのみ差し替え)。旧`individual-finder`専用ノード型はR54(caseB7直系版採用)で撤去済み(screendef.schema.json:92の撤去注記)につき本画面ではlinkノードで代替した。",
   "nodes": [
     {
       "id": "shell",
@@ -20,11 +20,17 @@
               "id": "open-finder",
               "type": "link",
               "props": { "label": "ファインダーを開く", "href": "/finder/finder.html" }
+            },
+            {
+              "id": "open-universe",
+              "type": "button",
+              "props": { "label": "宇宙ビューを開く" },
+              "action": { "kind": "navigate", "to": "individual-universe" }
             }
           ]
         }
       ]
     }
   ],
-  "transitions": []
+  "transitions": [{ "from": "open-universe", "to_screen_id": "individual-universe", "label": "宇宙ビューを開く(g81-bundleD)" }]
 }

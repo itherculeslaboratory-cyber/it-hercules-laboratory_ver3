@@ -78,7 +78,12 @@ export type NodeType =
   // ローカル状態(yes-no の累積回答・ツリーの drill-down path)を要するため
   // 宣言的 form/list 語彙では表現しきれず専用ノード化(search-navigator と同じ
   // 縮退)。確定は末尾の1ボタンのみ(候補提示と確定の分離・AI は書かない)。
-  | "target-navigator";
+  | "target-navigator"
+  // g81-bundleD(V3-UIX-82/V3-UIX-83第2段・uib11finderway ○90「同じ部品でかたっく
+  // のがとってもいい」): 3d-force-graph宇宙面。個体ファインダーの宇宙ビュー
+  // (旧 public/finder/universe.*)をこのノードへ移し、uib09検索グラフビューと
+  // 同一部品(apps/web/src/renderer/graph-view/GraphView.tsx)を共有する。
+  | "graph-view";
 
 // field node props.variant (V3-AUT-06 adds "checkbox"; V3-OBS-18 adds
 // "segmented" — a horizontal toggle group of radios). Documents the supported

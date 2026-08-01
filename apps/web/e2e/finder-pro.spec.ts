@@ -133,45 +133,39 @@ test("caseB7実物: home→finder.html→sort→行選択→宇宙で見る→�
   const universeBtn = page.getByRole("button", { name: "★ 宇宙で見る" });
   await expect(universeBtn).toBeEnabled();
 
-  // 6. 「★宇宙で見る」は原型どおり別タブでuniverse.html(?focus=childId)を開く。
+  // 6. 「★宇宙で見る」は g81-bundleD で React 化された /s/individual-universe
+  //    (graph-view ノード)を別タブで開く(旧 universe.html は撤去済み)。
   const [uni] = await Promise.all([context.waitForEvent("page"), universeBtn.click()]);
   await uni.waitForLoadState("networkidle");
-  await expect(uni).toHaveURL(new RegExp(`/finder/universe\\.html\\?focus=${seed.childId}`));
+  await expect(uni).toHaveURL(new RegExp(`/s/individual-universe\\?focus=${seed.childId}`));
 
-  // 7. ?focus 受信で自動フォーカス(ノード選択+血統クラス付与) — バナー+右カラム
-  //    詳細パネルに反映される(実データ・実写真)。
-  await expect(uni.getByText(new RegExp(`個体ファインダーからフォーカス中.*${seed.childLabel}`))).toBeVisible();
-  await expect(uni.locator("#detail .d-name")).toHaveText(seed.childLabel);
-  await expect(uni.locator("#selinfo")).toContainText(`先祖2 · 子孫1`);
-  await expect(uni.locator("#lineageLegend")).toBeVisible();
-  const thumb = uni.locator("#detail .d-img img");
+  // 7. ?focus 受信で自動フォーカス(ノード選択+血統ハイライト) — 個体詳細パネル
+  //    に反映される(実データ・実写真)。WebGL: 3d-force-graphが実際にキャンバス
+  //    を作れたこと(フォールバック文言が出ていない)。
+  const detail = uni.getByTestId("graph-view-detail");
+  await expect(uni.getByTestId("graph-view-fallback")).toBeHidden();
+  await expect(uni.getByTestId("graph-view-canvas").locator("canvas")).toBeVisible();
+  await expect(detail).toContainText(seed.childLabel);
+  await expect(uni.getByText(/血統ハイライト 先祖2 ・ 子孫1/)).toBeVisible();
+  const thumb = detail.locator("img");
   await expect(thumb).toBeVisible();
   await expect
     .poll(() => thumb.evaluate((el: HTMLImageElement) => el.naturalWidth), { timeout: 10_000 })
     .toBeGreaterThan(0);
-
-  // WebGL: 3d-force-graphが実際にキャンバスを作れたこと(フォールバック文言が
-  // 出ていない・three.jsが挿入するcanvasが存在する)。
-  await expect(uni.locator("#fallback")).toBeHidden();
-  await expect(uni.locator("#graph3d canvas")).toBeVisible();
   await shot(uni, "focus-lineage", true);
 
   // 8. 血統: 先祖(sire/dam)+子孫(孫)が実データで出る。
-  await expect(uni.locator("#detail .d-rel")).toContainText(seed.sireLabel);
-  await expect(uni.locator("#detail .d-rel")).toContainText(seed.damLabel);
-  await expect(uni.locator("#detail .d-rel")).toContainText(seed.grandLabel);
+  await expect(detail).toContainText(seed.sireLabel);
+  await expect(detail).toContainText(seed.damLabel);
+  await expect(detail).toContainText(seed.grandLabel);
 
   // 9. 血統chipのノードジャンプ: 親(sire)をクリック→詳細パネルが差し替わる(先祖なし)。
-  //    force: 原型CSS(#mockbadge・変更禁止)は右下固定バッジで#detail下端と同じ
-  //    コーナーに重なる(caseB7原型からそのままの既存の隅)。長い実行列でTruthが
-  //    積み上がり#detailのスクロール量が変わるとバッジの直下にリンクが来ることが
-  //    ある。レイアウトは変えない(R52 CREED)ためテスト側でforce-clickする。
-  await uni.locator("#detail .d-link", { hasText: seed.sireLabel }).click({ force: true });
-  await expect(uni.locator("#detail .d-name")).toHaveText(seed.sireLabel);
-  await expect(uni.locator("#detail .d-rel")).toContainText("記録なし・初代");
+  await detail.getByRole("button", { name: seed.sireLabel }).click();
+  await expect(detail).toContainText(seed.sireLabel);
+  await expect(detail).toContainText("記録なし・初代");
 
   // 10. individual-detail 遷移: ジャンプ後の個体(親sire)で「詳細画面を開く」。
-  await uni.getByRole("button", { name: "詳細画面を開く" }).click();
+  await detail.getByRole("button", { name: "詳細画面を開く" }).click();
   await expect(uni).toHaveURL(/\/s\/individual-detail/);
   // individual-detail は IND ゾーン本実装(IndDetailNode)。主見出しは
   // "🪲 この子の「今」と「物語」を1画面で"、個体名は .id-name(見出しではなく div)。
