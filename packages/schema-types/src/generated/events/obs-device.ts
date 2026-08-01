@@ -5,7 +5,7 @@
 // regenerate: node scripts/codegen-schemas.mjs
 
 /**
- * 観測機器（センサ/カメラ等）登録の append-only イベントの data 部。Truth キー truth/ihl.obs.device.v1/<device_id>.json。機器は placement（置き場所）に紐付ける。個体への直接紐付けは route が 400 で拒否（本スキーマは個体参照フィールドを持たない）。API キーは暗号化保存（api_key_ciphertext・平文非保持）、実鍵投入は人間ゲート（後波）。
+ * 観測機器（センサ/カメラ等）登録の append-only イベントの data 部。Truth キー truth/ihl.obs.device.v1/<device_id>.json。機器は placement（置き場所）に紐付ける。個体への直接紐付けは route が 400 で拒否（本スキーマは個体参照フィールドを持たない）。API キーはサーバー側に一切保持・使用しない（第20回裁定DK-1）。クライアントが平文キーを保持し、POST /devices/{id}/test の都度のみ供給する。
  */
 export interface ObsDevice {
   /**
@@ -24,10 +24,6 @@ export interface ObsDevice {
    * 表示名（raw device ID は非表示・display_name のみ露出）。
    */
   display_name: string;
-  /**
-   * API キーの暗号文（平文は保持しない・任意）。
-   */
-  api_key_ciphertext?: string;
   /**
    * 運用開始日（日付のみ・任意）。
    */

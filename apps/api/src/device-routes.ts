@@ -5,10 +5,12 @@
 // boundary (V3-SEC-03: サーバー側に一切保持・使用せず) — the server never stores
 // it, encrypted or otherwise, and never derives a key from an env secret to do so
 // (第20回裁定DK-1: サーバー側AES-GCM保管を廃止). The client holds the plaintext
-// key and supplies it per-request via the `x-device-api-key` header only when it
-// wants to exercise the provider connection (POST /devices/:id/test); the server
-// uses it transiently in that single request and never persists it to Truth or
-// anywhere else. Real providers are a human gate — only a dummy provider's
+// key and supplies it per-request only when it wants to exercise the provider
+// connection (POST /devices/:id/test) — either via the `x-device-api-key`
+// header or a JSON body `api_key` field (the ScreenDef renderer has no header
+// vocabulary, so the device screen's test form uses the body field; both are
+// read transiently for that single request and never persisted). Real
+// providers are a human gate — only a dummy provider's
 // testConnection ships. envelope()/store()/dataOf() inlined per the
 // projectLedger precedent (批評家#3).
 import { Hono } from "hono";
@@ -215,10 +217,13 @@ deviceRoutes.get("/devices/:id/poll-interval", async (c) => {
 
 // POST /devices/{id}/test — dummy provider connection test + auto-discovery
 // (OBS-31 / V3-SEC-03). The server holds no stored key: the caller supplies the
-// provider key per-call via the `x-device-api-key` header. It is used only for
-// this single request's dummyTestConnection call and is never written to Truth
-// or anywhere else — no server-side persistence, encrypted or otherwise. Real
-// provider keys are a human gate and are not invoked here.
+// provider key per-call via the `x-device-api-key` header or a JSON body
+// `api_key` field (the ScreenDef renderer has no header vocabulary, so the
+// device screen's test form sends it in the body — header support is kept for
+// other/future clients). It is used only for this single request's
+// dummyTestConnection call and is never written to Truth or anywhere else —
+// no server-side persistence, encrypted or otherwise. Real provider keys are
+// a human gate and are not invoked here.
 deviceRoutes.post("/devices/:id/test", async (c) => {
   const deviceId = c.req.param("id");
   const actorId = c.get("actorId");
@@ -226,7 +231,9 @@ deviceRoutes.post("/devices/:id/test", async (c) => {
   if (!rec) return c.json({ error: "NOT_FOUND" }, 404);
   const d = dataOf(rec);
   if (d.actor_id !== actorId) return c.json({ error: "NOT_FOUND" }, 404); // 本人スコープ
-  const apiKey = c.req.header("x-device-api-key") ?? null;
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const bodyKey = typeof body.api_key === "string" && body.api_key ? body.api_key : null;
+  const apiKey = bodyKey ?? c.req.header("x-device-api-key") ?? null;
   const result = dummyTestConnection(deviceId, apiKey);
   // never echo the plaintext key back — only the connection outcome.
   return c.json({ device_id: deviceId, provider: d.provider, ...result });

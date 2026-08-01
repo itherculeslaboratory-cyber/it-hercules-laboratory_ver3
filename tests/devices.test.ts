@@ -76,6 +76,21 @@ describe("OBS-31 device registration (placement-bound)", () => {
     expect(test.discovered.length).toBeGreaterThan(0);
   });
 
+  it("dummy provider testConnection succeeds via client-supplied body key (ScreenDef renderer has no header vocabulary)", async () => {
+    const { env } = ctx();
+    const res = await createDevice(env, { provider: "dummy", display_name: "Body Key" });
+    const deviceId = ((await res.json()) as { device_id: string }).device_id;
+    const test = (await (
+      await app.request(
+        `/api/v1/devices/${deviceId}/test`,
+        { method: "POST", headers: AUTH_JSON, body: JSON.stringify({ api_key: PLAINTEXT }) },
+        env,
+      )
+    ).json()) as { ok: boolean; discovered: string[] };
+    expect(test.ok).toBe(true);
+    expect(test.discovered.length).toBeGreaterThan(0);
+  });
+
   it("test without a client-supplied key -> connectable=false, no discovery", async () => {
     const { env } = ctx();
     const res = await createDevice(env, { provider: "dummy", display_name: "No Key" });
