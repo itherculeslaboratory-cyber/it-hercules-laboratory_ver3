@@ -70,6 +70,7 @@ import { handleScheduled } from "./batch";
 import { costsRoutes } from "./costs-routes";
 import { checkRateLimit, clientIp, WRITE_RATE_LIMIT_PER_MINUTE, WRITE_QUOTA_PER_DAY } from "./rate-limit";
 import { responseEnvelope } from "./response-envelope-middleware";
+import { crossSearchRoutes } from "./cross-search-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 app.use("*", responseEnvelope());
@@ -640,6 +641,11 @@ app.route("/api/v1", aiRoutes);
 // board_kind=improvement)を再利用 — 既存「改善の板」画面に無改造で表示される。
 app.route("/api/v1", aiDigestRoutes);
 app.route("/api/v1", chainRoutes);
+
+// E1 横断検索 第1段(design R0801-c618a6-REPORT-2026-08-01-g78-b3think.md §2 案1・§2-1):
+// GET /api/v1/search — index/receipt/ の受領索引を日付プレフィックス単位で走査する
+// フリーテキスト横断検索。Protected(PUBLIC_ROUTES 非登録)。UI配線は次ラウンド。
+app.route("/api/v1", crossSearchRoutes);
 
 // T-71 恒久硬化(R91 承認・修正層裁定 = 自己サービス型 allowlist・参照:
 // docs/planning/c9/design-events-allowlist.md)。POST /events は薄い汎用 Truth-append
