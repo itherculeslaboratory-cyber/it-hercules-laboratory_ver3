@@ -1,67 +1,50 @@
-// V3-UIX-02 / V3-UIX-25 — navigation reachability. Build the real screen graph
-// from every screen-def's transitions[] + navigate actions + link hrefs, BFS from
-// home, and assert the K4-owned destinations are not buried.
+// V3-UIX-02 / V3-UIX-25 — navigation reachability. Build the screen graph from
+// screen-defs/navigation.json (the rendering-independent flow-spec正本 —
+// V3-UIX-36裁定, ihl-ver2\docs\planning\ver3\ver3-裁定記録-2026-07-10.md:59),
+// BFS from home, and assert the click/step budgets from CLICKBUDGET-1.
 //
-// Reachability budgets (design-k4 §3, critic fix (4) — real screen_ids only):
-//   settings / theme-gallery / ui-templates : ≤3 clicks from home (they are direct
-//     links off home = 1 click).
-//   obs-detail (観測保存の着地): ★2026-08-01是正(カードR0801-439da4-obsnav-cutover=
-//     NAV-1○85点)により home の主ボタン(観測を始める)と drawer メニュー(観測登録)を
-//     obs-entry から obs-register へ繋ぎ替えた。この結果、home→obs-entry の直行辺が
-//     無くなり、obs-entry(旧: 1) は 3、obs-detail(旧: 3、home→obs-entry→obs-confirm→
-//     obs-detail)は 5(home→obs-register→…→obs-entry→obs-confirm→obs-detail)へ実測が
-//     変わった。旧「3クリック以内」budget はこの承認済み設計変更の結果として満たせなく
-//     なっている(誇張ゼロ・正直に記録。budgetを緩めるだけで良いかは要再検討=次段の
-//     設計判断としてHQ/考える役に申し送り)。obs-domain-select は home
-//     完成予想図v2(承認済みmockup c9-home-forecast-v2.html・R112 90点)の IA
-//     再設計で home のトップレベル導線から撤去された(観測対象の特定は
-//     obs-navigator の3モードが引き継ぐ・「観測対象を特定する」section) —
-//     navigation.json の home→obs-domain-select エッジ自体は維持したまま
-//     (他クラスタが復活導線を生やす余地を残す)、この click-budget からは
-//     対象外にした(以前の `dist.get("obs-domain-select")===1` 契約は撤去)。
-//     market/gmo/lottery have no screen-def
-//     in this cluster and are NOT targets (each cluster validates its own).
+// ★2026-08-01是正(CLICKBUDGET-1○90点・R0801-4c1b9f-REPORT-2026-08-01-g81-clickthink.md
+// §5-C1/C3の履行。カード=review-queue\R0801-4c1b9f-clickbudget-2026-08-01.json):
+//   計測正本を screen-defs BFS(旧M1)から navigation.json BFS(M2)へ切り替えた。
+//   理由: navigation.json は V3-UIX-36裁定が「遷移仕様の正本」と定めたファイルであり、
+//   screen-defs BFS は home の deep_link/drawer/検索結果ナビ等(renderer.tsx側の
+//   実装のみに存在する辺)を見ておらず、実アプリより悲観的な数字が出ていた
+//   (旧計測=到達不能27/55)。navigation.json の各 edge には
+//   source: "screendef" | "renderer" | "planned" が付与済み(check-navigation.mjs
+//   が構造検査)。BFS は source:"planned"(宣言のみ・実体なし)の辺を除外する
+//   ——これが旧テストの「古い辺(home→obs-navigator等)を機械で辿ってしまう」事故の
+//   再発防止。
+//
+//   契約(旧: obs-detail 通し3クリック・単一予算)を2本立てへ分割:
+//     到達予算(reach budget) = home から「主要行為を開始できる画面」まで。
+//     完了予算(flow budget)  = 開始画面から確定(保存)までのステップ数。
+//   対象外化: obs-detail(旧フローの着地画面)。理由=NAV-1(○85点cutover)により
+//     観測登録の正本フローは obs-register→…→obs-register-done に移り、obs-detail は
+//     obs-entry/obs-confirm という「もう主要導線ではない」旧フローの着地点になった。
+//     E3導線(過去の観測を後から開く。IDEA候補・§8-2 in clickthink report)が実装され
+//     obs-detail が再び主要導線に含まれたら、この対象外化を再評価すること。
+//   撤去: toBe(5) の完全一致アサーション(カードifNo欄に明記の既知の罠——実測値を
+//     そのままテストへ焼くと、裁定を経ずに契約が緩んだことを機械が追認してしまう。
+//     上限(≤)へ置き換える)。
 import { describe, expect, it } from "vitest";
-import { loadScreenDefs } from "../scripts/check-navigation.mjs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-type Node = {
-  type?: string;
-  action?: { kind?: string; to?: string };
-  props?: { href?: string };
-  children?: Node[];
-};
-type Def = { screen_id: string; nodes?: Node[]; transitions?: { to_screen_id: string }[] };
+type Edge = { from: string; to: string; source: "screendef" | "renderer" | "planned" };
+type Nav = { entry: string; screens: string[]; edges: Edge[] };
 
-const dir = fileURLToPath(new URL("../screen-defs", import.meta.url));
-const defs = loadScreenDefs(dir) as Def[];
+const navPath = fileURLToPath(new URL("../screen-defs/navigation.json", import.meta.url));
+const nav = JSON.parse(readFileSync(navPath, "utf8")) as Nav;
 
-// A navigate/link target -> the destination screen_id ("" = not a screen link).
-function toScreenId(target: string | undefined): string {
-  if (!target) return "";
-  const t = target.split("?")[0]; // drop query (obs-entry?domain=biology)
-  if (t === "/") return "home";
-  const m = t.match(/^\/s\/([a-z0-9-]+)/); // /s/<id> app link
-  return m ? m[1] : t; // bare navigate targets are already screen_ids
-}
-
-/** Out-edges of one screen-def: transitions + navigate actions + app links. */
-function edgesOf(def: Def): Set<string> {
-  const out = new Set<string>();
-  for (const t of def.transitions ?? []) out.add(t.to_screen_id);
-  const visit = (n: Node) => {
-    if (n.action?.kind === "navigate") out.add(toScreenId(n.action.to));
-    if (n.type === "link" && n.props?.href) out.add(toScreenId(n.props.href));
-    for (const c of n.children ?? []) visit(c);
-  };
-  for (const n of def.nodes ?? []) visit(n);
-  out.delete("");
-  return out;
-}
-
-/** BFS click-distance from home to every reachable screen_id. */
+/** BFS click-distance from home to every reachable screen_id, over navigation.json
+ *  edges only (source:"planned" edges are declared-only and excluded — see header). */
 function distancesFromHome(): Map<string, number> {
-  const graph = new Map(defs.map((d) => [d.screen_id, edgesOf(d)]));
+  const graph = new Map<string, string[]>();
+  for (const e of nav.edges) {
+    if (e.source === "planned") continue;
+    if (!graph.has(e.from)) graph.set(e.from, []);
+    graph.get(e.from)!.push(e.to);
+  }
   const dist = new Map<string, number>([["home", 0]]);
   const queue = ["home"];
   while (queue.length) {
@@ -77,24 +60,25 @@ function distancesFromHome(): Map<string, number> {
   return dist;
 }
 
-const TARGETS: Record<string, number> = {
+// 到達予算(reach budget) — home から「主要行為を開始できる画面」まで(§5-C2/C3)。
+const REACH_TARGETS: Record<string, number> = {
+  "obs-register": 1,
+  "market-trade": 1,
+  "obs-search": 3,
+  "knowledge-hub": 3,
   settings: 3,
-  "theme-gallery": 3,
-  "ui-templates": 3,
-  // ★2026-08-01是正(NAV-1○85点cutover)により3→5に実測値を更新(ファイルヘッダ参照)。
-  "obs-detail": 5,
 };
 
-describe("V3-UIX-02/25 navigation reachability from home", () => {
+describe("V3-UIX-02/25 navigation reachability from home (navigation.json正本)", () => {
   const dist = distancesFromHome();
 
   it("home exists and is the BFS root", () => {
-    expect(defs.some((d) => d.screen_id === "home")).toBe(true);
+    expect(nav.screens.includes("home")).toBe(true);
     expect(dist.get("home")).toBe(0);
   });
 
-  it("every K4 destination is reachable within its click budget (超過 0)", () => {
-    for (const [id, budget] of Object.entries(TARGETS)) {
+  it("every reach-budget destination is reachable within its click budget (超過 0)", () => {
+    for (const [id, budget] of Object.entries(REACH_TARGETS)) {
       const d = dist.get(id);
       expect(d, `${id} reachable from home`).toBeTypeOf("number");
       expect(d!, `${id} within ${budget} clicks`).toBeLessThanOrEqual(budget);
@@ -107,13 +91,28 @@ describe("V3-UIX-02/25 navigation reachability from home", () => {
     }
   });
 
-  it("obs-detail is reached via the OBS-25 confirm flow (5 clicks after NAV-1 cutover)", () => {
-    // ★2026-08-01是正(カードR0801-439da4-obsnav-cutover=NAV-1○85点): home→obs-entry
-    // 直行辺が撤去され obs-register 経由になったため、obs-entry(旧1→3)・
-    // obs-confirm(旧2→4)・obs-detail(旧3→5)いずれも実測値が変わった(ファイル
-    // ヘッダコメント参照。budgetの再設計が必要かは別途HQ/考える役へ申し送り)。
-    expect(dist.get("obs-entry")).toBe(3);
-    expect(dist.get("obs-confirm")).toBe(4);
-    expect(dist.get("obs-detail")).toBe(5);
+  // 完了予算(flow budget) — 開始画面(obs-register-entry)から確定(obs-register-done)
+  // まで ≤2 ステップ(§5-C2/C3)。obs-register 自体は到達予算の対象なのでここでは
+  // 「開始画面からの相対ホップ」を別グラフで測る(homeからの絶対距離ではない)。
+  it("the observation-register flow completes within its step budget (entry -> done ≤2 hops)", () => {
+    const graph = new Map<string, string[]>();
+    for (const e of nav.edges) {
+      if (e.source === "planned") continue;
+      if (!graph.has(e.from)) graph.set(e.from, []);
+      graph.get(e.from)!.push(e.to);
+    }
+    const flowDist = new Map<string, number>([["obs-register-entry", 0]]);
+    const queue = ["obs-register-entry"];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      const d = flowDist.get(cur)!;
+      for (const next of graph.get(cur) ?? []) {
+        if (!flowDist.has(next)) {
+          flowDist.set(next, d + 1);
+          queue.push(next);
+        }
+      }
+    }
+    expect(flowDist.get("obs-register-done"), "obs-register-entry -> obs-register-done step count").toBeLessThanOrEqual(2);
   });
 });

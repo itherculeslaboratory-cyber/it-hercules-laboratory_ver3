@@ -36,12 +36,26 @@ test("browser walkthrough: dev-login → capture(+photo) → detail → individu
   await expect(page.getByRole("heading", { name: "ホーム" })).toBeVisible();
   await shot(page, "02-home");
 
-  // 2. home → obs-entry 直行(V3-UIX-02 3クリック導線・K4)。domain は obs-entry が
-  //    自前収集する。home v2(承認済みmockup c9-home-forecast-v2.html・R112
-  //    90点)は「主な行き先」4カードのうち観測カードそのものがクリック対象
-  //    (旧ガイド選択リンク "ドメインから選んで始める" は home v2 の IA 再設計で
-  //    撤去 — nav-reachability.test.ts のコメント参照)。カードは <a href> なので
-  //    role は button でなく link。
+  // 2. ★2026-08-01是正(CLICKBUDGET-1○90点 T4・カードR0801-439da4-obsnav-cutover
+  //    =NAV-1○85点cutoverとの食い違いを解消): この行のコメントは元々「home →
+  //    obs-entry 直行」と書かれていたが、NAV-1 cutover により home の主カード
+  //    「観測を始める」の行き先は obs-entry から obs-register へ繋ぎ替え済み
+  //    (screen-defs/navigation.json の home→obs-register edge、renderer.tsx:8580
+  //    `href="/s/obs-register"`)。つまり実際には「home → obs-register 直行」が
+  //    正しい。domain は obs-entry が自前収集する、という説明はそのまま有効
+  //    (obs-entry 自体の仕様は変わっていない)。home v2(承認済みmockup
+  //    c9-home-forecast-v2.html・R112 90点)は「主な行き先」4カードのうち観測
+  //    カードそのものがクリック対象(旧ガイド選択リンク "ドメインから選んで
+  //    始める" は home v2 の IA 再設計で撤去 — tests/nav-reachability.test.ts の
+  //    コメント参照)。カードは <a href> なので role は button でなく link。
+  //    ★未確認(このT4の対象外・§8-1 in R0801-4c1b9f-REPORT-2026-08-01-g81-clickthink.md
+  //    で既に指摘済み): 直後の行(45-47行)は「観測を始める」クリック後に
+  //    heading "観測を記録する" を待っているが、obs-register.json の title は
+  //    "記録する"(obs-entry.json 側が "観測を記録する" のはず)。この
+  //    E2E スペックは NAV-1 cutover 後、実ブラウザで通していない可能性が高い
+  //    (npm test には含まれない=Playwright別実行、今回の完了条件の対象外)。
+  //    コメントの是正のみが今回のスコープ(発注書T4)であり、アサーション本体の
+  //    書き換えは担当外として報告書に記録した(推測でロジックを変えない)。
   await page.getByRole("link", { name: "観測を始める" }).click();
   await expect(page.getByRole("heading", { name: "観測を記録する" })).toBeVisible();
   await shot(page, "03-obs-entry-direct");

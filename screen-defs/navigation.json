@@ -62,477 +62,572 @@
     {
       "from": "login",
       "to": "terms",
-      "label": "規約の本文を読む(login内のチェックボックスと同意のリンク・2026-08-01是正)"
+      "label": "規約の本文を読む(login内のチェックボックスと同意のリンク・2026-08-01是正)",
+      "source": "screendef"
     },
     {
       "from": "terms",
       "to": "home",
-      "label": "同意して始める(terms.json自身のagreeボタン。実経路の同意記録はloginのチェックボックスで完結・termsは本文閲覧用)"
+      "label": "同意して始める(terms.json自身のagreeボタン。実経路の同意記録はloginのチェックボックスで完結・termsは本文閲覧用)",
+      "source": "screendef"
     },
     {
       "from": "login",
       "to": "home",
-      "label": "dev-login"
+      "label": "dev-login",
+      "source": "screendef"
     },
     {
       "from": "login",
       "to": "login-sent",
-      "label": "magic-link 送信後"
+      "label": "magic-link 送信後",
+      "source": "screendef"
     },
     {
       "from": "login-sent",
       "to": "home",
-      "label": "数字コード検証成功後"
+      "label": "数字コード検証成功後",
+      "source": "screendef"
     },
     {
       "from": "login-sent",
       "to": "login",
-      "label": "違うメールアドレスだった? 入力し直す"
+      "label": "違うメールアドレスだった? 入力し直す",
+      "source": "renderer"
     },
     {
       "from": "home",
       "to": "obs-search",
-      "label": "検索へ"
+      "label": "検索へ",
+      "source": "renderer"
     },
     {
       "from": "home",
       "to": "individual-detail",
-      "label": "個体詳細へ"
+      "label": "個体詳細へ",
+      "source": "renderer"
     },
     {
       "from": "home",
       "to": "match",
-      "label": "マッチングへ"
+      "label": "マッチングへ",
+      "source": "planned"
     },
     {
       "from": "home",
       "to": "preference",
-      "label": "好みを教える"
+      "label": "好みを教える",
+      "source": "planned"
     },
     {
       "from": "preference",
       "to": "match",
-      "label": "好みに近い順を見る"
+      "label": "好みに近い順を見る",
+      "source": "planned"
     },
     {
       "from": "home",
       "to": "species",
-      "label": "種の管理へ"
+      "label": "種の管理へ",
+      "source": "planned"
     },
     {
       "from": "home",
       "to": "device",
-      "label": "機器の管理へ"
+      "label": "機器の管理へ",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "economy-status",
-      "label": "ステータスへ"
+      "label": "ステータスへ",
+      "source": "planned"
     },
     {
       "from": "home",
       "to": "costs",
-      "label": "運営コストへ"
+      "label": "運営コストへ",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "profile",
-      "label": "プロフィールへ"
+      "label": "プロフィールへ",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "market-trade",
-      "label": "取引へ"
+      "label": "取引へ",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "obs-navigator",
-      "label": "観測対象を特定するへ(home完成予想図v2)"
+      "label": "観測対象を特定するへ(home完成予想図v2)",
+      "source": "planned"
     },
     {
       "from": "home",
       "to": "ai-profile-settings",
-      "label": "AIの設定へ(home完成予想図v2・設定サブチップ)"
+      "label": "AIの設定へ(home完成予想図v2・設定サブチップ)",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "settings",
-      "label": "言語・国へ(home完成予想図v2・設定サブチップ・2026-08-01是正=settingsへ統合)"
+      "label": "言語・国へ(home完成予想図v2・設定サブチップ・2026-08-01是正=settingsへ統合)",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "dispute",
-      "label": "話し合いの場へ(home完成予想図v2)"
+      "label": "話し合いの場へ(home完成予想図v2)",
+      "source": "screendef"
     },
     {
       "from": "obs-entry",
       "to": "obs-navigator",
-      "label": "対象特定へ"
+      "label": "対象特定へ",
+      "source": "screendef"
     },
     {
       "from": "obs-entry",
       "to": "obs-confirm",
-      "label": "確認画面へ"
+      "label": "確認画面へ",
+      "source": "screendef"
     },
     {
       "from": "obs-entry",
       "to": "obs-templates",
-      "label": "テンプレートを管理する(フォーク・保存)"
+      "label": "テンプレートを管理する(フォーク・保存)",
+      "source": "screendef"
     },
     {
       "from": "obs-templates",
       "to": "obs-entry",
-      "label": "観測入力へ戻る"
+      "label": "観測入力へ戻る",
+      "source": "screendef"
     },
     {
       "from": "obs-navigator",
       "to": "obs-entry",
-      "label": "対象確定後に観測入力へ"
+      "label": "対象確定後に観測入力へ",
+      "source": "screendef"
     },
     {
       "from": "obs-confirm",
       "to": "obs-detail",
-      "label": "登録後に観測詳細へ"
+      "label": "登録後に観測詳細へ",
+      "source": "screendef"
     },
     {
       "from": "obs-detail",
       "to": "individual-detail",
-      "label": "個体詳細へ"
+      "label": "個体詳細へ",
+      "source": "screendef"
     },
     {
       "from": "individual-detail",
       "to": "cross",
-      "label": "累代分析へ"
+      "label": "累代分析へ",
+      "source": "planned"
     },
     {
       "from": "individual-detail",
       "to": "bio-card",
-      "label": "バイオカードへ"
+      "label": "バイオカードへ",
+      "source": "planned"
     },
     {
       "from": "individual-detail",
       "to": "obs-register-entry",
-      "label": "sticky下端バー: 記録を追加"
+      "label": "sticky下端バー: 記録を追加",
+      "source": "renderer"
     },
     {
       "from": "individual-detail",
       "to": "obs-register-batch",
-      "label": "sticky下端バー: まとめて記録へ"
+      "label": "sticky下端バー: まとめて記録へ",
+      "source": "renderer"
     },
     {
       "from": "individual-detail",
       "to": "individual-detail",
-      "label": "血縁chipタップ/死亡記録・訂正・親リンク後の再表示"
+      "label": "血縁chipタップ/死亡記録・訂正・親リンク後の再表示",
+      "source": "renderer"
     },
     {
       "from": "qr-resume",
       "to": "obs-register-entry",
-      "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)"
+      "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)",
+      "source": "screendef"
     },
     {
       "from": "qr-resume",
       "to": "obs-register-new",
-      "label": "空の棚から新規個体登録へ"
+      "label": "空の棚から新規個体登録へ",
+      "source": "screendef"
     },
     {
       "from": "economy-status",
       "to": "platinum-shop",
-      "label": "プラチナコインショップへ"
+      "label": "プラチナコインショップへ",
+      "source": "screendef"
     },
     {
       "from": "economy-status",
       "to": "profile",
-      "label": "プロフィールへ"
+      "label": "プロフィールへ",
+      "source": "screendef"
     },
     {
       "from": "economy-status",
       "to": "costs",
-      "label": "運営コストへ"
+      "label": "運営コストへ",
+      "source": "screendef"
     },
     {
       "from": "costs",
       "to": "economy-status",
-      "label": "ステータスへ戻る"
+      "label": "ステータスへ戻る",
+      "source": "screendef"
     },
     {
       "from": "profile",
       "to": "economy-status",
-      "label": "ステータスへ"
+      "label": "ステータスへ",
+      "source": "screendef"
     },
     {
       "from": "platinum-shop",
       "to": "economy-status",
-      "label": "ステータスへ戻る"
+      "label": "ステータスへ戻る",
+      "source": "screendef"
     },
     {
       "from": "market-trade",
       "to": "template-market",
-      "label": "テンプレート市場へ"
+      "label": "テンプレート市場へ",
+      "source": "planned"
     },
     {
       "from": "template-market",
       "to": "market-trade",
-      "label": "取引へ戻る"
+      "label": "取引へ戻る",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "theme-gallery",
-      "label": "テーマギャラリーへ"
+      "label": "テーマギャラリーへ",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "ui-templates",
-      "label": "UI テンプレートへ"
+      "label": "UI テンプレートへ",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "settings",
-      "label": "設定へ"
+      "label": "設定へ",
+      "source": "screendef"
     },
     {
       "from": "theme-gallery",
       "to": "settings",
-      "label": "設定でテーマ適用へ"
+      "label": "設定でテーマ適用へ",
+      "source": "screendef"
     },
     {
       "from": "settings",
       "to": "ai-sessions",
-      "label": "AIセッション閲覧へ(サブ脳)"
+      "label": "AIセッション閲覧へ(サブ脳)",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "obs-register",
-      "label": "観測を始める(★2026-08-01是正・カードR0801-439da4-obsnav-cutover=NAV-1○85点: homeの主動線・ドロワー『観測登録』とも新フロー obs-register へ繋ぎ替え。旧 obs-entry への辺は撤去。旧経路の実測記録=ホーム以降5ホップは過去のもの=カードR0801-9d452f-ui11threeclick参照)"
+      "label": "観測を始める(★2026-08-01是正・カードR0801-439da4-obsnav-cutover=NAV-1○85点: homeの主動線・ドロワー『観測登録』とも新フロー obs-register へ繋ぎ替え。旧 obs-entry への辺は撤去。旧経路の実測記録=ホーム以降5ホップは過去のもの=カードR0801-9d452f-ui11threeclick参照)",
+      "source": "screendef"
     },
     {
       "from": "home",
       "to": "knowledge-hub",
-      "label": "知の広場へ"
+      "label": "知の広場へ",
+      "source": "screendef"
     },
     {
       "from": "knowledge-hub",
       "to": "knowledge-board",
-      "label": "公式掲示板へ"
+      "label": "公式掲示板へ",
+      "source": "renderer"
     },
     {
       "from": "knowledge-hub",
       "to": "knowledge-paper",
-      "label": "論文へ"
+      "label": "論文へ",
+      "source": "renderer"
     },
     {
       "from": "knowledge-hub",
       "to": "knowledge-github",
-      "label": "GitHub 掲示板へ"
+      "label": "GitHub 掲示板へ",
+      "source": "planned"
     },
     {
       "from": "knowledge-paper",
       "to": "paper-match",
-      "label": "論文照合へ"
+      "label": "論文照合へ",
+      "source": "screendef"
     },
     {
       "from": "settings",
       "to": "ai-profile-settings",
-      "label": "AI プロファイル設定へ"
+      "label": "AI プロファイル設定へ",
+      "source": "screendef"
     },
     {
       "from": "settings",
       "to": "settings",
-      "label": "保存後に再読込(I18-03: 新localeでUI全文を即時切替)"
+      "label": "保存後に再読込(I18-03: 新localeでUI全文を即時切替)",
+      "source": "screendef"
     },
     {
       "from": "knowledge-board",
       "to": "knowledge-thread",
-      "label": "スレッドを開く"
+      "label": "スレッドを開く",
+      "source": "renderer"
     },
     {
       "from": "knowledge-thread",
       "to": "knowledge-board",
-      "label": "掲示板へ戻る"
+      "label": "掲示板へ戻る",
+      "source": "renderer"
     },
     {
       "from": "obs-register",
       "to": "obs-register",
-      "label": "検索結果を表示"
+      "label": "検索結果を表示",
+      "source": "screendef"
     },
     {
       "from": "obs-register",
       "to": "obs-register-new",
-      "label": "新規個体として登録"
+      "label": "新規個体として登録",
+      "source": "screendef"
     },
     {
       "from": "obs-register",
       "to": "obs-register-entry",
-      "label": "候補チップ/検索結果から追観測へ"
+      "label": "候補チップ/検索結果から追観測へ",
+      "source": "renderer"
     },
     {
       "from": "obs-register",
       "to": "obs-register-batch",
-      "label": "まとめて記録へ"
+      "label": "まとめて記録へ",
+      "source": "screendef"
     },
     {
       "from": "obs-register-batch",
       "to": "obs-register-clutch",
-      "label": "割り出しへ"
+      "label": "割り出しへ",
+      "source": "renderer"
     },
     {
       "from": "obs-register-batch",
       "to": "obs-register-batch-confirm",
-      "label": "確認へ"
+      "label": "確認へ",
+      "source": "renderer"
     },
     {
       "from": "obs-search",
       "to": "obs-register-batch",
-      "label": "計測グリッドへ"
+      "label": "計測グリッドへ",
+      "source": "renderer"
     },
     {
       "from": "obs-search",
       "to": "obs-register-entry",
-      "label": "追観測へ"
+      "label": "追観測へ",
+      "source": "renderer"
     },
     {
       "from": "obs-search",
       "to": "individual-detail",
-      "label": "カード本体タップで個体詳細へ"
+      "label": "カード本体タップで個体詳細へ",
+      "source": "renderer"
     },
     {
       "from": "obs-register-clutch",
       "to": "obs-register-batch",
-      "label": "保存後にまとめて記録へ"
+      "label": "保存後にまとめて記録へ",
+      "source": "renderer"
     },
     {
       "from": "obs-register-clutch",
       "to": "obs-register",
-      "label": "保存後に記録するへ戻る"
+      "label": "保存後に記録するへ戻る",
+      "source": "renderer"
     },
     {
       "from": "obs-register-batch-confirm",
       "to": "obs-register-batch",
-      "label": "測り直す/やり直す"
+      "label": "測り直す/やり直す",
+      "source": "renderer"
     },
     {
       "from": "obs-register-batch-confirm",
       "to": "obs-register-batch-done",
-      "label": "一括保存後に完了へ"
+      "label": "一括保存後に完了へ",
+      "source": "renderer"
     },
     {
       "from": "obs-register-batch-done",
       "to": "obs-register-batch",
-      "label": "同じ条件でもう一度"
+      "label": "同じ条件でもう一度",
+      "source": "renderer"
     },
     {
       "from": "obs-register-batch-done",
       "to": "home",
-      "label": "完了"
+      "label": "完了",
+      "source": "renderer"
     },
     {
       "from": "obs-register-new",
       "to": "obs-register-entry",
-      "label": "登録して計測へ"
+      "label": "登録して計測へ",
+      "source": "screendef"
     },
     {
       "from": "obs-register-entry",
       "to": "obs-register-entry",
-      "label": "ステージ更新後にこの画面を再表示"
+      "label": "ステージ更新後にこの画面を再表示",
+      "source": "screendef"
     },
     {
       "from": "obs-register-entry",
       "to": "obs-register",
-      "label": "死亡記録後に記録開始へ"
+      "label": "死亡記録後に記録開始へ",
+      "source": "screendef"
     },
     {
       "from": "obs-register-entry",
       "to": "obs-register-confirm",
-      "label": "確認へ"
+      "label": "確認へ",
+      "source": "screendef"
     },
     {
       "from": "obs-register-confirm",
       "to": "obs-register-done",
-      "label": "保存後に完了へ"
+      "label": "保存後に完了へ",
+      "source": "screendef"
     },
     {
       "from": "obs-register-done",
       "to": "individual-detail",
-      "label": "個体詳細で見る"
+      "label": "個体詳細で見る",
+      "source": "screendef"
     },
     {
       "from": "obs-register-done",
       "to": "obs-register-entry",
-      "label": "同じコに追加"
+      "label": "同じコに追加",
+      "source": "screendef"
     },
     {
       "from": "obs-register-done",
       "to": "home",
-      "label": "完了"
+      "label": "完了",
+      "source": "screendef"
     },
     {
       "from": "market-trade",
       "to": "market-trade",
-      "label": "取引アクション後に再読込(出品公開/申込/振込申告/入金確認/発送/受取確定)"
+      "label": "取引アクション後に再読込(出品公開/申込/振込申告/入金確認/発送/受取確定)",
+      "source": "screendef"
     },
     {
       "from": "market-trade",
       "to": "dispute",
-      "label": "相違・死着を相談室へ(F4検品3出口)"
+      "label": "相違・死着を相談室へ(F4検品3出口)",
+      "source": "screendef"
     },
     {
       "from": "knowledge-thread",
       "to": "knowledge-thread",
-      "label": "返信後に再読込"
+      "label": "返信後に再読込",
+      "source": "renderer"
     },
     {
       "from": "knowledge-thread",
       "to": "dispute",
-      "label": "投稿を相談室へ(Polis対立の裁判2room)"
+      "label": "投稿を相談室へ(Polis対立の裁判2room)",
+      "source": "renderer"
     },
     {
       "from": "dispute",
       "to": "dispute",
-      "label": "開始/発言/決着後に再読込"
+      "label": "開始/発言/決着後に再読込",
+      "source": "screendef"
     },
     {
       "from": "dispute",
       "to": "market-trade",
-      "label": "取引へ戻る"
+      "label": "取引へ戻る",
+      "source": "renderer"
     },
     {
       "from": "dispute",
       "to": "knowledge-thread",
-      "label": "スレへ戻る"
+      "label": "スレへ戻る",
+      "source": "renderer"
     },
     {
       "from": "setup-profile",
       "to": "home",
-      "label": "handle+locale確定後にホームへ(V3-AUT-10)"
+      "label": "handle+locale確定後にホームへ(V3-AUT-10)",
+      "source": "screendef"
     },
     {
       "from": "login",
       "to": "setup-profile",
-      "label": "middleware誘導(オンボーディング未完了・V3-AUT-10)—ログイン成功後handleが未設定ならここへ307誘導"
+      "label": "middleware誘導(オンボーディング未完了・V3-AUT-10)—ログイン成功後handleが未設定ならここへ307誘導",
+      "source": "renderer"
     },
     {
       "from": "home",
       "to": "individual-finder",
-      "label": "個体ファインダー(2026-08-01 g78-b2implC・V3-UIX-83第1段=カタログ登録のみ。renderer.tsx側の実導線/finder/finder.html直リンクは現状のまま触っていない=二重入口)"
+      "label": "個体ファインダー(2026-08-01 g78-b2implC・V3-UIX-83第1段=カタログ登録のみ。renderer.tsx側の実導線/finder/finder.html直リンクは現状のまま触っていない=二重入口)",
+      "source": "planned"
     },
     {
       "from": "individual-finder",
       "to": "individual-universe",
-      "label": "宇宙ビューを開く(2026-08-01 g81-bundleD・V3-UIX-83第2段=graph-view化。finder.html『★宇宙で見る』からも/s/individual-universe?focus=idへ遷移する)"
+      "label": "宇宙ビューを開く(2026-08-01 g81-bundleD・V3-UIX-83第2段=graph-view化。finder.html『★宇宙で見る』からも/s/individual-universe?focus=idへ遷移する)",
+      "source": "screendef"
     },
     {
       "from": "individual-universe",
       "to": "individual-detail",
-      "label": "個体詳細画面を開く(2026-08-01 g81-bundleD・graph-view個体詳細パネルのCTA)"
+      "label": "個体詳細画面を開く(2026-08-01 g81-bundleD・graph-view個体詳細パネルのCTA)",
+      "source": "screendef"
     },
     {
       "from": "settings",
       "to": "notification-settings",
-      "label": "通知設定へ(2026-08-01 g79-uib07impl2・V3-UIX-42 Ship2)"
+      "label": "通知設定へ(2026-08-01 g79-uib07impl2・V3-UIX-42 Ship2)",
+      "source": "screendef"
     },
     {
       "from": "notification-settings",
       "to": "notification-settings",
-      "label": "保存後に再読込"
+      "label": "保存後に再読込",
+      "source": "screendef"
     }
   ]
 }
