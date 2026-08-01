@@ -3,7 +3,7 @@
   "route": "/research/search",
   "title": "研究の統合検索",
   "layout": "standard",
-  "notes": "WIK-13/14 — unifiedSearch 4 本柱(fulltext/tag/user/node)を prefix scan で合成投影(常駐 index なし)。type/tags フィルタ。RAG_PRIORITY 順。結果から論文詳細へ。POST /api/v1/research/search(protected)。",
+  "notes": "WIK-13/14 — unifiedSearch 4 本柱(fulltext/tag/user/node)を prefix scan で合成投影(常駐 index なし)。type/tags フィルタ。RAG_PRIORITY 順。結果から論文詳細へ。POST /api/v1/research/search(protected)。g89-w2research: 結果行を table 化(種別/タイトル/一致チャネル/並び順根拠/投稿者/詳細リンク)。unifiedSearch は数値スコア・スニペット・ページングを返さないため、この3要素は捏造せず表示から外した(再現できない要素として報告書に明記)。matched[]/rank_source は実データのタグ/スコア相当として表示。★重大是正: フォームの `name` が API契約(SearchQuery: text/type/tags)と食い違っていた(旧: query→text, content_type→type)ため、キーワード検索は常に0件だった(実機検証で発見・実データで再現・修正後に再検証済み)。tagsフィールドはカンマ区切り文字列のまま送信しており、API側の`tags.includes(x)`は配列要素一致ではなく部分文字列一致として働く(意図と異なる可能性があるが、フォームからカンマ区切り文字列を配列へ変換する宣言的手段が無いため、既知の限界として報告書に明記のうえ現状維持)。",
   "nodes": [
     {
       "id": "shell",
@@ -21,8 +21,8 @@
               "props": { "header_scoped": true },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/search" },
               "children": [
-                { "id": "query", "type": "field", "props": { "variant": "text", "name": "query", "label": "キーワード", "placeholder": "例: 温度 飼育" } },
-                { "id": "type-filter", "type": "field", "props": { "variant": "select", "name": "content_type", "label": "種別", "options": [
+                { "id": "query", "type": "field", "props": { "variant": "text", "name": "text", "label": "キーワード", "placeholder": "例: 温度 飼育" } },
+                { "id": "type-filter", "type": "field", "props": { "variant": "select", "name": "type", "label": "種別", "options": [
                   { "value": "", "label": "すべて" },
                   { "value": "article", "label": "記事" },
                   { "value": "blog", "label": "ブログ" },
@@ -39,14 +39,23 @@
               "type": "card",
               "children": [
                 { "id": "results-title", "type": "heading", "props": { "text": "検索結果", "level": 2 } },
-                { "id": "result-list", "type": "list", "props": { "bind_items": "result.results", "item_text": "{{content_type}} {{title}}", "empty_text": "該当する結果はありません" } }
+                {
+                  "id": "result-table",
+                  "type": "table",
+                  "props": {
+                    "bind_items": "result.results",
+                    "empty_text": "該当する結果はありません",
+                    "columns": [
+                      { "key": "content_type", "label": "種別", "cell": "badge" },
+                      { "key": "title", "label": "タイトル" },
+                      { "key": "matched", "label": "一致チャネル(4本柱のうち一致したもの)" },
+                      { "key": "rank_source", "label": "並び順の根拠", "cell": "badge", "tone": "neutral" },
+                      { "key": "actor_id", "label": "投稿者", "cell": "actor" },
+                      { "key": "content_id", "cell": "link", "href_tpl": "/s/paper-detail?id={{content_id}}", "link_label": "詳細を開く" }
+                    ]
+                  }
+                }
               ]
-            },
-            {
-              "id": "to-paper",
-              "type": "button",
-              "props": { "label": "論文の詳細を開く", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "paper-detail" }
             }
           ]
         }

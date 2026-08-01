@@ -3,7 +3,7 @@
   "route": "/research/newspaper",
   "title": "文明研究新聞",
   "layout": "standard",
-  "notes": "PPR-17 — generateNewspaper 投影(新規 task_node ダイジェスト)。日次蒸留の単発手動トリガは POST /research/agent/run(Cron 定期配線は §6 人間ゲート)。source_path=GET /api/v1/research/newspaper(protected)。論文詳細へ。",
+  "notes": "PPR-17 — generateNewspaper 投影(全 task_node ダイジェスト・content_type=newspaper)。日次蒸留の単発手動トリガは POST /research/agent/run(Cron 定期配線は §6 人間ゲート)。source_path=GET /api/v1/research/newspaper(protected)。論文詳細へ。g89-w2research是正: 旧版は `data.newspaper.title`/`data.newspaper.tasks`(要素に{difficulty,question})を参照していたが、実レスポンスは `{newspaper: {content_id,title,body_markdown,created_at,...}}` で1段ネストしており(要 `data.newspaper.newspaper.*`)、かつ `tasks` 配列自体が存在しない(digestは body_markdown という1本の文字列)。実形に合わせ本文はbody_markdownをそのまま表示、難易度階層はGET /research/tasks(taskTree投影・実際にdifficultyフィールドを持つ)を別テーブルで表示、号アーカイブはGET /research/content?type=newspaper(過去のnewspaperコンテンツ一覧)で表示する形に是正した。",
   "nodes": [
     {
       "id": "shell",
@@ -20,11 +20,54 @@
               "type": "card",
               "props": { "source_path": "/api/v1/research/newspaper" },
               "children": [
-                { "id": "issue-title", "type": "heading", "props": { "text": "{{data.newspaper.title}}", "level": 2 } },
-                { "id": "issued-at", "type": "text", "props": { "text": "発行: {{data.newspaper.created_at}}", "muted": true } },
-                { "id": "digest", "type": "list", "props": { "bind_items": "data.newspaper.tasks", "item_text": "[{{difficulty}}] {{question}}", "empty_text": "新しい課題はまだありません" } }
+                {
+                  "id": "issue-title",
+                  "type": "heading",
+                  "props": { "when": { "not_empty": "{{data.newspaper.newspaper.title}}" }, "text": "{{data.newspaper.newspaper.title}}", "level": 2 }
+                },
+                {
+                  "id": "no-issue",
+                  "type": "text",
+                  "props": { "when": { "empty": "{{data.newspaper.newspaper.title}}" }, "text": "まだ新聞は発行されていません。", "muted": true }
+                },
+                { "id": "issued-at", "type": "text", "props": { "text": "発行: {{data.newspaper.newspaper.created_at}}", "muted": true } },
+                { "id": "body", "type": "text", "props": { "text": "{{data.newspaper.newspaper.body_markdown}}" } }
               ]
             },
+
+            { "id": "digest-title", "type": "heading", "props": { "text": "課題の難易度階層", "level": 2 } },
+            {
+              "id": "digest-table",
+              "type": "table",
+              "props": {
+                "source_path": "/api/v1/research/tasks",
+                "bind_items": "data.digest-table.items",
+                "empty_text": "新しい課題はまだありません",
+                "columns": [
+                  { "key": "difficulty", "label": "難易度", "cell": "badge" },
+                  { "key": "priority", "label": "優先度" },
+                  { "key": "question", "label": "課題" },
+                  { "key": "source_kind", "label": "由来", "cell": "badge", "tone": "neutral" }
+                ]
+              }
+            },
+
+            { "id": "archive-title", "type": "heading", "props": { "text": "号アーカイブ", "level": 2 } },
+            {
+              "id": "archive-table",
+              "type": "table",
+              "props": {
+                "source_path": "/api/v1/research/content?type=newspaper",
+                "bind_items": "data.archive-table.items",
+                "empty_text": "過去の号はまだありません",
+                "columns": [
+                  { "key": "created_at", "label": "発行", "cell": "date" },
+                  { "key": "title", "label": "号名" },
+                  { "key": "content_id", "cell": "link", "href_tpl": "/s/paper-detail?id={{content_id}}", "link_label": "開く" }
+                ]
+              }
+            },
+
             {
               "id": "to-paper",
               "type": "button",
