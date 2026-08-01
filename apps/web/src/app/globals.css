@@ -1,5 +1,9 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "./tokens.generated.css";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* =============================================================================
  * ThemePack tokens (V3-UIX-16) now live in tokens.generated.css — the codegen
@@ -4266,4 +4270,64 @@ a.civ-thumb-card:focus-visible {
   margin-top: 12px;
   font-size: 12.5px;
   color: var(--primary);
+}
+
+/* =============================================================================
+ * g84-retroA shadcn/ui retrofit (RETRO-1 ○85, T0) — shadcn init writes its own
+ * --background/--primary/... oklch greyscale palette + a .dark class variant.
+ * That is a second, competing token system next to --civ-* (ThemePack, V3-UIX-16,
+ * driven by :root[data-theme] not a .dark class) and would make the replaced
+ * Badge/Progress render in gray instead of the app's green ThemePack — breaking
+ * the retrofit contract "見た目・操作は変わりません". Every shadcn semantic var
+ * below is an ALIAS onto the existing --civ-* var, not a new color. No .dark
+ * block: --civ-* already switches for both data-theme and prefers-color-scheme,
+ * so shadcn components pick up the app theme automatically via this one block.
+ * sidebar-*/chart-* tokens (shadcn default scaffold, unused by any of the 4
+ * retrofitted nodes) were dropped rather than aliased (reuse-first/no dead code).
+ * ========================================================================== */
+@theme inline {
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  --background: var(--civ-bg);
+  --foreground: var(--civ-text);
+  --card: var(--civ-surface);
+  --card-foreground: var(--civ-text);
+  --popover: var(--civ-surface);
+  --popover-foreground: var(--civ-text);
+  --primary: var(--civ-primary);
+  --primary-foreground: var(--civ-primary-text);
+  --secondary: var(--civ-surface-2);
+  --secondary-foreground: var(--civ-text);
+  --muted: var(--civ-surface-2);
+  --muted-foreground: var(--civ-text-muted);
+  --accent: var(--civ-surface-2);
+  --accent-foreground: var(--civ-text);
+  --destructive: var(--civ-danger);
+  --border: var(--civ-border);
+  --input: var(--civ-border);
+  --ring: var(--civ-focus);
+  --radius: var(--civ-radius);
 }

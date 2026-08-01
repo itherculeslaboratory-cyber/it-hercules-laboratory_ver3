@@ -10,6 +10,8 @@ import React, {
   useState,
 } from "react";
 import QRCode from "qrcode";
+import { Badge as ShadcnBadge } from "@/components/ui/badge";
+import { Progress as ShadcnProgress } from "@/components/ui/progress";
 import { cn } from "@/lib/cn";
 import { apiUrl, unwrapEnvelope } from "@/lib/api";
 import { ApiError, mapError } from "@/lib/error-messages";
@@ -1405,15 +1407,14 @@ function CardNode({ node }: { node: ScreenNode }) {
 // V3-UIX-04: 色は意味のみ(緑=成功/赤=失敗/青=情報/黄=注意)。caution/info はそれぞれ
 // 専用トークン(--civ-caution*/--civ-info*)を持ち、caution が danger(失敗)と混同され
 // ないようにする(旧実装は同色だった)。
-type Tone = "success" | "warning" | "caution" | "info" | "neutral";
-const TONES: readonly Tone[] = ["success", "warning", "caution", "info", "neutral"];
+// g84-retroA(RETRO-1 ○85 T1): internal markup now delegates to the shadcn-
+// scaffolded src/components/ui/badge.tsx (installed via `npx shadcn add
+// badge`, then re-tuned to this app's 5-tone system — see that file's header
+// comment for why the tone axis stays CSS-driven instead of cva/Tailwind).
+// Signature (text/tone) is unchanged: renderCell()'s "badge" table cell
+// (TableNode, out of this order's scope) also calls this helper.
 function Badge({ text, tone }: { text: string; tone?: string }) {
-  const t: Tone = TONES.includes(tone as Tone) ? (tone as Tone) : "neutral";
-  return (
-    <span className="civ-badge" data-tone={t}>
-      {text}
-    </span>
-  );
+  return <ShadcnBadge tone={tone}>{text}</ShadcnBadge>;
 }
 
 function BadgeNode({ node }: { node: ScreenNode }) {
@@ -1440,22 +1441,13 @@ function numFromProp(raw: unknown, scope: Scope): number {
   const n = Number(interpolate(String(raw ?? "0"), scope));
   return Number.isFinite(n) ? n : 0;
 }
+// g84-retroA(RETRO-1 ○85 T2): internal markup now delegates to the shadcn-
+// scaffolded src/components/ui/progress.tsx (installed via `npx shadcn add
+// progress`, restyled onto .civ-progress* — see that file's header comment).
+// Signature (value/max/label) is unchanged: renderCell()'s "progress" table
+// cell (TableNode, out of this order's scope) also calls this helper.
 function ProgressBar({ value, max, label }: { value: number; max: number; label?: string }) {
-  const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
-  return (
-    <div
-      className="civ-progress"
-      role="progressbar"
-      aria-valuenow={value}
-      aria-valuemin={0}
-      aria-valuemax={max}
-      aria-label={label || undefined}
-    >
-      <div className="civ-progress-track">
-        <div className="civ-progress-fill" style={{ transform: `scaleX(${pct / 100})` }} />
-      </div>
-    </div>
-  );
+  return <ShadcnProgress value={value} max={max} label={label} />;
 }
 function ProgressNode({ node }: { node: ScreenNode }) {
   const p = props(node);
