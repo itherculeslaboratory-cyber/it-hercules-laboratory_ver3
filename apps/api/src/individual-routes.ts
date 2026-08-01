@@ -10,7 +10,12 @@
 import { Hono, type Context } from "hono";
 import { TruthStore, ulid, cosineSimilarity, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { QR_BATCH_SIZES, STAGE_TO_NEXT_TRANSITION } from "./observation-constants";
+import {
+  QR_BATCH_SIZES,
+  STAGE_TO_NEXT_TRANSITION,
+  deltaE76,
+  colorSimilarityFromDeltaE76,
+} from "./observation-constants";
 import { appendContribution, appendCohortTerminalContribution } from "./contribution";
 import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
 import { projectOpenBindings, projectCurrentOwner } from "./source-routes";
@@ -36,6 +41,7 @@ const OCCUPANCY_TYPE = "ihl.src.occupancy.v1";
 const BINDING_TYPE = "ihl.src.device_binding.v1"; // FND-18 source module (V3-IND-13 環境時系列 join)
 const TELEMETRY_TYPE = "ihl.src.telemetry.v1";
 const TXN_TYPE = "ihl.mkt.transaction_event.v1";
+const COLOR_TYPE = "ihl.obs.color.v1"; // g80-uibatch4 T3: E2で新設済みのBPCMS Lab色イベント
 
 const SCHEMA = {
   master: "schemas/events/ind-master.schema.json",
@@ -142,6 +148,24 @@ export interface EntityGraph {
   individual_id: string;
   nodes: EntityGraphNode[];
   edges: EntityGraphEdge[];
+}
+
+// g80-uibatch4 T3: observation-routes.ts の loadCaptureLab と同一ロジックだが
+// module-private でimport不可のためここへ再宣言する(本ファイル冒頭コメント
+// 「envelope()/store()/dataOf()はinline再宣言」と同じ前例)。
+// そのcaptureに紐づく最新のihl.obs.color.v1(BPCMS Lab)を読む。1件も無ければnull
+// (未遡及capture・観測なしを正直に区別する=創作値で埋めない)。
+async function loadCaptureLabFor(
+  s: TruthStore,
+  captureId: string,
+): Promise<{ l: number; a: number; b: number } | null> {
+  const rows = (await s.listEvents(`truth/${COLOR_TYPE}/${captureId}-`)).map(dataOf);
+  if (!rows.length) return null;
+  rows.sort((a, b) => String(a.color_id).localeCompare(String(b.color_id)));
+  const latest = rows[rows.length - 1].lab as { l: number; a: number; b: number } | undefined;
+  return latest && typeof latest.l === "number" && typeof latest.a === "number" && typeof latest.b === "number"
+    ? latest
+    : null;
 }
 
 /** individual_id の最新capture(capture_id昇順末尾=既存 GET /individuals と同じ
@@ -420,6 +444,35 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
     }
   }
 
+  // g80-uibatch4 T3: color_reproducibility = 親個体のLabと子個体群のLabのΔE76
+  // 由来類似度の平均(親子の色遺伝再現性)。ihl.obs.color.v1 は既存個体には
+  // 未遡及(G79-3)なので、親または子の一方でも色イベントが無ければ全欠測は
+  // 全欠測のまま null とし、創作値で埋めない(完了条件どおり「欠測は欠測」)。
+  const parentCaps = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.subject_ref === `individual/${id}`);
+  const parentLabs: { l: number; a: number; b: number }[] = [];
+  for (const pcap of parentCaps) {
+    const lab = await loadCaptureLabFor(s, String(pcap.capture_id ?? ""));
+    if (lab) parentLabs.push(lab);
+  }
+  const parentLab =
+    parentLabs.length > 0
+      ? {
+          l: avg(parentLabs.map((v) => v.l)) as number,
+          a: avg(parentLabs.map((v) => v.a)) as number,
+          b: avg(parentLabs.map((v) => v.b)) as number,
+        }
+      : null;
+  const childColorSimilarities: number[] = [];
+  if (parentLab) {
+    for (const cap of caps) {
+      const lab = await loadCaptureLabFor(s, String(cap.capture_id ?? ""));
+      if (lab) childColorSimilarities.push(colorSimilarityFromDeltaE76(deltaE76(parentLab, lab)));
+    }
+  }
+  const colorReproducibility = childColorSimilarities.length > 0 ? avg(childColorSimilarities) : null;
+
   const rates = {
     mortality: rate(deaths, total),
     survival: total > 0 ? 1 - rate(deaths, total) : 0,
@@ -427,7 +480,9 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
     eclosion_failure: rate(eclosionFailures, total), // 羽化不全率
     hatch_rate: rate(births, total), // 孵化率
     sex_ratio: males + females > 0 ? males / (males + females) : null, // 性比(雄比)
-    color_reproducibility: null as number | null, // §5 defer(色解析後波)
+    // g80-uibatch4 T3: 親子ΔE76由来の色類似度平均。親または全子が未遡及(色イベント
+    // 無し)ならcolorReproducibilityはnull=欠測は欠測のまま(創作値で埋めない)。
+    color_reproducibility: colorReproducibility,
   };
   if (metric) {
     if (!(metric in rates)) return { individual_id: id, metric, value: null, unknown_metric: true };
@@ -448,6 +503,9 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
       min_length: lengths.length ? Math.min(...lengths) : null,
     },
     rates,
+    // g80-uibatch4 T3: color_reproducibility の内訳(何件の色イベントから算出したか)。
+    // nullの理由(未遡及capture・そもそも無し)を画面側が正直に説明できるようにする。
+    color_reproducibility_sample: { parent_has_color: parentLab !== null, children_with_color: childColorSimilarities.length },
     // V3-IND-17: 失敗データ(死亡・羽化不全)は「成功より価値が高い反脆弱性データ」として
     // 削除せず正式集計に含める(誇張ゼロ・fail_stage/fail_reason は入力があれば構造化、
     // 無ければ null のまま=機械が推測しない)。

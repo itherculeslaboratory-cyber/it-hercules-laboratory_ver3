@@ -9514,11 +9514,13 @@ function PrefCard({
   side,
   onChoose,
   disabled,
+  refetching,
 }: {
   item: PrefPairItem | undefined;
   side: "left" | "right";
   onChoose: () => void;
   disabled: boolean;
+  refetching: boolean;
 }) {
   if (!item) {
     return (
@@ -9528,7 +9530,7 @@ function PrefCard({
     );
   }
   return (
-    <div className="swipe-card pref-card">
+    <div className={cn("swipe-card", "pref-card", refetching && "pref-skeleton")}>
       <div className={cn("swipe-photo", side === "left" ? "a" : "b")}>
         {item.thumbnail_path ? (
           <img className="pref-photo-img" src={item.thumbnail_path} alt={item.species ?? "個体の写真"} />
@@ -9581,20 +9583,28 @@ function PrefPairwiseNode() {
   const execute = useContext(ExecuteCtx);
   const [data, setData] = useState<PrefPairResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refetching, setRefetching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const fetchPair = useCallback(() => {
-    setLoading(true);
+  // g80-uibatch4 T2: 初回取得は loading(カード未着=表示できるものが無い)、
+  // 2回目以降(次ペア取得)は refetching(直前のカードを維持したままスケルトン化)。
+  // これでE6実測の「次ペア取得中カード全消え」を解消する(順序=完了条件どおり)。
+  const fetchPair = useCallback((isInitial: boolean) => {
+    if (isInitial) setLoading(true);
+    else setRefetching(true);
     Promise.resolve(execute({ kind: "api", method: "GET", path: "/api/v1/match/pair" }))
       .then((v) => setData((v as PrefPairResponse | undefined) ?? null))
       .catch(() => setData(null))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isInitial) setLoading(false);
+        else setRefetching(false);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    fetchPair();
+    fetchPair(true);
   }, [fetchPair]);
 
   const converged = data != null && !data.exhausted && data.round >= data.target;
@@ -9614,7 +9624,7 @@ function PrefPairwiseNode() {
         .catch(() => setErrorMsg("記録に失敗しました。もう一度お試しください。"))
         .finally(() => {
           setSubmitting(false);
-          fetchPair(); // 成功=次ラウンドへ進む/失敗=同じラウンドが再取得され自然にロールバックする
+          fetchPair(false); // 成功=次ラウンドへ進む/失敗=同じラウンドが再取得され自然にロールバックする
         });
     },
     [data, submitting, execute, fetchPair],
@@ -9666,7 +9676,7 @@ function PrefPairwiseNode() {
 
             {loading && <p className="civ-empty">読み込み中…</p>}
 
-            {!loading && data?.exhausted && (
+            {!loading && !refetching && data?.exhausted && (
               <p className="civ-empty">
                 まだ評価できる個体がありません。観測を増やすと、好みくらべに使える個体が増えます。
               </p>
@@ -9675,12 +9685,29 @@ function PrefPairwiseNode() {
             {!loading && showingQuestion && data?.left && data?.right && (
               <>
                 <div className="swipe-row pref-pair-row">
-                  <PrefCard item={data.left} side="left" onChoose={() => choose("left")} disabled={submitting} />
+                  <PrefCard
+                    item={data.left}
+                    side="left"
+                    onChoose={() => choose("left")}
+                    disabled={submitting || refetching}
+                    refetching={refetching}
+                  />
                   <div className="swipe-vs">VS</div>
-                  <PrefCard item={data.right} side="right" onChoose={() => choose("right")} disabled={submitting} />
+                  <PrefCard
+                    item={data.right}
+                    side="right"
+                    onChoose={() => choose("right")}
+                    disabled={submitting || refetching}
+                    refetching={refetching}
+                  />
                 </div>
                 <div className="pass-row">
-                  <button type="button" className="pass-btn" disabled={submitting} onClick={() => choose("neither")}>
+                  <button
+                    type="button"
+                    className="pass-btn"
+                    disabled={submitting || refetching}
+                    onClick={() => choose("neither")}
+                  >
                     どちらも ×
                   </button>
                 </div>
@@ -9859,6 +9886,7 @@ type IndCross = {
     sex_ratio: number | null;
     color_reproducibility: number | null;
   };
+  color_reproducibility_sample: { parent_has_color: boolean; children_with_color: number };
 };
 function IndCrossNode() {
   const scope = useContext(ScopeCtx);
@@ -9934,9 +9962,16 @@ function IndCrossNode() {
                 <div className="r-label">性比(雄の割合)</div>
                 <div className="r-plain">オスの比率</div>
               </div>
-              <div className="rate-tile prep">
-                <div className="r-num">色の再現性は後の波</div>
-                <div className="r-plain">色の解析が入る後の波で対応</div>
+              <div className={cn("rate-tile", r.color_reproducibility == null ? "prep" : undefined)}>
+                <div className="r-num">{indPct(r.color_reproducibility)}</div>
+                <div className="r-label">色の再現性</div>
+                <div className="r-plain">
+                  {r.color_reproducibility == null
+                    ? data.color_reproducibility_sample.parent_has_color
+                      ? "子の色データがまだありません"
+                      : "この親の色データがまだありません"
+                    : `色データがある子${data.color_reproducibility_sample.children_with_color}匹の平均`}
+                </div>
               </div>
             </div>
 
@@ -9976,7 +10011,7 @@ function IndCrossNode() {
             </div>
 
             <p className="source-note">
-              情報は <code>GET /individuals/{"{id}"}/cross</code> の実データ(生存・完品・羽化不全・孵化・死亡・性比・令別平均体重・サイズ極値はすべて観測から都度計算)。色の再現性は色解析が入る後の波で対応します。
+              情報は <code>GET /individuals/{"{id}"}/cross</code> の実データ(生存・完品・羽化不全・孵化・死亡・性比・令別平均体重・サイズ極値・色の再現性はすべて観測から都度計算)。色の再現性は親・子それぞれの色記録(ihl.obs.color.v1)のΔE76(色差)から算出し、色記録が無い個体は集計から除きます。
             </p>
           </div>
         </section>

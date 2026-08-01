@@ -211,6 +211,32 @@ body {
   gap: 12px;
   padding: 16px;
 }
+
+/* g80-uibatch4 T1: civ-scope-dialogと同型(ネイティブ<dialog>のTailwind
+ * Preflight margin:auto復元・ページ中央寄せ)。civ-page-info-dialogに
+ * このルールが無く左上張り付き+オーバーレイ無しだった(R0801-10372a実測)。 */
+.civ-page-info-dialog {
+  border: 1px solid var(--civ-border);
+  border-radius: var(--civ-radius);
+  background: var(--civ-surface);
+  color: var(--civ-text);
+  padding: 0;
+  margin: auto;
+  max-width: 480px;
+  max-height: min(600px, calc(100vh - 64px));
+  width: calc(100% - 32px);
+}
+.civ-page-info-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+.civ-page-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  max-height: min(600px, calc(100vh - 64px));
+  overflow-y: auto;
+}
 .civ-drawer-list {
   list-style: none;
   margin: 0;
@@ -3411,6 +3437,27 @@ a.civ-thumb-card:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+/* g80-uibatch4 T2: 次ペア取得中もカード枠を維持し中身だけスケルトン化する
+ * (R0801-10372a実測=次ペア取得の600〜1300msの間カード本体が全消えしていた)。
+ * 既存アニメの命名(civ-spin)に合わせ civ-pulse という名で新設。 */
+@keyframes civ-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.ind-zone .pref-card.pref-skeleton .swipe-photo,
+.ind-zone .pref-card.pref-skeleton .swipe-name,
+.ind-zone .pref-card.pref-skeleton .swipe-traits,
+.ind-zone .pref-card.pref-skeleton .pref-cap {
+  animation: civ-pulse 1.1s ease-in-out infinite;
+}
+.ind-zone .pref-card.pref-skeleton .pref-photo-img {
+  filter: grayscale(40%);
 }
 .ind-zone .pref-photo-empty {
   font-size: 12px;

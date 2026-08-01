@@ -280,6 +280,69 @@ describe("IND-12 交配結果(projectCross・決定論)", () => {
     };
     expect(strangerCohort.individuals).toEqual([]);
   });
+
+  describe("g80-uibatch4 T3: color_reproducibility(親子ΔE76由来・欠測は欠測のまま)", () => {
+    async function seedCapture(env: object, subjectRef: string): Promise<string> {
+      const res = await post("/api/v1/observation/captures", { domain: "biology", subject_ref: subjectRef }, env);
+      return ((await res.json()) as { capture_id: string }).capture_id;
+    }
+    async function seedColor(env: object, captureId: string, lab: { l: number; a: number; b: number }) {
+      const res = await post(`/api/v1/observation/${captureId}/color`, { lab, hsv: { h: 0, s: 0, v: 0 } }, env);
+      expect(res.status).toBe(202);
+    }
+
+    it("親・子とも色イベント無し(未遡及)→ null のまま(創作値で埋めない)", async () => {
+      const { env } = ctx();
+      const pa = await seedCross(env);
+      await seedCapture(env, `individual/${pa}`); // capture はあるが color イベントは無い
+      const r = (await (await get(`/api/v1/individuals/${pa}/cross`, env)).json()) as {
+        rates: Record<string, number | null>;
+        color_reproducibility_sample: { parent_has_color: boolean; children_with_color: number };
+      };
+      expect(r.rates.color_reproducibility).toBeNull();
+      expect(r.color_reproducibility_sample).toEqual({ parent_has_color: false, children_with_color: 0 });
+    });
+
+    it("親のみ色イベントあり・子は無し → null のまま(片側欠測は全欠測扱い)", async () => {
+      const { env } = ctx();
+      const pa = await seedCross(env);
+      const paCap = await seedCapture(env, `individual/${pa}`);
+      await seedColor(env, paCap, { l: 50, a: 0, b: 0 });
+      const r = (await (await get(`/api/v1/individuals/${pa}/cross`, env)).json()) as {
+        rates: Record<string, number | null>;
+        color_reproducibility_sample: { parent_has_color: boolean; children_with_color: number };
+      };
+      expect(r.rates.color_reproducibility).toBeNull();
+      expect(r.color_reproducibility_sample).toEqual({ parent_has_color: true, children_with_color: 0 });
+    });
+
+    it("親+一部の子に色イベントあり(混在)→ 色データがある子だけでΔE76由来の平均を算出", async () => {
+      const { env } = ctx();
+      const pa = await seedCross(env);
+      const kids = (
+        (await (await get(`/api/v1/individuals?parent_id=${pa}`, env)).json()) as {
+          individuals: { individual_id: string }[];
+        }
+      ).individuals.map((k) => k.individual_id);
+      const paCap = await seedCapture(env, `individual/${pa}`);
+      await seedColor(env, paCap, { l: 50, a: 0, b: 0 });
+      // 4体中2体だけ色イベントを持つ(残り2体は未遡及=欠測として除外される)。
+      const k0Cap = await seedCapture(env, `individual/${kids[0]}`);
+      await seedColor(env, k0Cap, { l: 51, a: 1, b: 0 }); // ΔE76 = sqrt(1+1) ≈ 1.4142
+      const k1Cap = await seedCapture(env, `individual/${kids[1]}`);
+      await seedColor(env, k1Cap, { l: 53, a: 0, b: 0 }); // ΔE76 = 3
+      await seedCapture(env, `individual/${kids[2]}`); // color イベント無し=無視される
+
+      const r = (await (await get(`/api/v1/individuals/${pa}/cross`, env)).json()) as {
+        rates: Record<string, number | null>;
+        color_reproducibility_sample: { parent_has_color: boolean; children_with_color: number };
+      };
+      const expectedSim1 = 1 - Math.sqrt(2) / 100;
+      const expectedSim2 = 1 - 3 / 100;
+      expect(r.rates.color_reproducibility).toBeCloseTo((expectedSim1 + expectedSim2) / 2, 10);
+      expect(r.color_reproducibility_sample).toEqual({ parent_has_color: true, children_with_color: 2 });
+    });
+  });
 });
 
 describe("IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)", () => {

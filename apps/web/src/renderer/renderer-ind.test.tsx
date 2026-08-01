@@ -268,13 +268,39 @@ describe("IND cross — real rates, honest guidance without an id", () => {
             sex_ratio: 0.54,
             color_reproducibility: null,
           },
+          color_reproducibility_sample: { parent_has_color: false, children_with_color: 0 },
         };
       return undefined;
     });
     render(<Renderer def={def("ind-cross")} onAction={onAction} params={{ id: "ind-7" }} />);
     expect(await screen.findByText("88%")).toBeInTheDocument(); // survival
     expect(screen.getByText("79%")).toBeInTheDocument(); // completion
-    expect(screen.getByText("色の再現性は後の波")).toBeInTheDocument(); // honest defer
+    expect(screen.getByText("この親の色データがまだありません")).toBeInTheDocument(); // honest missing-data, not a "later wave" defer
+  });
+
+  it("renders a real color_reproducibility percentage once color data exists (g80-uibatch4 T3)", async () => {
+    const onAction = vi.fn(async (a: { path?: string }) => {
+      if (a.path?.endsWith("/cross"))
+        return {
+          cohort_size: 24,
+          weight_by_instar: { first: 4.2, second: 18, third_early: 54, third_late: 82 },
+          size_extremes: { max_weight: 96, max_length: 158, min_length: 121 },
+          rates: {
+            mortality: 0.12,
+            survival: 0.88,
+            completion: 0.79,
+            eclosion_failure: 0.08,
+            hatch_rate: 0.92,
+            sex_ratio: 0.54,
+            color_reproducibility: 0.9,
+          },
+          color_reproducibility_sample: { parent_has_color: true, children_with_color: 2 },
+        };
+      return undefined;
+    });
+    render(<Renderer def={def("ind-cross")} onAction={onAction} params={{ id: "ind-7" }} />);
+    expect(await screen.findByText("90%")).toBeInTheDocument(); // color_reproducibility
+    expect(screen.getByText("色データがある子2匹の平均")).toBeInTheDocument();
   });
 
   it("guides the user to open from an individual when no id is given", () => {
