@@ -98,6 +98,11 @@ export const LocaleCtx = createContext<string>("ja");
 // Ctx/data-layout配線自体は他消費者が現れた場合に備えて残置(無害)。
 export const LayoutCtx = createContext<string>("standard");
 
+// g79-bundleA(V3-UIX-59【R136/S1】・b2think §2-6): 「この画面について話す」導線が
+// channel=当該screen_idをユーザーに手入力させず自動刻印するための最小フック。
+// def.screen_id を Renderer が Provide し、AppShellNode の PageInfoPanel が読む。
+export const ScreenIdCtx = createContext<string>("");
+
 // HDR-1(c9-structure-canon.md §1/§1c・R112/R115採用)「観測対象」グローバル
 // 文脈スイッチ。AppShellNode がヘッダーセレクタで確定した選択(層1=学術分類の
 // 種・層2=血統ブランドタグ)を保持し、全画面の子ノードへ配る。空文字="すべて"
@@ -6715,9 +6720,184 @@ function DrawerNav() {
   );
 }
 
+// g79-bundleA(V3-UIX-59【R136/S1】確定(修正)・b2think §2-5案1/§2-6): 「この画面
+// について」パネル。段階導入 — app-shellノードの props.page_info を持つ画面
+// だけトリガーを出す(未整備画面には何も足さない=誇張ゼロ。structure-canon.md:40の
+// STRIP-1で撤去済みの3導線(愚痴/改善/Builder)のうち、G79-2裁定により愚痴/改善の
+// 2導線のみ復活可=Builder・manualは出さない)。
+type PageInfoFaqEntry = { q?: unknown; a?: unknown };
+type PageInfo = {
+  purpose?: unknown;
+  how_to?: unknown;
+  faq?: unknown;
+  talk_channel?: unknown;
+};
+type TalkBoardKind = "complaint" | "improvement";
+const TALK_BOARD_LABELS: Record<TalkBoardKind, string> = {
+  complaint: "愚痴",
+  improvement: "改善",
+};
+
+function PageInfoPanel({ pageInfo, screenId }: { pageInfo: PageInfo; screenId: string }) {
+  const execute = useContext(ExecuteCtx);
+  const navigate = useContext(NavigateCtx);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [composeKind, setComposeKind] = useState<TalkBoardKind | null>(null);
+  const [composeText, setComposeText] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const onNativeClose = () => setIsOpen(false);
+    el.addEventListener("close", onNativeClose);
+    return () => el.removeEventListener("close", onNativeClose);
+  }, []);
+  const open = useCallback(() => {
+    setIsOpen(true);
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.showModal === "function") el.showModal();
+    else el.setAttribute("open", "");
+  }, []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setComposeKind(null);
+    setComposeText("");
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.close === "function") el.close();
+    else el.removeAttribute("open");
+  }, []);
+
+  const howTo = Array.isArray(pageInfo.how_to)
+    ? (pageInfo.how_to as unknown[]).filter((s): s is string => typeof s === "string")
+    : [];
+  const faq = Array.isArray(pageInfo.faq)
+    ? (pageInfo.faq as PageInfoFaqEntry[]).filter(
+        (f): f is { q: string; a: string } => typeof f?.q === "string" && typeof f?.a === "string",
+      )
+    : [];
+  // ★注意(cardgate3 §6実測・G79-2裁定): 「screen_idをchannelに自動刻印する既存実装」
+  // は無い。plaza側の受け皿(POST /plaza/posts の channel)は実在するのみ
+  // (plaza-routes.ts:173-222)。刻印はここで screenId をそのまま渡すことで行う。
+  const talkEnabled = pageInfo.talk_channel === true;
+
+  const submitTalk = useCallback(async () => {
+    const kind = composeKind;
+    const text = composeText.trim();
+    if (!kind || !text || posting) return;
+    setPosting(true);
+    try {
+      const res = await execute(
+        { kind: "api", method: "POST", path: "/api/v1/plaza/posts" },
+        { channel: screenId, board_kind: kind, topic: text, body: text },
+      );
+      const threadId = (res as { thread_id?: string } | undefined)?.thread_id;
+      close();
+      if (threadId) navigate("knowledge-thread", { thread_id: threadId });
+    } finally {
+      setPosting(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composeKind, composeText, posting, execute, screenId, navigate]);
+
+  return (
+    <div className="civ-page-info">
+      <button
+        type="button"
+        className={cn("civ-interactive", "civ-button")}
+        data-variant="ghost"
+        aria-haspopup="dialog"
+        onClick={open}
+      >
+        この画面について
+      </button>
+      <dialog ref={dialogRef} className="civ-page-info-dialog" aria-label="この画面について">
+        {isOpen && (
+          <div className="civ-page-info-body">
+            <h2 className="civ-heading">この画面について</h2>
+            <p className="civ-text">{String(pageInfo.purpose ?? "")}</p>
+            {howTo.length > 0 && (
+              <ul className="civ-page-info-howto">
+                {howTo.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ul>
+            )}
+            {faq.length > 0 && (
+              <dl className="civ-page-info-faq">
+                {faq.map((f, i) => (
+                  <div key={i}>
+                    <dt>{f.q}</dt>
+                    <dd>{f.a}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {talkEnabled && (
+              <div className="civ-page-info-talk">
+                <h3 className="civ-heading">この画面について話す</h3>
+                <div className="civ-page-info-talk-buttons">
+                  <button
+                    type="button"
+                    className={cn("civ-interactive", "civ-button")}
+                    data-variant="ghost"
+                    aria-pressed={composeKind === "complaint"}
+                    onClick={() => setComposeKind("complaint")}
+                  >
+                    愚痴
+                  </button>
+                  <button
+                    type="button"
+                    className={cn("civ-interactive", "civ-button")}
+                    data-variant="ghost"
+                    aria-pressed={composeKind === "improvement"}
+                    onClick={() => setComposeKind("improvement")}
+                  >
+                    改善
+                  </button>
+                </div>
+                {composeKind && (
+                  <div className="civ-page-info-compose">
+                    <label className="civ-label" htmlFor="page-info-talk-text">
+                      {TALK_BOARD_LABELS[composeKind]}を書く
+                    </label>
+                    <textarea
+                      id="page-info-talk-text"
+                      className="civ-input"
+                      value={composeText}
+                      onChange={(e) => setComposeText(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className={cn("civ-interactive", "civ-button")}
+                      disabled={!composeText.trim() || posting}
+                      onClick={submitTalk}
+                    >
+                      投稿する
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <button type="button" className={cn("civ-interactive", "civ-button")} data-variant="ghost" onClick={close}>
+              閉じる
+            </button>
+          </div>
+        )}
+      </dialog>
+    </div>
+  );
+}
+
 function AppShellNode({ node }: { node: ScreenNode }) {
   const execute = useContext(ExecuteCtx);
   const layout = useContext(LayoutCtx);
+  const screenId = useContext(ScreenIdCtx);
+  const pageInfo = props(node).page_info as PageInfo | undefined;
+  const hasPageInfo = typeof pageInfo?.purpose === "string" && pageInfo.purpose.trim() !== "";
   const [authLoaded, setAuthLoaded] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -6811,6 +6991,7 @@ function AppShellNode({ node }: { node: ScreenNode }) {
         <div className="civ-chrome-auth">
           <ChromeAuthLinks authenticated={authLoaded && authenticated} loggingOut={loggingOut} onLogout={onLogout} />
         </div>
+        {hasPageInfo && <PageInfoPanel pageInfo={pageInfo as PageInfo} screenId={screenId} />}
         <ThemeToggleButton />
       </header>
       <HeaderScopeCtx.Provider value={scope}>
@@ -9478,20 +9659,22 @@ export function Renderer({
     <MessagesCtx.Provider value={resolvedMessage}>
       <LocaleCtx.Provider value={viewerLocale ?? "ja"}>
         <LayoutCtx.Provider value={def.layout ?? "standard"}>
-          <ExecuteCtx.Provider value={execute}>
-            <ScopeCtx.Provider value={scope}>
-              <TransitionsCtx.Provider value={def.transitions ?? []}>
-                <NavigateCtx.Provider value={navigate}>
-                  <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
-                    {def.nodes.map((n) => (
-                      <NodeView key={n.id} node={n} />
-                    ))}
-                    <ToastHost />
-                  </DataSinkCtx.Provider>
-                </NavigateCtx.Provider>
-              </TransitionsCtx.Provider>
-            </ScopeCtx.Provider>
-          </ExecuteCtx.Provider>
+          <ScreenIdCtx.Provider value={def.screen_id}>
+            <ExecuteCtx.Provider value={execute}>
+              <ScopeCtx.Provider value={scope}>
+                <TransitionsCtx.Provider value={def.transitions ?? []}>
+                  <NavigateCtx.Provider value={navigate}>
+                    <DataSinkCtx.Provider value={{ setNodeData, setActionResult }}>
+                      {def.nodes.map((n) => (
+                        <NodeView key={n.id} node={n} />
+                      ))}
+                      <ToastHost />
+                    </DataSinkCtx.Provider>
+                  </NavigateCtx.Provider>
+                </TransitionsCtx.Provider>
+              </ScopeCtx.Provider>
+            </ExecuteCtx.Provider>
+          </ScreenIdCtx.Provider>
         </LayoutCtx.Provider>
       </LocaleCtx.Provider>
     </MessagesCtx.Provider>
