@@ -1161,6 +1161,70 @@ function renderCell(col: Record<string, unknown>, row: unknown): React.ReactNode
   }
   return value == null ? "" : String(value);
 }
+
+// g87-p0base(catalog L19 P0穴3件のうち2件=field textarea/scope条件表示は
+// 発注時点で既に実装済みだった=e128561。残る1件=table button/actionセルの
+// み本ラウンドの実装対象。既存の row-as-scope 規約("link" cell の href_tpl
+// 上記・ImageGridNode の item_action_screen/query/label)と既存の実行経路
+// (ButtonNode/useRunActionのnavigate・api分岐)をそのまま合成する — 新規の
+// 実行経路は発明しない。col.action は node.action と同じ {kind:"navigate",
+// to,query?} / {kind:"api",method,path,toast?,static?} の形だが、
+// to/path/query/static の各テンプレート文字列は SCOPE ではなく ROW を対象に
+// 解決する(このテーブルの他セル=href_tpl/actor/observed 等が全てROWを対象に
+// 解決するのと同じ規約)。呼び出し先screen-defが未だ存在しない(g83-uiprogress
+// 実測=table button/actionセルを使う画面は現時点で0件)ため、この形は
+// 「既存2規約の合成」として妥当と判断した(判断の詳細は報告書に記載)。
+function TableActionCell({
+  tableNodeId,
+  col,
+  row,
+}: {
+  tableNodeId: string;
+  col: Record<string, unknown>;
+  row: unknown;
+}) {
+  const run = useRunAction(tableNodeId);
+  const navigate = useContext(NavigateCtx);
+  const [pending, setPending] = useState(false);
+  const rawAction = col.action as
+    | { kind?: string; to?: string; query?: Record<string, string>; method?: string; path?: string; toast?: string; static?: Record<string, unknown> }
+    | undefined;
+  const label = String(col.label ?? "実行");
+  const onClick = useCallback(async () => {
+    if (!rawAction || pending) return;
+    setPending(true);
+    try {
+      if (rawAction.kind === "navigate") {
+        const to = interpolate(String(rawAction.to ?? ""), row);
+        const queryTpl = rawAction.query ?? {};
+        navigate(to, Object.fromEntries(Object.entries(queryTpl).map(([k, v]) => [k, interpolate(String(v), row)])));
+      } else {
+        const action: Action = {
+          kind: "api",
+          method: (rawAction.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined) ?? "POST",
+          path: interpolate(String(rawAction.path ?? ""), row),
+          toast: rawAction.toast,
+        };
+        const body = rawAction.static ? resolveStatic(rawAction.static, row as Scope) : undefined;
+        await run(action, body);
+      }
+    } finally {
+      setPending(false);
+    }
+  }, [rawAction, pending, navigate, run, row]);
+  return (
+    <button
+      type="button"
+      className={cn("civ-interactive", "civ-button")}
+      data-variant={col.variant ? String(col.variant) : "ghost"}
+      disabled={pending}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function TableNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const resolve = useContext(MessagesCtx);
@@ -1192,7 +1256,11 @@ export function TableNode({ node }: { node: ScreenNode }) {
               // stacked card list instead of a squeezed horizontal scroll
               // (受領10 モバイル「詳細を開く」ボタン潰れの根本対処)。
               <TableCell key={ci} data-label={displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}>
-                {renderCell(c, row)}
+                {String(c.cell ?? "text") === "button" ? (
+                  <TableActionCell tableNodeId={node.id} col={c} row={row} />
+                ) : (
+                  renderCell(c, row)
+                )}
               </TableCell>
             ))}
           </TableRow>
