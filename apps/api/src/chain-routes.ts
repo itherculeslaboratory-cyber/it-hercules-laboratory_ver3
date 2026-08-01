@@ -10,6 +10,13 @@
 import { Hono } from "hono";
 import { TruthStore, worldHash, sha256Hex, GENESIS_HASH } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import {
+  CADENCE_TYPE,
+  deriveCadenceGaps,
+  receivedAtForSubject,
+  type CadenceDeclaration,
+  type CadenceGap,
+} from "./cadence-routes";
 
 export const chainRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -22,6 +29,12 @@ function rootKeyFor(date: string): string {
 function prevDateOf(date: string): string {
   const d = new Date(`${date}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function nextDateOf(date: string): string {
+  const d = new Date(`${date}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
 }
 
@@ -92,6 +105,81 @@ export async function ensureDailyRootStored(env: Bindings, date: string): Promis
   return derived;
 }
 
+// S5(design R0801-f383db §3論点2案C/§5論点1/§7 S5行、HQ申し送り=R0801-ac7fec 判断3):
+// 日次ルートに欠測サマリ(streams_expected/gap_count/gaps[])を同梱する。
+// 穴の導出そのものはS4の deriveCadenceGaps(純関数)・receivedAtForSubject を読み取りで
+// 再利用するだけで、新規の穴導出ロジックはここに書かない。ここで書くのは「date D の枠に
+// 絞り込む」ための集約(全subject横断のcadence宣言列挙 + groupごとの deriveCadenceGaps
+// 呼び出し結果を date D の範囲でフィルタする)のみ。
+// ★保存済みの根(index/root/<D>.json)の値・R_D のハッシュ計算には一切触れない
+// (ensureDailyRootStored/deriveDailyRoot/computeDayRoot は無変更)。読み出し時に都度導出して
+// 応答へ添えるだけ(S4の「穴は保存しない」原則の延長・§3論点2案Cのとおり)。
+export interface DailyGapSummary {
+  streams_expected: number;
+  gap_count: number;
+  gaps: Array<CadenceGap & { subject_id: string; stream_kind: string }>;
+}
+
+/**
+ * date D の終端(排他的上限)より前に発効した cadence 宣言だけを対象にする
+ * (D より後にしか効かない宣言は D の期待には含めない)。stream_kind 型フィルタは
+ * S4の判断を継続して見送り(下記「判断が要った箇所」参照)= 受領側は subject 一致のみで判定。
+ */
+async function activeCadenceDeclarations(s: TruthStore, dateEndMs: number): Promise<CadenceDeclaration[]> {
+  const rows = (await s.listEvents(`truth/${CADENCE_TYPE}/`)).map((e) => ({
+    ...((e.data ?? {}) as Record<string, unknown>),
+    received_at: e.received_at,
+  }));
+  return rows.filter((d): d is CadenceDeclaration => {
+    if (
+      typeof d.stream_kind !== "string" ||
+      typeof d.subject_id !== "string" ||
+      typeof d.expected_interval_s !== "number" ||
+      typeof d.effective_from !== "string" ||
+      typeof d.received_at !== "string"
+    ) {
+      return false;
+    }
+    const windowStartMs = Math.max(Date.parse(d.effective_from), Date.parse(d.received_at));
+    return windowStartMs < dateEndMs;
+  });
+}
+
+/** date D の欠測サマリを都度導出する(保存しない)。 */
+export async function computeDailyGapSummary(env: Bindings, date: string): Promise<DailyGapSummary> {
+  const s = new TruthStore(env.TRUTH);
+  const dateStartMs = Date.parse(`${date}T00:00:00.000Z`);
+  const dateEndMs = Date.parse(`${nextDateOf(date)}T00:00:00.000Z`);
+  const declarations = await activeCadenceDeclarations(s, dateEndMs);
+
+  const groups = new Map<string, CadenceDeclaration[]>();
+  for (const d of declarations) {
+    const key = `${d.subject_id}::${d.stream_kind}`;
+    const arr = groups.get(key);
+    if (arr) arr.push(d);
+    else groups.set(key, [d]);
+  }
+
+  const gaps: Array<CadenceGap & { subject_id: string; stream_kind: string }> = [];
+  for (const decls of groups.values()) {
+    const subjectId = decls[0].subject_id;
+    const streamKind = decls[0].stream_kind;
+    const earliestMs = Math.min(
+      ...decls.map((d) => Math.max(Date.parse(d.effective_from), Date.parse(d.received_at))),
+    );
+    const receivedAtList = await receivedAtForSubject(s, subjectId, earliestMs, dateEndMs);
+    const result = deriveCadenceGaps(decls, receivedAtList, new Date(dateEndMs).toISOString());
+    for (const g of result.gaps) {
+      const slotMs = Date.parse(g.slot);
+      if (slotMs >= dateStartMs && slotMs < dateEndMs) {
+        gaps.push({ ...g, subject_id: subjectId, stream_kind: streamKind });
+      }
+    }
+  }
+
+  return { streams_expected: groups.size, gap_count: gaps.length, gaps };
+}
+
 // GET /chain/root?date=YYYY-MM-DD — 公開読み出し(R74-2で index.ts PUBLIC_ROUTES に登録)。
 chainRoutes.get("/chain/root", async (c) => {
   const date = c.req.query("date") ?? "";
@@ -99,5 +187,6 @@ chainRoutes.get("/chain/root", async (c) => {
     return c.json({ error: "INVALID_DATE" }, 400);
   }
   const result = await ensureDailyRootStored(c.env, date);
-  return c.json(result);
+  const summary = await computeDailyGapSummary(c.env, date);
+  return c.json({ ...result, ...summary });
 });

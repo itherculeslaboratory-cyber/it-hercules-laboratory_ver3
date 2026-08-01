@@ -18,7 +18,7 @@ import type { Bindings, Variables } from "./env";
 
 export const cadenceRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-const CADENCE_TYPE = "ihl.obs.cadence.v1";
+export const CADENCE_TYPE = "ihl.obs.cadence.v1";
 const CADENCE_SCHEMA = "schemas/events/obs-cadence.schema.json";
 const CADENCE_FIELDS = ["stream_kind", "subject_id", "expected_interval_s", "tolerance_s", "effective_from"] as const;
 
@@ -73,7 +73,7 @@ cadenceRoutes.get("/observation/cadence/:subject_id", async (c) => {
   return c.json({ subject_id: subjectId, declarations: rows });
 });
 
-interface CadenceDeclaration {
+export interface CadenceDeclaration {
   stream_kind: string;
   subject_id: string;
   expected_interval_s: number;
@@ -155,7 +155,7 @@ function nextDate(date: string): string {
 }
 
 /** subjectId 宛ての受領索引エントリ(cadence宣言自身を除く)の received_at 一覧。 */
-async function receivedAtForSubject(
+export async function receivedAtForSubject(
   s: TruthStore,
   subjectId: string,
   fromMs: number,

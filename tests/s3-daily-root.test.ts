@@ -13,10 +13,13 @@ import app from "../apps/api/src/index";
 import { FakeR2Bucket, makeEnv } from "./helpers";
 import {
   computeDayRoot,
+  computeDailyGapSummary,
   deriveDailyRoot,
   ensureDailyRootStored,
+  type DailyGapSummary,
   type DailyRoot,
 } from "../apps/api/src/chain-routes";
+import { CADENCE_TYPE } from "../apps/api/src/cadence-routes";
 
 function makeIndexEntry(
   eventId: string,
@@ -166,5 +169,92 @@ describe("GET /api/v1/chain/root (public read, R74-2 PUBLIC_ROUTES)", () => {
     const first = await (await app.request(`/api/v1/chain/root?date=${date}`, {}, env)).json();
     const second = await (await app.request(`/api/v1/chain/root?date=${date}`, {}, env)).json();
     expect(second).toEqual(first);
+  });
+});
+
+// S5(design R0801-f383db §3論点2案C/§7 S5行): GET /chain/root への欠測サマリ同梱。
+// cadence宣言はTruthStore.putEventAt経由(実時刻刻印)を通さず、s3-daily-root.test.tsの
+// 索引エントリと同じ手法(bucket直書き)で received_at/effective_from を固定した状態を作る。
+async function putCadenceDeclaration(
+  bucket: FakeR2Bucket,
+  subjectId: string,
+  cadenceId: string,
+  overrides: Record<string, unknown> = {},
+): Promise<void> {
+  const key = `truth/${CADENCE_TYPE}/${subjectId}-${cadenceId}.json`;
+  const envelope = {
+    specversion: "1.0",
+    id: cadenceId,
+    source: "apps/api",
+    type: CADENCE_TYPE,
+    time: "2026-08-10T00:00:00.000Z",
+    dataschema: "schemas/events/obs-cadence.schema.json",
+    subject: subjectId,
+    provenance: { generator_kind: "human", actor_id: "test-actor" },
+    data: {
+      cadence_id: cadenceId,
+      actor_id: "test-actor",
+      stream_kind: "env_telemetry",
+      subject_id: subjectId,
+      expected_interval_s: 86400,
+      tolerance_s: 0,
+      effective_from: "2026-08-10T00:00:00.000Z",
+    },
+    received_at: "2026-08-10T00:00:00.000Z",
+    ...overrides,
+  };
+  await bucket.put(key, JSON.stringify(envelope), { onlyIf: { etagDoesNotMatch: "*" } });
+}
+
+describe("S5 — GET /chain/root の欠測サマリ同梱(streams_expected/gap_count/gaps[]、design §7 S5行)", () => {
+  const subjectId = "device/s5-gap-test";
+
+  it("① 穴のある日: gap_count>0 かつ gaps[] に中身(受領0件・日次1スロット宣言)", async () => {
+    const bucket = new FakeR2Bucket();
+    await putCadenceDeclaration(bucket, subjectId, "cad-1");
+    const env = makeEnv(bucket);
+
+    const summary = await computeDailyGapSummary(env, "2026-08-10");
+    expect(summary.streams_expected).toBe(1);
+    expect(summary.gap_count).toBe(1);
+    expect(summary.gaps).toEqual([
+      { slot: "2026-08-10T00:00:00.000Z", subject_id: subjectId, stream_kind: "env_telemetry" },
+    ]);
+  });
+
+  it("② 穴0の日: gap_count:0 かつ gaps が空配列(null/フィールド欠落と区別できる)", async () => {
+    const bucket = new FakeR2Bucket();
+    await putCadenceDeclaration(bucket, subjectId, "cad-2");
+    await putIndexEntry(
+      bucket,
+      "2026-08-11",
+      makeIndexEntry("ev-s5-received", "2026-08-11", { subject: subjectId, type: "ihl.test.sample.v1" }),
+    );
+    const env = makeEnv(bucket);
+
+    const summary = await computeDailyGapSummary(env, "2026-08-11");
+    expect(summary.streams_expected).toBe(1);
+    expect(summary.gap_count).toBe(0);
+    expect(summary.gaps).toEqual([]);
+    expect(Array.isArray(summary.gaps)).toBe(true);
+  });
+
+  it("③ ルート値(date/root/prev_root/event_count)はサマリ同梱の前後で不変(GET /chain/root経由)", async () => {
+    const bucket = new FakeR2Bucket();
+    await putIndexEntry(bucket, "2026-08-12", makeIndexEntry("ev-s5-root", "2026-08-12"));
+    const env = makeEnv(bucket);
+
+    const direct = await ensureDailyRootStored(env, "2026-08-12");
+    const res = await app.request("/api/v1/chain/root?date=2026-08-12", {}, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as DailyRoot & DailyGapSummary;
+
+    expect(body.date).toBe(direct.date);
+    expect(body.root).toBe(direct.root);
+    expect(body.prev_root).toBe(direct.prev_root);
+    expect(body.event_count).toBe(direct.event_count);
+    expect(typeof body.gap_count).toBe("number");
+    expect(Array.isArray(body.gaps)).toBe(true);
+    expect(typeof body.streams_expected).toBe("number");
   });
 });
