@@ -4,8 +4,24 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { cn } from "@/lib/cn";
 import { ScopeCtx, ExecuteCtx } from "../core/context";
-import { formatDateJa } from "../core/scope";
+import { formatDateJa, safeLabel } from "../core/scope";
 import { registerNode } from "../core/registry";
+import {
+  type IndividualProfile,
+  type PedNode,
+  type ProfileCapture,
+  type ProfileLifeEvent,
+  type ProfileMeasurement,
+  type TimelineEntry,
+  buildTimeline,
+  inbreedingCoefficient,
+  inbreedingTone,
+  isDegenerate,
+  measureValue,
+  prevValueFn,
+  profileLabel,
+  seriesFor,
+} from "../core/individual";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Z9(g85-split2a) — このファイルは renderer.tsx の以下の範囲を「1文字も改変せず」
@@ -15,14 +31,9 @@ import { registerNode } from "../core/registry";
 // 登録キー: list:ind-detail / ind-match / pref-pairwise / ind-species / ind-cross / ind-bio-card
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ★判断メモ(このファイルの下部・「Z9が自己完結するための重複」節にまとめて記載):
-// IndDetailNode/IndGrowthChart は renderer.tsx 上で Z3(zones/ind-profile.tsx 予定,
-// L5012〜)の型/関数(IndividualProfile・PedNode・profileLabel・seriesFor 等)を
-// 直接参照している。ORDER の import 制限(core/context・core/scope・core/registry
-// のみ)により Z3 ファイルを import できないため、Phase 2a(まだ renderer.tsx から
-// 何も削除していないスナップショット段階)の間だけ、この下部節で該当の型/関数を
-// 「元の記述と1文字も変えずに」複製している。Phase 2b のカットオーバー(重複の
-// 解消・どちらか一方の定義に一本化)は考える役の設計判断であり本艦では行わない。
+// Phase 2b(g85-split2a-ruling §3)で一本化済み: IndDetailNode/IndGrowthChart が
+// 使うIndividualProfile/PedNode/profileLabel/seriesFor等はcore/individual.ts
+// からimportする(旧: renderer.tsx/zones/ind-profile.tsxとの複製)。
 
 // 1画面 = 1 GET を購読する軽量フック(HomeDashboardNode の useEffect 直配線を1つに
 // まとめただけ・常駐キャッシュ無し=不変条項①)。path が null の間は取得しない。
@@ -1407,150 +1418,11 @@ function IndBioCardNode() {
   );
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// Z9が自己完結するための重複(★判断が要った箇所・報告書に詳細記載)
-//
-// 下記の型/関数は renderer.tsx 上では Z3(zones/ind-profile.tsx 予定・
-// growth-chart/individual-profile。実測でL5012付近から)の側に定義されており、
-// Z9(このファイル)の IndDetailNode / IndGrowthChart から直接参照されている。
-// ORDER の共通ルール3(import は ../core/context・../core/scope・../core/registry
-// のみ)により Z3 側の未作成ファイルを import できないため、Phase 2a の間だけ
-// renderer.tsx の元記述を1文字も変えずにこの節へ複製した。renderer.tsx 自体は
-// まだ何も削除していない(共通ルール1・4)。Phase 2b のカットオーバーでこの重複を
-// 解消する設計判断は本艦の範囲外(考える役)。
-// ═════════════════════════════════════════════════════════════════════════════
-
-// renderer.tsx L5020-L5056 verbatim(型定義)
-type ProfileMeasurement = { item: string; kind: string; value: number | string; unit?: string };
-type ProfileCapture = {
-  capture_id: string;
-  time: string;
-  measurements?: ProfileMeasurement[];
-  photo_id?: string | null;
-  thumbnail_path?: string | null;
-};
-type ProfileLifeEvent = { individual_id: string; kind: string; at: string; detail?: Record<string, unknown> };
-type ProfileParentRef = { individual_id: string; label: string };
-type ProfileSibling = ProfileParentRef & { dead: boolean; eclosed: boolean };
-type IndividualProfile = {
-  individual_id: string;
-  master: { local_label_text?: string; species?: string } | null;
-  name: string | null;
-  species: string | null;
-  stage: string | null;
-  status: "alive" | "deceased";
-  thumbnail_path: string | null;
-  placement_id: string | null;
-  schedule: { next_observation_at: string } | null;
-  parents: { sire?: ProfileParentRef; dam?: ProfileParentRef };
-  siblings: ProfileSibling[];
-  children: ProfileParentRef[];
-  observations: ProfileCapture[];
-  life_events: ProfileLifeEvent[];
-  parent_observations: { sire: ProfileCapture[]; dam: ProfileCapture[] };
-  cohort_observations: { individual_id: string; capture_id: string; weight_g: number | null; length_mm: number | null }[];
-};
-type PedNode = {
-  individual_id: string;
-  known: boolean;
-  parent_role?: string;
-  circular?: boolean;
-  truncated?: boolean;
-  parents: PedNode[];
-};
-
-// renderer.tsx L2064-L2067 verbatim
-const ULID_RE = /^[0-9A-Za-z]{26}$/;
-function safeLabel(label: string, species: string | null): string {
-  return ULID_RE.test(label) ? species || "無名個体" : label;
-}
-
-// renderer.tsx L5058-L5102 の関数本体は不変(説明コメントのみ、要旨をこの節冒頭の
-// 判断メモに畳んだため個々には再掲していない)
-function profileLabel(profile: IndividualProfile): string {
-  const raw = profile.master?.local_label_text || profile.name || profile.individual_id;
-  return safeLabel(raw, profile.species);
-}
-
-function measureValue(cap: ProfileCapture, item: string): number | null {
-  const m = (cap.measurements ?? []).find((mm) => mm.item === item);
-  if (!m) return null;
-  const n = typeof m.value === "number" ? m.value : Number(m.value);
-  return Number.isFinite(n) ? n : null;
-}
-
-function seriesFor(
-  caps: ProfileCapture[],
-  item: string,
-  degenerate: boolean,
-): { x: number; y: number; iso: string }[] {
-  const pts = caps
-    .map((c) => ({ t: Date.parse(c.time), y: measureValue(c, item), iso: c.time }))
-    .filter((pt): pt is { t: number; y: number; iso: string } => Number.isFinite(pt.t) && pt.y != null)
-    .sort((a, b) => a.t - b.t);
-  if (pts.length === 0) return [];
-  const t0 = pts[0].t;
-  return pts.map((pt, i) => ({ x: degenerate ? i : (pt.t - t0) / 86_400_000, y: pt.y, iso: pt.iso }));
-}
-
-function isDegenerate(seriesCaps: ProfileCapture[][]): boolean {
-  const ts = seriesCaps.flat().map((c) => Date.parse(c.time)).filter((t) => Number.isFinite(t));
-  return ts.length > 1 && Math.max(...ts) - Math.min(...ts) < 60_000;
-}
-
-// renderer.tsx L5376-L5403 の関数本体は不変(inbreedingTone直前の説明コメントは
-// 判断メモに要旨を畳んだため再掲していない)
-function collectAncestors(node: PedNode | undefined, depth: number, out: { id: string; depth: number }[]): void {
-  if (!node || !node.known) return;
-  out.push({ id: node.individual_id, depth });
-  if (depth >= 3) return;
-  for (const parent of node.parents ?? []) collectAncestors(parent, depth + 1, out);
-}
-function inbreedingCoefficient(pedigree: PedNode | null): number | null {
-  if (!pedigree) return null;
-  const sireNode = pedigree.parents?.find((n) => n.parent_role === "sire");
-  const damNode = pedigree.parents?.find((n) => n.parent_role === "dam");
-  if (!sireNode?.known || !damNode?.known) return null;
-  const sireAnc: { id: string; depth: number }[] = [];
-  const damAnc: { id: string; depth: number }[] = [];
-  collectAncestors(sireNode, 0, sireAnc);
-  collectAncestors(damNode, 0, damAnc);
-  let f = 0;
-  for (const d of damAnc) for (const s of sireAnc) if (s.id === d.id) f += Math.pow(0.5, s.depth + d.depth + 1);
-  return f;
-}
-
-function inbreedingTone(f: number): { symbol: string; word: string } {
-  if (f < 0.0625) return { symbol: "●", word: "低" };
-  if (f < 0.125) return { symbol: "▲", word: "中" };
-  return { symbol: "⚠", word: "高" };
-}
-
-// renderer.tsx L5662-L5703 の関数本体・型定義は不変。同L5665-5682のLIFE_ICON/
-// LIFE_LABEL_JA定数はZ9のどの関数からも参照されないため意図的に複製していない
-// (Z9のindLifeEventLabelは自前のswitch文で表示語を持つ・renderer.tsx L8704-8724)
-type TimelineEntry =
-  | { kind: "capture"; at: number; atIso: string; capture: ProfileCapture }
-  | { kind: "life"; at: number; atIso: string; event: ProfileLifeEvent };
-function buildTimeline(profile: IndividualProfile): TimelineEntry[] {
-  const caps: TimelineEntry[] = profile.observations
-    .map((c) => ({ kind: "capture" as const, at: Date.parse(c.time), atIso: c.time, capture: c }))
-    .filter((e) => Number.isFinite(e.at));
-  const life: TimelineEntry[] = profile.life_events
-    .map((e) => ({ kind: "life" as const, at: Date.parse(e.at), atIso: e.at, event: e }))
-    .filter((e) => Number.isFinite(e.at));
-  return [...caps, ...life].sort((a, b) => a.at - b.at);
-}
-function prevValueFn(observations: ProfileCapture[]) {
-  return (captureId: string, item: string): number | null => {
-    const idx = observations.findIndex((o) => o.capture_id === captureId);
-    for (let i = idx - 1; i >= 0; i--) {
-      const v = measureValue(observations[i], item);
-      if (v != null) return v;
-    }
-    return null;
-  };
-}
+// Phase 2b裁定(g85-split2a-ruling §3 #4/#6)によりProfile*/IndividualProfile/
+// PedNode/ULID_RE/safeLabel/profileLabel/measureValue/seriesFor/isDegenerate/
+// collectAncestors/inbreedingCoefficient/inbreedingTone/TimelineEntry/
+// buildTimeline/prevValueFnはcore/individual.ts・core/scope.tsへ一本化済み
+// (importは冒頭)。旧「Z9が自己完結するための重複」節はこれで解消。
 
 // ============ 登録 ============
 registerNode("list:ind-detail", IndDetailNode);

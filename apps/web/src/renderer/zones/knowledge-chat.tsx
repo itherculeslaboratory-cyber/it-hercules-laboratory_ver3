@@ -4,83 +4,18 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ExecuteCtx, ScopeCtx } from "../core/context";
 import { registerNode } from "../core/registry";
+import { props } from "../core/node-view";
+import { monogram, shortActorId, ActorLabel } from "../core/primitives";
+import type { ThreadPost, ThreadView } from "../core/thread";
 import type { ScreenNode } from "../types";
 
 // g85-split2a Z8(zones/knowledge-chat.tsx・renderer.tsx zone
 // 「list:knowledge-thread-chat」の切り出し・実範囲=renderer.tsx:8426-8628)。
-// 差し戻し裁定(kits/lane-think/R0802-000233-REPORT-2026-08-02-g85-split2a-
-// ruling.md §2-3)に従い、core/context・core/scope・core/registry・@/・react
-// のいずれにも無い共有シンボル6個(props/ThreadPost/ThreadView/monogram/
-// shortActorId/actorNameCache/ActorLabel)を、元記述を1文字も変えずこの
-// ファイルへ複製した(移動ではなく複製 — 元定義は renderer.tsx に残る。
-// Badge はこのゾーンの範囲内では未使用のため複製していない)。これらは
-// zone C(renderer.tsx の共通層・Phase 2a では不触)・zones/thread-posts.tsx
-// (Z4)からも参照される3重共有シンボルのため、Phase 2b のカットオーバー前に
-// lane-think が正本の置き場所を裁定する(裁定書§3: props→core/node-view.tsx、
-// monogram/shortActorId/actorNameCache/ActorLabel→core/primitives.tsx、
-// ThreadPost/ThreadView→core/thread.ts)。
-
-// 複製元: renderer.tsx:120-121
-function props(node: ScreenNode): Record<string, unknown> {
-  return node.props ?? {};
-}
-
-// 複製元: renderer.tsx:6100-6111
-type ThreadPost = {
-  post_id: string;
-  actor_id: string;
-  channel: string;
-  topic: string;
-  board_kind: string;
-  body: string;
-  created_at: string;
-  reply_to?: string;
-  cite_refs?: Array<{ type: string; id: string; label?: string }>;
-  tags?: string[];
-};
-// 複製元: renderer.tsx:6112-6118
-type ThreadView = {
-  thread_id: string;
-  channel: string;
-  topic: string;
-  posts: ThreadPost[];
-  tombstones?: Array<{ ref: { type: string; id: string }; reason: string }>;
-};
-
-// 複製元: renderer.tsx:6125-6127
-function monogram(actorId: string): string {
-  return actorId.trim().slice(0, 1).toUpperCase() || "?";
-}
-
-// 複製元: renderer.tsx:6134-6136
-function shortActorId(actorId: string): string {
-  return actorId.length > 12 ? `${actorId.slice(0, 10)}…` : actorId;
-}
-
-// 複製元: renderer.tsx:6144
-const actorNameCache = new Map<string, string>();
-
-// 複製元: renderer.tsx:6146-6165
-function ActorLabel({ actorId }: { actorId: string }) {
-  const execute = useContext(ExecuteCtx);
-  const [name, setName] = useState<string>(() => actorNameCache.get(actorId) ?? "");
-  useEffect(() => {
-    if (!actorId || actorNameCache.has(actorId)) return;
-    let alive = true;
-    Promise.resolve(execute({ kind: "api", method: "GET", path: `/api/v1/users/${actorId}/profile` }))
-      .then((r) => {
-        const dn = String((r as { display_name?: string } | undefined)?.display_name ?? "");
-        actorNameCache.set(actorId, dn);
-        if (alive) setName(dn);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actorId]);
-  return <span title={actorId}>{name || shortActorId(actorId)}</span>;
-}
+// Phase 2b裁定(kits/lane-think/R0802-000233-REPORT-2026-08-02-g85-split2a-
+// ruling.md §3)に従い、props/ThreadPost/ThreadView/monogram/shortActorId/
+// actorNameCache/ActorLabelはcore/node-view.tsx・core/primitives.tsx・
+// core/thread.tsへ一本化済み(このゾーンのローカル複製は解消。Badgeはこの
+// ゾーンの範囲内では未使用のためimportしていない)。
 
 // T-71 KNW wave1(スレッド=みんなのグループチャット — 承認モックアップ section3
 // の verbatim 採用・R94「既存を捨てる」): 旧 ThreadPostsNode(投稿ごとの賛否

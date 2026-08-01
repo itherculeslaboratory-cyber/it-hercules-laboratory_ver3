@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState, type ReactElement } from "react";
 import { cn } from "@/lib/cn";
 import type { ScreenNode } from "../types";
 import {
@@ -12,19 +12,19 @@ import {
   ScreenIdCtx,
   type HeaderScope,
 } from "../core/context";
-import { registerNode } from "../core/registry";
-// ★差し戻し対象(報告書「判断が要った箇所」参照): 以下2つは zone C(props/
-// Children)・zone E(TargetNavigatorNode)に属し、この段階ではまだ独立
-// importできない(Phase 2b の core/node-view.tsx・Z2艦の zones/search.tsx を
-// 待つ必要がある)。renderer.tsx は編集禁止のためここでは解決できず、
-// このimport 2行はプレースホルダのまま残し、tsc実測エラーを報告書に記載する。
-import { Children } from "../core/node-view";
-import { TargetNavigatorNode } from "./search";
+import { registerNode, lookupNode } from "../core/registry";
+import type { TargetCandidate } from "./search";
+// renderer分割Phase 2b裁定(g85-split2a-ruling §3 #7)で解消: Z5→Z2の
+// zone→zone importだったTargetNavigatorNodeはlookupNode("target-navigator")に
+// 置換した(下記TargetNavigatorSlot)。props/Childrenはcore/node-view.tsxから
+// import可能になったのでプレースホルダではなくなった。
+import { Children, props } from "../core/node-view";
 
-// zone C(props/Children)から移動していない小関数。1行のみのため、zone C分割
-// (Phase 3・任意工程)まではこの複製を許容する(判断ログ参照)。
-function props(node: ScreenNode): Record<string, unknown> {
-  return node.props ?? {};
+function TargetNavigatorSlot(p: { confirmLabel?: string; onConfirm?: (c: TargetCandidate) => void }) {
+  const Comp = lookupNode("target-navigator") as
+    | ((props: { confirmLabel?: string; onConfirm?: (c: TargetCandidate) => void }) => ReactElement | null)
+    | undefined;
+  return Comp ? <Comp confirmLabel={p.confirmLabel} onConfirm={p.onConfirm} /> : null;
 }
 
 // V3-UIX-28 全画面共通ブランドクロム + V3-AUT-12 ログイン/登録/ログアウトの
@@ -238,7 +238,7 @@ function HeaderScopeSelector({
                 すべてに戻す
               </button>
             )}
-            <TargetNavigatorNode
+            <TargetNavigatorSlot
               confirmLabel="この対象を観測対象にする"
               onConfirm={(c) => void patchScope({ species: c.scientific_name })}
             />

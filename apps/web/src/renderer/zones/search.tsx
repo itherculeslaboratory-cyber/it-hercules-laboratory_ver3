@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Badge as ShadcnBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import ResearchPanel from "@/research/ResearchPanel";
 import { fetchManifestLatest, fetchManifestParquet, type ManifestLatestInfo } from "@/research/manifest-client";
@@ -12,8 +11,9 @@ import { GraphView, type GraphViewIndividual, type PedigreeLink } from "../graph
 import { savePreselect } from "../batch-draft";
 
 import { ExecuteCtx, HeaderScopeCtx, MessagesCtx, NavigateCtx, ScopeCtx } from "../core/context";
-import { headerScopeQuery } from "../core/scope";
+import { headerScopeQuery, STAGE_LABELS_JA, safeLabel, type PlacementRow } from "../core/scope";
 import { registerNode } from "../core/registry";
+import { Badge } from "../core/primitives";
 
 // =============================================================================
 // V3-AIP-101 検索スライスA(obs-search・c7-wireframes-core5 §2 のトーン/語彙
@@ -235,7 +235,7 @@ function primaryMeasure(row: SearchRow): { text: string; unit: string } | null {
 // 側は species_confirmed を一切書かない(候補提示と確定の分離)。選んだ学名は
 // obs-entry へ species_candidate として引き継ぐ(obs-entry の species_candidate
 // フィールドはユーザー編集可のプレフィルなので、確定は commit 側で改めて起きる)。
-type TargetCandidate = { qid: string; scientific_name: string };
+export type TargetCandidate = { qid: string; scientific_name: string };
 
 // HDR-1(c9-structure-canon.md §1b/§1c・R112/R115)ヘッダー観測対象セレクタ:
 // obs-navigator画面の既定(確定→obs-entryへnavigate)と、ヘッダーの既定
@@ -1463,23 +1463,11 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
 }
 
 // ============================================================================
-// ★判断が要った箇所(報告書に詳細): 以下5シンボル(Badge/STAGE_LABELS_JA/
-// safeLabel/relativeLabel/PlacementRow)は renderer.tsx 側で export されておらず
-// (Phase 3=zone C primitives分割が未着手のため)、core/context・core/scope・
-// core/registry のいずれにも存在しない。上記ノード群からの参照を解決するため、
-// renderer.tsx の該当箇所(Badge:1075-1077 / STAGE_LABELS_JA:2042-2051 /
-// safeLabel:2064-2067 / relativeLabel:1888-1895 / PlacementRow:2571)から
-// 1文字も変えずに複製した一時コピーである。renderer.tsx 側は削っていない
-// (Phase 2a規約「1文字も編集するな」を厳守)。Phase 3 で正式に
-// core/primitives 等へ移動されたら、この複製ブロックは削除してそちらの
-// import に差し替える想定。
+// Badge/STAGE_LABELS_JA/safeLabel/PlacementRowはPhase 2b裁定(g85-split2a-
+// ruling §3)でcore/primitives.tsx・core/scope.tsへ一本化済み(下記import)。
+// relativeLabelはこのゾーン(search-navigator等)からのみ使われZ2専用の純関数
+// のため一本化対象外(renderer.tsx zone C側の原本はPhase 3まで存置される)。
 // ============================================================================
-
-type PlacementRow = { placement_id: string; label: string };
-
-function Badge({ text, tone }: { text: string; tone?: string }) {
-  return <ShadcnBadge tone={tone}>{text}</ShadcnBadge>;
-}
 
 function relativeLabel(at: number): string {
   const mins = Math.max(0, Math.round((Date.now() - at) / 60_000));
@@ -1488,28 +1476,6 @@ function relativeLabel(at: number): string {
   const hours = Math.round(mins / 60);
   if (hours < 24) return `${hours}時間前`;
   return `${Math.round(hours / 24)}日前`;
-}
-
-const STAGE_LABELS_JA: Record<string, string> = {
-  first: "初令",
-  second: "二令",
-  third_early: "三令初期",
-  third_mid: "三令中期",
-  third_late: "三令後期",
-  prepupa: "前蛹",
-  pupa: "蛹",
-  adult: "成虫",
-};
-
-// GET /individuals falls back to the raw ULID as `label` when an individual
-// has neither local_label_text nor name (backend individual-routes.ts:
-// `label: label || name || id`). F4 lists EVERY individual (not a scoped
-// search like F1), so unlabeled rows from other flows/tests surface that
-// fallback here — a raw ID on screen violates the no-raw-ID quality bar. This
-// sanitizes it client-side without touching the completed backend contract.
-const ULID_RE = /^[0-9A-Za-z]{26}$/;
-function safeLabel(label: string, species: string | null): string {
-  return ULID_RE.test(label) ? species || "無名個体" : label;
 }
 
 registerNode("search-navigator", SearchNavigatorNode);

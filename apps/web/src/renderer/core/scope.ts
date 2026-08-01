@@ -340,3 +340,30 @@ export function defaultExecute(onNavigate?: (to: string, query?: Record<string, 
     return ct.includes("application/json") ? unwrapEnvelope(await res.json()) : undefined;
   };
 }
+
+// renderer分割Phase 2b裁定(g85-split2a-ruling §3 #4)によりここへ一本化。
+// 元定義: renderer.tsx:2042-2067(STAGE_LABELS_JA/ULID_RE/safeLabel)・:2571(PlacementRow)。
+// 複製先(解消対象): zones/obs-batch.tsx・search.tsx・ind-profile.tsx・ind-screens.tsx。
+export const STAGE_LABELS_JA: Record<string, string> = {
+  first: "初令",
+  second: "二令",
+  third_early: "三令初期",
+  third_mid: "三令中期",
+  third_late: "三令後期",
+  prepupa: "前蛹",
+  pupa: "蛹",
+  adult: "成虫",
+};
+
+// GET /individuals falls back to the raw ULID as `label` when an individual
+// has neither local_label_text nor name (backend individual-routes.ts:
+// `label: label || name || id`). F4 lists EVERY individual (not a scoped
+// search like F1), so unlabeled rows from other flows/tests surface that
+// fallback here — a raw ID on screen violates the no-raw-ID quality bar. This
+// sanitizes it client-side without touching the completed backend contract.
+export const ULID_RE = /^[0-9A-Za-z]{26}$/;
+export function safeLabel(label: string, species: string | null): string {
+  return ULID_RE.test(label) ? species || "無名個体" : label;
+}
+
+export type PlacementRow = { placement_id: string; label: string };

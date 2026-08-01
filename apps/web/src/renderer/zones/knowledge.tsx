@@ -5,15 +5,11 @@ import { cn } from "@/lib/cn";
 import { ExecuteCtx, HeaderScopeCtx, NavigateCtx } from "../core/context";
 import { appendHeaderScope, formatDateJa } from "../core/scope";
 import { registerNode } from "../core/registry";
+import { props } from "../core/node-view";
 import type { ScreenNode } from "../types";
 
-// zones/knowledge.tsx へ切り出し(renderer分割Phase 2a・Z6)。props() は
-// renderer.tsx の共有ヘルパー(node.props ?? {})をそのまま複製 — Phase 2b の
-// カットオーバーまでは renderer.tsx 側にも同名の定義が残る(元ファイルは
-// 1文字も編集しない・移動ではなく複製)。
-function props(node: ScreenNode): Record<string, unknown> {
-  return node.props ?? {};
-}
+// zones/knowledge.tsx へ切り出し(renderer分割Phase 2a・Z6)。props()は
+// Phase 2b裁定でcore/node-view.tsxへ一本化済み。
 
 // 板 kind → 日本語ラベルの共有ルックアップ(guide=説明 / complaint=愚痴 / improvement=改善)。
 // 旧 V3-BBS-03 の全画面フッター板(ScreenBoardsFooter)は STRIP-1(R95・共有chrome剥がし)で

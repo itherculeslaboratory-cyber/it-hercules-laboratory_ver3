@@ -1,43 +1,42 @@
 "use client";
 
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Badge as ShadcnBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { DataSinkCtx, ExecuteCtx, HeaderScopeCtx, NavigateCtx, ScopeCtx } from "../core/context";
-import { appendHeaderScope, errorText, formatDateJa, getPath, interpolate } from "../core/scope";
+import {
+  appendHeaderScope,
+  errorText,
+  formatDateJa,
+  getPath,
+  interpolate,
+  STAGE_LABELS_JA,
+  safeLabel,
+  type PlacementRow,
+} from "../core/scope";
 import { savePreselect } from "../batch-draft";
 import { registerNode } from "../core/registry";
+import { Badge } from "../core/primitives";
+import { useSource } from "../core/node-view";
 import type { ScreenNode } from "../types";
+import {
+  type IndividualProfile,
+  type PedNode,
+  type ProfileCapture,
+  type ProfileMeasurement,
+  type TimelineEntry,
+  buildTimeline,
+  collectAncestors,
+  inbreedingCoefficient,
+  inbreedingTone,
+  isDegenerate,
+  measureValue,
+  prevValueFn,
+  profileLabel,
+  seriesFor,
+} from "../core/individual";
 
-// ponytail-note(g85-split2a Z3・移動元判断が要った箇所として報告書に明記):
-// この3シンボル(STAGE_LABELS_JA/safeLabel/PlacementRow)と Badge ラッパーは
-// renderer.tsx の抽出対象外の行(1075/2042/2065/2571)で定義されている共有
-// ヘルパーで、Z1/Z2 も同じ3シンボルを使う。Phase 2a のimport制約
-// (../core/context・../core/scope・../core/registry のみ)には無い依存の
-// ため、renderer.tsx を改変せずここへ**そのまま複製**した(移動ではなく複製 —
-// 元定義は renderer.tsx に残っている)。Phase 2b のカットオーバー前に
-// lane-think が正本の置き場所(例: core/scope.ts への集約)を裁定すること。
-const STAGE_LABELS_JA: Record<string, string> = {
-  first: "初令",
-  second: "二令",
-  third_early: "三令初期",
-  third_mid: "三令中期",
-  third_late: "三令後期",
-  prepupa: "前蛹",
-  pupa: "蛹",
-  adult: "成虫",
-};
-
-const ULID_RE = /^[0-9A-Za-z]{26}$/;
-function safeLabel(label: string, species: string | null): string {
-  return ULID_RE.test(label) ? species || "無名個体" : label;
-}
-
-type PlacementRow = { placement_id: string; label: string };
-
-function Badge({ text, tone }: { text: string; tone?: string }) {
-  return <ShadcnBadge tone={tone}>{text}</ShadcnBadge>;
-}
+// Phase 2b裁定(g85-split2a-ruling §3)でSTAGE_LABELS_JA/safeLabel/PlacementRow/
+// Badge/IndividualProfile系はcore側へ一本化済み(このゾーンのローカル複製は解消)。
 
 // =============================================================================
 // V3-AIP-101 個体詳細スライスA (c7-wireframes-core5 §4 F1/F2) — growth-chart
@@ -47,89 +46,9 @@ function Badge({ text, tone }: { text: string; tone?: string }) {
 // search-navigator/batch-summary と同じ縮退)。
 // =============================================================================
 
-type ProfileMeasurement = { item: string; kind: string; value: number | string; unit?: string };
-type ProfileCapture = {
-  capture_id: string;
-  time: string;
-  measurements?: ProfileMeasurement[];
-  photo_id?: string | null;
-  thumbnail_path?: string | null;
-};
-type ProfileLifeEvent = { individual_id: string; kind: string; at: string; detail?: Record<string, unknown> };
-type ProfileParentRef = { individual_id: string; label: string };
-type ProfileSibling = ProfileParentRef & { dead: boolean; eclosed: boolean };
-type IndividualProfile = {
-  individual_id: string;
-  master: { local_label_text?: string; species?: string } | null;
-  name: string | null;
-  species: string | null;
-  stage: string | null;
-  status: "alive" | "deceased";
-  thumbnail_path: string | null;
-  placement_id: string | null;
-  schedule: { next_observation_at: string } | null;
-  parents: { sire?: ProfileParentRef; dam?: ProfileParentRef };
-  siblings: ProfileSibling[];
-  children: ProfileParentRef[];
-  observations: ProfileCapture[];
-  life_events: ProfileLifeEvent[];
-  parent_observations: { sire: ProfileCapture[]; dam: ProfileCapture[] };
-  cohort_observations: { individual_id: string; capture_id: string; weight_g: number | null; length_mm: number | null }[];
-};
-type PedNode = {
-  individual_id: string;
-  known: boolean;
-  parent_role?: string;
-  circular?: boolean;
-  truncated?: boolean;
-  parents: PedNode[];
-};
-
-function profileLabel(profile: IndividualProfile): string {
-  const raw = profile.master?.local_label_text || profile.name || profile.individual_id;
-  return safeLabel(raw, profile.species);
-}
-
-// Same string-tolerant coercion as latestMeasurement() below: a capture's
-// measurement value is schema-typed number|string (obs-capture.schema.json),
-// and template-interpolated writes (obs-register-confirm.json's static
-// "{{params.weight_g}}") always produce a string. A strict typeof==="number"
-// filter here would silently drop every such capture from the growth chart
-// and timeline delta — coerce instead of filtering out valid string values.
-function measureValue(cap: ProfileCapture, item: string): number | null {
-  const m = (cap.measurements ?? []).find((mm) => mm.item === item);
-  if (!m) return null;
-  const n = typeof m.value === "number" ? m.value : Number(m.value);
-  return Number.isFinite(n) ? n : null;
-}
-
-// 系列(x=経過時間[日]・系列ごとに自分の初回観測を0とする・y=値)。実観測間隔
-// (envelope time)を反映するので3ヶ月間隔と3日間隔が同じ幅に見えない(ユーザー
-// 裁定2026-07-12)。時刻無効/値無しの行は無視。
-// ponytail: E2E seed のようにループ内で連続 POST して全点が数秒未満(ミリ秒差)
-// に縮退する場合だけ観測順の等間隔にフォールバックする(degenerate は呼び出し
-// 側が本個体+親♂+親♀の合算レンジで判定・実運用は日〜月オーダーの間隔が付く
-// ので起きない)。
-function seriesFor(
-  caps: ProfileCapture[],
-  item: string,
-  degenerate: boolean,
-): { x: number; y: number; iso: string }[] {
-  const pts = caps
-    .map((c) => ({ t: Date.parse(c.time), y: measureValue(c, item), iso: c.time }))
-    .filter((pt): pt is { t: number; y: number; iso: string } => Number.isFinite(pt.t) && pt.y != null)
-    .sort((a, b) => a.t - b.t);
-  if (pts.length === 0) return [];
-  const t0 = pts[0].t;
-  return pts.map((pt, i) => ({ x: degenerate ? i : (pt.t - t0) / 86_400_000, y: pt.y, iso: pt.iso }));
-}
-
-// 本個体+親♂+親♀を合算した実時刻レンジが1分未満なら「ミリ秒差で縮退」とみなす
-// (E2E seed 判定用の閾値。実運用の採取間隔は最短でも時間〜日オーダー)。
-function isDegenerate(seriesCaps: ProfileCapture[][]): boolean {
-  const ts = seriesCaps.flat().map((c) => Date.parse(c.time)).filter((t) => Number.isFinite(t));
-  return ts.length > 1 && Math.max(...ts) - Math.min(...ts) < 60_000;
-}
+// Profile*/IndividualProfile/PedNode/profileLabel/measureValue/seriesFor/
+// isDegenerateはPhase 2b裁定(g85-split2a-ruling §3 #6)でcore/individual.tsへ
+// 一本化済み(importは冒頭)。
 
 const CHART_UNITS = [
   { value: "weight", label: "体重(g)" },
@@ -403,34 +322,8 @@ function GrowthChartNode({ node }: { node: ScreenNode }) {
 // F_A はこのスライスでは 0 と仮定する簡易版(ponytail: 祖先の近交まで遡ると
 // 要件の「深さ4世代」を超えて再帰することになり過剰実装 — 精密版が要るなら
 // 別途要件化してから)。深さは sire/dam=世代1 として祖先3世代先(計4世代)まで。
-function collectAncestors(node: PedNode | undefined, depth: number, out: { id: string; depth: number }[]): void {
-  if (!node || !node.known) return;
-  out.push({ id: node.individual_id, depth });
-  if (depth >= 3) return;
-  for (const parent of node.parents ?? []) collectAncestors(parent, depth + 1, out);
-}
-function inbreedingCoefficient(pedigree: PedNode | null): number | null {
-  if (!pedigree) return null;
-  const sireNode = pedigree.parents?.find((n) => n.parent_role === "sire");
-  const damNode = pedigree.parents?.find((n) => n.parent_role === "dam");
-  if (!sireNode?.known || !damNode?.known) return null;
-  const sireAnc: { id: string; depth: number }[] = [];
-  const damAnc: { id: string; depth: number }[] = [];
-  collectAncestors(sireNode, 0, sireAnc);
-  collectAncestors(damNode, 0, damAnc);
-  let f = 0;
-  for (const d of damAnc) for (const s of sireAnc) if (s.id === d.id) f += Math.pow(0.5, s.depth + d.depth + 1);
-  return f;
-}
-
-// fix#3(磨き直し): F係数に語+トーンを添える。あくまで表示上の目安(自動確定
-// ではない・認定文言は出さない)。
-// ponytail: 閾値は暫定・裁定で調整可。
-function inbreedingTone(f: number): { symbol: string; word: string } {
-  if (f < 0.0625) return { symbol: "●", word: "低" };
-  if (f < 0.125) return { symbol: "▲", word: "中" };
-  return { symbol: "⚠", word: "高" };
-}
+// collectAncestors/inbreedingCoefficient/inbreedingToneはPhase 2b裁定(g85-
+// split2a-ruling §3 #6)でcore/individual.tsへ一本化済み(importは冒頭)。
 
 // 血統健全度(同腹N匹・死亡率・羽化到達率)。siblings が空(単体登録・購入個体)
 // なら算出母数が無いので null(「同腹集計なし」の第一級表示に回す)。
@@ -689,9 +582,8 @@ function KinshipChip({ label, muted, onClick }: { label: string; muted?: boolean
 }
 
 // 変化点タイムライン: observations + life_events をマージし新しい順に描く。
-type TimelineEntry =
-  | { kind: "capture"; at: number; atIso: string; capture: ProfileCapture }
-  | { kind: "life"; at: number; atIso: string; event: ProfileLifeEvent };
+// TimelineEntryはPhase 2b裁定(g85-split2a-ruling §3 #6)でcore/individual.tsへ
+// 一本化済み(importは冒頭)。LIFE_ICON/LIFE_LABEL_JAはZ3専用の表示語のためここに残す。
 const LIFE_ICON: Record<string, string> = {
   birth: "🐣",
   molt: "🔄",
@@ -710,27 +602,7 @@ const LIFE_LABEL_JA: Record<string, string> = {
   move: "移動",
   survival_correction: "生存訂正(誤記録の訂正)",
 };
-function buildTimeline(profile: IndividualProfile): TimelineEntry[] {
-  const caps: TimelineEntry[] = profile.observations
-    .map((c) => ({ kind: "capture" as const, at: Date.parse(c.time), atIso: c.time, capture: c }))
-    .filter((e) => Number.isFinite(e.at));
-  const life: TimelineEntry[] = profile.life_events
-    .map((e) => ({ kind: "life" as const, at: Date.parse(e.at), atIso: e.at, event: e }))
-    .filter((e) => Number.isFinite(e.at));
-  return [...caps, ...life].sort((a, b) => a.at - b.at);
-}
-// 直近の同一項目値(訂正の「記録値 X → 訂正後」表示・Δ計算の両方に使う)。
-// observations は backend で capture_id(ULID)昇順=時刻順が保証されている。
-function prevValueFn(observations: ProfileCapture[]) {
-  return (captureId: string, item: string): number | null => {
-    const idx = observations.findIndex((o) => o.capture_id === captureId);
-    for (let i = idx - 1; i >= 0; i--) {
-      const v = measureValue(observations[i], item);
-      if (v != null) return v;
-    }
-    return null;
-  };
-}
+// prevValueFnはcore/individual.tsへ一本化済み(importは冒頭)。
 
 // タイムライン計測行の「値を訂正 ▸」— 新しい capture を append するだけ(元の
 // 記録は消さない)。POST /observation/captures は既存の単発計測エンドポイント
@@ -1120,33 +992,8 @@ function IndividualProfileNode() {
   );
 }
 
-// ponytail-note(g85-split2a Z3): useSource は renderer.tsx:138 で定義された
-// 共有フックで、抽出対象範囲(5012-6091)の外にある。growth-chart ノードの
-// 自前 source_path 取得のためだけに使うので、renderer.tsx を改変せずここへ
-// そのまま複製した(元定義はそのまま renderer.tsx に残る — 上記の
-// STAGE_LABELS_JA 等と同じ理由・同じ判断)。
-function useSource(node: ScreenNode) {
-  const p = node.props ?? {};
-  const scope = useContext(ScopeCtx);
-  const headerScope = useContext(HeaderScopeCtx);
-  const execute = useContext(ExecuteCtx);
-  const { setNodeData } = useContext(DataSinkCtx);
-  const rawPath = p.source_path ? interpolate(String(p.source_path), scope) : "";
-  const path = rawPath && p.header_scoped ? appendHeaderScope(rawPath, headerScope) : rawPath;
-  useEffect(() => {
-    if (!path) return;
-    let alive = true;
-    Promise.resolve(execute({ kind: "api", method: "GET", path }))
-      .then((r) => {
-        if (alive && r !== undefined) setNodeData(node.id, r);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path]);
-}
+// useSourceはPhase 2b裁定(g85-split2a-ruling §3 #5)でcore/node-view.tsxへ
+// 一本化済み(importは冒頭)。
 
 registerNode("growth-chart", GrowthChartNode);
 registerNode("individual-profile", IndividualProfileNode);

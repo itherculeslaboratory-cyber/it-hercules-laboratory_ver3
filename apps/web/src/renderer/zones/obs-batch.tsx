@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Badge as ShadcnBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { mapError } from "@/lib/error-messages";
 import {
@@ -20,30 +19,14 @@ import {
   type ScheduleTarget,
 } from "../batch-draft";
 import { ExecuteCtx, HeaderScopeCtx, NavigateCtx, ScopeCtx } from "../core/context";
-import { appendHeaderScope, errorText, formatDateJa, todayPlusDays } from "../core/scope";
+import { appendHeaderScope, errorText, formatDateJa, todayPlusDays, STAGE_LABELS_JA, safeLabel, type PlacementRow } from "../core/scope";
 import { registerNode } from "../core/registry";
+import { Badge } from "../core/primitives";
 
 // zones/obs-batch.tsx — g85-split2a Z1(renderer.tsx zone D「observation-batch」の
 // 切り出し・KIT-TEMPLATE合格ライン=元範囲との差分ゼロ)。
-//
-// Badge について(判断が要った箇所・是正候補として明記): このゾーンは <Badge>
-// を8箇所使うが、Badge 自体は renderer.tsx zone C(primitives・456-2379行)に
-// まだ残っており、Phase 3(zone C分割・retroB/retroV完了後の任意工程)まで
-// core へ移動されない。設計書(R0801-45bd4e §1-2)は「barrel 1本(./core)を
-// import すれば足りる」としているが、これは Phase 1 時点の実測が旧行番号
-// ベースだったための前提のズレで、実際には Phase 1 で core へ移されたのは
-// zone B(Context+純関数)のみ。renderer.tsx を編集しない・core/context・
-// core/scope・core/registry 以外から import しない、という本ラウンドの制約の
-// 下では、renderer.tsx の Badge を直接 import する経路が無い。ここでは
-// renderer.tsx:1075-1077 の実装をそのまま複製した最小ローカル版を置く
-// (移動対象=クラッチ/バッチ4画面の本体は無改変・このBadgeは複製であり移動
-// ではない)。Phase 2a の他ゾーン(design doc §1-2 実測: 共有シンボル参照が
-// <Badge> に集中)も同型の複製を持つ可能性が高い。Phase 3 で primitives/badge.tsx
-// が core 相当の場所にできたら、この複製をimportへ置き換えて削除するのが
-// 筋(HQ/lane-thinkの設計判断待ち)。
-function Badge({ text, tone }: { text: string; tone?: string }) {
-  return <ShadcnBadge tone={tone}>{text}</ShadcnBadge>;
-}
+// Badge/STAGE_LABELS_JA/safeLabelはPhase 2b裁定(g85-split2a-ruling §3)で
+// core/primitives.tsx・core/scope.tsへ一本化済み(ローカル複製は解消)。
 
 // =============================================================================
 // V3-AIP-101 観測登録スライス2 (c7-wireframes-core5 §F3/F4/F5/F6) — クラッチ
@@ -54,32 +37,10 @@ function Badge({ text, tone }: { text: string; tone?: string }) {
 // 専用コンポーネントに留める)。
 // =============================================================================
 
-const STAGE_LABELS_JA: Record<string, string> = {
-  first: "初令",
-  second: "二令",
-  third_early: "三令初期",
-  third_mid: "三令中期",
-  third_late: "三令後期",
-  prepupa: "前蛹",
-  pupa: "蛹",
-  adult: "成虫",
-};
-
 // 「そろそろ」判定の閾値(日数)。追い立てない温度感(2026-07-12 ユーザー裁定
 // 「予定は目安・赤禁止」)のニュートラルな既定値 — ユーザー単位のテンプレ化は
 // 今後の波。ponytail: 固定30日、per-stage/per-userの間隔テンプレは今後の拡張。
 const OVERDUE_DAYS = 30;
-
-// GET /individuals falls back to the raw ULID as `label` when an individual
-// has neither local_label_text nor name (backend individual-routes.ts:
-// `label: label || name || id`). F4 lists EVERY individual (not a scoped
-// search like F1), so unlabeled rows from other flows/tests surface that
-// fallback here — a raw ID on screen violates the no-raw-ID quality bar. This
-// sanitizes it client-side without touching the completed backend contract.
-const ULID_RE = /^[0-9A-Za-z]{26}$/;
-function safeLabel(label: string, species: string | null): string {
-  return ULID_RE.test(label) ? species || "無名個体" : label;
-}
 
 function daysSince(iso: string | null): number {
   if (!iso) return Infinity;
@@ -583,7 +544,7 @@ type ClutchRow = {
   placement_id?: string;
   container_label?: string;
 };
-type PlacementRow = { placement_id: string; label: string };
+// PlacementRowはcore/scope.tsへ一本化済み(importは冒頭)。
 
 // F4: まとめて記録(お世話/移動一括+クラッチ照合・昇格)。GET /individuals・
 // GET /clutches・GET /placements を1回ずつ取得し、クライアント側フィルタ+
