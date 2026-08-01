@@ -14,6 +14,7 @@ import type { Bindings, Variables } from "./env";
 import { subspeciesGateError } from "./observation-routes";
 import { createIndividualMaster, linkParent } from "./individual-routes";
 import { projectCurrentOwner } from "./source-routes";
+import { projectCohortCompleteness } from "./cohort-completeness";
 
 export const clutchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -241,6 +242,17 @@ clutchRoutes.get("/clutches/:id", async (c) => {
 // (水増し/行方不明検出・V3-IND-36)。
 clutchRoutes.get("/clutches/:id/reconciliation", async (c) => {
   const view = await projectClutchReconciliation(store(c), c.req.param("id"));
+  if (!view) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json(view);
+});
+
+// GET /clutches/{id}/completeness — コホート完結性(V3-KRM-35・S7)。既存の
+// /reconciliation と同じく専用エンドポイントとした(★判断=報告書に記載: 個体
+// 単位の life_event 走査が入るため、clutchView(一覧の各行が呼ぶ)へ組み込むと
+// GET /clutches 一覧の全行に個体走査コストが乗ってしまう。reconciliation も
+// 同じ理由で単独ルートに分離されている前例に合わせた)。
+clutchRoutes.get("/clutches/:id/completeness", async (c) => {
+  const view = await projectCohortCompleteness(store(c), c.req.param("id"));
   if (!view) return c.json({ error: "NOT_FOUND" }, 404);
   return c.json(view);
 });
