@@ -12,8 +12,19 @@ function store(c: { env: Bindings }): TruthStore {
 }
 
 // GET /me/contribution — 本人の 3 軸貢献度（score/minted/next_threshold/carry/title）。
+// g89-w2econ: axis_list の title は閾値到達フラグ(boolean)であり、ScreenDef の
+// {{title}} 単純補間だと画面に生の "true"/"false" 文字列が出てしまう(renderer.tsx の
+// interpolate() は String(v) を返すのみ・boolean→日本語変換をしない)。projectContribution
+// (contribution.ts)本体・AxisState 型は他テスト(contribution.test.ts の厳格 toEqual)を
+// 壊すため変更せず、この route ハンドラでのみ表示用の title_label を追記する(加法的・
+// 既存フィールドは一切変更しない)。
 contributionRoutes.get("/me/contribution", async (c) => {
-  return c.json(await projectContribution(store(c), c.get("actorId")));
+  const proj = await projectContribution(store(c), c.get("actorId"));
+  const axis_list = proj.axis_list.map((a) => ({
+    ...a,
+    title_label: a.title ? "称号あり" : "称号なし",
+  }));
+  return c.json({ ...proj, axis_list });
 });
 
 // GET /me/pt — 本人の PT 影響力残高（非公開＝本人のみ・KRM-10）。

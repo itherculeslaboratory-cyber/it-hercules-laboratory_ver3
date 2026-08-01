@@ -37,6 +37,36 @@ shopRoutes.get("/shop/indulgence/price", async (c) => {
   return c.json({ label: SHOP_LABEL, stage, price_pt: fib(stage), currency: "PT" });
 });
 
+// GET /shop/indulgence/ladder — g89-w2econ(catalog クラスタ7 platinum-shop「ラダー」欄):
+// 現ステージから先5段の価格を fib(stage) の純関数のみで算出する(Truth 追記なし・読み取り
+// 専用)。indulgenceStage/fib は既存の /price と同じ実装をそのまま再利用(重複定義しない)。
+shopRoutes.get("/shop/indulgence/ladder", async (c) => {
+  const actorId = c.get("actorId");
+  const currentStage = indulgenceStage(await listPtEvents(store(c), actorId), actorId, new Date());
+  const ladder = Array.from({ length: 5 }, (_, i) => {
+    const stage = currentStage + i;
+    return { stage, price_pt: fib(stage) };
+  });
+  return c.json({ label: SHOP_LABEL, current_stage: currentStage, ladder });
+});
+
+// GET /shop/indulgence/history — g89-w2econ(catalog クラスタ7 platinum-shop「購入履歴」欄):
+// 本人の PT イベントのうち reason_code="indulgence_spend"(免罪符購入で POST /shop/
+// indulgence が append する専用理由コード・本ファイル冒頭で定義済み)のみを抽出する
+// (economy-status.json の /me/status 全種混在履歴とは異なり、購入だけに絞った投影)。
+shopRoutes.get("/shop/indulgence/history", async (c) => {
+  const actorId = c.get("actorId");
+  const events = await listPtEvents(store(c), actorId);
+  const history = events
+    .filter((d) => d.reason_code === "indulgence_spend")
+    .map((d) => ({
+      at: String(d.created_at ?? ""),
+      price_pt: typeof d.delta === "number" ? -d.delta : 0,
+    }))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  return c.json({ history });
+});
+
 // POST /shop/indulgence — 免罪符購入。カウント>0 かつ PT>=価格 のとき、PT を消費し
 // カルマカウントを 1 赦す（value 層は不変）。
 shopRoutes.post("/shop/indulgence", async (c) => {

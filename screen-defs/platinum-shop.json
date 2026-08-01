@@ -3,7 +3,7 @@
   "route": "/shop/platinum",
   "title": "プラチナコインショップ",
   "layout": "standard",
-  "notes": "KRM-05 プラチナコインショップ（用語統一）。免罪符購入でカルマカウント -1（カルマ値は不変）。価格は fib(stage) PT（購入で +1 段・暦月経過で -1 段）。GET /shop/indulgence/price で現在価格、POST /shop/indulgence で購入。",
+  "notes": "KRM-05 プラチナコインショップ（用語統一）。免罪符購入でカルマカウント -1（カルマ値は不変）。価格は fib(stage) PT（購入で +1 段・暦月経過で -1 段）。GET /shop/indulgence/price で現在価格、POST /shop/indulgence で購入。g89-w2econ: catalog(クラスタ7)が要求する「残高kpi-tile+ラダーtable+購入履歴table」のうち、残高はGET /api/v1/me/pt(既存route)でkpi-tile化。ラダー(先5段の価格)と購入履歴(reason_code=indulgence_spend のみの絞り込み)はAPIに対応するrouteが存在しなかったため、shop-routes.tsに読み取り専用のGET /shop/indulgence/ladder・GET /shop/indulgence/historyを新設した(Truthへの書込みなし・fib()の純関数計算とlistPtEventsの既存フィルタ再利用のみ)。",
   "nodes": [
     {
       "id": "shell",
@@ -16,6 +16,16 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "プラチナコインショップ", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text": "免罪符でカルマカウントを1つ戻します。カルマ値は変わりません。", "muted": true } },
+
+            {
+              "id": "pt-balance",
+              "type": "kpi-tile",
+              "props": {
+                "source_path": "/api/v1/me/pt",
+                "value": "{{data.pt-balance.balance}}",
+                "label": "PT影響力残高"
+              }
+            },
 
             { "id": "price-title", "type": "heading", "props": { "text": "現在の価格", "level": 2 } },
             {
@@ -33,6 +43,36 @@
               "props": { "label": "免罪符を購入する", "variant": "primary" },
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/shop/indulgence" }
             },
+
+            { "id": "ladder-title", "type": "heading", "props": { "text": "価格ラダー（先5段）", "level": 2 } },
+            {
+              "id": "ladder",
+              "type": "table",
+              "props": {
+                "source_path": "/api/v1/shop/indulgence/ladder",
+                "bind_items": "data.ladder.ladder",
+                "columns": [
+                  { "key": "stage", "label": "段階" },
+                  { "key": "price_pt", "label": "価格(PT)" }
+                ]
+              }
+            },
+
+            { "id": "history-title", "type": "heading", "props": { "text": "購入履歴", "level": 2 } },
+            {
+              "id": "history",
+              "type": "table",
+              "props": {
+                "source_path": "/api/v1/shop/indulgence/history",
+                "bind_items": "data.history.history",
+                "columns": [
+                  { "key": "at", "label": "購入日時", "cell": "date" },
+                  { "key": "price_pt", "label": "支払額(PT)" }
+                ],
+                "empty_text": "購入履歴はまだありません。"
+              }
+            },
+
             {
               "id": "back-status",
               "type": "button",

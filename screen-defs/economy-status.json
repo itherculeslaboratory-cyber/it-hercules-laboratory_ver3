@@ -3,7 +3,7 @@
   "route": "/economy/status",
   "title": "ステータス",
   "layout": "standard",
-  "notes": "KRM-16 統合ステータス。プラチナ/カルマ二層/3軸貢献度/称号 + append-only 履歴の読取投影。GET /me/status・/me/ledger・/me/contribution を都度再計算で表示。V3-UIX-68: history の bind 先が StatusHistoryEntry の実フィールド({{at}}/{{kind}})と一致していなかった旧退行({{created_at}}/{{label}}は存在しないキーで常に空表示)を修正。称号(title)を貢献度リストへ追加、PT影響力残高(GET /me/pt・非公開=本人のみ)も本画面に集約(新規画面を増やさない・V3-UIX-68)。",
+  "notes": "KRM-16 統合ステータス。プラチナ/カルマ二層/3軸貢献度/称号 + append-only 履歴の読取投影。GET /me/status・/me/ledger・/me/contribution を都度再計算で表示。V3-UIX-68: history の bind 先が StatusHistoryEntry の実フィールド({{at}}/{{kind}})と一致していなかった旧退行({{created_at}}/{{label}}は存在しないキーで常に空表示)を修正。称号(title)を貢献度リストへ追加、PT影響力残高(GET /me/pt・非公開=本人のみ)も本画面に集約(新規画面を増やさない・V3-UIX-68)。g89-w2econ是正: 貢献度の{{title}}はAxisState.title(boolean)をそのままlist item_textへ補間しており、renderer.tsx のinterpolate()はString(v)しか行わないため画面に生の\"true\"/\"false\"という英単語が出る構造バグだった(称号 true / 称号 false)。listをtableへ変え、title列をbadgeセル(TableNodeのrenderCell()が既に持つtrue_label/false_labelパターン=thread consensus/divisive列と同型)にする案も検討したが、TableNodeのbadgeセルはROWのフィールドがboolean型の時のみtrue_label/false_labelを適用する実装(renderer.tsx renderCell())で、axis_listのtitleを直接渡すとその変換に乗る一方、既存テスト(contribution.test.ts)がprojectContribution()自体を厳格toEqualで検査しているためAxisState型は変更できない。よってcontribution-routes.tsのGET /me/contributionハンドラでのみ、日本語ラベルtitle_label(\"称号あり\"/\"称号なし\")を加法的に追加し(projectContribution本体は無変更)、それをbadgeセルで表示するようにした。",
   "nodes": [
     {
       "id": "shell",
@@ -32,11 +32,17 @@
             { "id": "contribution-title", "type": "heading", "props": { "text": "貢献度（3軸・称号は閾値到達で表示）", "level": 2 } },
             {
               "id": "contribution",
-              "type": "list",
+              "type": "table",
               "props": {
                 "source_path": "/api/v1/me/contribution",
                 "bind_items": "data.contribution.axis_list",
-                "item_text": "{{axis}}: {{score}}（鋳造 {{minted}} / 次閾値 {{next_threshold}} / 称号 {{title}}）"
+                "columns": [
+                  { "key": "axis", "label": "軸" },
+                  { "key": "score", "label": "スコア" },
+                  { "key": "minted", "label": "鋳造" },
+                  { "key": "next_threshold", "label": "次閾値" },
+                  { "key": "title_label", "label": "称号", "cell": "badge" }
+                ]
               }
             },
 

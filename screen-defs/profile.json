@@ -3,7 +3,7 @@
   "route": "/me/profile",
   "title": "プロフィール",
   "layout": "standard",
-  "notes": "KRM-21/04 プロフィール。カルマ/貢献度/取引評価の3指標を個別表示（研究スコアは貢献度配下）。BAN は公開表示。国/言語/文化タグ/自己紹介は公開設定可、取引実績/カルマ/悪レビュー等の public_safety は常に公開。GET /me/profile。V3-UIX-68(透明性の文化): 作品一覧(個体)を追加し「その人の作品を相手のマイページで全て見れる」を実現。?actor=<id> 付きで開くとGET /users/{actor}/profile・/users/{actor}/individualsで他者の公開ページ(受け手側)を表示できる(V3-UIX-68 の GET /users/{actor}/individuals 新設route)。ただし他画面(広場投稿者名・出品者名等)からこの画面へ actor 付きで遷移するリンクは本エントリでは未着手(送り手側は別対応・screen-defごとの導線追加が必要)。お気に入り2種(推し作者=通知あり/推し作品=保存のみ)は新規の永続化設計判断(既存 social-eval kind=favorite/follow を流用するか専用schemaを起こすか)を要するため未着手(裁定/設計待ち)。",
+  "notes": "KRM-21/04 プロフィール。カルマ/貢献度/取引評価の3指標を個別表示（研究スコアは貢献度配下）。BAN は公開表示。国/言語/文化タグ/自己紹介は公開設定可、取引実績/カルマ/悪レビュー等の public_safety は常に公開。GET /me/profile。V3-UIX-68(透明性の文化): 作品一覧(個体)を追加し「その人の作品を相手のマイページで全て見れる」を実現。?actor=<id> 付きで開くとGET /users/{actor}/profile・/users/{actor}/individualsで他者の公開ページ(受け手側)を表示できる(V3-UIX-68 の GET /users/{actor}/individuals 新設route)。ただし他画面(広場投稿者名・出品者名等)からこの画面へ actor 付きで遷移するリンクは本エントリでは未着手(送り手側は別対応・screen-defごとの導線追加が必要)。お気に入り2種(推し作者=通知あり/推し作品=保存のみ)は新規の永続化設計判断(既存 social-eval kind=favorite/follow を流用するか専用schemaを起こすか)を要するため未着手(裁定/設計待ち)。g89-w2econ是正: identity/other-identityカードが参照していた{{country}}/{{language}}はGET /me/profile(ProfileProjection)に存在しないフィールドで常に空欄表示になる構造バグだった(country は GET /me/preferences にのみ実在・language は locale フィールドしか無くそもそも国とは別概念のため対応する実データが無い)。country(本人分のみ)は新設の locale カードで GET /me/preferences から表示するよう是正。language/culture_tags/bio/icon は profile-routes.ts の CONFIGURABLE_FIELDS に名前だけ宣言され settings-routes.ts の PREF_FIELDS(実ストレージ)には無い=公開設定できると謳いながら保存先が無いフィールドで、再現できない要素として明記する(捏造しない)。karma.ban(boolean)も生の\"true\"/\"false\"文字列がテキスト中に出る構造バグだったため、when.eq条件で実際にBANの時だけ出るバッジに置き換えた。市場評価はカード本文に加え、実データ(good/normal/bad件数)をバッジで表示(catalogの「評価タグ」欄に対応・捏造なし)。アバター(icon)は上記のとおり実ストレージが無いため再現できない要素。other-identity(他者のマイページ)の国表示も、GET /me/preferences相当の公開版route(例: GET /users/{actor}/preferences)がAPIに存在しないため再現できない要素として実装していない(本人分のcountryのみ locale カードで表示)。",
   "nodes": [
     {
       "id": "shell",
@@ -21,7 +21,16 @@
               "type": "card",
               "props": {
                 "source_path": "/api/v1/me/profile",
-                "bind_text": "{{country}} / {{language}}　信頼度 {{intl_trust}}"
+                "bind_text": "信頼度 {{intl_trust}}"
+              }
+            },
+            {
+              "id": "locale",
+              "type": "card",
+              "props": {
+                "source_path": "/api/v1/me/preferences",
+                "bind_text": "国 {{country}}",
+                "empty_text": "国はまだ設定されていません。"
               }
             },
 
@@ -29,7 +38,16 @@
             {
               "id": "karma",
               "type": "card",
-              "props": { "source_path": "/api/v1/me/profile", "bind_text": "値 {{karma.value}} / カウント {{karma.count}}　BAN: {{karma.ban}}" }
+              "props": { "source_path": "/api/v1/me/profile", "bind_text": "値 {{karma.value}} / カウント {{karma.count}}" }
+            },
+            {
+              "id": "ban-badge",
+              "type": "badge",
+              "props": {
+                "text": "BAN中",
+                "tone": "danger",
+                "when": { "eq": ["{{data.karma.karma.ban}}", "true"] }
+              }
             },
 
             { "id": "contribution-title", "type": "heading", "props": { "text": "貢献度", "level": 2 } },
@@ -43,7 +61,15 @@
             {
               "id": "market",
               "type": "card",
-              "props": { "source_path": "/api/v1/me/profile", "bind_text": "良 {{market.rating.good}} / 普 {{market.rating.normal}} / 悪 {{market.rating.bad}}" }
+              "props": {
+                "source_path": "/api/v1/me/profile",
+                "bind_text": "良 {{market.rating.good}} / 普 {{market.rating.normal}} / 悪 {{market.rating.bad}}",
+                "badges": [
+                  { "text": "良 {{data.market.market.rating.good}}", "tone": "success" },
+                  { "text": "普 {{data.market.market.rating.normal}}", "tone": "neutral" },
+                  { "text": "悪 {{data.market.market.rating.bad}}", "tone": "danger" }
+                ]
+              }
             },
 
             { "id": "works-title", "type": "heading", "props": { "text": "作品一覧(個体)", "level": 2 } },
@@ -71,8 +97,17 @@
               "type": "card",
               "props": {
                 "source_path": "/api/v1/users/{{params.actor}}/profile",
-                "bind_text": "{{country}} / {{language}}　信頼度 {{intl_trust}}　BAN: {{karma.ban}}",
+                "bind_text": "信頼度 {{intl_trust}}",
                 "empty_text": "URLに ?actor=<相手のID> を付けて開くと、その人の情報がここに表示されます。"
+              }
+            },
+            {
+              "id": "other-ban-badge",
+              "type": "badge",
+              "props": {
+                "text": "BAN中",
+                "tone": "danger",
+                "when": { "eq": ["{{data.other-identity.karma.ban}}", "true"] }
               }
             },
             {
