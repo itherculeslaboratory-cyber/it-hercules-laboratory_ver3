@@ -4689,7 +4689,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "2026-08-01 g82-clickimpl: registry.json statementの「通知15種」という内訳をambiguity欄に「内訳未定義のまま5系統+DND時間帯に確定(UIB07-5○90点履行)」と注記済み。status/commitsは変更していない——通知カテゴリ実装そのもの(settings→notification-settings画面)は別艦(2026-08-01 g79-uib07impl2)による既存実装であり、その完了確認は今回のスコープ外(私は登録した注記の追加以外、コード変更をしていない)。"
   },
   {
     "id": "V3-UIX-44",
@@ -4780,7 +4780,7 @@
     "status": "todo",
     "commits": [],
     "tc": [],
-    "note": ""
+    "note": "2026-08-01 g82-clickimpl: registry.json ambiguity欄へ「3導線→2導線(愚痴/改善)への縮小はHQ裁定G79-2+ユーザー裁定PAGEINFO-3○90点で正式採用済み」を追記。status/commitsは変更していない——2導線UIの実装そのものは別ラウンドの成果物であり、今回のスコープ外(私はコード変更をしていない)。"
   },
   {
     "id": "V3-UIX-61",
@@ -8130,10 +8130,10 @@
     "tier": "A",
     "lane": "L6-ui",
     "scope": "required",
-    "status": "todo",
-    "commits": [],
+    "status": "in_progress",
+    "commits": ["4c6a034"],
     "tc": [],
-    "note": ""
+    "note": "2026-08-01 g82-clickimpl: 観測登録フローの到達予算(≤3クリック)+完了予算(≤2ステップ)をnavigation.json一本化+tests/nav-reachability.test.ts+scripts/check-navigation.mjsで機械契約化・実測全充足(reach=1、flow=2)。ただしstatementが含む抽選応募/GMO振込の導線はscreen-def自体が未実装(第2波)のため、要件全体としてはdoneにできない。commits[]はHQのラウンド基準コミット後に追記されたい。"
   },
   {
     "id": "V3-UIX-03",
