@@ -754,12 +754,12 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
   // サーバ問い合わせ」パターンで独立させる(既存のfilters/sortedへ混ぜ込むと
   // 色情報を持たない個体の扱い(除外)が既存のファセットロジックと衝突するため)。
   const [colorOpen, setColorOpen] = useState(false);
-  // scripts/check-ui-tokens.mjs GATE は apps/web/**/*.tsx 内の生の "#rrggbb" 文字列を
-  // 一律拒否する(ThemePackトークン規律・design-c2 §4.4)。これは意匠色向けの規律だが
-  // 正規表現は文脈を見ないため、色検索の初期スウォッチ(意匠色ではなく検索クエリの
-  // 初期値)も同じ形では書けない。0x数値リテラルから組み立てることでGATEの対象
-  // (文字列中の"#hex")を回避しつつ、実体は変わらない(値を隠しているわけではない)。
-  const [colorHexDraft, setColorHexDraft] = useState(`#${(0x8b5a2b).toString(16)}`);
+  // 色検索の初期スウォッチに固定の意匠色を持たせる product 要件は無い。ソース中に
+  // 生の "#rrggbb" リテラルを一切書かず(scripts/check-ui-tokens.mjs GATE・
+  // design-c2 §4.4)、既存トークン(--civ-primary・apps/web/src/app/tokens.generated.css)
+  // をマウント後に DOM から読んで初期値にする(このtsxはSSRもされるためuseState初期値は
+  // "" のままにし、client専用の getComputedStyle は下のuseEffectで呼ぶ)。
+  const [colorHexDraft, setColorHexDraft] = useState("");
   const [colorLoading, setColorLoading] = useState(false);
   const [colorError, setColorError] = useState<string | null>(null);
   const [colorResult, setColorResult] = useState<ColorSearchResponse | null>(null);
@@ -768,6 +768,18 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
   const [basketExpanded, setBasketExpanded] = useState(false);
   const [snack, setSnack] = useState<{ ids: string[] } | null>(null);
   const snackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // マウント後(client側)のみ実行。--civ-primary を DOM から読む(tsx中に
+    // hexリテラルを書かない=GATE適合)。colorHexDraftをユーザーが既に触っていたら
+    // 上書きしない。
+    if (colorHexDraft) return;
+    const fromToken = getComputedStyle(document.documentElement)
+      .getPropertyValue("--civ-primary")
+      .trim();
+    if (fromToken) setColorHexDraft(fromToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let alive = true;
