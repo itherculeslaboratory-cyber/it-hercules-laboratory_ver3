@@ -120,8 +120,10 @@ async function loadSoldComparables(s: TruthStore): Promise<Comparable[]> {
 // 全 item をそのままテンプレ変数名(item名)としてフラット化する(=テンプレ {{item名}}
 // と1:1対応・命名推測が要らない)。同名 item は後勝ち(直近 capture 優先・listEvents は
 // R2 prefix scan=capture_id(ULID)キー順で本番は時系列・fake bucket は挿入順で近似)。
-export async function autoDeriveIndividualObs(s: TruthStore, individualId: string): Promise<IndividualObs> {
-  const proj = await projectIndividual(s, individualId);
+// actorId は projectIndividual に素通しする可視性判定用の追加引数(MKTVIZ-1・
+// projectIndividualProfile と同じ規約)。省略時は private 観測が除外される。
+export async function autoDeriveIndividualObs(s: TruthStore, individualId: string, actorId?: string): Promise<IndividualObs> {
+  const proj = await projectIndividual(s, individualId, actorId);
   const out: IndividualObs = { individual_id: individualId };
   if (!proj) return out; // 個体不明でも400にはしない(=IDだけの最小スタブへ自然縮退)
   const master = proj.master as Record<string, unknown> | null;
@@ -146,7 +148,7 @@ export async function autoDeriveIndividualObs(s: TruthStore, individualId: strin
   const parents: { individual_id: string; parent_role?: string; known: boolean; photo_media_key?: string }[] = [];
   for (const p of pedigree.parents) {
     let photoMediaKey: string | undefined;
-    const parentProj = p.known ? await projectIndividual(s, p.individual_id) : null;
+    const parentProj = p.known ? await projectIndividual(s, p.individual_id, actorId) : null;
     for (const obs of parentProj?.observations ?? []) {
       const capId = (obs as Record<string, unknown>).capture_id;
       if (typeof capId !== "string") continue;
@@ -175,9 +177,10 @@ marketPricingRoutes.post("/market/listings/draft", async (c) => {
     : [];
   if (ids.length === 0) return c.json({ error: "INVALID_DRAFT", details: ["individual_ids required"] }, 400);
   const s = store(c);
+  const actorId = c.get("actorId");
   const individuals: IndividualObs[] = Array.isArray(body?.individuals)
     ? (body?.individuals as IndividualObs[])
-    : await Promise.all(ids.map((id) => autoDeriveIndividualObs(s, id)));
+    : await Promise.all(ids.map((id) => autoDeriveIndividualObs(s, id, actorId)));
   const template = typeof body?.template === "string" ? body.template : "";
   const comparables: Comparable[] = Array.isArray(body?.comparables)
     ? (body?.comparables as Comparable[])

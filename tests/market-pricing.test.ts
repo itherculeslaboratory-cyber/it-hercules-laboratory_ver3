@@ -10,7 +10,8 @@ import {
   buildListingDraft,
   type Comparable,
 } from "../apps/api/src/market-pricing-routes";
-import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
+import { issueSessionToken } from "../apps/api/src/session";
+import { AUTH_HEADERS, FakeR2Bucket, SESSION_SECRET, makeEnv } from "./helpers";
 
 const COMPS: Comparable[] = [
   { individual_id: "I1", price: 1000, weight: 1 },
@@ -132,6 +133,56 @@ describe("pricing routes", () => {
     expect(cited.species).toBe("Dynastes hercules");
     expect(cited.weight).toBe(82.5);
     expect(cited.parents).toEqual([{ individual_id: sire.individual_id, parent_role: "sire", known: true, photo_media_key: undefined }]);
+  });
+
+  // ★2026-08-02(MKTVIZ-1): autoDeriveIndividualObs(server-side comparable生成経路)は
+  // projectIndividual に actorId を素通ししていなかったため、他人の private 観測が
+  // comparable/description に混ざっていた問題の是正回帰テスト。
+  it("POST /market/listings/draft: 他actorのprivate観測はcomparable生成に混ざらない(MKTVIZ-1是正)", async () => {
+    const bucket = new FakeR2Bucket();
+    const env = makeEnv(bucket);
+    const aliceAuth = { Authorization: `Bearer ${await issueSessionToken("alice", SESSION_SECRET)}`, "content-type": "application/json" };
+    const bobAuth = { Authorization: `Bearer ${await issueSessionToken("bob", SESSION_SECRET)}`, "content-type": "application/json" };
+    const indRes = await app.request(
+      "/api/v1/individuals",
+      { method: "POST", headers: aliceAuth, body: JSON.stringify({ species: "Dynastes hercules" }) },
+      env,
+    );
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+    await app.request(
+      "/api/v1/observation/captures",
+      {
+        method: "POST",
+        headers: aliceAuth,
+        body: JSON.stringify({
+          domain: "biology",
+          subject_ref: `individual/${individualId}`,
+          visibility: "private",
+          measurements: [{ item: "weight", kind: "number", value: 99, unit: "g" }],
+        }),
+      },
+      env,
+    );
+    // bob(別actor)が draft を生成 — alice の private 観測は comparable/description に混ざってはいけない。
+    const bobRes = await app.request(
+      "/api/v1/market/listings/draft",
+      { method: "POST", headers: bobAuth, body: JSON.stringify({ individual_ids: [individualId], template: "体重 {{weight}}g" }) },
+      env,
+    );
+    expect(bobRes.status).toBe(201);
+    const bobBody = (await bobRes.json()) as { description: string; cited_observations: { weight?: number; observation_count: number }[] };
+    expect(bobBody.description).toBe("体重 g"); // weight未解決=空置換
+    expect(bobBody.cited_observations[0].weight).toBeUndefined();
+    expect(bobBody.cited_observations[0].observation_count).toBe(0);
+    // alice自身は自分のprivate観測を含むdraftを生成できる(過剰にフィルタしていないことの回帰確認)。
+    const aliceRes = await app.request(
+      "/api/v1/market/listings/draft",
+      { method: "POST", headers: aliceAuth, body: JSON.stringify({ individual_ids: [individualId], template: "体重 {{weight}}g" }) },
+      env,
+    );
+    const aliceBody = (await aliceRes.json()) as { description: string; cited_observations: { weight?: number; observation_count: number }[] };
+    expect(aliceBody.description).toBe("体重 99g");
+    expect(aliceBody.cited_observations[0].observation_count).toBe(1);
   });
 
   it("POST /market/listings/draft: individual_ids 欠如は 400", async () => {

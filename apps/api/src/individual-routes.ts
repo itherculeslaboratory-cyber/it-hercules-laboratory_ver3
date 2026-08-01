@@ -287,8 +287,11 @@ export async function projectNameHistory(
  * sorted birth→…→specimen) + the 6 culture blocks (IND-13). observations join by
  * subject_ref; the other blocks join where the substrate carries a link and are
  * [] otherwise (market listings carry no individual ref yet — later 波).
+ * actorId は可視性判定(captureVisibleTo)専用の追加引数(projectIndividualProfile
+ * と同じ規約)。省略時(actorId===undefined)は private 観測が全て除外される
+ * (captureVisibleTo の既定=本人以外には見せない)。
  */
-export async function projectIndividual(s: TruthStore, id: string) {
+export async function projectIndividual(s: TruthStore, id: string, actorId?: string) {
   const master = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
   const ref = `individual/${id}`;
   const life = (await s.listEvents(`truth/${LIFE_TYPE}/${id}-`))
@@ -296,7 +299,7 @@ export async function projectIndividual(s: TruthStore, id: string) {
     .filter((d) => d.individual_id === id);
   const observations = (await s.listEvents(`truth/${CAPTURE_TYPE}/`))
     .map(dataOf)
-    .filter((d) => d.subject_ref === ref);
+    .filter((d) => d.subject_ref === ref && captureVisibleTo(d, actorId));
   // An individual is implicit (不変条項① 派生値は投影で都度再計算): it exists as
   // soon as anything references it — a capture's subject_ref or a life-event —
   // even with no explicit master record (the observation flow never mints one).
@@ -1489,7 +1492,7 @@ individualRoutes.get("/individuals/pedigree-links", async (c) => {
 
 // GET /individuals/{id} — whole-individual projection (6 文化 + timeline · IND-13).
 individualRoutes.get("/individuals/:id", async (c) => {
-  const proj = await projectIndividual(store(c), c.req.param("id"));
+  const proj = await projectIndividual(store(c), c.req.param("id"), c.get("actorId"));
   if (!proj) return c.json({ error: "NOT_FOUND" }, 404);
   return c.json(proj);
 });

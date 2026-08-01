@@ -1352,6 +1352,44 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     const aliceBody = (await aliceRes.json()) as { observations: { capture_id: string }[] };
     expect(aliceBody.observations).toHaveLength(1);
   });
+
+  // ★2026-08-02(MKTVIZ-1): projectIndividual(非profile経路・GET /individuals/{id})は
+  // captureVisibleTo を通していなかった問題の是正回帰テスト。cardgate9報告の重大1
+  // (「認証済み第三者が他人の private 観測をそのまま読める」)の直接再現+修正確認。
+  it("private観測は他actorの非profileレスポンス(GET /individuals/{id})からも除外される(MKTVIZ-1是正)", async () => {
+    const { env } = ctx();
+    const aliceAuth = { Authorization: `Bearer ${await issueSessionToken("alice", SESSION_SECRET)}` };
+    const bobAuth = { Authorization: `Bearer ${await issueSessionToken("bob", SESSION_SECRET)}` };
+    const indRes = await app.request(
+      "/api/v1/individuals",
+      { method: "POST", headers: { ...aliceAuth, ...JSON_HEADERS }, body: JSON.stringify({ local_label_text: "alice-ind" }) },
+      env,
+    );
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+    await app.request(
+      "/api/v1/observation/captures",
+      {
+        method: "POST",
+        headers: { ...aliceAuth, ...JSON_HEADERS },
+        body: JSON.stringify({
+          domain: "biology",
+          subject_ref: `individual/${individualId}`,
+          visibility: "private",
+          measurements: [{ item: "weight", kind: "number", value: 12, unit: "g" }],
+        }),
+      },
+      env,
+    );
+    // bob(別actor)が alice 個体を GET /individuals/{id}(非profile経路)で開く — private観測は見えてはいけない。
+    const bobRes = await app.request(`/api/v1/individuals/${individualId}`, { headers: bobAuth }, env);
+    expect(bobRes.status).toBe(200);
+    const bobBody = (await bobRes.json()) as { observations: { capture_id: string }[] };
+    expect(bobBody.observations).toEqual([]);
+    // alice自身は自分のprivate観測を見られる(過剰にフィルタしていないことの回帰確認)。
+    const aliceRes = await app.request(`/api/v1/individuals/${individualId}`, { headers: aliceAuth }, env);
+    const aliceBody = (await aliceRes.json()) as { observations: { capture_id: string }[] };
+    expect(aliceBody.observations).toHaveLength(1);
+  });
 });
 
 describe("V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)", () => {
