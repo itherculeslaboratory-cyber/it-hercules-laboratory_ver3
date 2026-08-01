@@ -3,7 +3,7 @@
   "route": "/research/paper/match",
   "title": "条件 P と観測の照合",
   "layout": "standard",
-  "notes": "PPR-01/30 — 条件 P × 観測を matchConditions で照合。route の ?solid=1 / ?auto=1 で確定観測 JSON を流し込むブリッジ。充足/不足/違反/一致率を表示し、不足キーの静的ヒント(1 行・LLM 既定 OFF)を出す。仮説を Project に追記(api POST hypothesis)。",
+  "notes": "PPR-01/30 — 条件 P × 観測を matchConditions で照合。route の ?solid=1 / ?auto=1 で確定観測 JSON を流し込むブリッジ。充足/不足/違反/一致率を表示し、不足キーの静的ヒント(1 行・LLM 既定 OFF)を出す。仮説を Project に追記(api POST hypothesis)。★2026-08-02(g89-w2paper): 一致率(result.match_rate、matchConditions実装=0..1の小数)をテキストからprogress(max=1)へ差し替え(既存語彙のみ)。satisfied/missing/violatedは文字列配列(オブジェクトではない)のためtable cell:\"badge\"の行データ形(bind_itemsがオブジェクト配列を要求)を安全に適用できる前例がリポジトリ内に無く、list のまま維持した(誇張ゼロ・未確認の変換はしない)。",
   "nodes": [
     {
       "id": "shell",
@@ -29,7 +29,7 @@
               "id": "result",
               "type": "card",
               "children": [
-                { "id": "rate", "type": "heading", "props": { "text": "一致率: {{result.match_rate}}", "level": 2 } },
+                { "id": "rate", "type": "progress", "props": { "label": "一致率", "value": "{{result.match_rate}}", "max": 1 } },
                 { "id": "satisfied-title", "type": "heading", "props": { "text": "充足キー", "level": 3 } },
                 { "id": "satisfied", "type": "list", "props": { "bind_items": "result.satisfied", "item_text": "{{.}}", "empty_text": "充足キーはまだありません" } },
                 { "id": "missing-title", "type": "heading", "props": { "text": "不足キー", "level": 3 } },

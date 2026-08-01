@@ -3,7 +3,7 @@
   "route": "/research/descriptor",
   "title": "Data Descriptor の記入",
   "layout": "standard",
-  "notes": "PPR-03/30 — Data Descriptor 6 節の穴埋め form(field variant=text/number/select)。送信で autoFillDescriptor が観測を節に投影して自動充填し、充足キーは claim を証拠付き(evidenced)に、未検証は仮説(hypothesis)ラベルで表示。LaTeX 禁止(LATEX_FORBIDDEN)。",
+  "notes": "PPR-03/30 — Data Descriptor 6 節の穴埋め form(field variant=text/number/select)。送信で autoFillDescriptor が観測を節に投影して自動充填し、充足キーは claim を証拠付き(evidenced)に、未検証は仮説(hypothesis)ラベルで表示。LaTeX 禁止(LATEX_FORBIDDEN)。★2026-08-02(g89-w2paper)気づき(未修正・担当外のため報告のみ): この画面のform actionはPOST /api/v1/research/content(research-content-routes.ts)であり、返り値は{content_id,key}のみでclaims/matchを含まない。autoFillDescriptor は実際には POST /api/v1/research/paper-match(paper-match-routes.ts:126)側でのみ呼ばれている。つまりpreview cardの result.claims は現状の配線では常に空(empty_text表示)になる設計不一致がある — 本レーンのスコープ(4画面のscreen-defs実装)を超えるAPI配線判断のため実装はせず、この notes とS4報告書の「気づき」欄に記録するに留めた。★同ラウンドでclaims一覧をlist→table(status列をbadge化)に変更したのは、配線が直った場合に備えた表示側の語彙統一(research-newspaper.json等の既存tableと同型)であり、この不一致自体を解消するものではない。「progressバー」「条件chip分割」(カタログ提案)は、それぞれ①提出後の充足度をサーバから受け取る経路が無い ②conditionsが単一自由記述フィールドで構造化キー入力の新規フィールド型が要る、という理由で既存語彙合成の範囲を超えるため対応を見送った(誇張ゼロ)。",
   "nodes": [
     {
       "id": "shell",
@@ -38,7 +38,18 @@
               "type": "card",
               "children": [
                 { "id": "preview-title", "type": "heading", "props": { "text": "自動充填プレビュー", "level": 2 } },
-                { "id": "claims", "type": "list", "props": { "bind_items": "result.claims", "item_text": "{{statement}} [{{status}}]", "empty_text": "claim はまだありません" } }
+                {
+                  "id": "claims",
+                  "type": "table",
+                  "props": {
+                    "bind_items": "result.claims",
+                    "empty_text": "claim はまだありません",
+                    "columns": [
+                      { "key": "statement", "label": "claim" },
+                      { "key": "status", "label": "状態", "cell": "badge" }
+                    ]
+                  }
+                }
               ]
             }
           ]

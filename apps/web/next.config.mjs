@@ -10,6 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787";
 
 const nextConfig = {
   reactStrictMode: true,
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // STRIP-1(knw-to-c9-strip-chrome「左下の黒『N』FAB」): grepしても app 側の
   // renderer.tsx/globals.css に該当要素は存在しない——実体は Next.js の開発時
   // dev indicator(黒丸"N"バッジ・fixed左下・本番ビルドには出ない)。KNW側の

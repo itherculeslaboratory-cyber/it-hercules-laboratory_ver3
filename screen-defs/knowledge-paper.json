@@ -3,7 +3,7 @@
   "route": "/knowledge/paper",
   "title": "論文",
   "layout": "standard",
-  "notes": "BBS-01 柱2（design-c5.md §K6 §2.4・HG-KN-04=A/HG-KN-05=A 仮置き）。論文の照合（K5 paper-match）へ navigate。記事/ブログもこの柱に統合。",
+  "notes": "BBS-01 柱2（design-c5.md §K6 §2.4・HG-KN-04=A/HG-KN-05=A 仮置き）。論文の照合（K5 paper-match）へ navigate。記事/ブログもこの柱に統合。★design-c5.md:1102 の正式仕様は「柱2: 論文(K5の論文照合へnavigate)」の単純な一覧+navigateであり、ui-asset-catalog.md クラスタ12「8タブ+条件chip」は同カタログ内にのみ存在する未検証の提案(裏付けデータ・実在コンポーネントなし=PaperProgressW2は本リポジトリ内に実体が無いことを確認済み)。裁定UIB10-1(2026-08-01・○=A案=独立タブ運用を正式仕様とする)もこの単純構成を追認している。★2026-08-02(g89-w2paper)是正: 一覧の source_path が誤って /api/v1/observation/search(観測検索。論文とは無関係)を指していたバグを修正し、research-newspaper.json の archive-table(/api/v1/research/content?type=newspaper)と同型のtable構成に揃えた(list→table)。8タブ/条件chipはデータ・コンポーネント裏付けが無いため実装せず(誇張ゼロ)。",
   "nodes": [
     {
       "id": "shell",
@@ -18,11 +18,17 @@
             { "id": "lead", "type": "text", "props": { "text_key": "knowledge-paper.lead.text", "text": "論文を照合して観測に結びつけます。", "muted": true } },
             {
               "id": "papers",
-              "type": "list",
+              "type": "table",
               "props": {
-                "source_path": "/api/v1/observation/search",
-                "bind_items": "data.papers",
-                "item_text": "{{title}}"
+                "source_path": "/api/v1/research/content?type=paper",
+                "bind_items": "data.papers.items",
+                "empty_text": "論文はまだ登録されていません。",
+                "columns": [
+                  { "key": "created_at", "label": "登録", "cell": "date" },
+                  { "key": "title", "label": "タイトル" },
+                  { "key": "completeness_pct", "label": "充足度", "cell": "progress" },
+                  { "key": "content_id", "cell": "link", "href_tpl": "/s/paper-detail?id={{content_id}}", "link_label": "詳細を開く" }
+                ]
               }
             },
             {
