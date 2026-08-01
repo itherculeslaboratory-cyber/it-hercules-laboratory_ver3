@@ -31,6 +31,11 @@
       "format": "date-time",
       "description": "イベント発生時刻（RFC3339 / ISO 8601）。"
     },
+    "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "サーバ受領時刻。TruthStoreが刻印し、クライアント提出値は無条件に上書きされる。"
+    },
     "dataschema": {
       "type": "string",
       "format": "uri-reference",

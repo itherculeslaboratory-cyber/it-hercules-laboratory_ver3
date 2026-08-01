@@ -67,13 +67,14 @@ export class TruthStore {
   }
 
   async putEvent(envelope: unknown): Promise<PutEventResult> {
-    const v = validateEnvelope(envelope);
+    const stamped = { ...(envelope as Record<string, unknown>), received_at: new Date().toISOString() };
+    const v = validateEnvelope(stamped);
     if (!v.valid) return { status: "invalid", errors: v.errors };
 
-    const e = envelope as { type: string; id: string };
+    const e = stamped as { type: string; id: string };
     // ver2 event-store key layout truth/<schema_ref>/<event_id>.json
     // (libs/ihl/core/event_store.py) adapted to envelope type/id.
-    return this.writeOnce(`truth/${e.type}/${e.id}.json`, envelope);
+    return this.writeOnce(`truth/${e.type}/${e.id}.json`, stamped);
   }
 
   /**
@@ -85,9 +86,10 @@ export class TruthStore {
    * validation + put-if-absent semantics as putEvent (design-c2 §3.1).
    */
   async putEventAt(key: string, envelope: unknown): Promise<PutEventResult> {
-    const v = validateEnvelope(envelope);
+    const stamped = { ...(envelope as Record<string, unknown>), received_at: new Date().toISOString() };
+    const v = validateEnvelope(stamped);
     if (!v.valid) return { status: "invalid", errors: v.errors };
-    return this.writeOnce(key, envelope);
+    return this.writeOnce(key, stamped);
   }
 
   /** Put a binary blob (media/photo/<id>) with the same put-if-absent contract. */

@@ -29,6 +29,10 @@ export interface Envelope {
    */
   time: string;
   /**
+   * サーバ受領時刻。TruthStoreが刻印し、クライアント提出値は無条件に上書きされる。
+   */
+  received_at?: string;
+  /**
    * data 部を検証するスキーマの URI（repo 内 schemas/ への参照。非互換変更は別 URI）。frozen 契約に対応する data は schemas/frozen/* を指す。
    */
   dataschema?: string;
