@@ -66,6 +66,12 @@ ALL_INDEX_ENTRY_COLUMNS: frozenset[str] = frozenset(
         "sig_verified",
         "text_repr",
         "text_repr_v",
+        # g80-vis2(design R0801-7b17da-REPORT-2026-08-01-g80-visibilitythink.md §2-3
+        # 案C'・§3-1隻2): B3-A約束(非公開設定・第三者提供未許諾のものを除いた上で配る)
+        # の履行に使う判定用の2列。IndexEntry(packages/truth/src/index-entry.ts)の
+        # 隻1側で追加される列と同じ名前を1対1で保つ。
+        "visibility",
+        "consent_l3",
     }
 )
 
@@ -73,7 +79,13 @@ ALL_INDEX_ENTRY_COLUMNS: frozenset[str] = frozenset(
 # 保守側に倒す — actor_id(誰が投稿したかを一意特定できる人物系フィールド)を manifest
 # から除外する。B3-A が「含めてよい」と裁定したら、呼び出し側で columns=ALL_INDEX_ENTRY_COLUMNS
 # (またはactor_idを含む明示集合)を渡せば足り、この生成器自体の変更は不要。
-DEFAULT_MANIFEST_COLUMNS: frozenset[str] = ALL_INDEX_ENTRY_COLUMNS - {"actor_id"}
+# visibility/consent_l3 は判定にのみ使い配布はしない(下記コメント参照)ため、既定列
+# 集合にも含めない。
+DEFAULT_MANIFEST_COLUMNS: frozenset[str] = ALL_INDEX_ENTRY_COLUMNS - {
+    "actor_id",
+    "visibility",
+    "consent_l3",
+}
 
 # 研究者モード(F2)の JSON→SQL 生成器が使う列ホワイトリスト(design §4-3
 # 「RESEARCH_QUERY_COLUMNS: ReadonlySet<string> — manifest の列名の固定集合」)。
@@ -104,6 +116,24 @@ def load_index_entries(index_root: str | Path) -> list[dict[str, Any]]:
     if not root.exists():
         return []
     return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(root.rglob("*.json"))]
+
+
+def is_publicly_consented_row(row: dict[str, Any]) -> bool:
+    """既定拒否フィルタ(design R0801-7b17da §2-3 案C'・§3-1隻2)。
+
+    `visibility == "public"` かつ `consent_l3 is True` の行だけ通す。`.get()` は
+    キーが無ければ `None` を返すため、visibility/consent_l3 列を持たない旧形式行
+    (隻1デプロイ前に書かれた索引エントリ)は自動的に除外される — 遡及書き換えなしで
+    安全側(既定拒否)に倒れる(design §2-3 補強2と同じ考え方)。
+    """
+    return row.get("visibility") == "public" and row.get("consent_l3") is True
+
+
+def filter_publicly_consented_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """manifest へ配布する前の既定拒否フィルタ。private行・consent_l3欠落行・
+    consent_l3=false行・visibility/consent_l3列の無い旧形式行を除外する。
+    """
+    return [row for row in rows if is_publicly_consented_row(row)]
 
 
 def project_columns(
@@ -140,21 +170,62 @@ def generate_manifest_from_index_entries(
     F2(design §4-4④・正直表示): `generated_at` を latest.json に刻む。省略時は
     呼び出し時点の壁時計(UTC ISO8601)を使う — 呼び出し側が固定時刻を指定したい
     場合(再現性の確認・テスト)のみ明示で渡す。
+
+    g80-vis2(design §2-3・§3-1隻2・B3-A約束の履行): 列を絞る前に
+    filter_publicly_consented_rows() で既定拒否フィルタを通す。visibility/consent_l3
+    は判定にのみ使い、`columns` に明示指定されていても配布物(projected rows)からは
+    必ず落とす(判定用フラグを配らない・design「フラグ列自体は配布物からは落とす」)。
     """
     rows = load_index_entries(index_root)
-    projected = project_columns(rows, columns)
-    out = write_generation_manifest(projected, base_dir, generation)
+    visible_rows = filter_publicly_consented_rows(rows)
+    projected = project_columns(visible_rows, columns)
+    for row in projected:
+        row.pop("visibility", None)
+        row.pop("consent_l3", None)
+    # g80-vis2: 全行が既定拒否フィルタで落ちると projected == [] になりうる
+    # (design §3-1隻2「並走時はそれまで空manifest=安全側の挙動」)。この時も
+    # 読み出し可能な空 Parquet を書けるよう、期待列(=フラグ2列を除いた要求列)を
+    # スキーマとして明示する(rows が空だと polars が0列DataFrameを作り、DuckDB
+    # 側の read_parquet が「列が無い」で読めなくなるため)。
+    out_columns = (frozenset(columns) if columns is not None else DEFAULT_MANIFEST_COLUMNS) - {
+        "visibility",
+        "consent_l3",
+    }
+    out = write_generation_manifest(projected, base_dir, generation, columns=out_columns)
     update_latest_pointer(base_dir, generation, generated_at=generated_at)
     return out
 
 
-def write_manifest(rows: list[dict[str, Any]], path: str | Path) -> None:
+def _rows_to_dataframe(
+    rows: list[dict[str, Any]], columns: frozenset[str] | set[str] | None
+) -> pl.DataFrame:
+    """rows(dict群)を polars DataFrame に変換する。rows が空でも `columns` が
+    渡されていれば列名だけのスキーマを持つ0行DataFrameを作る(空Parquetでも
+    DuckDB の read_parquet が読める形にする — g80-vis2 の既定拒否フィルタで
+    全行除外された時に必要)。
+    """
+    if rows:
+        return pl.DataFrame(rows)
+    if columns:
+        return pl.DataFrame({col: [] for col in sorted(columns)})
+    return pl.DataFrame(rows)
+
+
+def write_manifest(
+    rows: list[dict[str, Any]],
+    path: str | Path,
+    *,
+    columns: frozenset[str] | set[str] | None = None,
+) -> None:
     """Write `rows` as one Parquet manifest file (overwrites — the manifest is a
     regenerable projection, not Truth; Truth itself stays append-only elsewhere).
+
+    `columns`(任意): rows が空の時にだけ使う、期待される列名の集合。省略時は
+    従来どおり(rows が空なら0列のDataFrameになる=既存の呼び出し元の挙動を変えない)。
     """
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    pl.DataFrame(rows).write_parquet(out)
+    _rows_to_dataframe(rows, columns).write_parquet(out)
 
 
 # V3-FND-06(制約): embedding等の派生層は generation-N/immutable manifest で世代管理し、
@@ -167,19 +238,26 @@ class GenerationExistsError(ValueError):
 
 
 def write_generation_manifest(
-    rows: list[dict[str, Any]], base_dir: str | Path, generation: int
+    rows: list[dict[str, Any]],
+    base_dir: str | Path,
+    generation: int,
+    *,
+    columns: frozenset[str] | set[str] | None = None,
 ) -> Path:
     """generation-N/manifest.parquet を新規作成する。同じ generation が既に存在する
     場合は書かず GenerationExistsError を投げる(上書き禁止=V3-FND-06 の中核)。
     Truth 本体を書き換えないのと同じ規約(このファイルも投影の一種だが、世代番号が
     バージョンを兼ねるため generation 単位では immutable にする)。
+
+    `columns`(任意): write_manifest() と同じく rows が空の時にだけ使う期待列名集合
+    (g80-vis2: 既定拒否フィルタで全行除外された時も読み出し可能な空Parquetにする)。
     """
     gen_dir = Path(base_dir) / f"generation-{generation}"
     out = gen_dir / "manifest.parquet"
     if out.exists():
         raise GenerationExistsError(f"generation-{generation} already exists at {out}")
     gen_dir.mkdir(parents=True, exist_ok=True)
-    pl.DataFrame(rows).write_parquet(out)
+    _rows_to_dataframe(rows, columns).write_parquet(out)
     return out
 
 

@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import json  # noqa: E402
+from typing import Any  # noqa: E402
 
 from manifest import (  # noqa: E402
     ALL_INDEX_ENTRY_COLUMNS,
@@ -20,7 +21,9 @@ from manifest import (  # noqa: E402
     SUBSET_COSINE_MAX_ROWS,
     GenerationExistsError,
     WhitelistViolationError,
+    filter_publicly_consented_rows,
     generate_manifest_from_index_entries,
+    is_publicly_consented_row,
     load_index_entries,
     project_columns,
     read_latest_generation,
@@ -163,9 +166,19 @@ def test_search_allows_filter_within_explicit_allowed_columns(tmp_path: Path) ->
 # --- F1(g79-f1manifest): IndexEntry -> manifest.parquet 生成器 ------------------------
 
 
-def _index_entry(event_id: str, actor_id: str | None, text_repr: str | None) -> dict:
+def _index_entry(
+    event_id: str,
+    actor_id: str | None,
+    text_repr: str | None,
+    *,
+    visibility: str | None = None,
+    consent_l3: bool | None = None,
+) -> dict:
     # packages/truth/src/index-entry.ts IndexEntry の全フィールド(2026-08-01時点)。
-    return {
+    # visibility/consent_l3 は g80-vis2(design R0801-7b17da §2-3隻1)で IndexEntry に
+    # 追加される判定用の2列 — 省略時(None)はキー自体を持たない旧形式行を再現する
+    # (隻1デプロイ前に書かれた索引エントリ。既定拒否フィルタが除外することを検証する)。
+    entry: dict[str, Any] = {
         "event_id": event_id,
         "type": "ihl.obs.capture.v1",
         "subject": f"subj-{event_id}",
@@ -183,16 +196,36 @@ def _index_entry(event_id: str, actor_id: str | None, text_repr: str | None) -> 
         "text_repr": text_repr,
         "text_repr_v": 1,
     }
+    if visibility is not None:
+        entry["visibility"] = visibility
+    if consent_l3 is not None:
+        entry["consent_l3"] = consent_l3
+    return entry
 
 
 def _write_index_receipt_fixture(root: Path) -> None:
     # index/receipt/<date>/<received_at_ms>-<event_id>.json のローカルミラー
     # (index-entry.ts indexKeyFor() と同じレイアウト。実 R2 には接続していない)。
+    # visibility="public"/consent_l3=True を明示する — g80-vis2 の既定拒否フィルタ導入後も
+    # この共有フィクスチャを使う既存の往復テストが引き続き行を通す(公開・許諾済み)ことを
+    # 意図しているため。フィルタそのものの単体テストは別フィクスチャ(_write_entries)で行う。
     day_dir = root / "index" / "receipt" / "2026-08-01"
     day_dir.mkdir(parents=True)
     for i, (actor, text) in enumerate([("user-1", "[capture] type=x subject=s1"), ("user-2", None)]):
-        entry = _index_entry(f"evt-{i}", actor, text)
+        entry = _index_entry(f"evt-{i}", actor, text, visibility="public", consent_l3=True)
         (day_dir / f"175400000{i}-evt-{i}.json").write_text(json.dumps(entry), encoding="utf-8")
+
+
+def _write_entries(root: Path, entries: list[dict]) -> Path:
+    # 任意の IndexEntry dict 群を index/receipt/<date>/ 配下に書く(g80-vis2 のフィルタ
+    # テスト用 — visibility/consent_l3 の組み合わせを行ごとに変えたい時に使う)。
+    day_dir = root / "index" / "receipt" / "2026-08-01"
+    day_dir.mkdir(parents=True, exist_ok=True)
+    for i, entry in enumerate(entries):
+        (day_dir / f"175400000{i}-{entry['event_id']}.json").write_text(
+            json.dumps(entry), encoding="utf-8"
+        )
+    return root / "index" / "receipt"
 
 
 def test_load_index_entries_reads_nested_date_dirs(tmp_path: Path) -> None:
@@ -207,8 +240,13 @@ def test_load_index_entries_returns_empty_for_missing_dir(tmp_path: Path) -> Non
 
 def test_project_columns_defaults_exclude_actor_id() -> None:
     # 既定は保守側(カード B3-A 未裁定の間は人物系フィールドを含めない)。
+    # g80-vis2: visibility/consent_l3(判定用フラグ)も既定から除外(配布はしない)。
     assert "actor_id" not in DEFAULT_MANIFEST_COLUMNS
-    assert DEFAULT_MANIFEST_COLUMNS == ALL_INDEX_ENTRY_COLUMNS - {"actor_id"}
+    assert DEFAULT_MANIFEST_COLUMNS == ALL_INDEX_ENTRY_COLUMNS - {
+        "actor_id",
+        "visibility",
+        "consent_l3",
+    }
     projected = project_columns([_index_entry("evt-0", "user-1", None)])
     assert "actor_id" not in projected[0]
     assert projected[0]["event_id"] == "evt-0"
@@ -317,3 +355,119 @@ def test_generate_manifest_from_index_entries_accepts_explicit_generated_at(tmp_
     )
     info = read_latest_manifest_info(base_dir)
     assert info == {"generation": 1, "generated_at": "2026-08-01T09:00:00+09:00"}
+
+
+# --- g80-vis2(design R0801-7b17da-REPORT-2026-08-01-g80-visibilitythink.md §2-3 案C'・
+# §3-1隻2): manifest既定拒否フィルタ(B3-A約束「非公開設定・第三者提供未許諾のものを
+# 除いた上で配ります」の履行)。visibility=="public" かつ consent_l3 is True の行だけ
+# manifest に通す。列が無い旧形式行は既定で除外(遡及書き換えなしで安全側に倒れる)。
+# -----------------------------------------------------------------------------------
+
+
+def test_default_manifest_columns_excludes_visibility_and_consent_l3() -> None:
+    # フラグ列は判定にのみ使い配布はしない(design「フラグ列自体は配布物からは落とす」)。
+    assert "visibility" not in DEFAULT_MANIFEST_COLUMNS
+    assert "consent_l3" not in DEFAULT_MANIFEST_COLUMNS
+    assert {"visibility", "consent_l3"} <= ALL_INDEX_ENTRY_COLUMNS
+
+
+def test_is_publicly_consented_row_true_only_for_public_and_consented() -> None:
+    assert is_publicly_consented_row({"visibility": "public", "consent_l3": True}) is True
+    assert is_publicly_consented_row({"visibility": "private", "consent_l3": True}) is False
+    assert is_publicly_consented_row({"visibility": "public", "consent_l3": False}) is False
+    assert is_publicly_consented_row({"visibility": "public"}) is False
+    assert is_publicly_consented_row({}) is False
+
+
+def test_filter_publicly_consented_rows_keeps_only_matching_rows() -> None:
+    rows = [
+        {"event_id": "e-pub", "visibility": "public", "consent_l3": True},
+        {"event_id": "e-priv", "visibility": "private", "consent_l3": True},
+    ]
+    got = filter_publicly_consented_rows(rows)
+    assert [r["event_id"] for r in got] == ["e-pub"]
+
+
+# ①-1: private行がmanifestに入らない
+def test_generate_manifest_excludes_private_row(tmp_path: Path) -> None:
+    src = tmp_path / "src"
+    entry = _index_entry("evt-priv", "user-1", "text", visibility="private", consent_l3=True)
+    _write_entries(src, [entry])
+    base_dir = tmp_path / "manifests"
+
+    out = generate_manifest_from_index_entries(src / "index" / "receipt", base_dir, 1)
+    got = search_manifest(out)
+    assert got == []
+
+
+# ①-2: consent_l3欠落行がmanifestに入らない
+def test_generate_manifest_excludes_row_missing_consent_l3(tmp_path: Path) -> None:
+    src = tmp_path / "src"
+    entry = _index_entry("evt-noconsent", "user-1", "text", visibility="public")
+    _write_entries(src, [entry])
+    base_dir = tmp_path / "manifests"
+
+    out = generate_manifest_from_index_entries(src / "index" / "receipt", base_dir, 1)
+    got = search_manifest(out)
+    assert got == []
+
+
+# ①-3: consent_l3=false行がmanifestに入らない
+def test_generate_manifest_excludes_row_with_consent_l3_false(tmp_path: Path) -> None:
+    src = tmp_path / "src"
+    entry = _index_entry("evt-refused", "user-1", "text", visibility="public", consent_l3=False)
+    _write_entries(src, [entry])
+    base_dir = tmp_path / "manifests"
+
+    out = generate_manifest_from_index_entries(src / "index" / "receipt", base_dir, 1)
+    got = search_manifest(out)
+    assert got == []
+
+
+# ②: visibility/consent_l3列が無い旧形式行が既定で除外される
+def test_generate_manifest_excludes_legacy_rows_without_visibility_columns(tmp_path: Path) -> None:
+    src = tmp_path / "src"
+    legacy_entry = _index_entry("evt-legacy", "user-1", "text")  # visibility/consent_l3キー無し
+    assert "visibility" not in legacy_entry
+    assert "consent_l3" not in legacy_entry
+    _write_entries(src, [legacy_entry])
+    base_dir = tmp_path / "manifests"
+
+    out = generate_manifest_from_index_entries(src / "index" / "receipt", base_dir, 1)
+    got = search_manifest(out)
+    assert got == []
+
+
+def test_generate_manifest_includes_public_consented_row(tmp_path: Path) -> None:
+    src = tmp_path / "src"
+    entries = [
+        _index_entry("evt-pub", "user-1", "text", visibility="public", consent_l3=True),
+        _index_entry("evt-priv", "user-2", "text", visibility="private", consent_l3=True),
+        _index_entry("evt-legacy", "user-3", "text"),
+    ]
+    _write_entries(src, entries)
+    base_dir = tmp_path / "manifests"
+
+    out = generate_manifest_from_index_entries(src / "index" / "receipt", base_dir, 1)
+    got = search_manifest(out)
+    assert {r["event_id"] for r in got} == {"evt-pub"}
+
+
+def test_generate_manifest_never_includes_flag_columns_even_when_explicitly_requested(
+    tmp_path: Path,
+) -> None:
+    # columns=ALL_INDEX_ENTRY_COLUMNS を明示指定しても、visibility/consent_l3は判定にのみ
+    # 使い配布物には残らない(design「フラグ列自体は配布物からは落とす」)。
+    src = tmp_path / "src"
+    entry = _index_entry("evt-pub", "user-1", "text", visibility="public", consent_l3=True)
+    _write_entries(src, [entry])
+    base_dir = tmp_path / "manifests"
+
+    out = generate_manifest_from_index_entries(
+        src / "index" / "receipt", base_dir, 1, columns=ALL_INDEX_ENTRY_COLUMNS
+    )
+    got = search_manifest(out)
+    assert len(got) == 1
+    assert "visibility" not in got[0]
+    assert "consent_l3" not in got[0]
+    assert got[0]["actor_id"] == "user-1"
