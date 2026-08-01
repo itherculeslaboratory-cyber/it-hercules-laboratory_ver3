@@ -3,7 +3,7 @@
 // ことと「データが無い/未接続のときに捏造せず正直な空表示になる」ことを固定する
 // (誇張ゼロの回帰防止)。API はスタブ(onAction)で差し込む。
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Renderer } from "./renderer";
 import type { ScreenDef } from "./types";
 
@@ -78,6 +78,88 @@ describe("IND individual-detail — real profile/pedigree/authenticity wiring", 
     expect(screen.getByText(/個体を選ぶと/)).toBeInTheDocument();
   });
 });
+
+describe("IND individual-detail — death recording sends schema-required evidence (g76-s6bevidence)", () => {
+  function deathDef(): ScreenDef {
+    return {
+      screen_id: "t",
+      route: "/t",
+      title: "t",
+      nodes: [{ id: "profile", type: "individual-profile" }],
+    } as ScreenDef;
+  }
+  function profileFixture() {
+    return {
+      individual_id: "ind-7",
+      master: { local_label_text: "ヘラクレス No.7", species: "ヘラクレスオオカブト" },
+      name: "ヘラクレス No.7",
+      species: "ヘラクレスオオカブト",
+      stage: "third_early",
+      status: "alive",
+      thumbnail_path: null,
+      placement_id: "棚A-3",
+      schedule: { next_observation_at: "2026-07-24" },
+      parents: {},
+      siblings: [],
+      children: [],
+      observations: [],
+      life_events: [],
+      parent_observations: { sire: [], dam: [] },
+      cohort_observations: [],
+    };
+  }
+
+  it("死亡を記録するボタンは at_stage+weight_g が未入力だと無効化され、入力後は detail 込みで POST される", async () => {
+    const onAction = vi.fn(async (a: { path?: string; method?: string }) => {
+      if (a.path?.endsWith("/profile")) return profileFixture();
+      if (a.path?.endsWith("/pedigree")) return { individual_id: "ind-7", known: false, parents: [] };
+      if (a.path?.endsWith("/authenticity")) return undefined;
+      if (a.path?.endsWith("/life-events")) return { ok: true };
+      return undefined;
+    });
+    render(<Renderer def={deathDef()} onAction={onAction} params={{ id: "ind-7" }} />);
+    fireEvent.click(await screen.findByRole("button", { name: /●飼育中/ }));
+
+    const submit = screen.getByRole("button", { name: "死亡を記録する" });
+    expect(submit).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("死亡時の体重(g)"), { target: { value: "18.5" } });
+    expect(submit).toBeDisabled(); // at_stage は既定でprofile.stage("third_early")が入っているため実は選択済み — チェックボックス未確認でまだ無効
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(submit).not.toBeDisabled();
+
+    fireEvent.click(submit);
+    expect(await waitForCall(onAction, "/life-events")).toEqual(
+      expect.objectContaining({
+        kind: "death",
+        detail: { at_stage: "third_early", terminal_observation: { weight_g: 18.5 } },
+      }),
+    );
+  });
+
+  it("追跡不能として記録ボタンは detail 無しで kind:lost を POST する", async () => {
+    const onAction = vi.fn(async (a: { path?: string; method?: string }) => {
+      if (a.path?.endsWith("/profile")) return profileFixture();
+      if (a.path?.endsWith("/pedigree")) return { individual_id: "ind-7", known: false, parents: [] };
+      if (a.path?.endsWith("/authenticity")) return undefined;
+      if (a.path?.endsWith("/life-events")) return { ok: true };
+      return undefined;
+    });
+    render(<Renderer def={deathDef()} onAction={onAction} params={{ id: "ind-7" }} />);
+    fireEvent.click(await screen.findByRole("button", { name: /●飼育中/ }));
+    fireEvent.click(screen.getByRole("button", { name: /追跡不能として記録/ }));
+    expect(await waitForCall(onAction, "/life-events")).toEqual(expect.objectContaining({ kind: "lost" }));
+  });
+});
+
+async function waitForCall(onAction: ReturnType<typeof vi.fn>, pathSuffix: string): Promise<Record<string, unknown>> {
+  for (let i = 0; i < 50; i++) {
+    const call = onAction.mock.calls.find((c) => (c[0] as { path?: string })?.path?.endsWith(pathSuffix));
+    if (call) return call[1] as Record<string, unknown>;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  throw new Error(`onAction was never called with a path ending in ${pathSuffix}`);
+}
 
 describe("IND match — convergence + ranking wiring, honest limits", () => {
   it("shows the two top-ranked candidates enriched from bio-card and the convergence state", async () => {

@@ -2961,10 +2961,14 @@ function BatchRosterNode() {
   const setGridValue = (id: string, key: "weight" | "length", v: string) =>
     setGrid((g) => ({ ...g, [id]: { ...(g[id] ?? { weight: "", length: "" }), [key]: v } }));
 
-  type Extra = { kind: "death" } | { kind: "stage"; toStage: string };
+  type Extra = { kind: "death"; atStage: string; weightG: string } | { kind: "stage"; toStage: string };
   const [extras, setExtras] = useState<Record<string, Extra>>({});
   const [rowMenuOpen, setRowMenuOpen] = useState<string | null>(null);
   const [stagePick, setStagePick] = useState<Record<string, string>>({});
+  // 死亡記録の証拠収集(at_stage+terminal_observation.weight_g)。schemas/events/
+  // ind-life-event.schema.json の if/then が要求する(S6コミット4d690ad)。
+  const [deathStagePick, setDeathStagePick] = useState<Record<string, string>>({});
+  const [deathWeightPick, setDeathWeightPick] = useState<Record<string, string>>({});
 
   const [reconcileOpen, setReconcileOpen] = useState<Record<string, boolean>>({});
   const [reconcileCounted, setReconcileCounted] = useState<Record<string, string>>({});
@@ -3073,9 +3077,24 @@ function BatchRosterNode() {
       if (!ind) continue;
       const idx = items.length;
       if (extra.kind === "death") {
-        items.push({ kind: "life-event", individual_id: id, body: { kind: "death", at: now } });
-        rows.push({ key: `death-${id}`, group: "death", label: ind.label, valueText: "死亡として記録", itemIndex: idx });
-      } else {
+        const weight = Number(extra.weightG);
+        items.push({
+          kind: "life-event",
+          individual_id: id,
+          body: {
+            kind: "death",
+            at: now,
+            detail: { at_stage: extra.atStage, terminal_observation: { weight_g: weight } },
+          },
+        });
+        rows.push({
+          key: `death-${id}`,
+          group: "death",
+          label: ind.label,
+          valueText: `死亡として記録(${STAGE_LABELS_JA[extra.atStage] ?? extra.atStage}・${weight}g)`,
+          itemIndex: idx,
+        });
+      } else if (extra.kind === "stage") {
         items.push({ kind: "life-event", individual_id: id, body: { kind: "molt", at: now, detail: { to_stage: extra.toStage } } });
         rows.push({
           key: `stage-${id}`,
@@ -3237,7 +3256,9 @@ function BatchRosterNode() {
                 </p>
                 {extra && (
                   <p className="civ-text">
-                    {extra.kind === "death" ? "☠ 死亡として記録(今回)" : `→ ${STAGE_LABELS_JA[extra.toStage] ?? extra.toStage} に変化(今回)`}{" "}
+                    {extra.kind === "death"
+                      ? `☠ 死亡として記録(今回・${STAGE_LABELS_JA[extra.atStage] ?? extra.atStage}・${extra.weightG}g)`
+                      : `→ ${STAGE_LABELS_JA[extra.toStage] ?? extra.toStage} に変化(今回)`}{" "}
                     <button
                       type="button"
                       className={cn("civ-interactive", "civ-button")}
@@ -3269,17 +3290,48 @@ function BatchRosterNode() {
                 )}
                 {menuOpen && !extra && (
                   <div className="civ-disclosure-body">
-                    <button
-                      type="button"
-                      className={cn("civ-interactive", "civ-button")}
-                      data-variant="secondary"
-                      onClick={() => {
-                        setExtras((e) => ({ ...e, [ind.individual_id]: { kind: "death" } }));
-                        setRowMenuOpen(null);
-                      }}
-                    >
-                      ☠ 死亡として記録
-                    </button>
+                    <div className="civ-picker-row">
+                      <select
+                        className="civ-input"
+                        value={deathStagePick[ind.individual_id] ?? ""}
+                        onChange={(e) => setDeathStagePick((s) => ({ ...s, [ind.individual_id]: e.target.value }))}
+                        aria-label="死亡時のステージ"
+                      >
+                        <option value="">死亡時のステージ</option>
+                        {Object.entries(STAGE_LABELS_JA).map(([v, l]) => (
+                          <option key={v} value={v}>
+                            {l}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        className="civ-input"
+                        placeholder="体重(g)"
+                        aria-label="死亡時の体重(g)"
+                        value={deathWeightPick[ind.individual_id] ?? ""}
+                        onChange={(e) => setDeathWeightPick((s) => ({ ...s, [ind.individual_id]: e.target.value }))}
+                      />
+                      <button
+                        type="button"
+                        className={cn("civ-interactive", "civ-button")}
+                        data-variant="secondary"
+                        disabled={
+                          !deathStagePick[ind.individual_id] ||
+                          !Number.isFinite(Number(deathWeightPick[ind.individual_id])) ||
+                          deathWeightPick[ind.individual_id] === ""
+                        }
+                        onClick={() => {
+                          const atStage = deathStagePick[ind.individual_id];
+                          const weightG = deathWeightPick[ind.individual_id];
+                          if (!atStage || !weightG) return;
+                          setExtras((e) => ({ ...e, [ind.individual_id]: { kind: "death", atStage, weightG } }));
+                          setRowMenuOpen(null);
+                        }}
+                      >
+                        ☠ 死亡として記録
+                      </button>
+                    </div>
                     <div className="civ-picker-row">
                       <select
                         className="civ-input"
@@ -5211,15 +5263,24 @@ function StatusMenu({ profile, onChanged }: { profile: IndividualProfile; onChan
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cohortSize = profile.siblings.length + 1;
+  // 死亡記録の証拠収集(at_stage+terminal_observation.weight_g)。schemas/events/
+  // ind-life-event.schema.json の if/then が要求する(S6コミット4d690ad)。
+  const [atStage, setAtStage] = useState(profile.stage ?? "");
+  const [weightG, setWeightG] = useState("");
+  const weightGValid = weightG !== "" && Number.isFinite(Number(weightG));
 
   const recordDeath = async () => {
-    if (!confirmed) return;
+    if (!confirmed || !atStage || !weightGValid) return;
     setPending(true);
     setError(null);
     try {
       await execute(
         { kind: "api", method: "POST", path: `/api/v1/individuals/${profile.individual_id}/life-events` },
-        { kind: "death", at: new Date().toISOString() },
+        {
+          kind: "death",
+          at: new Date().toISOString(),
+          detail: { at_stage: atStage, terminal_observation: { weight_g: Number(weightG) } },
+        },
       );
       onChanged();
     } catch (e) {
@@ -5233,6 +5294,22 @@ function StatusMenu({ profile, onChanged }: { profile: IndividualProfile; onChan
     setError(null);
     try {
       await execute({ kind: "api", method: "POST", path: `/api/v1/individuals/${profile.individual_id}/qr` });
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setPending(false);
+    }
+  };
+  // lost はdetail必須なし(ind-life-event.schema.jsonのif/thenはkind:"death"のみ対象)。
+  const recordLost = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await execute(
+        { kind: "api", method: "POST", path: `/api/v1/individuals/${profile.individual_id}/life-events` },
+        { kind: "lost", at: new Date().toISOString() },
+      );
+      onChanged();
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -5255,6 +5332,32 @@ function StatusMenu({ profile, onChanged }: { profile: IndividualProfile; onChan
         <div className="civ-disclosure-body">
           {profile.status !== "deceased" && (
             <div className="civ-field">
+              <label className="civ-label" htmlFor={`death-at-stage-${profile.individual_id}`}>
+                死亡時のステージ
+              </label>
+              <select
+                id={`death-at-stage-${profile.individual_id}`}
+                className="civ-input"
+                value={atStage}
+                onChange={(e) => setAtStage(e.target.value)}
+              >
+                <option value="">選んでください</option>
+                {Object.entries(STAGE_LABELS_JA).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <label className="civ-label" htmlFor={`death-weight-${profile.individual_id}`}>
+                死亡時の体重(g)
+              </label>
+              <input
+                id={`death-weight-${profile.individual_id}`}
+                type="number"
+                className="civ-input"
+                value={weightG}
+                onChange={(e) => setWeightG(e.target.value)}
+              />
               <label className="civ-checkbox-row">
                 <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
                 <span className="civ-label">
@@ -5266,10 +5369,20 @@ function StatusMenu({ profile, onChanged }: { profile: IndividualProfile; onChan
                 className={cn("civ-interactive", "civ-button")}
                 data-variant="secondary"
                 data-compact
-                disabled={!confirmed || pending}
+                disabled={!confirmed || !atStage || !weightGValid || pending}
                 onClick={recordDeath}
               >
                 死亡を記録する
+              </button>
+              <button
+                type="button"
+                className={cn("civ-interactive", "civ-button")}
+                data-variant="ghost"
+                data-compact
+                disabled={pending}
+                onClick={recordLost}
+              >
+                🔍 追跡不能として記録
               </button>
             </div>
           )}
