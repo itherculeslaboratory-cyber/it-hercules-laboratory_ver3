@@ -42,6 +42,8 @@ const BINDING_TYPE = "ihl.src.device_binding.v1"; // FND-18 source module (V3-IN
 const TELEMETRY_TYPE = "ihl.src.telemetry.v1";
 const TXN_TYPE = "ihl.mkt.transaction_event.v1";
 const COLOR_TYPE = "ihl.obs.color.v1"; // g80-uibatch4 T3: E2で新設済みのBPCMS Lab色イベント
+const CLUTCH_TYPE = "ihl.ind.clutch.v1"; // g87-c4cross: 二層投影(count層)読み取り専用参照
+const CLUTCH_EVENT_TYPE = "ihl.ind.clutch_event.v1";
 
 const SCHEMA = {
   master: "schemas/events/ind-master.schema.json",
@@ -370,6 +372,46 @@ async function offspringOf(s: TruthStore, id: string): Promise<string[]> {
   return [...new Set(kids)].sort();
 }
 
+// g87-c4cross: クラッチ(count層)の current_count / 負discrepancy(行方不明疑い)を
+// この画面向けに再計算する。ロジックは clutch-routes.ts の
+// projectClutchCurrentCount/projectClutchReconciliation と同一意味だが、
+// individual-routes.ts↔clutch-routes.ts の相互import(circular)を避けるため
+// 本ファイル冒頭の既存慣例(「cross-module read-only types」・envelope/store/dataOf
+// 再宣言と同precedent)に倣いここへ再宣言する。
+async function clutchCurrentCount(s: TruthStore, clutchId: string, initialCount: number): Promise<number> {
+  const events = (await s.listEvents(`truth/${CLUTCH_EVENT_TYPE}/${clutchId}-`))
+    .map(dataOf)
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)) || String(a.event_id).localeCompare(String(b.event_id)));
+  let base = initialCount;
+  let startIdx = 0;
+  for (let i = 0; i < events.length; i++) {
+    if (events[i].kind === "recount") {
+      base = Number(events[i].counted ?? base);
+      startIdx = i + 1;
+    }
+  }
+  let count = base;
+  for (let i = startIdx; i < events.length; i++) {
+    const e = events[i];
+    if (e.kind === "attrition") count -= Number(e.death_count ?? 0);
+    if (e.kind === "promote") {
+      const promotedCount = Array.isArray(e.promoted_individual_ids) ? e.promoted_individual_ids.length : 0;
+      count -= promotedCount + Number(e.death_count ?? 0);
+    }
+  }
+  return count;
+}
+
+async function clutchMissingEvents(
+  s: TruthStore,
+  clutchId: string,
+): Promise<{ event_id: string; at: string; discrepancy: number }[]> {
+  const events = (await s.listEvents(`truth/${CLUTCH_EVENT_TYPE}/${clutchId}-`)).map(dataOf);
+  return events
+    .filter((e) => e.kind === "recount" && typeof e.discrepancy === "number" && (e.discrepancy as number) < 0)
+    .map((e) => ({ event_id: String(e.event_id), at: String(e.at), discrepancy: Number(e.discrepancy) }));
+}
+
 const rate = (num: number, den: number): number => (den > 0 ? num / den : 0);
 
 function avg(xs: number[]): number | null {
@@ -476,6 +518,36 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
   }
   const colorReproducibility = childColorSimilarities.length > 0 ? avg(childColorSimilarities) : null;
 
+  // g87-c4cross V3-IND-36 二層投影: この個体を sire/dam とするクラッチ(count層・
+  // promote前の匿名プール)を、既存の individual層(rates)と並べて見せる。
+  // 産地(country/origin)フィールドは ind-master / ind-clutch いずれの Truth
+  // スキーマにも存在しないため、産地層別統計は実装していない(捏造禁止・screen側で
+  // 「再現できない要素」として正直に列挙する)。
+  const clutchRows = (await s.listEvents(`truth/${CLUTCH_TYPE}/`))
+    .map(dataOf)
+    .filter((d) => d.sire_id === id || d.dam_id === id);
+  const clutchLayer: Record<string, unknown>[] = [];
+  const missingLane: Record<string, unknown>[] = [];
+  for (const cd of clutchRows) {
+    const clutchId = String(cd.clutch_id ?? "");
+    if (!clutchId) continue;
+    const initial = Number(cd.initial_count ?? 0);
+    const current = await clutchCurrentCount(s, clutchId, initial);
+    clutchLayer.push({
+      clutch_id: clutchId,
+      role: cd.sire_id === id ? "sire" : "dam",
+      harvested_at: cd.harvested_at ?? null,
+      initial_count: initial,
+      current_count: current,
+      container_label: typeof cd.container_label === "string" ? cd.container_label : null,
+    });
+    for (const m of await clutchMissingEvents(s, clutchId)) {
+      missingLane.push({ clutch_id: clutchId, ...m });
+    }
+  }
+  clutchLayer.sort((a, b) => String(a.harvested_at ?? "").localeCompare(String(b.harvested_at ?? "")));
+  missingLane.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+
   const rates = {
     mortality: rate(deaths, total),
     survival: total > 0 ? 1 - rate(deaths, total) : 0,
@@ -514,6 +586,11 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
     // 無ければ null のまま=機械が推測しない)。
     fail_by_stage: failByStage,
     failure_data: failureData,
+    // g87-c4cross: 二層投影(count層=クラッチ・individual層=上のrates)+ 消息不明
+    // レーン(recountのdiscrepancy<0=行方不明疑い)。0件は「ゼロ」のまま返す
+    // (creative埋めをしない・screen側もゼロを正直表示)。
+    clutch_layer: clutchLayer,
+    missing_lane: missingLane,
   };
 }
 
