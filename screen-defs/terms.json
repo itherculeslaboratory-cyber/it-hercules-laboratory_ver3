@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "利用規約を確認し、同意する画面。本文はまだ最終版ではない(仮のもの)であることを明記しています。" } },
       "children": [
         {
           "id": "page",

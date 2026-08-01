@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "取引や投稿でのやり取りで困りごとがあった時、相手と1対1で話し合うための部屋。14日間動きがないと自動的に終了します。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

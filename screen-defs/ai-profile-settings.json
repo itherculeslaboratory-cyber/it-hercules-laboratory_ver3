@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "AIを使う機能ごとに、どれくらいの計算資源を使うか・どこで処理するかを設定する画面。自分のAPIキーはこの端末にだけ保存され、サーバには送られません。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

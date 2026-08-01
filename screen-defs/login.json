@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "ログイン画面。パスワードは使わず、メールに届くリンクか数字コードで入ります。" } },
       "children": [
         {
           "id": "page",

@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "好みに近い個体をゆるく探すマッチング画面(結婚相手探しではなく、好みの学習結果を眺める画面)。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

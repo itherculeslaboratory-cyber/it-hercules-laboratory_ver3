@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "決めた条件と実際の観測を照らし合わせて、条件に合っているか・足りない項目は何かを確認する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "初めてログインした人が、表示名(ハンドル)と言語を決める最初の設定画面。" } },
       "children": [
         {
           "id": "page",

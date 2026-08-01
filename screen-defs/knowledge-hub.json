@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "「知の広場」の入口。困った時の相談・話したいこと・論文を3つのタブで探せます。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

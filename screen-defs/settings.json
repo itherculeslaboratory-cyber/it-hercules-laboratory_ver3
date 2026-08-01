@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "表示言語・テーマ・通知など、アプリ全体の使い方の好みをまとめて設定する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "複数の個体のお世話・移動・繁殖の割り出しをまとめて記録する画面。前回のお世話から日数が経った個体は自動で候補に挙がります。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

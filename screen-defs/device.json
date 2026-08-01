@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "観測に使う機器(温湿度計など)や置き場所(棚)を登録・管理する画面。実際の機器接続は試験段階のサンプルデータで、本物の接続はまだ行っていないことを画面内に明記しています。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

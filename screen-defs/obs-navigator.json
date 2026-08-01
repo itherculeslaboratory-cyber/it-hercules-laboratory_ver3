@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "観測したい対象(種類)を、名前で探す・はい/いいえで絞る・分類ツリーで辿る、の3通りで特定する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

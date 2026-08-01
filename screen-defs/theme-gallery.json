@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "アプリの見た目(テーマ)の一覧を見る画面。実際に使うテーマの切り替えは設定画面から行います。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

@@ -3907,6 +3907,27 @@ function BatchDoneNode() {
 // 多く、既存の宣言的語彙では表現しきれない)。
 // =============================================================================
 
+// T2(E1横断検索UI導線): GET /api/v1/search(apps/api/src/cross-search-routes.ts・
+// R0801-d5e912実装済み)のレスポンス型。API契約をそのまま写す(創作しない)。
+type CrossSearchResultRow = {
+  event_id: string;
+  type: string;
+  subject: string | null;
+  actor_id: string | null;
+  received_at: string;
+  payload_key: string;
+  text_repr: string | null;
+};
+type CrossSearchResponse = {
+  query: { q: string | null; type: string | null; subject: string | null; actor_id: string | null; from: string; to: string };
+  count: number;
+  results: CrossSearchResultRow[];
+  truncated: boolean;
+  truncated_dates: string[];
+  unknown_type_note: string;
+  dedup_note: string;
+};
+
 type SearchRow = {
   individual_id: string;
   label: string;
@@ -3921,24 +3942,38 @@ type SearchRow = {
   thumbnail_path: string | null;
 };
 
+// V3-UIX-37是正(uib05A・R0801-95b347=UIB05A-1○85点「このほうが綺麗」): 数値フィルタの
+// 操作方式を「中心値±幅」固定から「以上/以下/付近」の常時表示クリック選択に変更。
+// mode="near" の時だけ従来の中心値±幅(lengthCenter/lengthWidth)を使う。
+// mode="gte"/"lte" の時は単一値(lengthValue)を使う。3モードとも上限キャップなし・自由入力・0件可。
+type NumericFilterMode = "gte" | "lte" | "near";
+
 type SearchFilters = {
   species: string | null;
   stage: string | null;
   shelf: string | null;
-  lengthX: number | null;
-  lengthY: number | null;
-  weightX: number | null;
-  weightY: number | null;
+  lengthMode: NumericFilterMode;
+  lengthValue: number | null;
+  lengthCenter: number | null;
+  lengthWidth: number | null;
+  weightMode: NumericFilterMode;
+  weightValue: number | null;
+  weightCenter: number | null;
+  weightWidth: number | null;
 };
 
 const DEFAULT_SEARCH_FILTERS: SearchFilters = {
   species: null,
   stage: null,
   shelf: null,
-  lengthX: null,
-  lengthY: null,
-  weightX: null,
-  weightY: null,
+  lengthMode: "near",
+  lengthValue: null,
+  lengthCenter: null,
+  lengthWidth: null,
+  weightMode: "near",
+  weightValue: null,
+  weightCenter: null,
+  weightWidth: null,
 };
 
 type SearchSort = "length_desc" | "weight_desc" | "last_capture_desc" | "eclosion_desc";
@@ -4004,24 +4039,45 @@ function filtersEqual(a: SearchFilters, b: SearchFilters): boolean {
     a.species === b.species &&
     a.stage === b.stage &&
     a.shelf === b.shelf &&
-    a.lengthX === b.lengthX &&
-    a.lengthY === b.lengthY &&
-    a.weightX === b.weightX &&
-    a.weightY === b.weightY
+    a.lengthMode === b.lengthMode &&
+    a.lengthValue === b.lengthValue &&
+    a.lengthCenter === b.lengthCenter &&
+    a.lengthWidth === b.lengthWidth &&
+    a.weightMode === b.weightMode &&
+    a.weightValue === b.weightValue &&
+    a.weightCenter === b.weightCenter &&
+    a.weightWidth === b.weightWidth
   );
+}
+// mode="gte"/"lte": 単一値との比較(値未入力なら絞らない)。
+// mode="near": 中心値・幅の両方が揃って初めてレンジが有効(片方だけでは絞らない —
+// 小数の完全一致で誤って0件化するのを避ける・従来ロジックを維持)。
+function matchesNumericFilter(
+  value: number | null,
+  mode: NumericFilterMode,
+  filterValue: number | null,
+  center: number | null,
+  width: number | null,
+): boolean {
+  if (mode === "gte") {
+    if (filterValue == null) return true;
+    return value != null && value >= filterValue;
+  }
+  if (mode === "lte") {
+    if (filterValue == null) return true;
+    return value != null && value <= filterValue;
+  }
+  if (center == null || width == null) return true;
+  return value != null && Math.abs(value - center) <= width;
 }
 function matchesFilters(row: SearchRow, f: SearchFilters): boolean {
   if (f.species != null && row.species !== f.species) return false;
   if (f.stage != null && row.stage !== f.stage) return false;
   if (f.shelf != null && row.placement_id !== f.shelf) return false;
-  // 中心値・幅の両方が揃って初めてレンジが有効になる(片方だけでは絞らない —
-  // 小数の完全一致で誤って0件化するのを避ける)。
-  if (f.lengthX != null && f.lengthY != null) {
-    if (row.latest_length_mm == null || Math.abs(row.latest_length_mm - f.lengthX) > f.lengthY) return false;
-  }
-  if (f.weightX != null && f.weightY != null) {
-    if (row.latest_weight_g == null || Math.abs(row.latest_weight_g - f.weightX) > f.weightY) return false;
-  }
+  if (!matchesNumericFilter(row.latest_length_mm, f.lengthMode, f.lengthValue, f.lengthCenter, f.lengthWidth))
+    return false;
+  if (!matchesNumericFilter(row.latest_weight_g, f.weightMode, f.weightValue, f.weightCenter, f.weightWidth))
+    return false;
   return true;
 }
 function facetCount(rows: SearchRow[], filters: SearchFilters, key: "species" | "stage" | "shelf", value: string): number {
@@ -4289,11 +4345,18 @@ function TargetNavigatorNode({
 }
 
 // V3-UIX-37(uib05・b2think §1-4案1): 体長/体重の数値レンジ絞り込み行は構造完全一致
-// のため共通化。DOM構造(civ-picker-row/civ-label/civ-input/civ-text[data-muted]・
-// id・aria)は元の2ブロックと1文字も変えていない。
+// のため共通化。★2026-08-01是正(R0801-95b347=UIB05A-1○85点「このほうが綺麗」):
+// 操作方式を「中心値±幅」固定から「以上/以下/付近」の常時表示・クリック選択(civ-segmented
+// 既存パターン=並び替え行と同じ役物を再利用・新規発明なし)へ変更。「付近」選択時のみ
+// 中心値±幅の入力を出す(現行方式は「付近」に畳む)。上限キャップなし・自由入力・0件可。
 type NumericFilterRowProps = {
   label: string;
   idBase: string;
+  mode: NumericFilterMode;
+  onModeChange: (m: NumericFilterMode) => void;
+  modeAriaLabel: string;
+  valueDraft: string;
+  onValueChange: (v: string) => void;
   centerDraft: string;
   widthDraft: string;
   onCenterChange: (v: string) => void;
@@ -4302,9 +4365,20 @@ type NumericFilterRowProps = {
   widthAriaLabel: string;
 };
 
+const NUMERIC_FILTER_MODE_LABELS: Record<NumericFilterMode, string> = {
+  gte: "以上",
+  lte: "以下",
+  near: "付近",
+};
+
 function NumericFilterRow({
   label,
   idBase,
+  mode,
+  onModeChange,
+  modeAriaLabel,
+  valueDraft,
+  onValueChange,
   centerDraft,
   widthDraft,
   onCenterChange,
@@ -4314,34 +4388,61 @@ function NumericFilterRow({
 }: NumericFilterRowProps) {
   return (
     <div className="civ-picker-row">
-      <label className="civ-label" htmlFor={`${idBase}-x`}>
-        {label}
-      </label>
-      <input
-        id={`${idBase}-x`}
-        className="civ-input"
-        type="number"
-        inputMode="decimal"
-        placeholder="中心値"
-        value={centerDraft}
-        onChange={(e) => onCenterChange(e.target.value)}
-        onBlur={onCommit}
-        onKeyDown={(e) => e.key === "Enter" && onCommit()}
-      />
-      <span className="civ-text" data-muted="true">
-        ±
-      </span>
-      <input
-        className="civ-input"
-        type="number"
-        inputMode="decimal"
-        placeholder="幅"
-        aria-label={widthAriaLabel}
-        value={widthDraft}
-        onChange={(e) => onWidthChange(e.target.value)}
-        onBlur={onCommit}
-        onKeyDown={(e) => e.key === "Enter" && onCommit()}
-      />
+      <span className="civ-label">{label}</span>
+      <div className="civ-segmented" role="radiogroup" aria-label={modeAriaLabel}>
+        {(Object.keys(NUMERIC_FILTER_MODE_LABELS) as NumericFilterMode[]).map((m) => (
+          <label key={m} className="civ-segment">
+            <input
+              type="radio"
+              name={`${idBase}-mode`}
+              checked={mode === m}
+              onChange={() => onModeChange(m)}
+            />
+            <span>{NUMERIC_FILTER_MODE_LABELS[m]}</span>
+          </label>
+        ))}
+      </div>
+      {mode === "near" ? (
+        <>
+          <input
+            id={`${idBase}-x`}
+            className="civ-input"
+            type="number"
+            inputMode="decimal"
+            placeholder="中心値"
+            value={centerDraft}
+            onChange={(e) => onCenterChange(e.target.value)}
+            onBlur={onCommit}
+            onKeyDown={(e) => e.key === "Enter" && onCommit()}
+          />
+          <span className="civ-text" data-muted="true">
+            ±
+          </span>
+          <input
+            className="civ-input"
+            type="number"
+            inputMode="decimal"
+            placeholder="幅"
+            aria-label={widthAriaLabel}
+            value={widthDraft}
+            onChange={(e) => onWidthChange(e.target.value)}
+            onBlur={onCommit}
+            onKeyDown={(e) => e.key === "Enter" && onCommit()}
+          />
+        </>
+      ) : (
+        <input
+          id={`${idBase}-value`}
+          className="civ-input"
+          type="number"
+          inputMode="decimal"
+          placeholder={mode === "gte" ? "以上の値" : "以下の値"}
+          value={valueDraft}
+          onChange={(e) => onValueChange(e.target.value)}
+          onBlur={onCommit}
+          onKeyDown={(e) => e.key === "Enter" && onCommit()}
+        />
+      )}
     </div>
   );
 }
@@ -4366,11 +4467,26 @@ function SearchNavigatorNode() {
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
 
+  const [lengthMode, setLengthMode] = useState<NumericFilterMode>("near");
+  const [lengthValueDraft, setLengthValueDraft] = useState("");
   const [lengthXDraft, setLengthXDraft] = useState("");
   const [lengthYDraft, setLengthYDraft] = useState("");
+  const [weightMode, setWeightMode] = useState<NumericFilterMode>("near");
+  const [weightValueDraft, setWeightValueDraft] = useState("");
   const [weightXDraft, setWeightXDraft] = useState("");
   const [weightYDraft, setWeightYDraft] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // T2(E1横断検索UI導線・R0801-d5e912=GET /api/v1/search 完成済みAPIへの入口)。
+  // このフィルタ群(種/ステージ/体長/体重)は取得済みの個体一覧に対するクライアント側の
+  // 絞り込みだが、横断検索は index/receipt/ を日付範囲でサーバ側走査する別機能のため、
+  // 状態・実行を分離する(既存の個体フィルタと混ぜない)。
+  const [crossOpen, setCrossOpen] = useState(false);
+  const [crossQueryDraft, setCrossQueryDraft] = useState("");
+  const [crossTypeDraft, setCrossTypeDraft] = useState("");
+  const [crossLoading, setCrossLoading] = useState(false);
+  const [crossError, setCrossError] = useState<string | null>(null);
+  const [crossResult, setCrossResult] = useState<CrossSearchResponse | null>(null);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [basketExpanded, setBasketExpanded] = useState(false);
@@ -4404,10 +4520,14 @@ function SearchNavigatorNode() {
       if (last) {
         setFilters(last.filters);
         setSort(last.sort);
-        setLengthXDraft(last.filters.lengthX != null ? String(last.filters.lengthX) : "");
-        setLengthYDraft(last.filters.lengthY != null ? String(last.filters.lengthY) : "");
-        setWeightXDraft(last.filters.weightX != null ? String(last.filters.weightX) : "");
-        setWeightYDraft(last.filters.weightY != null ? String(last.filters.weightY) : "");
+        setLengthMode(last.filters.lengthMode);
+        setLengthValueDraft(last.filters.lengthValue != null ? String(last.filters.lengthValue) : "");
+        setLengthXDraft(last.filters.lengthCenter != null ? String(last.filters.lengthCenter) : "");
+        setLengthYDraft(last.filters.lengthWidth != null ? String(last.filters.lengthWidth) : "");
+        setWeightMode(last.filters.weightMode);
+        setWeightValueDraft(last.filters.weightValue != null ? String(last.filters.weightValue) : "");
+        setWeightXDraft(last.filters.weightCenter != null ? String(last.filters.weightCenter) : "");
+        setWeightYDraft(last.filters.weightWidth != null ? String(last.filters.weightWidth) : "");
       }
       setLoaded(true);
     })();
@@ -4448,27 +4568,92 @@ function SearchNavigatorNode() {
   const sorted = useMemo(() => sortRows(filtered, sort), [filtered, sort]);
   const totalCaptures = filtered.reduce((sum, r) => sum + (r.capture_count ?? 0), 0);
 
-  const commitLength = () => {
-    const xRaw = lengthXDraft.trim();
-    const yRaw = lengthYDraft.trim();
-    const x = xRaw === "" ? null : Number(xRaw);
-    const y = yRaw === "" ? null : Number(yRaw);
-    setFilters((f) => ({
-      ...f,
-      lengthX: x != null && Number.isFinite(x) ? x : null,
-      lengthY: y != null && Number.isFinite(y) ? y : null,
-    }));
+  const commitLength = (modeArg?: NumericFilterMode) => {
+    const mode = modeArg ?? lengthMode;
+    if (mode === "near") {
+      const xRaw = lengthXDraft.trim();
+      const yRaw = lengthYDraft.trim();
+      const x = xRaw === "" ? null : Number(xRaw);
+      const y = yRaw === "" ? null : Number(yRaw);
+      setFilters((f) => ({
+        ...f,
+        lengthMode: mode,
+        lengthCenter: x != null && Number.isFinite(x) ? x : null,
+        lengthWidth: y != null && Number.isFinite(y) ? y : null,
+        lengthValue: null,
+      }));
+    } else {
+      const raw = lengthValueDraft.trim();
+      const v = raw === "" ? null : Number(raw);
+      setFilters((f) => ({
+        ...f,
+        lengthMode: mode,
+        lengthValue: v != null && Number.isFinite(v) ? v : null,
+        lengthCenter: null,
+        lengthWidth: null,
+      }));
+    }
   };
-  const commitWeight = () => {
-    const xRaw = weightXDraft.trim();
-    const yRaw = weightYDraft.trim();
-    const x = xRaw === "" ? null : Number(xRaw);
-    const y = yRaw === "" ? null : Number(yRaw);
-    setFilters((f) => ({
-      ...f,
-      weightX: x != null && Number.isFinite(x) ? x : null,
-      weightY: y != null && Number.isFinite(y) ? y : null,
-    }));
+  const handleLengthModeChange = (m: NumericFilterMode) => {
+    setLengthMode(m);
+    commitLength(m);
+  };
+  const commitWeight = (modeArg?: NumericFilterMode) => {
+    const mode = modeArg ?? weightMode;
+    if (mode === "near") {
+      const xRaw = weightXDraft.trim();
+      const yRaw = weightYDraft.trim();
+      const x = xRaw === "" ? null : Number(xRaw);
+      const y = yRaw === "" ? null : Number(yRaw);
+      setFilters((f) => ({
+        ...f,
+        weightMode: mode,
+        weightCenter: x != null && Number.isFinite(x) ? x : null,
+        weightWidth: y != null && Number.isFinite(y) ? y : null,
+        weightValue: null,
+      }));
+    } else {
+      const raw = weightValueDraft.trim();
+      const v = raw === "" ? null : Number(raw);
+      setFilters((f) => ({
+        ...f,
+        weightMode: mode,
+        weightValue: v != null && Number.isFinite(v) ? v : null,
+        weightCenter: null,
+        weightWidth: null,
+      }));
+    }
+  };
+  const handleWeightModeChange = (m: NumericFilterMode) => {
+    setWeightMode(m);
+    commitWeight(m);
+  };
+
+  // T2(E1横断検索UI導線): 完成済みAPI GET /api/v1/search(R0801-d5e912実装)を叩く。
+  // 期間指定は送らない(サーバ側の既定=直近7日をそのまま使い、レスポンスのquery.from/to
+  // を画面に表示することで「実際に使われた期間」を正直に見せる)。
+  const runCrossSearch = async () => {
+    setCrossLoading(true);
+    setCrossError(null);
+    try {
+      const params = new URLSearchParams();
+      const q = crossQueryDraft.trim();
+      if (q) params.set("q", q);
+      const type = crossTypeDraft.trim();
+      if (type) params.set("type", type);
+      const qs = params.toString();
+      const res = (await execute({
+        kind: "api",
+        method: "GET",
+        path: `/api/v1/search${qs ? `?${qs}` : ""}`,
+      })) as CrossSearchResponse | undefined;
+      if (res) setCrossResult(res);
+      else setCrossError("検索に失敗しました(応答がありません)");
+    } catch {
+      setCrossError("検索に失敗しました");
+    } finally {
+      setCrossLoading(false);
+    }
   };
 
   const toggleFacet = (key: "species" | "stage" | "shelf", value: string) => {
@@ -4502,31 +4687,33 @@ function SearchNavigatorNode() {
       if (count > 0)
         opts.push({ key: "shelf", label: `${placementLabel(filters.shelf) || "棚"}を外す`, count, apply: () => setFilters(next) });
     }
-    if (filters.lengthX != null && filters.lengthY != null) {
-      const next = { ...filters, lengthX: null, lengthY: null };
+    if (filters.lengthValue != null || (filters.lengthCenter != null && filters.lengthWidth != null)) {
+      const next = { ...filters, lengthValue: null, lengthCenter: null, lengthWidth: null };
       const count = individuals.filter((r) => matchesFilters(r, next)).length;
       if (count > 0)
         opts.push({
           key: "length",
-          label: "体長の範囲を外す",
+          label: "体長の絞り込みを外す",
           count,
           apply: () => {
             setFilters(next);
+            setLengthValueDraft("");
             setLengthXDraft("");
             setLengthYDraft("");
           },
         });
     }
-    if (filters.weightX != null && filters.weightY != null) {
-      const next = { ...filters, weightX: null, weightY: null };
+    if (filters.weightValue != null || (filters.weightCenter != null && filters.weightWidth != null)) {
+      const next = { ...filters, weightValue: null, weightCenter: null, weightWidth: null };
       const count = individuals.filter((r) => matchesFilters(r, next)).length;
       if (count > 0)
         opts.push({
           key: "weight",
-          label: "体重の範囲を外す",
+          label: "体重の絞り込みを外す",
           count,
           apply: () => {
             setFilters(next);
+            setWeightValueDraft("");
             setWeightXDraft("");
             setWeightYDraft("");
           },
@@ -4538,10 +4725,14 @@ function SearchNavigatorNode() {
   const applyFilterState = (f: SearchFilters, s: SearchSort) => {
     setFilters(f);
     setSort(s);
-    setLengthXDraft(f.lengthX != null ? String(f.lengthX) : "");
-    setLengthYDraft(f.lengthY != null ? String(f.lengthY) : "");
-    setWeightXDraft(f.weightX != null ? String(f.weightX) : "");
-    setWeightYDraft(f.weightY != null ? String(f.weightY) : "");
+    setLengthMode(f.lengthMode);
+    setLengthValueDraft(f.lengthValue != null ? String(f.lengthValue) : "");
+    setLengthXDraft(f.lengthCenter != null ? String(f.lengthCenter) : "");
+    setLengthYDraft(f.lengthWidth != null ? String(f.lengthWidth) : "");
+    setWeightMode(f.weightMode);
+    setWeightValueDraft(f.weightValue != null ? String(f.weightValue) : "");
+    setWeightXDraft(f.weightCenter != null ? String(f.weightCenter) : "");
+    setWeightYDraft(f.weightWidth != null ? String(f.weightWidth) : "");
   };
 
   const saveCurrentSearch = () => {
@@ -4709,23 +4900,125 @@ function SearchNavigatorNode() {
             <NumericFilterRow
               label="体長(mm)"
               idBase="search-length"
+              mode={lengthMode}
+              onModeChange={handleLengthModeChange}
+              modeAriaLabel="体長の絞り込み方法"
+              valueDraft={lengthValueDraft}
+              onValueChange={setLengthValueDraft}
               centerDraft={lengthXDraft}
               widthDraft={lengthYDraft}
               onCenterChange={setLengthXDraft}
               onWidthChange={setLengthYDraft}
-              onCommit={commitLength}
+              onCommit={() => commitLength()}
               widthAriaLabel="体長の幅"
             />
             <NumericFilterRow
               label="体重(g)"
               idBase="search-weight"
+              mode={weightMode}
+              onModeChange={handleWeightModeChange}
+              modeAriaLabel="体重の絞り込み方法"
+              valueDraft={weightValueDraft}
+              onValueChange={setWeightValueDraft}
               centerDraft={weightXDraft}
               widthDraft={weightYDraft}
               onCenterChange={setWeightXDraft}
               onWidthChange={setWeightYDraft}
-              onCommit={commitWeight}
+              onCommit={() => commitWeight()}
               widthAriaLabel="体重の幅"
             />
+          </div>
+        )}
+      </div>
+
+      {/* T2(E1横断検索UI導線・R0801-d5e912=GET /api/v1/search 完成済みAPIの入口)。
+          上の絞り込みは取得済み個体一覧の二次フィルタだが、これは全観測イベントを
+          日付範囲でサーバ側から探す別機能なので別の開閉セクションにする。 */}
+      <div className="civ-disclosure" data-open={crossOpen || undefined}>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button", "civ-disclosure-trigger")}
+          data-variant="secondary"
+          aria-expanded={crossOpen}
+          onClick={() => setCrossOpen((o) => !o)}
+        >
+          横断検索(全記録から探す) {crossOpen ? "▾" : "▸"}
+        </button>
+        {crossOpen && (
+          <div className="civ-disclosure-body">
+            <p className="civ-text" data-muted="true">
+              個体だけでなく観測・取引・話し合いなど全ての記録をフリーテキストで探します。既定は直近7日・最大90日まで指定可。
+            </p>
+            <div className="civ-field">
+              <label className="civ-label" htmlFor="cross-search-q">
+                キーワード
+              </label>
+              <input
+                id="cross-search-q"
+                className="civ-input"
+                type="text"
+                value={crossQueryDraft}
+                onChange={(e) => setCrossQueryDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runCrossSearch()}
+                placeholder="例: 産卵、脱皮、取引 など"
+              />
+            </div>
+            <div className="civ-field">
+              <label className="civ-label" htmlFor="cross-search-type">
+                種類(type)で絞り込み(任意)
+              </label>
+              <input
+                id="cross-search-type"
+                className="civ-input"
+                type="text"
+                value={crossTypeDraft}
+                onChange={(e) => setCrossTypeDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runCrossSearch()}
+                placeholder="例: observation"
+              />
+            </div>
+            <button
+              type="button"
+              className={cn("civ-interactive", "civ-button")}
+              data-variant="primary"
+              onClick={runCrossSearch}
+              disabled={crossLoading}
+            >
+              {crossLoading ? "検索中…" : "横断検索する"}
+            </button>
+            {crossError && (
+              <p className="civ-text" data-variant="error">
+                {crossError}
+              </p>
+            )}
+            {crossResult && (
+              <div className="civ-cross-search-results">
+                <p className="civ-text" data-muted="true">
+                  検索期間: {crossResult.query.from} 〜 {crossResult.query.to} / {crossResult.count}件
+                </p>
+                {crossResult.truncated && (
+                  <p className="civ-text" data-variant="warning">
+                    打ち切りあり: {crossResult.truncated_dates.join("、")}
+                    の日付は1000件天井に達したため、この範囲内の全件ではありません。
+                  </p>
+                )}
+                {crossResult.results.length === 0 ? (
+                  <p className="civ-text" data-muted="true">該当する記録がありません。</p>
+                ) : (
+                  <ul className="civ-list">
+                    {crossResult.results.map((r) => (
+                      <li key={r.event_id} className="civ-list-row">
+                        <span className="civ-badge">{r.type}</span>
+                        <span className="civ-text">{r.text_repr ?? "(内容の要約なし・未知の記録型)"}</span>
+                        <span className="civ-text" data-muted="true">
+                          {r.received_at}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -6648,7 +6941,7 @@ function HeaderScopeSelector({
 // maxDepth=2 は上限であり下限ではないため、サブカテゴリ未定義のこの段では1段のみで
 // 要件を満たす(将来サブカテゴリが定義され次第、ここへtreeを継ぎ足す)。
 const DRAWER_NAV_ITEMS: Array<{ label: string; href: string | null }> = [
-  { label: "観測登録", href: "/s/obs-entry" },
+  { label: "観測登録", href: "/s/obs-register" },
   { label: "マーケット", href: "/s/market-trade" },
   { label: "検索", href: "/s/obs-search" },
   { label: "知の広場", href: "/s/knowledge-hub" },
@@ -8125,7 +8418,7 @@ function HomeDashboardNode({ node }: { node: ScreenNode }) {
             <p className="section-caption">毎日いちばん使う4つの入口。ここから各エリアへ飛ぶ。</p>
           </div>
           <div className="primary-grid">
-            <a className="primary-card obs" href="/s/obs-entry">
+            <a className="primary-card obs" href="/s/obs-register">
               <div className="pc-icon">🔭</div>
               <div className="pc-title">観測を始める</div>
               <div className="pc-desc">目の前の個体の変化を記録する。すべての記録の出発点。</div>

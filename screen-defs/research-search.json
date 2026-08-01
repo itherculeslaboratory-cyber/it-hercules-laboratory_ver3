@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "研究に関する記録(本文・タグ・投稿者・関連メモ)を横断して探す画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

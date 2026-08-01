@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "文章をそのまま書くだけで観測を記録できる画面。日付や個体名などを機械的なルールで読み取って候補を出します(AIの自由な解釈ではありません)。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

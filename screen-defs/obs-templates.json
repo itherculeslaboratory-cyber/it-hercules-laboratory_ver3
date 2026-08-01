@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "観測入力でよく使う型(テンプレート)を管理する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

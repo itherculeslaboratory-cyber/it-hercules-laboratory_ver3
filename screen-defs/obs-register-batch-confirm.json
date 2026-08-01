@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "まとめて記録する内容の最終確認画面。問題がありそうな行だけ注意として表示されます。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

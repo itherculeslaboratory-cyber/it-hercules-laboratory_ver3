@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "論文・見た目のテーマ・グラフ・AIの設定などのテンプレートを売買・複製(フォーク)する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

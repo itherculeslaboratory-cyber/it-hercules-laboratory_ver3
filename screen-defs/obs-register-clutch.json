@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "複数の子(クラッチ)をまとめて登録する画面。この段階ではまだ個体ごとのIDは発行されません(容器を分けた時に発行されます)。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

@@ -300,8 +300,8 @@
     },
     {
       "from": "home",
-      "to": "obs-entry",
-      "label": "観測入力へ(★2026-08-01是正・カードR0801-9d452f-ui11threeclick: 実測は新規観測フル完了までホーム以降5ホップ(home→obs-entry→obs-navigator→obs-entry→obs-confirm→obs-detail)。旧『3クリック導線』表記は誇張ゼロ規約に反するため撤去。経路短縮の設計検討はui00第2弾後に別途)"
+      "to": "obs-register",
+      "label": "観測を始める(★2026-08-01是正・カードR0801-439da4-obsnav-cutover=NAV-1○85点: homeの主動線・ドロワー『観測登録』とも新フロー obs-register へ繋ぎ替え。旧 obs-entry への辺は撤去。旧経路の実測記録=ホーム以降5ホップは過去のもの=カードR0801-9d452f-ui11threeclick参照)"
     },
     {
       "from": "home",

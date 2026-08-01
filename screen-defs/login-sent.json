@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "ログイン用のリンクを送った後に表示する画面。リンクが届かない場合は、数字コードでも入れます。" } },
       "children": [
         {
           "id": "page",

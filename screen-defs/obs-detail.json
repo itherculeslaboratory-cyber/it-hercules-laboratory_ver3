@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "1件の観測の詳しい内容(写真・測定値・その時どこにいたか)を見る画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

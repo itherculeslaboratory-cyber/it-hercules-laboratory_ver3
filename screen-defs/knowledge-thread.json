@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "1つのスレッド(グループチャット)でみんなとやり取りする画面。数秒ごとに自動で更新されます。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

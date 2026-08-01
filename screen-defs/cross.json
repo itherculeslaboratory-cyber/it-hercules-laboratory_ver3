@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "同じ種類・累代の個体たちの生存率・完了率・サイズなどの統計を見る画面。個体詳細から開きます。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "QRコードを読み取った後、その個体やその棚から観測を再開する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

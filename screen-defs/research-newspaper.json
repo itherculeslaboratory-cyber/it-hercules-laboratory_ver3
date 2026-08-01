@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "蓄積した研究データから自動で作られる「新聞」記事を読む画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

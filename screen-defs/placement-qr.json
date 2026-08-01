@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "置き場所(棚)ごとのQRコードを発行し、その場所の環境(部屋・空調など)を記録する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

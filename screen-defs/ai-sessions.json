@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "過去にAIとやり取りした記録を一覧・閲覧する画面。行を開くとその時のやり取りの中身が読めます。" } },
       "children": [
         {
           "id": "page",

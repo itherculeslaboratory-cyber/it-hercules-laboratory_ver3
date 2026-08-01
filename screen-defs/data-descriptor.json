@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "論文の決まった項目を埋めていく入力画面。観測データから自動で埋まる項目には印が付きます。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

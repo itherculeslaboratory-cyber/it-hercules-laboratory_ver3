@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "自分のプロフィール(貢献度・評価・自己紹介・作品一覧)を見る・公開範囲を設定する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

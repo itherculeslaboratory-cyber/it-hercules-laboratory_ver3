@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "個体の名刺(種類・サイズ・特徴・QRコード)をカード形式で見る画面。複数まとめてQRを発行することもできます。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

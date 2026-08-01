@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "追観測(1件)の最終確認画面。前回との差分を見て「登録する」で保存します。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

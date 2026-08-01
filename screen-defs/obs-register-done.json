@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "観測が保存された直後の画面。よければ次にお世話する目安の日をここで登録できます。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

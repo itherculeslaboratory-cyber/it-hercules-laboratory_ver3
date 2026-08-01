@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "既に登録済みの個体に、今回の体重・体長だけを追加で記録する画面。前回との差分(増減)がすぐ分かります。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

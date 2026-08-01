@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "2枚の写真を見て、好みをどちらか選ぶだけの画面(好みを記録する専用の入力画面。結果を眺めるのはmatch画面です)。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

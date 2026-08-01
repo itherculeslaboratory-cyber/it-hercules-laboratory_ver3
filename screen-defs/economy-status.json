@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "自分のプラチナコイン・カルマ・貢献度・称号をまとめて見る画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

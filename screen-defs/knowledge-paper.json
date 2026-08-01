@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "論文の一覧から、観測データとの照合画面へ進める画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

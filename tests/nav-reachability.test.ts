@@ -5,9 +5,14 @@
 // Reachability budgets (design-k4 §3, critic fix (4) — real screen_ids only):
 //   settings / theme-gallery / ui-templates : ≤3 clicks from home (they are direct
 //     links off home = 1 click).
-//   obs-detail (観測保存の着地) : ≤3 — home の主ボタンは obs-entry 直行
-//     (obs-entry が domain を自前収集するため domain-select ホップは保存動線では冗長)。
-//     home→obs-entry→obs-confirm→obs-detail = 3。obs-domain-select は home
+//   obs-detail (観測保存の着地): ★2026-08-01是正(カードR0801-439da4-obsnav-cutover=
+//     NAV-1○85点)により home の主ボタン(観測を始める)と drawer メニュー(観測登録)を
+//     obs-entry から obs-register へ繋ぎ替えた。この結果、home→obs-entry の直行辺が
+//     無くなり、obs-entry(旧: 1) は 3、obs-detail(旧: 3、home→obs-entry→obs-confirm→
+//     obs-detail)は 5(home→obs-register→…→obs-entry→obs-confirm→obs-detail)へ実測が
+//     変わった。旧「3クリック以内」budget はこの承認済み設計変更の結果として満たせなく
+//     なっている(誇張ゼロ・正直に記録。budgetを緩めるだけで良いかは要再検討=次段の
+//     設計判断としてHQ/考える役に申し送り)。obs-domain-select は home
 //     完成予想図v2(承認済みmockup c9-home-forecast-v2.html・R112 90点)の IA
 //     再設計で home のトップレベル導線から撤去された(観測対象の特定は
 //     obs-navigator の3モードが引き継ぐ・「観測対象を特定する」section) —
@@ -76,7 +81,8 @@ const TARGETS: Record<string, number> = {
   settings: 3,
   "theme-gallery": 3,
   "ui-templates": 3,
-  "obs-detail": 3,
+  // ★2026-08-01是正(NAV-1○85点cutover)により3→5に実測値を更新(ファイルヘッダ参照)。
+  "obs-detail": 5,
 };
 
 describe("V3-UIX-02/25 navigation reachability from home", () => {
@@ -101,11 +107,13 @@ describe("V3-UIX-02/25 navigation reachability from home", () => {
     }
   });
 
-  it("obs-detail is reached via the OBS-25 confirm flow within 3 clicks", () => {
-    // home → obs-entry → obs-confirm → obs-detail (obs-domain-select は home v2
-    // で撤去済み — 上のファイルヘッダコメント参照)
-    expect(dist.get("obs-entry")).toBe(1);
-    expect(dist.get("obs-confirm")).toBe(2);
-    expect(dist.get("obs-detail")).toBe(3);
+  it("obs-detail is reached via the OBS-25 confirm flow (5 clicks after NAV-1 cutover)", () => {
+    // ★2026-08-01是正(カードR0801-439da4-obsnav-cutover=NAV-1○85点): home→obs-entry
+    // 直行辺が撤去され obs-register 経由になったため、obs-entry(旧1→3)・
+    // obs-confirm(旧2→4)・obs-detail(旧3→5)いずれも実測値が変わった(ファイル
+    // ヘッダコメント参照。budgetの再設計が必要かは別途HQ/考える役へ申し送り)。
+    expect(dist.get("obs-entry")).toBe(3);
+    expect(dist.get("obs-confirm")).toBe(4);
+    expect(dist.get("obs-detail")).toBe(5);
   });
 });

@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "まとめて記録が保存された後の完了画面。保存できなかった行があれば、隠さずそのまま表示します。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

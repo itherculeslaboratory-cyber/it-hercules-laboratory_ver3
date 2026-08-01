@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "観測入力の最終確認画面。内容を確かめて「登録する」の1つのボタンで保存します。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

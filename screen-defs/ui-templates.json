@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "画面の見た目をテンプレートとして保存し、他の人のものを複製(フォーク)する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "みんなの記録から情報を探したり、困りごと・改善案を投稿したりする掲示板画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

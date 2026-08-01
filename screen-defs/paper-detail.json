@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "1件の論文の詳しい内容(項目ごとの充足度・引用・関連する観測)を見る画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

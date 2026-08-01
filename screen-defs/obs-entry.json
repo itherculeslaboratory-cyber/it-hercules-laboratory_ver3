@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "種類・発育段階などを入力して観測を記録する画面(現在は個体詳細・QRなどの内側の経路から開きます)。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

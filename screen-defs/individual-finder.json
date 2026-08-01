@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "飼っている個体を一覧・血統・成長でたどり、理想の個体を見つける画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

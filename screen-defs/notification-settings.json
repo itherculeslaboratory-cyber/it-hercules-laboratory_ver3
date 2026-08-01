@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "通知の種類ごとに、プッシュ通知・メールを受け取るか・受け取らない時間帯(サイレント時間)を設定する画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

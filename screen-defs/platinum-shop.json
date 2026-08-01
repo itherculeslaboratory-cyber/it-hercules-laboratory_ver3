@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "プラチナコインで「免罪符」を購入する画面(購入するとカルマの表示上の消費が軽くなります。カルマの実体は変わりません)。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

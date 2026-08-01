@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "このサービスの運営にかかっている費用(サーバー代など)を透明に見せる画面。売上や個人の収入は表示しません。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

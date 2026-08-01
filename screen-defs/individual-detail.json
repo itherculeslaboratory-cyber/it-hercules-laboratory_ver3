@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "1匹の個体の詳しいプロフィール(血統・血統書としての確からしさ・成長グラフなど)を見る画面。", "how_to": ["上部のQRボタンで個体のQRコードを発行できる", "血統に欠けがある場合は案内バッジで正直に示す"], "talk_channel": true } },
       "children": [
         {
           "id": "page",

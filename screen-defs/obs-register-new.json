@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "新しい個体として登録する画面。個体IDは保存すると自動でつきます。種類は分からなければ空欄のままで大丈夫です。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

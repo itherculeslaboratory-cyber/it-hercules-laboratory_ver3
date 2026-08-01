@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "飼っている種類(生き物の種)を管理する画面。似た名前の種類があれば統合の候補も提案します。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

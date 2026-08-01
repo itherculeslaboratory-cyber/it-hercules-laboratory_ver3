@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "研究プロジェクトの全体像(論文・ブログ・引用・課題・バージョン)をまとめて見る画面。", "talk_channel": true } },
       "children": [
         {
           "id": "page",

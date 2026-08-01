@@ -8,6 +8,7 @@
     {
       "id": "shell",
       "type": "app-shell",
+      "props": { "page_info": { "purpose": "開発の改善履歴(GitHub)を外部で確認するためのリンク集。" } },
       "children": [
         {
           "id": "page",
