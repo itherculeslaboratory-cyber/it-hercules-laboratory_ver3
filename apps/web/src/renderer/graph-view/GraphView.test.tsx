@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { GraphView, type GraphViewIndividual, type PedigreeLink } from "./GraphView";
 
 afterEach(() => cleanup());
@@ -105,5 +105,73 @@ describe("GraphView — 種族チップ・個体クリックでの選択(g81-bun
     render(<GraphView individuals={INDIVIDUALS} links={LINKS} />);
     // 3体とも同じ種族なので「すべて」+その種族チップの2つだけ。
     expect(screen.getAllByRole("button", { name: "トノサマバッタ" })).toHaveLength(1);
+  });
+});
+
+// jsdomはWebGLが無く3d-force-graphの実初期化が常に失敗する(=honest fallback)ため、
+// カメラフレーミングの検証だけは "3d-force-graph" をモックする。ファイル全体を
+// モックすると上のfallbackテスト(意図的な初期化失敗を検証)が壊れるため、
+// vi.doMock + 動的import + vi.resetModules でこの describe 内だけ隔離する
+// (g82-camerafit T2)。
+describe("GraphView — カメラ初期フレーミング(g82-camerafit T2・zoomToFit相当)", () => {
+  afterEach(() => {
+    vi.doUnmock("3d-force-graph");
+    vi.resetModules();
+  });
+
+  function mockForceGraph3D() {
+    const zoomToFit = vi.fn();
+    const cameraPosition = vi.fn();
+    vi.doMock("3d-force-graph", () => ({
+      default: () => () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const g: any = {};
+        [
+          "backgroundColor",
+          "nodeId",
+          "nodeLabel",
+          "nodeVal",
+          "nodeResolution",
+          "enableNodeDrag",
+          "showNavInfo",
+          "onNodeClick",
+          "graphData",
+          "nodeColor",
+          "nodeVisibility",
+          "linkVisibility",
+          "linkColor",
+          "linkWidth",
+          "linkDirectionalParticles",
+        ].forEach((m) => {
+          g[m] = vi.fn(() => g);
+        });
+        g.cameraPosition = cameraPosition.mockImplementation(() => g);
+        g.zoomToFit = zoomToFit.mockImplementation(() => g);
+        g.controls = vi.fn(() => ({}));
+        return g;
+      },
+    }));
+    return { zoomToFit, cameraPosition };
+  }
+
+  it("focusId無しでデータ投入後にzoomToFit(3d-force-graph標準API)が呼ばれる", async () => {
+    const { zoomToFit } = mockForceGraph3D();
+    const { GraphView: MockedGraphView } = await import("./GraphView");
+    render(<MockedGraphView individuals={INDIVIDUALS} links={LINKS} />);
+    await waitFor(() => expect(zoomToFit).toHaveBeenCalled());
+    expect(zoomToFit).toHaveBeenCalledWith(900, 80);
+  });
+
+  it("focusIdがある時はzoomToFitではなく選択個体近傍へcameraPositionで寄る(旧universe.js踏襲)", async () => {
+    const { zoomToFit, cameraPosition } = mockForceGraph3D();
+    const { GraphView: MockedGraphView } = await import("./GraphView");
+    render(<MockedGraphView individuals={INDIVIDUALS} links={LINKS} focusId="child-1" />);
+    await waitFor(() => expect(cameraPosition.mock.calls.length).toBeGreaterThanOrEqual(2));
+    expect(zoomToFit).not.toHaveBeenCalled();
+    const [pos, lookAt, ms] = cameraPosition.mock.calls[cameraPosition.mock.calls.length - 1];
+    expect(ms).toBe(900);
+    expect(pos.x).toBeCloseTo(lookAt.x);
+    expect(pos.y).toBeCloseTo(lookAt.y + 18);
+    expect(pos.z).toBeCloseTo(lookAt.z + 90);
   });
 });

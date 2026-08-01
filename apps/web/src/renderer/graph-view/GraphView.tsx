@@ -190,6 +190,12 @@ export function GraphView({ individuals, links, focusId, onOpenDetail, emptyHref
   }, [graphNodes.length]);
 
   // データ・ハイライト・絞り込みをGraphインスタンスへ反映(universe.js refresh()相当)。
+  // 依存配列に webglOk を含める(g82-camerafit T1で発見・修正): graphRef.current は
+  // ref なので値が変わってもこのeffectは再実行されない。実データでは個体一覧の
+  // fetchがGraph初期化(3d-force-graphの非同期import)より先に終わることが多く、
+  // webglOkが無いとGraphインスタンス生成後にgraphData()が一度も呼ばれないまま
+  // (=3D領域にノードが1つも投入されない)になる実バグがあった。3D領域が実データで
+  // 空白に見える根本原因はこれであり、カメラ位置の問題ではなかった。
   useEffect(() => {
     const Graph = graphRef.current;
     if (!Graph) return;
@@ -232,7 +238,7 @@ export function GraphView({ individuals, links, focusId, onOpenDetail, emptyHref
       })
       .linkWidth((l: { source: unknown; target: unknown }) => (hlLinks.has(linkKey(l)) ? 1.6 : 0.4))
       .linkDirectionalParticles((l: { source: unknown; target: unknown }) => (hlLinks.has(linkKey(l)) ? 3 : 0));
-  }, [graphNodes, graphLinks, selected, speciesFilter, scopeIds, lineage, nodeMetaById]);
+  }, [graphNodes, graphLinks, selected, speciesFilter, scopeIds, lineage, nodeMetaById, webglOk]);
 
   // ?focus=id ディープリンク: Graph初期化後・データがある時に1度だけ選択する。
   useEffect(() => {
@@ -243,6 +249,29 @@ export function GraphView({ individuals, links, focusId, onOpenDetail, emptyHref
     appliedFocus.current = true;
     selectNode(focusId);
   }, [focusId, nodeMetaById, selectNode]);
+
+  // カメラ初期フレーミング(zoomToFit相当・g82-camerafit): 実データの座標分布に
+  // 応じて全ノードが視野に収まる位置へカメラを寄せる。固定値{0,120,620}は
+  // 座標が広い/狭いデータで空白に見える(束D正直な限界)ため、ノード集合が
+  // 実際に変わった時だけ1回フレーミングする(選択・絞り込みの再描画では動かさない
+  // = 操作中に勝手にカメラが動く体験を避ける)。ライブラリ標準API
+  // (3d-force-graph の zoomToFit)をそのまま使い、旧universe.jsのframeNodesは
+  // 自作しない(reuse-first)。focusIdがある場合は旧universe.jsのフォーカス
+  // 挙動(選択個体の近傍へ寄る)を踏襲する。
+  const framedNodesKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const Graph = graphRef.current;
+    if (!Graph || graphNodes.length === 0) return;
+    const key = graphNodes.map((n) => n.id).join(",");
+    if (framedNodesKeyRef.current === key) return;
+    framedNodesKeyRef.current = key;
+    if (focusId && nodeMetaById.has(focusId)) {
+      const n = nodeMetaById.get(focusId)!;
+      Graph.cameraPosition({ x: n.fx, y: n.fy + 18, z: n.fz + 90 }, { x: n.fx, y: n.fy, z: n.fz }, 900);
+    } else {
+      Graph.zoomToFit(900, 80);
+    }
+  }, [graphNodes, focusId, nodeMetaById, webglOk]);
 
   const handleNear = () => {
     if (!selected) return;
