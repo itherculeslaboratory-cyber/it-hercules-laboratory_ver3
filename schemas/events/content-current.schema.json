@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/content-current.schema.json",
+  "title": "Research content current-generation pointer (ihl.research.content_current.v1)",
+  "description": "「いつでも戻せる」復元ポインタ（V3-AIP-108/109・設計R0801-436936 §4案4-A・review-queue R0801-436936-refrestore REF-1=○）。Truth キー truth/ihl.research.content_current.v1/<lineage_root>/<pointer_id>.json に append-only。「戻す」＝旧世代を指すポインタを1件appendするだけで、既存イベントは1バイトも書き換えず generation も増やさない。現在値＝同一 lineage_root 配下の pointer_id（ULID）昇順の最後。plaza-resolution.schema.json（取消は新イベント追記のsupersedeパターン）と同型のイディオムを流用。",
+  "x_ihl_req": "V3-AIP-108, V3-AIP-109",
+  "x_ihl_source": "proposals/R0801-436936-DESIGN-2026-08-01-g67-refdesign.md §4案4-A / review-queue/R0801-436936-refrestore-2026-08-01.json REF-1",
+  "type": "object",
+  "required": ["pointer_id", "lineage_root", "current_content_id", "actor_id", "created_at", "schema_version"],
+  "properties": {
+    "pointer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "このポインタ行の一意キー（ULID）。同一 lineage_root 配下でこの昇順の最後が現在値。"
+    },
+    "lineage_root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "この系譜の root 世代（generation:0）の content_id。GET .../generations と同じ up-walk でサーバが解決した値のみを埋める（クライアント指定は信用しない）。"
+    },
+    "current_content_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "現行として指す世代の content_id（戻し先）。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "復元実行者の actor_id（セッション principal 強制・V3-AUT-17）。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "復元時刻（RFC3339）。"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "data スキーマ版。"
+    }
+  },
+  "additionalProperties": false
+}

@@ -153,6 +153,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "krm-title": "krmTitle",
   "mkt-product-node": "mktProductNode",
   "obs-datasource": "obsDatasource",
+  // g72-refs4(設計R0801-436936 §4案4-A・REF-1裁定=○): S4「いつでも戻せる」復元ポインタ。
+  "content-current": "contentCurrent",
 };
 
 const FROZEN_NAMES = new Set([
@@ -297,6 +299,9 @@ const EVENT_NAMES = new Set([
   "krm-title",
   "mkt-product-node",
   "obs-datasource",
+  // g72-refs4(設計R0801-436936 §4案4-A) — data validation MUST fire or putEventAt
+  // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
+  "content-current",
 ]);
 
 function validatorFor(name: string): ValidateFn {

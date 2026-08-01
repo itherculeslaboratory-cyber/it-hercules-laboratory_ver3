@@ -159,6 +159,8 @@ const SCHEMAS = [
   ["krmTitle", "events/krm-title.schema.json"],
   ["mktProductNode", "events/mkt-product-node.schema.json"],
   ["obsDatasource", "events/obs-datasource.schema.json"],
+  // g72-refs4(設計R0801-436936 §4案4-A): S4「いつでも戻せる」復元ポインタ。
+  ["contentCurrent", "events/content-current.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

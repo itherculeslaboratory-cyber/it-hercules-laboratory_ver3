@@ -402,6 +402,12 @@ const CITATION_LINK_TYPE_FOR_COUNT = "ihl.citation.link.v1";
 // (paper-match-routes.ts の CITATION_LINK_SCHEMA と同型)。
 const CITATION_LINK_SCHEMA = "schemas/events/citation-link.schema.json";
 
+// g72-refs4(V3-AIP-108/109・設計R0801-436936 §4案4-A・REF-1裁定=○): S4「いつでも戻せる」復元
+// ポインタ。plaza-resolution.schema.json と同型の supersede パターン(取消/変更は新イベント
+// 追記のみ・既存イベントは1バイトも書き換えない)。
+const CONTENT_CURRENT_TYPE = "ihl.research.content_current.v1";
+const CONTENT_CURRENT_SCHEMA = "schemas/events/content-current.schema.json";
+
 // GET /research/content/:id/cited-by-posts — 論文側の逆引き投影(V3-PPR-08「論文→板」方向)。
 // 板→論文方向は既存 plaza-routes.ts 側(GET /plaza/threads/:thread_id/paper-citations)が
 // cite_refs を集約して提供済み。逆に「この論文を引用している投稿」を求めるには、post 側から
@@ -559,19 +565,11 @@ async function findDerivedFromParent(s: TruthStore, contentId: string): Promise<
   return link ? String((link.target_ref as { id?: string } | undefined)?.id ?? "") : undefined;
 }
 
-// GET /research/content/:id/generations — 世代横断ビュー(親設計R0801-436936 §3案2-A c・
-// 裁定R0801-9398e1 T2)。系譜の照合キーは uuid ではなく derived_from citation-link(裁定R-3)。
-// 上へ: 自ノードの prefix scan で親を辿る(安い)。下へ: truth/ihl.citation.link.v1/ の全走査に
-// なる(既存 GET /research/content/:id/cited-by-posts と同型・index があるかのように書かない=
-// O(n))。lineage_recorded は「その世代が実際に lineage_meta を持つか」を正直に返す(旧レコード
-// root は generation:0/lineage_recorded:false=推定値であることを明示・誇張ゼロ規約)。
-researchContentRoutes.get("/research/content/:id/generations", async (c) => {
-  const id = c.req.param("id");
-  const s = store(c);
-  const startEv = await s.readEvent(contentKey(id));
-  if (!startEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
-
-  // 上へ: 世代の辺だけを辿って root を見つける。
+// findLineageRootId/walkLineageChain — 系譜の root 探索(上へ)・全世代列挙(下へ)を共有関数化
+// (元は GET .../generations 内にインライン実装されていたロジックの抽出・挙動不変)。S4復元
+// (g72-refs4)が lineage_root の解決と「ポインタ無し系譜の generation 最大フォールバック」の
+// 両方でこれを再利用するため、二重実装しない(reuse-first)。
+async function findLineageRootId(s: TruthStore, id: string): Promise<string> {
   let rootId = id;
   for (;;) {
     const curEv = await s.readEvent(contentKey(rootId));
@@ -585,9 +583,20 @@ researchContentRoutes.get("/research/content/:id/generations", async (c) => {
     if (!isGenerationEdge(curData, parentData)) break;
     rootId = parentId;
   }
+  return rootId;
+}
 
-  // 下へ: derived_from リンク全件を1度だけ読み、target_ref.id -> content_id[] の候補マップを
-  // 作ってから世代の辺だけを BFS で辿る(O(n)全走査は1回のみ)。
+interface LineageChainItem {
+  content_id: string;
+  generation: number;
+  data: Record<string, unknown>;
+  envelope_id: string;
+}
+
+async function walkLineageChain(s: TruthStore, rootId: string): Promise<LineageChainItem[]> {
+  const rootEv = await s.readEvent(contentKey(rootId));
+  if (!rootEv) return [];
+  const rootData = dataOf(rootEv);
   const allLinks = (await s.listEvents(`truth/${CITATION_LINK_TYPE_FOR_COUNT}/`))
     .map(dataOf)
     .filter((l) => l.link_kind === "derived_from");
@@ -598,46 +607,122 @@ researchContentRoutes.get("/research/content/:id/generations", async (c) => {
     if (!parentId || !childId) continue;
     childCandidatesOf.set(parentId, [...(childCandidatesOf.get(parentId) ?? []), childId]);
   }
-
-  type GenItem = {
-    generation: number;
-    content_id: string;
-    reference_count: number;
-    citation_count: number;
-    lineage_recorded: boolean;
+  const rootItem: LineageChainItem = {
+    content_id: rootId, generation: generationOf(rootData), data: rootData, envelope_id: String(rootEv.id),
   };
-  async function toItem(contentId: string, ev: Record<string, unknown>, data: Record<string, unknown>): Promise<GenItem> {
-    return {
-      generation: generationOf(data),
-      content_id: contentId,
-      reference_count: await projectReferenceCounter(s, String(ev.id)),
-      citation_count: await countCitationLinksForContent(s, contentId),
-      lineage_recorded: data.lineage_meta !== undefined,
-    };
-  }
-
-  const rootEv = await s.readEvent(contentKey(rootId));
-  if (!rootEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
-  const rootData = dataOf(rootEv);
-  const items: GenItem[] = [await toItem(rootId, rootEv, rootData)];
+  const items: LineageChainItem[] = [rootItem];
   const visited = new Set<string>([rootId]);
-  const queue: { id: string; data: Record<string, unknown> }[] = [{ id: rootId, data: rootData }];
+  const queue: LineageChainItem[] = [rootItem];
   while (queue.length) {
-    const cur = queue.shift() as { id: string; data: Record<string, unknown> };
-    for (const childId of childCandidatesOf.get(cur.id) ?? []) {
+    const cur = queue.shift() as LineageChainItem;
+    for (const childId of childCandidatesOf.get(cur.content_id) ?? []) {
       if (visited.has(childId)) continue;
       const childEv = await s.readEvent(contentKey(childId));
       if (!childEv) continue;
       const childData = dataOf(childEv);
       if (!isGenerationEdge(childData, cur.data)) continue;
       visited.add(childId);
-      items.push(await toItem(childId, childEv, childData));
-      queue.push({ id: childId, data: childData });
+      const item: LineageChainItem = {
+        content_id: childId, generation: generationOf(childData), data: childData, envelope_id: String(childEv.id),
+      };
+      items.push(item);
+      queue.push(item);
     }
   }
+  return items;
+}
+
+// GET /research/content/:id/generations — 世代横断ビュー(親設計R0801-436936 §3案2-A c・
+// 裁定R0801-9398e1 T2)。系譜の照合キーは uuid ではなく derived_from citation-link(裁定R-3)。
+// 上へ: 自ノードの prefix scan で親を辿る(安い)。下へ: truth/ihl.citation.link.v1/ の全走査に
+// なる(既存 GET /research/content/:id/cited-by-posts と同型・index があるかのように書かない=
+// O(n))。lineage_recorded は「その世代が実際に lineage_meta を持つか」を正直に返す(旧レコード
+// root は generation:0/lineage_recorded:false=推定値であることを明示・誇張ゼロ規約)。
+researchContentRoutes.get("/research/content/:id/generations", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const startEv = await s.readEvent(contentKey(id));
+  if (!startEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+
+  const rootId = await findLineageRootId(s, id);
+  const chain = await walkLineageChain(s, rootId);
+  if (!chain.length) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+
+  const items = await Promise.all(chain.map(async (n) => ({
+    generation: n.generation,
+    content_id: n.content_id,
+    reference_count: await projectReferenceCounter(s, n.envelope_id),
+    citation_count: await countCitationLinksForContent(s, n.content_id),
+    lineage_recorded: n.data.lineage_meta !== undefined,
+  })));
 
   items.sort((a, b) => a.generation - b.generation || a.content_id.localeCompare(b.content_id));
   return c.json({ content_id: id, generations: items });
+});
+
+// 境界(設計R0801-436936 §4案4-A): S4「いつでも戻せる」復元(V3-AIP-108/109・REF-1裁定=○)。
+// POST .../restore は対象世代(:id)を指す現行ポインタを1件appendするだけ — 既存イベントは
+// 1バイトも書き換えず、generation も増やさない(=「戻す」で更新回数が水増しされない。
+// next-generation とは別の意味論)。GET .../current は「現在値」を解決する読み出し専用投影。
+//
+// POST /research/content/:id/restore — :id は戻したい世代(復元先)の content_id。
+researchContentRoutes.post("/research/content/:id/restore", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const targetEv = await s.readEvent(contentKey(id));
+  if (!targetEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const actorId = c.get("actorId");
+  // lineage_root はサーバが up-walk で解決する(クライアント指定は信用しない・
+  // V3-AUT-17のactor_id強制刻印と同じ思想)。
+  const rootId = await findLineageRootId(s, id);
+  const pointerId = ulid();
+  const data: Record<string, unknown> = {
+    pointer_id: pointerId,
+    lineage_root: rootId,
+    current_content_id: id,
+    actor_id: actorId,
+    created_at: new Date().toISOString(),
+    schema_version: SCHEMA_VERSION,
+  };
+  const res = await s.putEventAt(
+    `truth/${CONTENT_CURRENT_TYPE}/${rootId}/${pointerId}.json`,
+    envelope(CONTENT_CURRENT_TYPE, CONTENT_CURRENT_SCHEMA, actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_CONTENT_CURRENT", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_POINTER", key: res.key }, 409);
+  return c.json({ pointer_id: pointerId, lineage_root: rootId, current_content_id: id }, 201);
+});
+
+// GET /research/content/:id/current — :id は系譜内の任意の世代の content_id。「現在値」=
+// 同一 lineage_root 配下の現行ポインタの pointer_id(ULID)昇順の最後。ポインタが1件も無い
+// 系譜(まだ一度も restore していない/next-generation のみで運用中)は、従来どおり
+// 「generation最大=現行」へフォールバックする(response.resolved_by で挙動を明示・誇張ゼロ)。
+researchContentRoutes.get("/research/content/:id/current", async (c) => {
+  const id = c.req.param("id");
+  const s = store(c);
+  const startEv = await s.readEvent(contentKey(id));
+  if (!startEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
+  const rootId = await findLineageRootId(s, id);
+  const pointers = (await s.listEvents(`truth/${CONTENT_CURRENT_TYPE}/${rootId}/`))
+    .map(dataOf)
+    .sort((a, b) => String(a.pointer_id).localeCompare(String(b.pointer_id)));
+  if (pointers.length) {
+    const last = pointers[pointers.length - 1];
+    return c.json({
+      content_id: id,
+      lineage_root: rootId,
+      current_content_id: String(last.current_content_id),
+      resolved_by: "pointer",
+    });
+  }
+  const chain = await walkLineageChain(s, rootId);
+  const maxItem = chain.reduce((best, cur) => (cur.generation > best.generation ? cur : best), chain[0]);
+  return c.json({
+    content_id: id,
+    lineage_root: rootId,
+    current_content_id: maxItem.content_id,
+    resolved_by: "generation_max_fallback",
+  });
 });
 
 // POST /research/content/:id/tags — 確認 POST でのみ tag_event を append（WIK-14）。

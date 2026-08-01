@@ -699,6 +699,130 @@ describe("V3-AIP-108/109 GET /research/content/:id/generations (世代横断ビ�
   });
 });
 
+describe("V3-AIP-108/109 S4 復元(POST .../restore・GET .../current・設計R0801-436936 §4案4-A・REF-1裁定=○)", () => {
+  const paperBody = (contentId: string, title = "Restore paper") => ({
+    content_id: contentId, content_type: "paper", title,
+    sections: {
+      purpose: { filled: false, text: "" }, hypothesis: { filled: false, text: "" },
+      conditions: { filled: false, text: "" }, verification: { filled: false, text: "" },
+      phase: { filled: false, text: "" }, gap: { filled: false, text: "" },
+    },
+    completeness_pct: 0,
+  });
+
+  it("戻した後 GET .../current が旧世代を返す(pointer_id昇順の最後・resolved_by=pointer)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("RST-0"));
+    const gen1Res = await post(bucket, "/api/v1/research/content/RST-0/next-generation", { title: "v1" });
+    const { content_id: gen1Id } = (await gen1Res.json()) as { content_id: string };
+    await post(bucket, `/api/v1/research/content/${gen1Id}/next-generation`, { title: "v2" });
+
+    // gen2 が今の現行(next-generationのみ・まだ一度も戻していない)。ここで gen0(RST-0)へ戻す。
+    const restoreRes = await post(bucket, "/api/v1/research/content/RST-0/restore", {});
+    expect(restoreRes.status).toBe(201);
+
+    const currentRes = await get(bucket, "/api/v1/research/content/RST-0/current");
+    expect(currentRes.status).toBe(200);
+    const currentBody = (await currentRes.json()) as { current_content_id: string; resolved_by: string };
+    expect(currentBody.current_content_id).toBe("RST-0");
+    expect(currentBody.resolved_by).toBe("pointer");
+
+    // 系譜内のどの世代のidから current を叩いても同じ lineage_root を経由して同じ結果になる。
+    const currentFromGen1 = await get(bucket, `/api/v1/research/content/${gen1Id}/current`);
+    expect(((await currentFromGen1.json()) as { current_content_id: string }).current_content_id).toBe("RST-0");
+  });
+
+  it("戻しても generation は増えない(復元前後でlineage最大generationが不変・既存イベントは書き換えない)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("RST-GEN-0"));
+    const gen1Res = await post(bucket, "/api/v1/research/content/RST-GEN-0/next-generation", { title: "v1" });
+    const { content_id: gen1Id } = (await gen1Res.json()) as { content_id: string };
+
+    const before = await (await get(bucket, "/api/v1/research/content/RST-GEN-0/generations")).json();
+    type GenItem = { generation: number; content_id: string };
+    const maxBefore = Math.max(...(before as { generations: GenItem[] }).generations.map((g) => g.generation));
+    expect(maxBefore).toBe(1); // gen0/gen1のみ
+
+    const restoreRes = await post(bucket, "/api/v1/research/content/RST-GEN-0/restore", {});
+    expect(restoreRes.status).toBe(201);
+
+    const after = await (await get(bucket, "/api/v1/research/content/RST-GEN-0/generations")).json();
+    const genList = (after as { generations: GenItem[] }).generations;
+    const maxAfter = Math.max(...genList.map((g) => g.generation));
+    expect(maxAfter).toBe(1); // 戻しても世代は増えていない(=更新回数は水増しされない)
+    expect(genList.map((g) => g.content_id).sort()).toEqual(["RST-GEN-0", gen1Id].sort());
+
+    // current は gen0 を指すが、gen1 自体は消えていない(append-only・「戻す」は新イベントを
+    // 1件足しただけで既存イベントを書き換えていない)。
+    const current = (await (await get(bucket, "/api/v1/research/content/RST-GEN-0/current")).json()) as {
+      current_content_id: string;
+    };
+    expect(current.current_content_id).toBe("RST-GEN-0");
+    const gen1Detail = await get(bucket, `/api/v1/research/content/${gen1Id}`);
+    expect(gen1Detail.status).toBe(200); // gen1 は依然として readable(削除・書き換えされていない)
+  });
+
+  it("ポインタが1件も無い系譜は generation最大へフォールバックする(resolved_by=generation_max_fallback)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("RST-FB-0"));
+    const gen1Res = await post(bucket, "/api/v1/research/content/RST-FB-0/next-generation", { title: "v1" });
+    const { content_id: gen1Id } = (await gen1Res.json()) as { content_id: string };
+
+    const res = await get(bucket, "/api/v1/research/content/RST-FB-0/current");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { current_content_id: string; resolved_by: string };
+    expect(body.current_content_id).toBe(gen1Id); // gen1(generation最大)が現行
+    expect(body.resolved_by).toBe("generation_max_fallback");
+  });
+
+  it("存在しない content_id は404(restore/currentとも)", async () => {
+    const bucket = new FakeR2Bucket();
+    const restoreRes = await post(bucket, "/api/v1/research/content/nope/restore", {});
+    expect(restoreRes.status).toBe(404);
+    const currentRes = await get(bucket, "/api/v1/research/content/nope/current");
+    expect(currentRes.status).toBe(404);
+  });
+
+  it("未認証だと401(protected route のまま・新routeはPUBLIC_ROUTESに載せない)", async () => {
+    const bucket = new FakeR2Bucket();
+    await createContent(bucket, paperBody("RST-AUTH-1"));
+    const restoreRes = await app.request(
+      "/api/v1/research/content/RST-AUTH-1/restore",
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}) },
+      makeEnv(bucket),
+    );
+    expect(restoreRes.status).toBe(401);
+    const currentRes = await app.request(
+      "/api/v1/research/content/RST-AUTH-1/current",
+      { method: "GET" },
+      makeEnv(bucket),
+    );
+    expect(currentRes.status).toBe(401);
+  });
+
+  it("EVENT_NAMES発火の実測: 壊れた content-current data(pointer_id欠落)は putEventAt が invalid で弾く", async () => {
+    const bucket = new FakeR2Bucket();
+    const store = new TruthStore(bucket);
+    const badData = {
+      // pointer_id を欠落させる(required違反)。EVENT_NAMES に "content-current" が
+      // 登録されていなければ eventSchemaFor() が null を返し、この検証自体がスキップされて
+      // invalid ではなく inserted になってしまう(設計R0801-436936 §1-7の罠)。
+      lineage_root: "root-x",
+      current_content_id: "cur-x",
+      actor_id: "tester",
+      created_at: "2026-08-01T00:00:00.000Z",
+      schema_version: "1",
+    };
+    const env = makeEnvelope({
+      type: "ihl.research.content_current.v1",
+      dataschema: "schemas/events/content-current.schema.json",
+      data: badData,
+    });
+    const res = await store.putEventAt("truth/ihl.research.content_current.v1/root-x/bad-1.json", env);
+    expect(res.status).toBe("invalid");
+  });
+});
+
 describe("V3-PPR-03 POST /research/content: filled:true な section の text 空は400で拒否", () => {
   it("filled:true かつ text が空文字だと INVALID_SECTION_FILLED_WITHOUT_TEXT で400", async () => {
     const bucket = new FakeR2Bucket();
