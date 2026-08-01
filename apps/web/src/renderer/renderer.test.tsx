@@ -1122,6 +1122,53 @@ describe("Renderer — individual-universe「graph-view」ノード (g81-bundleD
   });
 });
 
+describe("Renderer — obs-search「グラフ」タブ (g82-uib09wire T3)", () => {
+  it("switches into the graph tab and mounts the shared GraphViewNode (GET /individuals + pedigree-links)", async () => {
+    const onAction = vi.fn(async (action: Action) => {
+      if (action.kind !== "api") throw new Error("unexpected non-api action in test");
+      if (action.path.startsWith("/api/v1/individuals/pedigree-links")) {
+        return { links: [{ child_id: "child-1", parent_id: "sire-1", parent_role: "sire" }] };
+      }
+      if (action.path.startsWith("/api/v1/individuals")) {
+        return {
+          individuals: [
+            {
+              individual_id: "sire-1",
+              label: "父トノサマ",
+              species: "トノサマバッタ",
+              latest_length_mm: 70,
+              latest_weight_g: 40,
+              thumbnail_path: null,
+            },
+            {
+              individual_id: "child-1",
+              label: "子トノサマ",
+              species: "トノサマバッタ",
+              latest_length_mm: 80,
+              latest_weight_g: 45,
+              thumbnail_path: null,
+            },
+          ],
+        };
+      }
+      if (action.path.startsWith("/api/v1/placements")) return { placements: [] };
+      throw new Error(`unexpected action.path in test: ${action.path}`);
+    });
+    const def = loadScreenDef("obs-search");
+    render(<Renderer def={def} onAction={onAction} />);
+    fireEvent.click(screen.getByRole("tab", { name: "グラフ" }));
+    // jsdomにWebGLが無いため3d-force-graphの初期化はhonest fallbackへ倒れる
+    // (individual-universeのgraph-viewテストと同じ経路。GraphView.tsx本体はimport共有=コピー0行)。
+    expect(await screen.findByTestId("graph-view-fallback", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(onAction).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "api", method: "GET", path: "/api/v1/individuals" }),
+    );
+    expect(onAction).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "api", method: "GET", path: "/api/v1/individuals/pedigree-links" }),
+    );
+  });
+});
+
 describe("Renderer — A層 image-grid node (c7 ui-parity-map §2-6)", () => {
   it("binds items into thumbnail cards with label/meta/badge", async () => {
     const onAction = vi.fn(async () => ({
