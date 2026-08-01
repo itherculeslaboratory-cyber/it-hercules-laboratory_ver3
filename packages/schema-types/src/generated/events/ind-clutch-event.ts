@@ -17,9 +17,9 @@ export interface IndClutchEvent {
    */
   clutch_id: string;
   /**
-   * イベント種別。recount=絶対数の再計測（基点リセット）／attrition=減耗照合（死亡差引）／promote=個別容器へ分割（個体化・count層からindividual層へ）。
+   * イベント種別。recount=絶対数の再計測（基点リセット）／attrition=減耗照合（死亡差引）／promote=個別容器へ分割（個体化・count層からindividual層へ）／series_set=表示連番の先頭トークン series の改名（OQ-LB-01 裁定の LWW 投影・count には一切影響しない命名イベント。count 系投影は必ずこの kind を無視すること）。
    */
-  kind: "recount" | "attrition" | "promote";
+  kind: "recount" | "attrition" | "promote" | "series_set";
   /**
    * イベント発生時刻（RFC3339）。
    */
@@ -40,6 +40,10 @@ export interface IndClutchEvent {
    * recount 時の counted − expected_before（V3-IND-36 attrition 照合の検出値）。正=水増し疑い（想定より多い）／負=行方不明疑い（想定より少ない・未記録の減耗）。kind=recount のみ設定。
    */
   discrepancy?: number;
+  /**
+   * 表示連番の先頭トークン（例「王」）。kind=series_set のみ設定。clutch レコードは書き換えず、この追記レコードの最新値を読出時に投影する（OQ-LB-01・不変条項③との両立）。
+   */
+  series?: string;
   /**
    * promote 時に生成された individual_id の一覧。
    */

@@ -85,6 +85,43 @@ export async function projectClutchCurrentCount(s: TruthStore, clutchId: string)
 }
 
 /**
+ * 既定 series（改名レコードが1件も無い時の投影値・書き込みは一切しない）。
+ * 設計正本 docs/planning/c7/usecase-driven-design.md 収束フロー2:
+ * container_label があればそれ、無ければ clutch_id 由来の短縮既定。
+ * これにより promote は series 未設定でも一切ブロックされない（ハードゲート撤廃）。
+ */
+export function defaultClutchSeries(clutchData: Record<string, unknown>): string {
+  const label = typeof clutchData.container_label === "string" ? clutchData.container_label.trim() : "";
+  if (label) return label;
+  return String(clutchData.clutch_id ?? "").slice(-4).toUpperCase();
+}
+
+/**
+ * series 投影（都度再計算・OQ-LB-01 裁定 = settings pref-set と同じ LWW 投影パターン）。
+ * clutch レコードは 1 バイトも書き換えない — TruthStore に update/delete が存在せず
+ * （packages/truth/src/store.ts の CL-12 注記）、改名は kind:"series_set" の追記のみ。
+ *
+ * ★順序キーは created_at（サーバ確定値）+ event_id（ULID）である。本ファイルの
+ * 兄弟投影（projectClutchCurrentCount / projectClutchReconciliation）は at で並べるが、
+ * at は body 由来でクライアントが自由に決められるため、LWW キーに使うと過去日付を
+ * 投げるだけで古い名前を復活させられる。pref-set（settings-routes.ts projectPreferences）
+ * と同じく created_at + ULID を採る。clutch-series-lww テストがこれを固定する。
+ */
+export async function projectClutchSeries(s: TruthStore, clutchId: string): Promise<string | null> {
+  const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
+  if (!clutch) return null;
+  const renames = (await s.listEvents(`truth/${CLUTCH_EVENT_TYPE}/${clutchId}-`))
+    .map(dataOf)
+    .filter((e) => e.kind === "series_set" && typeof e.series === "string" && e.series !== "")
+    .sort(
+      (a, b) =>
+        String(a.created_at).localeCompare(String(b.created_at)) ||
+        String(a.event_id).localeCompare(String(b.event_id)),
+    );
+  return renames.length ? String(renames[renames.length - 1].series) : defaultClutchSeries(dataOf(clutch));
+}
+
+/**
  * V3-IND-36 attrition 照合ビュー: count層の減少(recount/attrition)と
  * individual層の増加(promote)を突合し、水増し(discrepancy>0)・行方不明
  * (discrepancy<0)を検出する。各 recount イベントが書込時点で計算済みの
@@ -138,7 +175,8 @@ async function clutchView(s: TruthStore, clutchId: string): Promise<Record<strin
   const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
   if (!clutch) return null;
   const currentCount = await projectClutchCurrentCount(s, clutchId);
-  return { ...dataOf(clutch), current_count: currentCount };
+  const series = await projectClutchSeries(s, clutchId);
+  return { ...dataOf(clutch), current_count: currentCount, series };
 }
 
 // ── routes ───────────────────────────────────────────────────────────────
@@ -266,7 +304,8 @@ export async function writeClutchEvent(
   clutchId: string,
   body: Record<string, unknown>,
 ): Promise<
-  { ok: true; event_id: string; discrepancy?: number } | { ok: false; error: string; details?: string[] }
+  | { ok: true; event_id: string; discrepancy?: number; series?: string }
+  | { ok: false; error: string; details?: string[] }
 > {
   const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
   if (!clutch) return { ok: false, error: "NOT_FOUND" };
@@ -280,7 +319,7 @@ export async function writeClutchEvent(
   }
 
   const kind = body.kind;
-  if (kind !== "recount" && kind !== "attrition") {
+  if (kind !== "recount" && kind !== "attrition" && kind !== "series_set") {
     return { ok: false, error: "INVALID_KIND" }; // promote has its own dedicated route
   }
   let expectedBefore: number | null = null;
@@ -299,6 +338,13 @@ export async function writeClutchEvent(
     }
     const current = await projectClutchCurrentCount(s, clutchId);
     if (current !== null && body.death_count > current) return { ok: false, error: "ATTRITION_EXCEEDS_COUNT" };
+  }
+  if (kind === "series_set") {
+    // OQ-LB-01: 改名は追記のみ。空文字/非文字列は 400（既定へ戻す手段は「既定値と同じ
+    // 文字列を明示的に追記する」であり、空追記による取り消しは append-only 上定義しない）。
+    if (typeof body.series !== "string" || !body.series.trim()) {
+      return { ok: false, error: "INVALID_SERIES" };
+    }
   }
   if (typeof body.at !== "string" || !body.at) return { ok: false, error: "INVALID_AT" };
 
@@ -319,6 +365,7 @@ export async function writeClutchEvent(
     }
   }
   if (kind === "attrition") data.death_count = body.death_count;
+  if (kind === "series_set") data.series = String(body.series).trim();
   if (typeof body.note === "string") data.note = body.note;
 
   const res = await s.putEventAt(
@@ -327,6 +374,11 @@ export async function writeClutchEvent(
   );
   if (res.status === "invalid") return { ok: false, error: "INVALID_CLUTCH_EVENT", details: res.errors };
   if (res.status === "conflict") return { ok: false, error: "DUPLICATE_CLUTCH_EVENT" };
+  // pref-set 同様、書込みAPIは「再計算した投影」を返す（settings-routes.ts projectPreferences 応答と同型）。
+  if (kind === "series_set") {
+    const series = await projectClutchSeries(s, clutchId);
+    return series === null ? { ok: true, event_id: eventId } : { ok: true, event_id: eventId, series };
+  }
   return typeof data.discrepancy === "number"
     ? { ok: true, event_id: eventId, discrepancy: data.discrepancy }
     : { ok: true, event_id: eventId };
@@ -344,7 +396,13 @@ clutchRoutes.post("/clutches/:id/events", async (c) => {
     return c.json({ error: r.error, details: r.details }, status);
   }
   return c.json(
-    { event_id: r.event_id, clutch_id: clutchId, kind: body.kind, ...(r.discrepancy !== undefined ? { discrepancy: r.discrepancy } : {}) },
+    {
+      event_id: r.event_id,
+      clutch_id: clutchId,
+      kind: body.kind,
+      ...(r.discrepancy !== undefined ? { discrepancy: r.discrepancy } : {}),
+      ...(r.series !== undefined ? { series: r.series } : {}),
+    },
     201,
   );
 });

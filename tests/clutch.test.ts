@@ -566,3 +566,145 @@ describe("individuals list extension — stage/placement_id/last_care_at (C7 ス
     expect(row.last_care_at).not.toBeNull();
   });
 });
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+describe("OQ-LB-01 clutch series (LWW投影・settings pref-set と同型)", () => {
+  it("S1: container_label 付きで作成 -> series はその値と完全一致", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { container_label: "王ケース" });
+    const detail = (await (await get(`/api/v1/clutches/${id}`, env)).json()) as { series: string };
+    expect(detail.series).toBe("王ケース");
+  });
+
+  it("S2: container_label 無しで作成 -> series は clutch_id 末尾4文字の大文字化と完全一致", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env);
+    const detail = (await (await get(`/api/v1/clutches/${id}`, env)).json()) as { series: string };
+    expect(detail.series).toBe(id.slice(-4).toUpperCase());
+  });
+
+  it("S3: series_set 追記 -> 201 かつ応答 series が一致、続く GET も一致", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env);
+    const res = await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "王", at: "2026-08-02T00:00:00Z" }, env);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { series: string };
+    expect(body.series).toBe("王");
+    const detail = (await (await get(`/api/v1/clutches/${id}`, env)).json()) as { series: string };
+    expect(detail.series).toBe("王");
+  });
+
+  it("S4: series_set を2回追記 -> GET は最新(LWW後勝ち)と完全一致", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env);
+    await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "王", at: "2026-08-02T00:00:00Z" }, env);
+    await sleep(2); // ensure the 2nd write's server-stamped created_at (ms resolution) is strictly later — LWW tie-break key
+    await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "覇", at: "2026-08-03T00:00:00Z" }, env);
+    const detail = (await (await get(`/api/v1/clutches/${id}`, env)).json()) as { series: string };
+    expect(detail.series).toBe("覇");
+  });
+
+  it("S5: バックデート無効 — 2本目の at が1本目より過去でも GET は後から書いた方を返す", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env);
+    await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "王", at: "2026-08-02T00:00:00Z" }, env);
+    await sleep(2); // ensure the 2nd write's server-stamped created_at (ms resolution) is strictly later — LWW tie-break key
+    await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "覇", at: "2020-01-01T00:00:00Z" }, env); // at is body-supplied and earlier, created_at (server-stamped) is later
+    const detail = (await (await get(`/api/v1/clutches/${id}`, env)).json()) as { series: string };
+    expect(detail.series).toBe("覇");
+  });
+
+  it("S6: append-only の実測 — clutch本体は1件のまま無改変、series_set 追記は2件", async () => {
+    const { bucket, env } = ctx();
+    const id = await createClutch(env);
+    await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "王", at: "2026-08-02T00:00:00Z" }, env);
+    await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "覇", at: "2026-08-03T00:00:00Z" }, env);
+
+    const clutchKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch.v1/${id}`));
+    expect(clutchKeys).toHaveLength(1);
+    const clutchEnvelope = JSON.parse(bucket.objects.get(clutchKeys[0])!.body as string) as { data: Record<string, unknown> };
+    expect(Object.prototype.hasOwnProperty.call(clutchEnvelope.data, "series")).toBe(false);
+
+    const eventKeys = [...bucket.objects.keys()].filter((k) => k.startsWith(`truth/ihl.ind.clutch_event.v1/${id}-`));
+    let seriesSetCount = 0;
+    for (const k of eventKeys) {
+      const envelope = JSON.parse(bucket.objects.get(k)!.body as string) as { data: Record<string, unknown> };
+      if (envelope.data.kind === "series_set") seriesSetCount++;
+    }
+    expect(seriesSetCount).toBe(2);
+  });
+
+  it("S7: count層への不作用 — series_set を挟んでも current_count/reconciliation/completeness は完全に同値", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { initial_count: 20 });
+    await post(`/api/v1/clutches/${id}/events`, { kind: "recount", counted: 18, at: "2026-07-01T00:00:00Z" }, env);
+    await post(`/api/v1/clutches/${id}/events`, { kind: "attrition", death_count: 2, at: "2026-07-02T00:00:00Z" }, env);
+    await post(`/api/v1/clutches/${id}/promote`, { count: 3, at: "2026-07-03T00:00:00Z" }, env);
+
+    const before = (await (await get(`/api/v1/clutches/${id}`, env)).json()) as { current_count: number };
+    const reconBefore = await (await get(`/api/v1/clutches/${id}/reconciliation`, env)).json();
+    const completeBefore = await (await get(`/api/v1/clutches/${id}/completeness`, env)).json();
+
+    const setRes = await post(`/api/v1/clutches/${id}/events`, { kind: "series_set", series: "王", at: "2026-07-04T00:00:00Z" }, env);
+    expect(setRes.status).toBe(201);
+
+    const after = (await (await get(`/api/v1/clutches/${id}`, env)).json()) as { current_count: number };
+    const reconAfter = await (await get(`/api/v1/clutches/${id}/reconciliation`, env)).json();
+    const completeAfter = await (await get(`/api/v1/clutches/${id}/completeness`, env)).json();
+
+    expect(after.current_count).toBe(before.current_count);
+    expect(reconAfter).toEqual(reconBefore);
+    expect(completeAfter).toEqual(completeBefore);
+  });
+
+  it("S8: 異常系4条件", async () => {
+    const { env } = ctx();
+    const aH = await bearer("actor-a");
+    const bH = await bearer("actor-b");
+
+    // (1) 他人のクラッチへ series_set -> 403 NOT_OWNER, no write
+    const createRes = await app.request(
+      "/api/v1/clutches",
+      { method: "POST", headers: aH, body: JSON.stringify({ harvested_at: "2026-07-12", initial_count: 10 }) },
+      env,
+    );
+    expect(createRes.status).toBe(201);
+    const clutchId = ((await createRes.json()) as { clutch_id: string }).clutch_id;
+
+    const stolen = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: bH, body: JSON.stringify({ kind: "series_set", series: "王", at: "2026-08-02" }) },
+      env,
+    );
+    expect(stolen.status).toBe(403);
+    expect(await stolen.json()).toEqual({ error: "NOT_OWNER" });
+
+    // (2) series:"" -> 400 INVALID_SERIES
+    const empty = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: aH, body: JSON.stringify({ kind: "series_set", series: "", at: "2026-08-02" }) },
+      env,
+    );
+    expect(empty.status).toBe(400);
+    expect(await empty.json()).toEqual({ error: "INVALID_SERIES" });
+
+    // (3) series 欠落 -> 400 INVALID_SERIES
+    const missing = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: aH, body: JSON.stringify({ kind: "series_set", at: "2026-08-02" }) },
+      env,
+    );
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toEqual({ error: "INVALID_SERIES" });
+
+    // (4) 未知の kind "series" -> 400 INVALID_KIND
+    const unknownKind = await app.request(
+      `/api/v1/clutches/${clutchId}/events`,
+      { method: "POST", headers: aH, body: JSON.stringify({ kind: "series", series: "王", at: "2026-08-02" }) },
+      env,
+    );
+    expect(unknownKind.status).toBe(400);
+    expect(await unknownKind.json()).toEqual({ error: "INVALID_KIND" });
+  });
+});
