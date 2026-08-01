@@ -58,6 +58,41 @@ function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
 }
 
+// g90-w2search T-A3(V3-UIX-40残り「色検索」): apps/web/src/lib/color-analysis.ts の
+// rgbToLab と同一アルゴリズム(sRGB→線形RGB→XYZ→Lab, D65白色点)。web(Next.js)と
+// api(Workers)は別デプロイ対象でパッケージ境界を跨いだimportができないため、
+// この最小関数だけ複製する(重複はここ1関数のみ・肥大化させない)。
+function hexToLab(hex: string): { l: number; a: number; b: number } | null {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  const toLinear = (c: number): number => {
+    const cn = c / 255;
+    return cn <= 0.04045 ? cn / 12.92 : Math.pow((cn + 0.055) / 1.055, 2.4);
+  };
+  const rl = toLinear(r);
+  const gl = toLinear(g);
+  const bl = toLinear(b);
+  const x = rl * 0.4124564 + gl * 0.3575761 + bl * 0.1804375;
+  const y = rl * 0.2126729 + gl * 0.7151522 + bl * 0.072175;
+  const z = rl * 0.0193339 + gl * 0.119192 + bl * 0.9503041;
+  const xn = x / 0.95047;
+  const yn = y / 1.0;
+  const zn = z / 1.08883;
+  const f = (t: number): number => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const fx = f(xn);
+  const fy = f(yn);
+  const fz = f(zn);
+  return { l: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) };
+}
+
+// 色検索の既定許容ΔE76(この値以内を「近い色」として返す)。呼び出し側で
+// ?color_max_delta= により上書き可能(0<x<=100の範囲外は既定値へフォールバック)。
+const COLOR_SEARCH_DEFAULT_MAX_DELTA = 30;
+
 function dataOf(e: Record<string, unknown>): Record<string, unknown> {
   return (e.data ?? {}) as Record<string, unknown>;
 }
@@ -1360,6 +1395,19 @@ async function listIndividualsFor(
   const lineageFilter = c.req.query("lineage_id") ?? ""; // V3-IND-34 複数系統並行管理(完全一致)
   const sortKey = c.req.query("sort") ?? "";
   const sortOrder = c.req.query("order") === "asc" ? 1 : -1; // 既定 desc(新しい/多い/大きい順)
+  // g90-w2search T-A3(V3-UIX-40残り「色検索」): #RRGGBB を受け取りLab変換して、
+  // 各個体の最新capture色(ihl.obs.color.v1・g80-e2colorで新設済み)とのΔE76が
+  // color_max_delta 以内のものだけへ絞り込み、近い順(昇順)に並べ替える。
+  // color_hex 未指定時はこのブロックの分岐に一切入らず、既存の挙動と完全に同じ
+  // (新規パラメータの追加のみ・既存コンシューマへの影響なし)。
+  const colorHexParam = c.req.query("color_hex") ?? "";
+  const queryLab = colorHexParam ? hexToLab(colorHexParam) : null;
+  const colorMaxDeltaParam = Number(c.req.query("color_max_delta") ?? "");
+  const colorMaxDelta =
+    Number.isFinite(colorMaxDeltaParam) && colorMaxDeltaParam > 0 && colorMaxDeltaParam <= 100
+      ? colorMaxDeltaParam
+      : COLOR_SEARCH_DEFAULT_MAX_DELTA;
+  let colorExcludedNoData = 0;
   const s = store(c);
   const cohortIds = parentIdFilter ? new Set(await offspringOf(s, parentIdFilter)) : null;
   const masters = (await s.listEvents(`truth/${MASTER_TYPE}/`))
@@ -1458,6 +1506,20 @@ async function listIndividualsFor(
     if (statusFilter && lifeStatus !== statusFilter) continue;
     const lineageId = typeof m.lineage_id === "string" ? m.lineage_id : null;
     if (lineageFilter && lineageId !== lineageFilter) continue; // V3-IND-34 完全一致
+    // g90-w2search T-A3(色検索): この時点で他の全フィルタを通過した個体だけを対象に
+    // 最新capture色とのΔE76を測る(母集団を先に絞ってから重いcolor読み込みをする
+    // ことで、既存フィルタと組み合わせた時の読み取り量を増やさない)。
+    let colorDistance: number | null = null;
+    if (queryLab) {
+      const latestCaptureId = latest ? String(latest.data.capture_id ?? "") : "";
+      const lab = latestCaptureId ? await loadCaptureLabFor(s, latestCaptureId) : null;
+      if (!lab) {
+        colorExcludedNoData++;
+        continue; // 色情報を持たない個体(未遡及の過去capture等)は色検索の対象外
+      }
+      colorDistance = deltaE76(queryLab, lab);
+      if (colorDistance > colorMaxDelta) continue;
+    }
     // 最新観測から遡って最初に写真がある capture のサムネ URL(無ければ null)。
     let thumbnailPath: string | null = null;
     for (let i = caps.length - 1; i >= 0; i--) {
@@ -1487,7 +1549,14 @@ async function listIndividualsFor(
       life_status: lifeStatus,
       next_observation_at: nextObservationAt,
       lineage_id: lineageId, // V3-IND-34 複数系統並行管理タグ
+      ...(queryLab ? { color_distance: colorDistance } : {}),
     });
+  }
+  if (queryLab) {
+    // 色検索が有効な間は近い順(ΔE76昇順)を優先する。sort/order パラメータは無視
+    // (色検索と通常ソートの同時指定は想定しておらず、無視する旨をUI側の注記で示す)。
+    individuals.sort((a, b) => (a.color_distance as number) - (b.color_distance as number));
+    return c.json({ individuals, color_search: { excluded_no_color: colorExcludedNoData, max_delta: colorMaxDelta } });
   }
   if (LIST_SORT_FIELDS.has(sortKey)) {
     individuals.sort((a, b) => {

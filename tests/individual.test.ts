@@ -345,6 +345,48 @@ describe("IND-12 交配結果(projectCross・決定論)", () => {
   });
 });
 
+describe("g90-w2search T-A3: GET /individuals?color_hex= (V3-UIX-40残り「色検索」)", () => {
+  async function seedCapture(env: object, subjectRef: string): Promise<string> {
+    const res = await post("/api/v1/observation/captures", { domain: "biology", subject_ref: subjectRef }, env);
+    return ((await res.json()) as { capture_id: string }).capture_id;
+  }
+  async function seedColor(env: object, captureId: string, lab: { l: number; a: number; b: number }) {
+    const res = await post(`/api/v1/observation/${captureId}/color`, { lab, hsv: { h: 0, s: 0, v: 0 } }, env);
+    expect(res.status).toBe(202);
+  }
+
+  it("近い色だけをΔE76昇順で返し、色情報の無い個体はexcluded_no_colorへ計上して除外する", async () => {
+    const { env } = ctx();
+    const near = await createInd(env);
+    await seedColor(env, await seedCapture(env, `individual/${near}`), { l: 5, a: 0, b: 0 }); // #000000とのΔE76=5
+    const far = await createInd(env);
+    await seedColor(env, await seedCapture(env, `individual/${far}`), { l: 80, a: 0, b: 0 }); // ΔE76=80(既定maxDelta=30の外)
+    const noColor = await createInd(env);
+    await seedCapture(env, `individual/${noColor}`); // color イベント無し(未遡及)
+
+    const r = (await (await get("/api/v1/individuals?color_hex=000000", env)).json()) as {
+      individuals: { individual_id: string; color_distance: number }[];
+      color_search: { excluded_no_color: number; max_delta: number };
+    };
+    expect(r.individuals.map((i) => i.individual_id)).toEqual([near]);
+    expect(r.individuals[0].color_distance).toBeCloseTo(5, 5);
+    expect(r.color_search).toEqual({ excluded_no_color: 1, max_delta: 30 });
+
+    // color_max_delta を広げると far も対象に入り、近い順(ΔE76昇順)で並ぶ。
+    const wide = (await (await get("/api/v1/individuals?color_hex=000000&color_max_delta=90", env)).json()) as {
+      individuals: { individual_id: string }[];
+    };
+    expect(wide.individuals.map((i) => i.individual_id)).toEqual([near, far]);
+  });
+
+  it("color_hex 未指定時は通常のGET /individuals応答のまま(color_searchキーを含まない)", async () => {
+    const { env } = ctx();
+    await createInd(env);
+    const r = (await (await get("/api/v1/individuals", env)).json()) as Record<string, unknown>;
+    expect(r.color_search).toBeUndefined();
+  });
+});
+
 describe("IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)", () => {
   it("6 文化ブロック + timeline を返す", async () => {
     const { env } = ctx();

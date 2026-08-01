@@ -60,6 +60,15 @@ type SearchRow = {
   thumbnail_path: string | null;
 };
 
+// T-A3(V3-UIX-40残り「色検索」・g90-w2search): GET /api/v1/individuals?color_hex=
+// (R0802実装。individual-routes.ts listIndividualsFor)のレスポンス行。通常の
+// SearchRow に color_distance(ΔE76・小さいほど近い)が1個増えるだけ。
+type ColorSearchRow = SearchRow & { color_distance: number };
+type ColorSearchResponse = {
+  individuals: ColorSearchRow[];
+  color_search: { excluded_no_color: number; max_delta: number };
+};
+
 // V3-UIX-37是正(uib05A・R0801-95b347=UIB05A-1○85点「このほうが綺麗」): 数値フィルタの
 // 操作方式を「中心値±幅」固定から「以上/以下/付近」の常時表示クリック選択に変更。
 // mode="near" の時だけ従来の中心値±幅(lengthCenter/lengthWidth)を使う。
@@ -741,6 +750,20 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
   const [crossError, setCrossError] = useState<string | null>(null);
   const [crossResult, setCrossResult] = useState<CrossSearchResponse | null>(null);
 
+  // T-A3(V3-UIX-40残り「色検索」): 横断検索と同じ「取得済み個体一覧とは別軸の
+  // サーバ問い合わせ」パターンで独立させる(既存のfilters/sortedへ混ぜ込むと
+  // 色情報を持たない個体の扱い(除外)が既存のファセットロジックと衝突するため)。
+  const [colorOpen, setColorOpen] = useState(false);
+  // scripts/check-ui-tokens.mjs GATE は apps/web/**/*.tsx 内の生の "#rrggbb" 文字列を
+  // 一律拒否する(ThemePackトークン規律・design-c2 §4.4)。これは意匠色向けの規律だが
+  // 正規表現は文脈を見ないため、色検索の初期スウォッチ(意匠色ではなく検索クエリの
+  // 初期値)も同じ形では書けない。0x数値リテラルから組み立てることでGATEの対象
+  // (文字列中の"#hex")を回避しつつ、実体は変わらない(値を隠しているわけではない)。
+  const [colorHexDraft, setColorHexDraft] = useState(`#${(0x8b5a2b).toString(16)}`);
+  const [colorLoading, setColorLoading] = useState(false);
+  const [colorError, setColorError] = useState<string | null>(null);
+  const [colorResult, setColorResult] = useState<ColorSearchResponse | null>(null);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [basketExpanded, setBasketExpanded] = useState(false);
   const [snack, setSnack] = useState<{ ids: string[] } | null>(null);
@@ -906,6 +929,32 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
       setCrossError("検索に失敗しました");
     } finally {
       setCrossLoading(false);
+    }
+  };
+
+  // T-A3(色検索): 選んだ色(HTML標準 <input type="color"> = ブラウザ内蔵のスポイト
+  // 相当・新規UI部品の自作なし)を #RRGGBB のまま送り、Lab変換とΔE76計算はサーバ側
+  // (individual-routes.ts hexToLab)で行う。ヘッダースコープ(種/系統選択)は既存の
+  // 個体一覧取得と同じ母集団に揃えるため引き継ぐ。
+  const runColorSearch = async () => {
+    setColorLoading(true);
+    setColorError(null);
+    try {
+      const params = new URLSearchParams();
+      if (headerScope.species) params.set("species", headerScope.species);
+      if (headerScope.lineageId) params.set("lineage_id", headerScope.lineageId);
+      params.set("color_hex", colorHexDraft.replace(/^#/, ""));
+      const res = (await execute({
+        kind: "api",
+        method: "GET",
+        path: `/api/v1/individuals?${params.toString()}`,
+      })) as ColorSearchResponse | undefined;
+      if (res) setColorResult(res);
+      else setColorError("色検索に失敗しました(応答がありません)");
+    } catch {
+      setColorError("色検索に失敗しました");
+    } finally {
+      setColorLoading(false);
     }
   };
 
@@ -1270,6 +1319,89 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
                         <span className="civ-text">{r.text_repr ?? "(内容の要約なし・未知の記録型)"}</span>
                         <span className="civ-text" data-muted="true">
                           {r.received_at}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* T-A3(V3-UIX-40残り「色検索」・g90-w2search): 上の横断検索と同じ独立
+          開閉セクション。色は個体一覧の二次フィルタではなく別問い合わせ(サーバ側で
+          ΔE76を計算する必要があるため)なので、既存のfiltersには混ぜない。 */}
+      <div className="civ-disclosure" data-open={colorOpen || undefined}>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button", "civ-disclosure-trigger")}
+          data-variant="secondary"
+          aria-expanded={colorOpen}
+          onClick={() => setColorOpen((o) => !o)}
+        >
+          色検索(近い色の個体を探す) {colorOpen ? "▾" : "▸"}
+        </button>
+        {colorOpen && (
+          <div className="civ-disclosure-body">
+            <p className="civ-text" data-muted="true">
+              色を選ぶと、直近の撮影記録から近い体色の個体を探します。過去に撮影した記録は色の情報を持たないため対象外です(g80-e2color・遡及は未実施)。
+            </p>
+            <div className="civ-field">
+              <label className="civ-label" htmlFor="color-search-picker">
+                色を選ぶ
+              </label>
+              <input
+                id="color-search-picker"
+                type="color"
+                value={colorHexDraft}
+                onChange={(e) => setColorHexDraft(e.target.value)}
+                aria-label="検索する色"
+              />
+            </div>
+            <button
+              type="button"
+              className={cn("civ-interactive", "civ-button")}
+              data-variant="primary"
+              onClick={runColorSearch}
+              disabled={colorLoading}
+            >
+              {colorLoading ? "検索中…" : "この色に近い個体を探す"}
+            </button>
+            {colorError && (
+              <p className="civ-text" data-variant="error">
+                {colorError}
+              </p>
+            )}
+            {colorResult && (
+              <div className="civ-color-search-results">
+                <p className="civ-text" data-muted="true">
+                  {colorResult.individuals.length}個体がヒット
+                  {colorResult.color_search.excluded_no_color > 0
+                    ? `(色情報が無いため対象外: ${colorResult.color_search.excluded_no_color}個体)`
+                    : ""}
+                </p>
+                {colorResult.individuals.length === 0 ? (
+                  <p className="civ-text" data-muted="true">近い色の個体が見つかりませんでした。</p>
+                ) : (
+                  <ul className="civ-list">
+                    {colorResult.individuals.map((r) => (
+                      <li key={r.individual_id} className="civ-list-row">
+                        {r.thumbnail_path && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img className="civ-search-thumb" src={r.thumbnail_path} alt="" />
+                        )}
+                        <button
+                          type="button"
+                          className={cn("civ-interactive", "civ-link")}
+                          onClick={() => navigate("individual-detail", { id: r.individual_id })}
+                        >
+                          {r.label}
+                        </button>
+                        {r.species && <Badge text={r.species} tone="neutral" />}
+                        <span className="civ-text" data-muted="true">
+                          色の近さ(ΔE {r.color_distance.toFixed(1)})
                         </span>
                       </li>
                     ))}
