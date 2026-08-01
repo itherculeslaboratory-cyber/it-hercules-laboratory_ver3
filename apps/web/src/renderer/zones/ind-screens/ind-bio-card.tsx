@@ -74,7 +74,15 @@ function IndBioCardNode() {
             <div className="biocard-preview">
               <div className="meishi">
                 <div className="meishi-top">
-                  <div>
+                  <div className="meishi-photo">
+                    {card.thumbnail_path ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={card.thumbnail_path} alt="" />
+                    ) : (
+                      "🪲"
+                    )}
+                  </div>
+                  <div className="meishi-headmeta">
                     <div className="meishi-name">{displayName}</div>
                     {showSpeciesSub && <div className="meishi-sp">{card.species}</div>}
                   </div>
