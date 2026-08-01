@@ -7,6 +7,13 @@ status: active
 
 棚卸し表・OSS資産・ver2トリアージの3入力を、実レンダラ語彙(`apps/web/src/renderer/renderer.tsx` の NodeView dispatch)とトークン正本(`apps/web/src/app/tokens.generated.css`／enforcerは `scripts/check-ui-tokens.mjs`)に接地して統合した。以下が納品物。
 
+> ★★**鮮度ルール(必読・2026-08-02 g87-p2think裁定)**: 本カタログは **2026-07-17時点のスナップショット**である。
+> **その後に確定したユーザー裁定(`D:\claude\00-hq\review-queue\*.json` の `status: answered` カード)が、本カタログの記述より常に優先する。**
+> 本カタログの記述を仕様の根拠として使う前に、対象画面の `screen_id` で review-queue を必ず grep すること。
+> 実害実績: 2026-07-17付の【最優先2】knowledge-thread 節が、2026-07-18確定のユーザー裁定3枚(100点/80点/70点)によって
+> 既に失効していたにもかかわらず発注書の仕様根拠として再利用され、実装艦1隻が差し戻しに終わった
+> (`00-hq\kits\lane-implement\R0802-65734b-REPORT-2026-08-02-g87-p2thread.md`)。
+
 ---
 
 ## UI資産適用カタログ（ver3・47画面／15クラスタ）
@@ -154,6 +161,25 @@ status: active
 ---
 
 ### 【最優先2】knowledge-thread 組み立て手順(どの資産のどのブロック→どのノード型)
+
+> ★★**【失効】この節の設計は 2026-07-18 のユーザー裁定により全面的に不採用となった。実装の根拠に使ってはならない。**
+> **失効の根拠(すべて `D:\claude\00-hq\review-queue\` に現存・`status: answered`)**:
+> - `knw-redesign-forecast.json`(2026-07-18・**○100点**「急にめっちゃいいやん! 150点あげたいくらい。うれしすぎて声が出ました!」)
+>   — 「全投稿賛否ボタン+ID賛否表」を捨て、検索ファースト+リアルタイムグループチャットへ作り直す裁定。
+> - `knw-stage1-quality.json`(2026-07-18・**○80点**「良いです。やっぱり既存が足引っ張るね。もう既存捨てるようにして」)
+> - `knw-stage2-chat.json`(2026-07-18・**○70点**「KNW-STAGE2-CHAT=○/KNW-CTX-AUTO=○・両採用」)
+>   — 旧賛否/合意表UIの撤去 + チャット実配線を before/after スクショ付きで採用。
+>
+> **現行設計の正本(この節ではなく、こちらを見ること)**:
+> - `screen-defs/knowledge-thread.json`(`list` ノード1つ・`props.variant = "knowledge-thread-chat"`。notes欄に旧構成の撤去理由あり)
+> - `apps/web/src/renderer/zones/knowledge-chat.tsx`(実装本体)
+>
+> **したがって以下の記述はすべて失効している**: 「stance 投票を `field variant:segmented` へ」「Polis 合意可視化を `table`+progress cell へ」
+> 「専用ノード `thread-posts` を1つ追加」「投稿ごとの avatar+アクションUI」。
+> ★ただし「**`field` に `textarea` variant 追加**」(下記「必要な小改修2点」①)は**失効していない** — 他画面にも効く汎用語彙拡張として
+> 別途実装済み(`renderer.tsx:607-618` / コミット `e128561`)。
+>
+> 以下は**旧設計の記録(履歴として保存。実装してはならない)**。
 
 **現状**(出典 `screen-defs/knowledge-thread.json`): `head` card + `posts` list(item_text=「post_id: body」)+ `consensus` list(item_text=賛成/反対/保留の数)+ `stance` form(**text 2欄=statement_id と value を手打ち**)+ back `link`。アバター・アクションUI・Polis可視化・dispute分岐が欠。
 
