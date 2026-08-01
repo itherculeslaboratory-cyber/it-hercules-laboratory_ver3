@@ -4,7 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ExecuteCtx } from "../../core/context";
 import { registerNode } from "../../core/registry";
-import { useIndGet, indNum, type IndBioCard } from "./shared";
+import { useIndGet, indNum, type IndBioCard } from "./helpers";
 
 // ============ 1. マッチング(match)= 好み学習型(気晴らし・寄り道の探索) ============
 // fidelity-A5#8: 婚活的な相手探しではなく個体・好み学習に限定。実データ配線:

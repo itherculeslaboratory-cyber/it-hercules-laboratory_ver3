@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { ScopeCtx, ExecuteCtx } from "../../core/context";
 import { registerNode } from "../../core/registry";
 import { type IndividualProfile } from "../../core/individual";
-import { useIndGet, IndQr, indNum, type IndBioCard } from "./shared";
+import { useIndGet, IndQr, indNum, type IndBioCard } from "./helpers";
 
 // ============ 5. バイオカード(bio-card)============
 function IndBioCardNode() {

@@ -4,7 +4,7 @@ import { useContext } from "react";
 import { cn } from "@/lib/cn";
 import { ScopeCtx } from "../../core/context";
 import { registerNode } from "../../core/registry";
-import { useIndGet, indPct, indNum } from "./shared";
+import { useIndGet, indPct, indNum } from "./helpers";
 
 // ============ 4. 累代分析(cross)= 個体の詳細から開く ============
 type IndCross = {

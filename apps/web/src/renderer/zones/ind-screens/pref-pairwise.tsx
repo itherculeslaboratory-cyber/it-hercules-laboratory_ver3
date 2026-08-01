@@ -4,7 +4,7 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ExecuteCtx } from "../../core/context";
 import { registerNode } from "../../core/registry";
-import { useIndGet, indNum } from "./shared";
+import { useIndGet, indNum } from "./helpers";
 
 // ============ pairwise 好み入力(preference)============
 // V3-UIX-22/23/79・uib02think §5-4 の責務5つ:

@@ -19,7 +19,7 @@ import {
   profileLabel,
   seriesFor,
 } from "../../core/individual";
-import { useIndGet, IndQr, indNum } from "./shared";
+import { useIndGet, IndQr, indNum } from "./helpers";
 
 // 令コード → 表示語(内部語を画面に出さない・語彙辞書方針①)。未知コードは実値を
 // そのまま出す(誇張ゼロ: 勝手に翻訳して意味を変えない)。

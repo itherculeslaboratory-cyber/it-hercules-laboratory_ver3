@@ -3,7 +3,7 @@
 import { useCallback, useContext, useState } from "react";
 import { ExecuteCtx } from "../../core/context";
 import { registerNode } from "../../core/registry";
-import { useIndGet, indNum } from "./shared";
+import { useIndGet, indNum } from "./helpers";
 
 // ============ 2. 種の管理(species)============
 type IndSpeciesRow = {
