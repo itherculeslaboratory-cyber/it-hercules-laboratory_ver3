@@ -39,6 +39,7 @@ async function seedCapture(s: TruthStore, productId: string, individualId: strin
 }
 
 async function seedLifeEvent(s: TruthStore, individualId: string, kind: "birth" | "death", at: string): Promise<void> {
+  const detail = kind === "death" ? { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } : undefined;
   const res = await s.putEventAt(`truth/ihl.ind.life_event.v1/${individualId}-${ulid()}.json`, {
     specversion: "1.0",
     id: ulid(),
@@ -47,7 +48,7 @@ async function seedLifeEvent(s: TruthStore, individualId: string, kind: "birth" 
     time: new Date().toISOString(),
     dataschema: "schemas/events/ind-life-event.schema.json",
     provenance: { generator_kind: "human", actor_id: "seed-actor" },
-    data: { individual_id: individualId, kind, at, actor_id: "seed-actor" },
+    data: { individual_id: individualId, kind, at, actor_id: "seed-actor", ...(detail ? { detail } : {}) },
   });
   if (res.status !== "inserted") throw new Error(`seed life-event failed: ${res.status}`);
 }

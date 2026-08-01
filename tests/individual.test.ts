@@ -222,7 +222,7 @@ describe("IND-12 交配結果(projectCross・決定論)", () => {
     }
     const life = async (id: string, kind: string, detail?: unknown) =>
       post(`/api/v1/individuals/${id}/life-events`, { kind, at: "2026-04-01T00:00:00Z", detail }, env);
-    await life(kids[0], "death");
+    await life(kids[0], "death", { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } });
     await life(kids[1], "eclosion", { success: true });
     await life(kids[2], "eclosion", { success: false });
     await life(kids[3], "birth");
@@ -287,7 +287,11 @@ describe("IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約
     const { env } = ctx();
     const id = await createInd(env);
     await post(`/api/v1/individuals/${id}/life-events`, { kind: "birth", at: "2026-01-01T00:00:00Z" }, env);
-    await post(`/api/v1/individuals/${id}/life-events`, { kind: "death", at: "2026-05-01T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${id}/life-events`,
+      { kind: "death", at: "2026-05-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
     const body = (await (await get(`/api/v1/individuals/${id}`, env)).json()) as Record<string, unknown>;
     for (const key of ["timeline", "observations", "schedules", "templates", "data_sources", "market_offers", "improvements"]) {
       expect(key in body).toBe(true);
@@ -782,9 +786,17 @@ describe("V3-IND-14 個体一覧A1: species/stage/status フィルタ + sort/ord
     const pupa = await createInd(env, { local_label_text: "PUPA" });
     await post(`/api/v1/individuals/${pupa}/life-events`, { kind: "molt", at: "2026-06-01T00:00:00Z", detail: { to_stage: "pupa" } }, env);
     const dead = await createInd(env, { local_label_text: "DEAD" });
-    await post(`/api/v1/individuals/${dead}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${dead}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
     const specimen = await createInd(env, { local_label_text: "SPECIMEN" });
-    await post(`/api/v1/individuals/${specimen}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${specimen}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
     await post(`/api/v1/individuals/${specimen}/life-events`, { kind: "specimen", at: "2026-06-02T00:00:00Z" }, env);
 
     const body = (await (await get("/api/v1/individuals", env)).json()) as {
@@ -801,7 +813,11 @@ describe("V3-IND-14 個体一覧A1: species/stage/status フィルタ + sort/ord
   it("survival_correction (最新) は死亡を打ち消し生存側の判定へ戻す", async () => {
     const { env } = ctx();
     const id = await createInd(env, {});
-    await post(`/api/v1/individuals/${id}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${id}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
     await post(`/api/v1/individuals/${id}/life-events`, { kind: "survival_correction", at: "2026-06-02T00:00:00Z" }, env);
     const body = (await (await get("/api/v1/individuals", env)).json()) as {
       individuals: { individual_id: string; life_status: string }[];
@@ -831,12 +847,93 @@ describe("V3-IND-14 個体一覧A1: species/stage/status フィルタ + sort/ord
     const { env } = ctx();
     const alive = await createInd(env, { local_label_text: "ALIVE" });
     const dead = await createInd(env, { local_label_text: "DEAD" });
-    await post(`/api/v1/individuals/${dead}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${dead}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
     const body = (await (await get("/api/v1/individuals?status=dead", env)).json()) as {
       individuals: { individual_id: string }[];
     };
     expect(body.individuals.map((i) => i.individual_id)).toEqual([dead]);
     void alive;
+  });
+
+  it("S6: kind=lost が終端として導出される(?status=lost で一覧に出る)", async () => {
+    const { env } = ctx();
+    const alive = await createInd(env, { local_label_text: "ALIVE" });
+    const lost = await createInd(env, { local_label_text: "LOST" });
+    await post(`/api/v1/individuals/${lost}/life-events`, { kind: "lost", at: "2026-06-01T00:00:00Z" }, env);
+    const body = (await (await get("/api/v1/individuals?status=lost", env)).json()) as {
+      individuals: { individual_id: string; life_status: string }[];
+    };
+    expect(body.individuals.map((i) => i.individual_id)).toEqual([lost]);
+    void alive;
+  });
+
+  it("S6: 証拠なし death(at_stage/terminal_observation 無し)は400で拒否される", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "NO-EVIDENCE" });
+    const res = await post(`/api/v1/individuals/${id}/life-events`, { kind: "death", at: "2026-06-01T00:00:00Z" }, env);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("INVALID_LIFE_EVENT");
+
+    // at_stage のみ(terminal_observation 無し)も拒否される。
+    const res2 = await post(
+      `/api/v1/individuals/${id}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar" } },
+      env,
+    );
+    expect(res2.status).toBe(400);
+
+    // terminal_observation はあるが weight_g/photo_id のどちらも無い(空オブジェクト)も拒否される。
+    const res3 = await post(
+      `/api/v1/individuals/${id}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: {} } },
+      env,
+    );
+    expect(res3.status).toBe(400);
+  });
+
+  it("S6: photo_id のみの terminal_observation でも death が通る(weight_g/photo_idのいずれかでよい)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "PHOTO-EVIDENCE" });
+    const res = await post(
+      `/api/v1/individuals/${id}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { photo_id: "ph-1" } } },
+      env,
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("S6: survival_correction で lost/death を撤回すると終端でなくなる", async () => {
+    const { env } = ctx();
+    const lostId = await createInd(env, { local_label_text: "LOST-REVOKED" });
+    await post(`/api/v1/individuals/${lostId}/life-events`, { kind: "lost", at: "2026-06-01T00:00:00Z" }, env);
+    await post(`/api/v1/individuals/${lostId}/life-events`, { kind: "survival_correction", at: "2026-06-02T00:00:00Z" }, env);
+
+    const deadId = await createInd(env, { local_label_text: "DEATH-REVOKED" });
+    await post(
+      `/api/v1/individuals/${deadId}/life-events`,
+      { kind: "death", at: "2026-06-01T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
+    await post(`/api/v1/individuals/${deadId}/life-events`, { kind: "survival_correction", at: "2026-06-02T00:00:00Z" }, env);
+
+    const body = (await (await get("/api/v1/individuals", env)).json()) as {
+      individuals: { individual_id: string; life_status: string }[];
+    };
+    const byId = new Map(body.individuals.map((i) => [i.individual_id, i.life_status]));
+    expect(byId.get(lostId)).toBe("larva");
+    expect(byId.get(deadId)).toBe("larva");
+  });
+
+  it("S6: 既存形の非death終端イベント(eclosion)は従来どおり検証を通る(後方互換)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { local_label_text: "ECLOSION-COMPAT" });
+    const res = await post(`/api/v1/individuals/${id}/life-events`, { kind: "eclosion", at: "2026-06-01T00:00:00Z" }, env);
+    expect(res.status).toBe(201);
   });
 
   it("?sort=latest_weight_g&order=asc は体重昇順、null は方向によらず末尾", async () => {
@@ -961,7 +1058,11 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     await post(`/api/v1/individuals/${a}/life-events`, { kind: "molt", at: "2026-02-01T00:00:00Z", detail: { to_stage: "third_late" } }, env);
     await post(`/api/v1/individuals/${a}/life-events`, { kind: "eclosion", at: "2026-03-01T00:00:00Z" }, env);
     await capture(env, a, 82.5);
-    await post(`/api/v1/individuals/${b}/life-events`, { kind: "death", at: "2026-02-05T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${b}/life-events`,
+      { kind: "death", at: "2026-02-05T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
     await capture(env, b, 70);
 
     const body = (await (await get(`/api/v1/individuals/${a}/profile`, env)).json()) as {
@@ -1013,7 +1114,11 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
   it("survival_correction: 直近の訂正が death より新しければ alive に復元(append-only)", async () => {
     const { env } = ctx();
     const id = await createInd(env);
-    await post(`/api/v1/individuals/${id}/life-events`, { kind: "death", at: "2026-02-05T00:00:00Z" }, env);
+    await post(
+      `/api/v1/individuals/${id}/life-events`,
+      { kind: "death", at: "2026-02-05T00:00:00Z", detail: { at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } } },
+      env,
+    );
     let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as { status: string };
     expect(body.status).toBe("deceased");
     await post(`/api/v1/individuals/${id}/life-events`, { kind: "survival_correction", at: "2026-02-06T00:00:00Z" }, env);
@@ -1381,7 +1486,15 @@ describe("V3-IND-17 失敗データ(FailureDataNode・反脆弱性データ・pu
     const parent = await createInd(env, { local_label_text: "fail-parent" });
     const child = await createInd(env, { local_label_text: "fail-child" });
     await post(`/api/v1/individuals/${child}/parents`, { parent_id: parent, parent_role: "sire" }, env);
-    await post(`/api/v1/individuals/${child}/life-events`, { kind: "death", at: "2026-02-01T00:00:00Z", detail: { fail_stage: "larva", fail_reason: "test" } }, env);
+    await post(
+      `/api/v1/individuals/${child}/life-events`,
+      {
+        kind: "death",
+        at: "2026-02-01T00:00:00Z",
+        detail: { fail_stage: "larva", fail_reason: "test", at_stage: "third_instar", terminal_observation: { weight_g: 0.4 } },
+      },
+      env,
+    );
 
     const res = await get(`/api/v1/individuals/${parent}/cross`, env);
     const body = (await res.json()) as { fail_by_stage: Record<string, number>; failure_data: { fail_stage: string | null }[] };

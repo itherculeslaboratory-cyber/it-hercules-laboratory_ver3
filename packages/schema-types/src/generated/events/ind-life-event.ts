@@ -13,9 +13,9 @@ export interface IndLifeEvent {
    */
   individual_id: string;
   /**
-   * ライフイベント種別（誕生／脱皮／死亡／羽化／標本化／移動／生存訂正）。survival_correction は誤った死亡記録の訂正（V3-AIP-101 個体詳細スライスA・append-only — 元の death レコードは消さず、より新しい survival_correction が status 導出で優先される）。
+   * ライフイベント種別（誕生／脱皮／死亡／羽化／標本化／移動／生存訂正／追跡不能）。survival_correction は誤った死亡記録の訂正（V3-AIP-101 個体詳細スライスA・append-only — 元の death レコードは消さず、より新しい survival_correction が status 導出で優先される）。lost は追跡不能の終端申告（RULING-2026-08-01-gen65-ihl-backbone.md §8・隠すより申告するほうが得）。survival_correction で撤回できる。
    */
-  kind: "birth" | "molt" | "death" | "eclosion" | "specimen" | "move" | "survival_correction";
+  kind: "birth" | "molt" | "death" | "eclosion" | "specimen" | "move" | "survival_correction" | "lost";
   /**
    * イベント発生時刻（RFC3339）。timeline の時系列キー。
    */

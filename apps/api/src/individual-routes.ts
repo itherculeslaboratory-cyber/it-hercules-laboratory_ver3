@@ -1116,19 +1116,21 @@ export async function projectIndividualSummary(
   return { individual_id: id, ...summarizeIndividualRow(id, master, name, caps) };
 }
 
-// V3-IND-14 一覧フィルタ軸「状態(生体/蛹/幼虫/死亡/標本)」の5値判定。優先度:
-// 直近の終端 life-event(death/survival_correction/specimen・at 昇順末尾)が
-// specimen なら standing の死活を問わず標本、death なら死亡。survival_correction
-// が最新なら死亡訂正済み=生存側へ戻り、蛹(直近 molt.detail.to_stage==="pupa")
-// →生体(eclosion 済み=成虫)→幼虫(既定)の順で判定する。
+// V3-IND-14 一覧フィルタ軸「状態(生体/蛹/幼虫/死亡/標本/追跡不能)」の6値判定。優先度:
+// 直近の終端 life-event(death/survival_correction/specimen/lost・at 昇順末尾)が
+// specimen なら standing の死活を問わず標本、death なら死亡、lost なら追跡不能。
+// survival_correction が最新なら死亡/追跡不能を打ち消して生存側へ戻り、
+// 蛹(直近 molt.detail.to_stage==="pupa")→生体(eclosion 済み=成虫)→幼虫(既定)
+// の順で判定する（S6・RULING-2026-08-01-gen65-ihl-backbone.md §8）。
 function deriveLifeStatus(
   terminals: Record<string, unknown>[],
   stage: string | null,
   hasEclosion: boolean,
-): "alive" | "pupa" | "larva" | "dead" | "specimen" {
+): "alive" | "pupa" | "larva" | "dead" | "specimen" | "lost" {
   const last = terminals.slice().sort((a, b) => String(a.at).localeCompare(String(b.at))).pop();
   if (last?.kind === "specimen") return "specimen";
   if (last?.kind === "death") return "dead";
+  if (last?.kind === "lost") return "lost";
   if (stage === "pupa") return "pupa";
   if (hasEclosion) return "alive";
   return "larva";
@@ -1207,8 +1209,8 @@ async function listIndividualsFor(
   }
   const moltsByIndividual = new Map<string, Record<string, unknown>[]>();
   const eclosionsByIndividual = new Map<string, Record<string, unknown>[]>();
-  // V3-IND-14 状態フィルタ用: death/survival_correction/specimen(deriveLifeStatus
-  // の入力)。既存の molt/eclosion ループへ1分岐追加するだけで新規スキャンなし。
+  // V3-IND-14 状態フィルタ用: death/survival_correction/specimen/lost(deriveLifeStatus
+  // の入力・S6で lost を追加)。既存の molt/eclosion ループへ1分岐追加するだけで新規スキャンなし。
   const terminalsByIndividual = new Map<string, Record<string, unknown>[]>();
   for (const e of await s.listEvents(`truth/${LIFE_TYPE}/`)) {
     const d = dataOf(e);
@@ -1217,7 +1219,7 @@ async function listIndividualsFor(
     if (d.kind === "molt") (moltsByIndividual.get(id) ?? moltsByIndividual.set(id, []).get(id)!).push(d);
     else if (d.kind === "eclosion")
       (eclosionsByIndividual.get(id) ?? eclosionsByIndividual.set(id, []).get(id)!).push(d);
-    else if (d.kind === "death" || d.kind === "survival_correction" || d.kind === "specimen")
+    else if (d.kind === "death" || d.kind === "survival_correction" || d.kind === "specimen" || d.kind === "lost")
       (terminalsByIndividual.get(id) ?? terminalsByIndividual.set(id, []).get(id)!).push(d);
   }
   // 検索スライスA: capture_id → 先頭 photo_id(1個体1capture分あれば十分・

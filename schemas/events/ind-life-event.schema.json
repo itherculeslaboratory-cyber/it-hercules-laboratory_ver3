@@ -15,8 +15,8 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["birth", "molt", "death", "eclosion", "specimen", "move", "survival_correction"],
-      "description": "ライフイベント種別（誕生／脱皮／死亡／羽化／標本化／移動／生存訂正）。survival_correction は誤った死亡記録の訂正（V3-AIP-101 個体詳細スライスA・append-only — 元の death レコードは消さず、より新しい survival_correction が status 導出で優先される）。"
+      "enum": ["birth", "molt", "death", "eclosion", "specimen", "move", "survival_correction", "lost"],
+      "description": "ライフイベント種別（誕生／脱皮／死亡／羽化／標本化／移動／生存訂正／追跡不能）。survival_correction は誤った死亡記録の訂正（V3-AIP-101 個体詳細スライスA・append-only — 元の death レコードは消さず、より新しい survival_correction が status 導出で優先される）。lost は追跡不能の終端申告（RULING-2026-08-01-gen65-ihl-backbone.md §8・隠すより申告するほうが得）。survival_correction で撤回できる。"
     },
     "at": {
       "type": "string",
@@ -39,5 +39,24 @@
       "description": "記録時刻（RFC3339・任意）。"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "if": {
+    "properties": { "kind": { "const": "death" } },
+    "required": ["kind"]
+  },
+  "then": {
+    "required": ["detail"],
+    "properties": {
+      "detail": {
+        "type": "object",
+        "required": ["at_stage", "terminal_observation"],
+        "properties": {
+          "terminal_observation": {
+            "type": "object",
+            "anyOf": [{ "required": ["weight_g"] }, { "required": ["photo_id"] }]
+          }
+        }
+      }
+    }
+  }
 }
