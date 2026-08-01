@@ -138,9 +138,11 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 // 昇順(listEvents がキー順を保証しない実装でも、一覧カバーの cover 選定は
 // 「最初にアップロードされた1枚」であることが厳密には保証されないが、MVP
 // スケールでは十分・投影の完全な決定論ソートは別波)。
-async function loadListingPhotos(s: TruthStore, listingId: string): Promise<Array<{ photo_id: string }>> {
+async function loadListingPhotos(s: TruthStore, listingId: string): Promise<Array<{ photo_id: string; listing_id: string }>> {
   const rows = (await s.listEvents(`truth/${LISTING_PHOTO_TYPE}/${listingId}-`)).map(dataOf);
-  return rows.map((r) => ({ photo_id: String(r.photo_id) })).sort((a, b) => a.photo_id.localeCompare(b.photo_id));
+  return rows
+    .map((r) => ({ photo_id: String(r.photo_id), listing_id: listingId }))
+    .sort((a, b) => a.photo_id.localeCompare(b.photo_id));
 }
 
 // POST /market/listings — 出品を append(201/400/409)。title は必須。listing_id は
