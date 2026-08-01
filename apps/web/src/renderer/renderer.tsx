@@ -47,415 +47,70 @@ import {
 } from "./batch-draft";
 import type { Action, ScreenDef, ScreenNode, Transition } from "./types";
 
-/* -------------------------------------------------------------------------- *
- * Runtime scope + action execution.
- *
- * The renderer is data-driven: screens bind to live API data instead of
- * hardcoding it. Three scopes feed `{{...}}` interpolation and list binding:
- *   - params : URL query (?id=…) — the runtime individual/capture id.
- *   - data   : responses of node `source_path` GETs, keyed by node id.
- *   - result : the parsed response of the last successful action.
- * Individual catalog parts read these via context; screens stay declarative
- * and never wire a11y/state/data-fetch by hand.
- * -------------------------------------------------------------------------- */
+import {
+  DEFAULT_HEADER_SCOPE,
+  DataSinkCtx,
+  ExecuteCtx,
+  FormValidityCtx,
+  HeaderScopeCtx,
+  InvalidCtx,
+  LayoutCtx,
+  LocaleCtx,
+  MessagesCtx,
+  NavigateCtx,
+  ScopeCtx,
+  ScreenIdCtx,
+  TransitionsCtx,
+  type Execute,
+  type HeaderScope,
+  type ResolveMessage,
+  type Scope,
+} from "./core/context";
+import {
+  anyField,
+  appendHeaderScope,
+  compareLine,
+  currentStage,
+  defaultExecute,
+  displayText,
+  errorText,
+  formatDateJa,
+  getPath,
+  headerScopeQuery,
+  interpolate,
+  isRequiredCheckbox,
+  isRequiredField,
+  latestMeasurement,
+  queryFromBody,
+  queryFromResult,
+  readQuery,
+  requestInit,
+  resolveStatic,
+  scanFormValidity,
+  screenHref,
+  setPath,
+  stageBadgeText,
+  todayPlusDays,
+} from "./core/scope";
 
-export type Execute = (
-  action: Action,
-  body?: Record<string, unknown>,
-) => Promise<unknown>;
-
-export type Scope = {
-  params: Record<string, string>;
-  data: Record<string, unknown>;
-  result: Record<string, unknown>;
-  // c8 UI磨き第2弾#1(受領10「買い手/売り手だけ表示」): GET /me/profile を
-  // Renderer が一度だけ取得し {{viewer.actor_id}} として全ノードへ公開する —
-  // `when` プリミティブが役割(買い手/売り手/スレ主)を判定する唯一の材料。
-  // 未ログイン/取得失敗時は {}（`when` は単に false 側に倒れる・エラーにしない）。
-  viewer: Record<string, unknown>;
+// core/context.ts・core/scope.tsへ移動済み(zone B・renderer分割Phase 1)。
+// テスト互換のため interpolate/HeaderScopeCtx を含め、元々ここでexportされて
+// いたシンボルをそのままre-exportする(外部からの `./renderer` importを壊さない)。
+export {
+  DEFAULT_HEADER_SCOPE,
+  HeaderScopeCtx,
+  LayoutCtx,
+  LocaleCtx,
+  MessagesCtx,
+  ScreenIdCtx,
+  currentStage,
+  formatDateJa,
+  getPath,
+  interpolate,
+  latestMeasurement,
+  setPath,
 };
-
-type DataSink = {
-  setNodeData: (id: string, value: unknown) => void;
-  setActionResult: (value: unknown) => void;
-};
-
-const ExecuteCtx = createContext<Execute>(async () => undefined);
-const InvalidCtx = createContext<Set<string>>(new Set());
-const ScopeCtx = createContext<Scope>({ params: {}, data: {}, result: {}, viewer: {} });
-const TransitionsCtx = createContext<Transition[]>([]);
-const NavigateCtx = createContext<(to: string, query?: Record<string, string>) => void>(
-  () => {},
-);
-const DataSinkCtx = createContext<DataSink>({
-  setNodeData: () => {},
-  setActionResult: () => {},
-});
-// V3-AUT-06: reactive submit gate. A submit button reads this; outside a gated
-// form it defaults to true (no reactive disable), so only consent forms gate.
-const FormValidityCtx = createContext<boolean>(true);
-
-// I18-08: text_key -> string resolver. The catalog + fallback chain live in
-// lib/i18n (P5); the Renderer only calls resolve(key). Default is a no-op so
-// screens using literal text render unchanged and tests can inject a resolver.
-export type ResolveMessage = (key: string) => string | undefined;
-export const MessagesCtx = createContext<ResolveMessage>(() => undefined);
-// I18-06: viewer locale for the on-device UGC translate affordance. authored
-// language is ja, so that is the default when i18n has not set one.
-export const LocaleCtx = createContext<string>("ja");
-// design-home-round.md 是正(統合オーナー追加指示・SL-1「.civ-page max-width:720px
-// は幅の広い画面で使い切れない」診断・STRIP-1で720px自体を全ゾーン1160pxへ
-// 統一済み): def.layout(schema既存の任意string)をAppShellNodeへ届け、その画面の
-// .civ-app-shellへdata-layoutとして出すだけの最小フック。全幅化がグローバル
-// 既定になったため、globals.css側の"wide"専用CSSは不要化して削除済み——この
-// Ctx/data-layout配線自体は他消費者が現れた場合に備えて残置(無害)。
-export const LayoutCtx = createContext<string>("standard");
-
-// g79-bundleA(V3-UIX-59【R136/S1】・b2think §2-6): 「この画面について話す」導線が
-// channel=当該screen_idをユーザーに手入力させず自動刻印するための最小フック。
-// def.screen_id を Renderer が Provide し、AppShellNode の PageInfoPanel が読む。
-export const ScreenIdCtx = createContext<string>("");
-
-// HDR-1(c9-structure-canon.md §1/§1c・R112/R115採用)「観測対象」グローバル
-// 文脈スイッチ。AppShellNode がヘッダーセレクタで確定した選択(層1=学術分類の
-// 種・層2=血統ブランドタグ)を保持し、全画面の子ノードへ配る。空文字="すべて"
-// (未選択・フィルタなし)。
-//
-// 第1スライス(commit 09e7a4a・HDR-1○実装方針): 個体ドメイン(individuals/
-// pedigree-links/obs-search/universe)を配線。individual/clutch は species が
-// もともと本人入力の必須コアフィールド(subspecies 確定ゲート付き)なので、
-// この producer 機構は不要=対象外(装飾タグではなく実データそのもの)。
-//
-// 第2スライス(A1#4・read側): 残ドメインの一覧を species で絞る read 配線を
-// 追加 — 知の広場(GET /plaza/channels/:channel/threads・GET /plaza/search を
-// root投稿の species_id 代表値で絞り)・市場(GET /market/listings を絞り)・
-// 研究(GET /research/content・POST /research/search を絞り・GET
-// /research/projects は project.schema.json に種を持たせず content.project_id
-// 結合で派生フィルタ)・clutches(既存 lineage_id と並ぶ species フィルタ)・
-// BatchRosterNode(/individuals・/clutches の両 fetch)。
-//
-// 第2bスライス(slice2b・独立批評家blocking是正・本コミット): 第2スライスの
-// read配線には市場/知の広場/研究へ species_id を書き込む producer が無く、
-// scope選択時にそれらのアプリ作成コンテンツが一覧から消える(producer-less
-// decoration)問題があった。本スライスで producer を配線——
-// FormNode props.header_scoped_producer:true(market-trade.json
-// create-listing-form・data-descriptor.json descriptor-form)は送信 body へ
-// headerScope.species を自動付与(POST /market/listings・POST
-// /research/content。空 scope は何も付けない)。plaza compose
-// (KnowledgeHubNode.createThread → POST /plaza/posts)も同様に自動付与。
-// これで市場/知の広場/研究の3ドメインは「作成→(scope絞り込み時)一覧に出る」
-// が実際に機能する(tests/header-scope-producer.test.ts で実証)。
-//
-// 正直な限界(誇張ゼロ): (a) lineage_id は market/plaza/research のスキーマに
-// フィールドが無いため producer 対象外——これら3ドメインは species のみ絞れ、
-// lineage では絞れない。(b) home(届いた出来事・home-routes.ts)は list ではなく
-// ダッシュボード集計エンドポイントのため今回の「全 list エンドポイント」配線の
-// 対象外(structure-canon §1 が home tiles も切替と言うが、集計値の scope 切替は
-// 別波で要検討・申し送り)。
-//
-// 原理的に対象外(誇張ゼロ・A1#4の正直表示): placement/device(物理什器スキーマに
-// 種フィールドが無い)・taxon-species/taxon-morph(ヘッダーの選択肢そのものを供給する
-// 分類カタログ自体・自己参照になるため対象外)。observation capture の生一覧
-// エンドポイントは現状 API に存在しない(per-capture 詳細取得のみ)ため対象なし。
-export type HeaderScope = { species: string; lineageId: string };
-export const DEFAULT_HEADER_SCOPE: HeaderScope = { species: "", lineageId: "" };
-export const HeaderScopeCtx = createContext<HeaderScope>(DEFAULT_HEADER_SCOPE);
-
-// individual-routes.ts の既存 ?species=(大小無視完全一致)/?lineage_id=(完全
-// 一致)クエリへ HeaderScope をそのまま流し込む共通ビルダー(未選択の軸は
-// 付けない="" 全体を表す)。空スコープは "" を返す(既存の無引数呼び出しと
-// バイト同一になる=デフォルト挙動を壊さない)。
-function headerScopeQuery(scope: HeaderScope): string {
-  const params = new URLSearchParams();
-  if (scope.species) params.set("species", scope.species);
-  if (scope.lineageId) params.set("lineage_id", scope.lineageId);
-  const qs = params.toString();
-  return qs ? `?${qs}` : "";
-}
-
-// headerScopeQuery を「既にクエリ文字列を持つ path」にも安全に足すための第2
-// スライス用ヘルパー(KnowledgeHubNode の `${path}?q=...` 等と衝突しない)。
-// path が "?" を含まなければ headerScopeQuery と同じ "?a=b" を、含んでいれば
-// "&a=b" を足す。scope が空なら path をそのまま返す(既存呼び出しとバイト同一)。
-function appendHeaderScope(path: string, scope: HeaderScope): string {
-  const q = headerScopeQuery(scope);
-  if (!q) return path;
-  return path.includes("?") ? `${path}&${q.slice(1)}` : `${path}${q}`;
-}
-
-// Resolve a node's display string: prefer the i18n catalog value for `keyVal`,
-// else the literal, else `fallback`. Empty catalog hits fall through to literal.
-function displayText(
-  resolve: ResolveMessage,
-  keyVal: unknown,
-  literal: unknown,
-  fallback: string,
-): string {
-  if (keyVal != null) {
-    const m = resolve(String(keyVal));
-    if (m != null && m !== "") return m;
-  }
-  return literal != null ? String(literal) : fallback;
-}
-
-// V3-UIX-03: turn a thrown error into calm Japanese copy. An ApiError maps by
-// status code (never the raw "api <n>" line); anything else uses its message.
-function errorText(e: unknown): string {
-  if (e instanceof ApiError) return mapError(e.code);
-  return (e as Error)?.message ?? String(e);
-}
-
-/** Any node in the tree matching `pred` (recursive, depth-first). */
-function anyField(nodes: ScreenNode[] | undefined, pred: (n: ScreenNode) => boolean): boolean {
-  for (const n of nodes ?? []) {
-    if (pred(n)) return true;
-    if (anyField(n.children, pred)) return true;
-  }
-  return false;
-}
-const isRequiredField = (n: ScreenNode) => n.type === "field" && n.props?.required === true;
-const isRequiredCheckbox = (n: ScreenNode) =>
-  isRequiredField(n) && n.props?.variant === "checkbox";
-
-/** Live validity of a mounted form: every required control is filled/checked. */
-function scanFormValidity(form: HTMLFormElement): boolean {
-  return Array.from(form.querySelectorAll("[data-required='true']")).every((el) => {
-    if (el instanceof HTMLInputElement && el.type === "checkbox") return el.checked;
-    const v = (el as HTMLInputElement | HTMLSelectElement).value;
-    return String(v ?? "").trim() !== "";
-  });
-}
-
-/** Resolve a dotted path (`measurements.0.value`) against a value. */
-export function getPath(obj: unknown, path: string): unknown {
-  return path
-    .split(".")
-    .reduce<unknown>((o, k) => (o == null ? undefined : (o as Record<string, unknown>)[k]), obj);
-}
-
-/** Replace `{{ dotted.path }}` in `tpl` with values from `scope`. */
-export function interpolate(tpl: string, scope: unknown): string {
-  // ponytail: [\w.-]+ (not just \w.) so hyphenated path segments (e.g.
-  // data.lab-env-current) resolve instead of riding through as a raw
-  // "{{...}}" literal — confirmed bug on obs-detail/placement-qr (V3-OBS-72).
-  return tpl.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_m, p: string) => {
-    const v = getPath(scope, p);
-    return v == null ? "" : String(v);
-  });
-}
-
-/** Assign into a nested object, creating arrays for numeric segments. */
-export function setPath(obj: Record<string, unknown>, path: string, value: unknown): void {
-  const keys = path.split(".");
-  let cur: Record<string, unknown> = obj;
-  for (let i = 0; i < keys.length - 1; i++) {
-    const k = keys[i];
-    if (cur[k] == null) cur[k] = /^\d+$/.test(keys[i + 1]) ? [] : {};
-    cur = cur[k] as Record<string, unknown>;
-  }
-  cur[keys[keys.length - 1]] = value;
-}
-
-// V3-AIP-101 観測登録スライス1: static injects a body field is-literal today
-// (obs-entry's "measurements.0.kind":"number"). resolveStatic additionally lets
-// a static VALUE carry a `{{...}}` scope template (e.g. "individual/{{params.id}}")
-// or the literal token "{{now}}" (server time isn't known at screen-def-authoring
-// time). A templated value that resolves empty (an unset optional query param) is
-// OMITTED rather than sent as "" — so an optional measurement slot with no input
-// doesn't ride to the API as a malformed empty-value entry.
-// Nests via setPath (same dotted-array/object convention FormData submission
-// uses) so a caller can spread the result straight into a request body — the
-// F6 schedule button's "template.stage_interval_days.unspecified" key needs
-// the same {template:{stage_interval_days:{unspecified:N}}} shape a form's own
-// dotted field names produce.
-function resolveStatic(stat: Record<string, unknown>, scope: Scope): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(stat)) {
-    if (typeof v === "string" && v.includes("{{")) {
-      const resolved = v.trim() === "{{now}}" ? new Date().toISOString() : interpolate(v, scope);
-      if (resolved === "") continue;
-      setPath(out, k, resolved);
-    } else {
-      setPath(out, k, v);
-    }
-  }
-  return out;
-}
-
-/** Latest numeric value for `item` across capture-shaped rows (sorted by
- *  capture_id — a ULID, so ascending = chronological). `excludeCaptureId` skips
- *  the just-saved capture on a post-commit screen, so "previous" excludes itself. */
-export function latestMeasurement(
-  observations: unknown,
-  item: string,
-  excludeCaptureId?: string,
-): number | null {
-  const rows = (Array.isArray(observations) ? observations : []) as Record<string, unknown>[];
-  const sorted = rows
-    .filter((r) => !excludeCaptureId || r.capture_id !== excludeCaptureId)
-    .slice()
-    .sort((a, b) => String(a.capture_id ?? "").localeCompare(String(b.capture_id ?? "")));
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const ms = Array.isArray(sorted[i].measurements) ? (sorted[i].measurements as Record<string, unknown>[]) : [];
-    for (const m of ms) {
-      if (m.item !== item) continue;
-      const n = typeof m.value === "number" ? m.value : Number(m.value);
-      if (Number.isFinite(n)) return n;
-    }
-  }
-  return null;
-}
-
-// "前回 X〈unit〉  +Δ〈unit〉↑" comparison line shared by FieldNode (live, as the
-// user types — F2) and the text node's compare_* props (static recap — F6).
-// `current: null` (nothing typed/known yet) renders the previous value alone.
-function compareLine(
-  scope: Scope,
-  opts: { source?: unknown; item?: unknown; unit?: unknown; exclude?: unknown; current: number | null },
-): string {
-  const source = opts.source ? String(opts.source) : "";
-  const item = opts.item ? String(opts.item) : "";
-  if (!source || !item) return "";
-  const unit = opts.unit != null ? String(opts.unit) : "";
-  const exclude = opts.exclude ? interpolate(String(opts.exclude), scope) : "";
-  const history = getPath(scope, `data.${source}.observations`);
-  const prev = latestMeasurement(history, item, exclude || undefined);
-  if (prev == null) return "初回の記録です";
-  if (opts.current == null || !Number.isFinite(opts.current)) return `前回 ${prev}${unit}`;
-  const delta = opts.current - prev;
-  const sign = delta > 0 ? "+" : delta < 0 ? "" : "±";
-  const arrow = delta > 0 ? "↑" : delta < 0 ? "▼" : "";
-  return `前回 ${prev}${unit}　${sign}${delta.toFixed(1)}${unit}${arrow}`;
-}
-
-/** Current life-stage: the latest molt/eclosion life-event's detail.to_stage
- *  (individual_id's timeline, at-sorted defensively — projectIndividual already
- *  sorts, but a raw scope path might not). null = no stage recorded yet. */
-export function currentStage(timeline: unknown): string | null {
-  const rows = (Array.isArray(timeline) ? timeline : []) as Record<string, unknown>[];
-  const sorted = rows.slice().sort((a, b) => String(a.at ?? "").localeCompare(String(b.at ?? "")));
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const e = sorted[i];
-    if (e.kind === "molt" || e.kind === "eclosion") {
-      const d = e.detail as Record<string, unknown> | undefined;
-      if (d && typeof d.to_stage === "string") return d.to_stage;
-    }
-  }
-  return null;
-}
-
-// V3-AIP-101 磨き直し fix#11: format an ISO/epoch scope value into a plain
-// "2026-08-11" date — the ONLY date formatter in the renderer (fix#2/#10 reuse
-// it too), so no raw ISO/Z ever reaches the screen. Invalid/empty input → "".
-export function formatDateJa(value: unknown): string {
-  const d = value instanceof Date ? value : new Date(String(value ?? ""));
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/** Today + `days`, as a Date (local time) — F5/F6's client-computed "次の目安". */
-function todayPlusDays(days: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-// F2ステージ表示(fix#5/#8): shared by BadgeNode (standalone) and DisclosureNode
-// (the F2 header chip trigger) so the timeline→stage→label lookup lives ONE
-// place, not hand-copied per consumer.
-function stageBadgeText(
-  scope: Scope,
-  deriveFrom: unknown,
-  stageLabels: unknown,
-  emptyText: unknown,
-): { text: string; hasStage: boolean } {
-  const stage = currentStage(getPath(scope, String(deriveFrom)));
-  const labels = (stageLabels as Record<string, string> | undefined) ?? {};
-  const text = stage ? (labels[stage] ?? stage) : String(emptyText ?? "ステージ未記録");
-  return { text, hasStage: !!stage };
-}
-
-function readQuery(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  return Object.fromEntries(new URLSearchParams(window.location.search).entries());
-}
-
-// screen_id → real route. `home` is served at "/", every other def at "/s/<id>".
-function screenHref(to: string, query?: Record<string, string>): string {
-  const base = to === "home" ? "/" : `/s/${to}`;
-  const qs = query && Object.keys(query).length ? "?" + new URLSearchParams(query).toString() : "";
-  return base + qs;
-}
-
-// Scalar form fields for the next screen's {{params.*}} display. Nested values
-// (measurements) ride the sessionStorage draft instead — this is display only.
-function queryFromBody(body: Record<string, unknown>): Record<string, string> {
-  const q: Record<string, string> = {};
-  for (const [k, v] of Object.entries(body)) {
-    if (typeof v === "string" || typeof v === "number") q[k] = String(v);
-  }
-  return q;
-}
-
-// Common id-ish response fields worth carrying into the next screen as query.
-function queryFromResult(result: unknown): Record<string, string> {
-  const r = (result ?? {}) as Record<string, unknown>;
-  const q: Record<string, string> = {};
-  if (typeof r.token === "string") q.token = r.token;
-  if (typeof r.capture_id === "string") q.id = r.capture_id;
-  else if (typeof r.individual_id === "string") q.id = r.individual_id;
-  // c8 market-trade/dispute: a create action's response id is what the next
-  // load of the SAME screen needs on the query string to refetch the right
-  // record (self-navigate transitions are how this renderer "refreshes").
-  if (typeof r.listing_id === "string") q.listing_id = r.listing_id;
-  if (typeof r.dispute_id === "string") q.dispute_id = r.dispute_id;
-  return q;
-}
-
-// Build the fetch init for an api action + body. A body carrying a Blob (the
-// photo File) is sent as multipart/form-data (browser sets the boundary); every
-// other body is JSON. GET carries no body.
-function requestInit(method: string, body?: Record<string, unknown>): RequestInit {
-  const init: RequestInit = { method, credentials: "include" };
-  if (method === "GET" || body === undefined) return init;
-  const hasBlob = Object.values(body).some((v) => v instanceof Blob);
-  if (hasBlob) {
-    const fd = new FormData();
-    for (const [k, v] of Object.entries(body)) fd.append(k, v instanceof Blob ? v : String(v));
-    init.body = fd;
-  } else {
-    init.headers = { "content-type": "application/json" };
-    init.body = JSON.stringify(body);
-  }
-  return init;
-}
-
-function defaultExecute(onNavigate?: (to: string, query?: Record<string, string>) => void): Execute {
-  return async (action, body) => {
-    if (action.kind === "navigate") {
-      if (onNavigate) onNavigate(action.to);
-      else if (typeof window !== "undefined") window.location.assign(screenHref(action.to));
-      return undefined;
-    }
-    const res = await fetch(apiUrl(action.path), requestInit(action.method, body));
-    const ct = res.headers.get("content-type") ?? "";
-    if (!res.ok) {
-      // V3-AUT-20: read the server's machine-readable `error` code (when the
-      // body is JSON) so mapError() can give distinct copy per code instead of
-      // only per HTTP status; falls back to the status when absent/unparsable.
-      const errBody = ct.includes("application/json") ? await res.json().catch(() => null) : null;
-      const code =
-        errBody && typeof errBody === "object" && typeof (errBody as { error?: unknown }).error === "string"
-          ? (errBody as { error: string }).error
-          : res.status;
-      throw new ApiError(code);
-    }
-    return ct.includes("application/json") ? unwrapEnvelope(await res.json()) : undefined;
-  };
-}
+export type { Execute, HeaderScope, ResolveMessage, Scope };
 
 /* -------------------------------------------------------------------------- *
  * Catalog v0 — 12 types (design-c2 §4.2). Semantic classes only; all color and
