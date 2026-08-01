@@ -165,6 +165,9 @@ const SCHEMAS = [
   ["contentCurrent", "events/content-current.schema.json"],
   // 背骨S4(設計R0801-f383db §3 D-2): 提出ペース宣言。
   ["obsCadence", "events/obs-cadence.schema.json"],
+  // g81-f2wiring T4(must match envelope.ts VALIDATOR_NAME + EVENT_NAMES): F2研究者
+  // モードの検索条件JSON保存(ihl.research.query.v1)。
+  ["researchQuery", "events/research-query.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],

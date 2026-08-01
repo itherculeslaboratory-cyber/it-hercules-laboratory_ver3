@@ -159,6 +159,10 @@ const VALIDATOR_NAME: Record<string, string> = {
   "content-current": "contentCurrent",
   // 背骨S4(設計R0801-f383db §3 D-2): 提出ペース宣言。
   "obs-cadence": "obsCadence",
+  // g81-f2wiring T4(R0801-73be3e §7-1で次波送りにした本命): F2研究者モードの検索
+  // 条件JSON保存(ihl.research.query.v1)。condition-share.ts のクライアント側
+  // ダウンロード/URL共有とは併存(置き換えではない)。
+  "research-query": "researchQuery",
 };
 
 const FROZEN_NAMES = new Set([
@@ -312,6 +316,9 @@ const EVENT_NAMES = new Set([
   // 背骨S4(設計R0801-f383db §3 D-2) — data validation MUST fire or putEvent
   // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
   "obs-cadence",
+  // g81-f2wiring T4 — data validation MUST fire or putEvent stores unchecked
+  // data permanently (Truth is INSERT ONLY, unfixable).
+  "research-query",
 ]);
 
 function validatorFor(name: string): ValidateFn {

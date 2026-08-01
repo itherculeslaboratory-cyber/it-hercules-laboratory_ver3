@@ -49,6 +49,9 @@ export type NodeType =
   // (localStorage)、ファセット絞り込み+0件緩和バー、4択ソート、下部固定
   // バスケットを1画面に持つ。
   | "search-navigator"
+  // g81-f2wiring T1: 検索画面「研究者」タブ(obs-search.json)の中身。F2研究者
+  // モード本体(ResearchPanel.tsx)をmanifest取得+duckdb-wasm実行と一緒に配線する。
+  | "research-panel"
   // V3-AIP-101 個体詳細スライスA(c7-wireframes-core5 §4 F1/F2): 手書き SVG
   // 折れ線チャート(本個体実線+親破線オーバーレイ+コホート帯)。依存追加禁止
   // (ライブラリ無し)。親カーブ欠損時はⓘ帯+親リンクの小フォームを内包。

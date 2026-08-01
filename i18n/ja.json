@@ -210,5 +210,18 @@
   "knowledge-thread.posts-title.text": "投稿",
   "knowledge-thread.consensus-title.text": "合意の可視化",
   "knowledge-thread.back-board.label": "掲示板へ戻る",
-  "knowledge-board.open-thread.label": "スレッドを開く"
+  "knowledge-board.open-thread.label": "スレッドを開く",
+  "obs-search.research-panel.empty.text": "研究者モード: manifestはまだ生成されていません。生成器(libs/datalake)がR2へ manifest.parquetを配置すると、ここで検索できるようになります。",
+  "obs-search.research-panel.generated-at.text": "(生成: {{generated_at}})",
+  "obs-search.research-panel.condition-json.label": "検索条件(JSON)",
+  "obs-search.research-panel.run.label": "実行",
+  "obs-search.research-panel.run-running.label": "実行中...",
+  "obs-search.research-panel.results-count.text": "{{count}}件",
+  "obs-search.research-panel.export-csv.label": "CSV出力",
+  "obs-search.research-panel.export-json.label": "JSON出力",
+  "obs-search.research-panel.save-condition.label": "検索条件を保存(JSONダウンロード)",
+  "obs-search.research-panel.copy-share-url.label": "共有URLをコピー",
+  "obs-search.research-panel.save-to-truth.label": "Truthに保存",
+  "obs-search.research-panel.save-to-truth-saving.label": "保存中...",
+  "obs-search.research-panel.save-to-truth-saved.text": "Truthに保存しました。"
 }

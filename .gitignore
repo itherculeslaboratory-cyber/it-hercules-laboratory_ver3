@@ -8,6 +8,10 @@ __pycache__/
 .venv/
 coverage/
 
+# g81-f2wiring T3: generated at predev/prebuild time (apps/web/scripts/copy-duckdb-assets.mjs)
+# from the @duckdb/duckdb-wasm npm package — never commit the ~78MB binaries.
+apps/web/public/duckdb/
+
 # AI harness local state (session settings / temp worktrees) — never committed
 .claude/
 

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/research-query.schema.json",
+  "title": "Research Query condition data (ihl.research.query.v1)",
+  "description": "F2研究者モードの検索条件JSON保存の append-only イベントの data 部。Truth キー truth/ihl.research.query.v1/<query_id>.json。生成器(apps/web/src/research/query-generator.ts)が受け取る ResearchQueryJson(select/conditions/limit)をそのまま query に格納し、manifest_generation で再現性100%を担保する(同じ generation + 同じ query = 同じ結果)。クライアント側のダウンロード/URL共有(condition-share.ts)は本イベントの追加で置き換えない — 併存する(g81-f2wiring T4・R0801-73be3e §7-1の申し送り)。",
+  "x_ihl_req": "V3-AIP-101(F2)",
+  "x_ihl_source": "kits/lane-implement/R0801-73be3e-REPORT-2026-08-01-g80-f2research.md §7-1",
+  "type": "object",
+  "required": ["query_id", "actor_id", "manifest_generation", "query"],
+  "properties": {
+    "query_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "保存イベントの一意キー(保存のたびに新規)。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "保存した利用者の actor_id(V3-AUT-17)。"
+    },
+    "manifest_generation": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "この条件JSONが対象とした manifest の generation番号(condition-share.ts の SavedResearchCondition.manifest_generation と同じ役割)。"
+    },
+    "query": {
+      "type": "object",
+      "description": "生成器(query-generator.ts)が受け取る ResearchQueryJson 本体(select/conditions/limit)。ホワイトリスト検証は保存時ではなく実行時(生成器側)で行うため、ここでは形の自由度を残す。",
+      "additionalProperties": true
+    },
+    "label": {
+      "type": "string",
+      "description": "保存した条件に付ける任意のラベル(検索条件を保存(JSONダウンロード)と同様、必須ではない)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "保存時刻(RFC3339・任意)。"
+    }
+  },
+  "additionalProperties": false
+}

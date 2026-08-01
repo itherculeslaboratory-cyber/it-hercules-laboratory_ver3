@@ -92,6 +92,7 @@ export * from "./events/ppr-graph-update";
 export * from "./events/pref-set";
 export * from "./events/project";
 export * from "./events/research-proposal";
+export * from "./events/research-query";
 export * from "./events/sec-key-bundle-recovery";
 export * from "./events/sec-key-bundle";
 export * from "./events/social-eval";

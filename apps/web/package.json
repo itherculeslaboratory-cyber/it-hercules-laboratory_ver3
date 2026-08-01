@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copy-duckdb-assets.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-duckdb-assets.mjs",
     "build": "next build",
     "start": "next start",
     "test": "vitest run",

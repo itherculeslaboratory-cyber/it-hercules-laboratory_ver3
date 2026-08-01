@@ -16,6 +16,11 @@ import { ApiError, mapError } from "@/lib/error-messages";
 import { shouldOfferTranslation, translateOnDemand } from "@/lib/ugc-translate";
 import { makeResolver, type Catalogs } from "@/lib/i18n-resolve";
 import { computeCaptureColorPayload } from "@/lib/color-analysis";
+import ResearchPanel from "@/research/ResearchPanel";
+import { fetchManifestLatest, fetchManifestParquet, type ManifestLatestInfo } from "@/research/manifest-client";
+import { loadDuckDb, registerManifest, runResearchQuery } from "@/research/duckdb-client";
+import { saveResearchQueryToTruth } from "@/research/truth-query-save";
+import type { ResearchQueryJson } from "@/research/query-generator";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
 import {
   clearBatch,
@@ -4461,6 +4466,80 @@ function NumericFilterRow({
   );
 }
 
+// F2研究者モード配線(g81-f2wiring T1)。screen-defs/obs-search.json の「研究者」タブ
+// (node type: "research-panel")がこのコンポーネントに委譲する。ResearchPanel
+// (apps/web/src/research/ResearchPanel.tsx)は manifestInfo/onRunQuery を注入で受け
+// 取るテスト容易な設計のため、ここで manifest-client.ts(フェッチ)+ duckdb-client.ts
+// (遅延ロード・登録・実行)を配線する。duckdb-wasm 自体はここで静的importしていない
+// (loadDuckDb() 内の動的importのまま=F0実測の遅延ロードを維持)。
+function ResearchPanelNode() {
+  const resolve = useContext(MessagesCtx);
+  const execute = useContext(ExecuteCtx);
+  const [manifestInfo, setManifestInfo] = useState<ManifestLatestInfo | null>(null);
+  const [manifestError, setManifestError] = useState<string | null>(null);
+  const registeredGenerationRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const info = await fetchManifestLatest();
+        if (!cancelled) setManifestInfo(info);
+      } catch (e) {
+        if (!cancelled) setManifestError(e instanceof Error ? e.message : String(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleRunQuery = useCallback(
+    async (sql: string, params: unknown[]) => {
+      if (!manifestInfo || manifestInfo.generation === null) {
+        throw new Error("manifest not generated yet");
+      }
+      const db = await loadDuckDb();
+      if (registeredGenerationRef.current !== manifestInfo.generation) {
+        const bytes = await fetchManifestParquet(manifestInfo.generation);
+        await registerManifest(db, bytes);
+        registeredGenerationRef.current = manifestInfo.generation;
+      }
+      return runResearchQuery(db, sql, params);
+    },
+    [manifestInfo],
+  );
+
+  const handleSaveToTruth = useCallback(
+    async (query: ResearchQueryJson, manifestGeneration: number) => {
+      const me = (await execute({ kind: "api", method: "GET", path: "/api/v1/me/profile" })) as
+        | { actor_id?: string }
+        | undefined;
+      const actorId = me?.actor_id;
+      if (!actorId) throw new Error("actor_id not available (not signed in?)");
+      await saveResearchQueryToTruth(query, manifestGeneration, actorId);
+    },
+    [execute],
+  );
+
+  if (manifestError) {
+    return (
+      <p className="civ-empty" data-testid="research-panel-manifest-error">
+        {manifestError}
+      </p>
+    );
+  }
+  if (!manifestInfo) return null;
+  return (
+    <ResearchPanel
+      manifestInfo={manifestInfo}
+      onRunQuery={handleRunQuery}
+      resolve={resolve}
+      onSaveToTruth={handleSaveToTruth}
+    />
+  );
+}
+
 // 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/obs-search.json
 // はnode {type:"search-navigator"} 1個のみでこのコンポーネントに委譲。動作影響なし):
 //   GET /individuals + GET /placements 取得 → 保存検索チップ(localStorage)+
@@ -7447,6 +7526,8 @@ export function NodeView({ node }: { node: ScreenNode }) {
       return <BatchDoneNode />;
     case "search-navigator":
       return <SearchNavigatorNode />;
+    case "research-panel":
+      return <ResearchPanelNode />;
     case "growth-chart":
       return <GrowthChartNode node={node} />;
     case "individual-profile":

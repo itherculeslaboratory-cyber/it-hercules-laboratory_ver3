@@ -102,6 +102,7 @@ export interface Node {
     | "batch-summary"
     | "batch-done"
     | "search-navigator"
+    | "research-panel"
     | "growth-chart"
     | "individual-profile"
     | "thread-posts"

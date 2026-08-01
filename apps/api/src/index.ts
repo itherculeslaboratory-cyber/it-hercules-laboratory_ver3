@@ -673,6 +673,10 @@ const SELF_SERVICE_EVENT_TYPES = new Set<string>([
   // 汎用メカニズム(認可境界/insert-only/actor_id stamping)を POST /events 越しに
   // 検証する既存 TC(cl-01/cl-02/auth.test.ts)がこれに依存する。
   "ihl.test.sample.v1",
+  // g81-f2wiring T4: F2研究者モードの検索条件JSON保存。業務ルール(在庫/重複/ロール等)
+  // を持たない単純な append(ui.vote.v1/process.intent.v1と同型)のため typed route を
+  // 作らず自己サービス経路に乗せる。
+  "ihl.research.query.v1",
 ]);
 
 app.post("/events", async (c) => {

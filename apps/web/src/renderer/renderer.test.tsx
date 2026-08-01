@@ -1050,6 +1050,32 @@ describe("Renderer — A層 tabs node (c7 ui-parity-map §2-5)", () => {
   });
 });
 
+describe("Renderer — obs-search「研究者」タブ (g81-f2wiring T1)", () => {
+  it("switches into the research tab and mounts F2's ResearchPanel (honest empty-state, no manifest yet)", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/research/manifest/latest")) {
+        return new Response(JSON.stringify({ generation: null, generated_at: null }), { status: 200 });
+      }
+      throw new Error(`unexpected fetch in test: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const def = loadScreenDef("obs-search");
+      render(<Renderer def={def} onAction={vi.fn()} />);
+      // 一般タブが既定(research-panel はまだマウントされていない = fetch未発火)。
+      expect(fetchMock).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("tab", { name: "研究者" }));
+      expect(
+        await screen.findByText(/研究者モード: manifestはまだ生成されていません/),
+      ).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/v1/research/manifest/latest"));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("Renderer — A層 image-grid node (c7 ui-parity-map §2-6)", () => {
   it("binds items into thumbnail cards with label/meta/badge", async () => {
     const onAction = vi.fn(async () => ({

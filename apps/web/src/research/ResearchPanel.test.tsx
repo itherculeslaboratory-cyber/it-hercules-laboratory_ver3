@@ -60,3 +60,33 @@ describe("ResearchPanel — generation表示・SQLプレビュー・実行", () 
     expect(screen.queryByTestId("results-block")).toBeNull();
   });
 });
+
+describe("ResearchPanel — Truthへ保存 (g81-f2wiring T4)", () => {
+  it("onSaveToTruth未指定なら保存ボタン自体を出さない(後方互換)", () => {
+    render(<ResearchPanel manifestInfo={{ generation: 1, generated_at: "t" }} onRunQuery={vi.fn()} />);
+    expect(screen.queryByTestId("save-to-truth")).toBeNull();
+  });
+
+  it("保存ボタンで現在の条件JSON+manifest generationを渡してonSaveToTruthを呼び、成功表示になる", async () => {
+    const onSaveToTruth = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ResearchPanel manifestInfo={{ generation: 5, generated_at: "t" }} onRunQuery={vi.fn()} onSaveToTruth={onSaveToTruth} />,
+    );
+    fireEvent.click(screen.getByTestId("save-to-truth"));
+    await waitFor(() => expect(screen.getByTestId("save-to-truth-saved")).toBeInTheDocument());
+    expect(onSaveToTruth).toHaveBeenCalledWith(
+      { conditions: [{ column: "type", operator: "=", value: "obs-capture" }], limit: 100 },
+      5,
+    );
+  });
+
+  it("onSaveToTruthが失敗したら保存エラーを表示する", async () => {
+    const onSaveToTruth = vi.fn().mockRejectedValue(new Error("network down"));
+    render(
+      <ResearchPanel manifestInfo={{ generation: 1, generated_at: "t" }} onRunQuery={vi.fn()} onSaveToTruth={onSaveToTruth} />,
+    );
+    fireEvent.click(screen.getByTestId("save-to-truth"));
+    await waitFor(() => expect(screen.getByTestId("save-to-truth-error").textContent).toBe("network down"));
+    expect(screen.queryByTestId("save-to-truth-saved")).toBeNull();
+  });
+});
