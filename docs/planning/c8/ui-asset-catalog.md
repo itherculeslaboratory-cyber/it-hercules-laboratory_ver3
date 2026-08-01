@@ -17,6 +17,14 @@ status: active
 3. **レンダラ語彙化** — 画面を既存ノード型の合成として ScreenDef に落とす(Path A)。既存語彙で表せない一発物リッチ部品のみ、専用ノード型を1つ追加して採用ブロックをその中に閉じ込める(Path B)。専用ノードの追加は最終手段(既に `individual-profile`/`search-navigator` 等7種が前例)。
 
 > **接地事実(検証済・出典 `renderer.tsx` L4850-4978)**: 汎用ノード語彙は `app-shell / page / heading / text / button / form / field / list / card / image / qr-code / measurement-table / table / badge / progress / tabs / image-grid / stepper / kpi-tile / visit-tracker / recent-chips / disclosure / link`。専用(一発物)ノードは `clutch-intake / batch-roster / batch-summary / batch-done / search-navigator / growth-chart / individual-profile` の7種。`field` の variant は `text/number/date/select/segmented/photo/checkbox/hidden`(**textarea は未実装**)。`table` の cell は `text/badge/progress/date/observed/link`(**button/action セルは未実装**)。**ノードの scope 条件表示(`{{params.stage}}==X` で出し分け)は現状レンダラに無い** — これが P0 の唯一の共通不足(後述)。
+>
+> **訂正(2026-08-02 g87-groundfix・実物突合。上記は2026-07-17時点の記述のまま2週間以上更新されておらず、この陳腐化がui-progress-2026-08-02.jsonの4画面誤判定の原因になった=詳細は同ファイルcorrection_history参照)**: 現物(`apps/web/src/renderer/renderer.tsx`・`core/node-view.tsx`・`core/scope.ts`・`zones/*.tsx`、apps/web/src/renderer配下)と1主張ずつ突合した結果:
+> - **汎用ノード語彙**: 列挙(23個)自体は現行`core/node-view.tsx`L102-260の`NodeView`switch文と一致・変化なし(訂正なし)。ただし"22種"という数え方(uiprogress報告側の表現)は上記列挙を実際に数えると23であり、記録の時点でずれていた(本カタログの列挙自体は正しい)。
+> - **専用(一発物)ノード**: 7種→**実測11種に増加**。追加4種= `thread-posts`(`zones/thread-posts.tsx:304`・`core/node-view.tsx:247-248`)・`research-panel`(`zones/search.tsx:1483`・`core/node-view.tsx:241-242`)・`target-navigator`(`zones/search.tsx:1482`・`core/node-view.tsx:249-250`)・`graph-view`(`zones/search.tsx:1484`・`core/node-view.tsx:251-252`)。
+> - **`field` の textarea variant**: **実装済み**(`renderer.tsx:607-618`。`git log -S'"textarea"'`先頭ヒット=コミット`e128561`)。variant一覧は`text/number/date/select/segmented/photo/checkbox/hidden/textarea`の9種へ訂正。
+> - **`table` の button/actionセル**: **実装済み**(`renderer.tsx:1177`の`TableActionCell`・`renderer.tsx:1259-1260`で`cell === "button"`分岐。2026-08-02 g87-p0baseラウンドで実装)。また元の列挙に無かった`actor`セル(`renderer.tsx:1137`。`git blame`=コミット`8d56219`・2026-07-17 09:34、本カタログと同日だが本節の列挙作成時点では未反映だったとみられる)も実装済み。cell一覧は`text/badge/progress/date/actor/observed/link/button`の8種へ訂正。
+> - **scope条件表示(`when`)**: **実装済み**。`core/node-view.tsx`L101で全ノード共通に`if (!evalWhen(p, scope)) return null;`を実行(`core/scope.ts`の`evalWhen`が`eq`/`not_eq`/`empty`/`not_empty`の4演算子を実装)。「P0の唯一の共通不足」は解消済み。
+> - **訂正しなかった主張(=本節で言及されていないもの)**: 導入方針3行(L14-17)・除外リスト(L21-35)・アーキタイプ別カタログ(L39-120・47画面ぶん)・組み立て手順2件(L124-165)・付録A棚卸し表(L179-)は本ラウンドの対象外(発注書指示=接地事実節のみ訂正)につき今回は実物突合していない。
 
 ### ライセンス上／スタック上 使えない資産の除外リスト
 | 資産 | 除外理由 | 許容される用途 |
