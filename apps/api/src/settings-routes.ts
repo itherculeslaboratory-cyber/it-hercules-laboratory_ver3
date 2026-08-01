@@ -34,6 +34,25 @@ const PREF_FIELDS = [
   "bank_transfer_ready",
   "scope_species",
   "scope_lineage_id",
+  "notify_karma",
+  "notify_platinum",
+  "notify_dm",
+  "notify_trade",
+  "notify_system",
+  "dnd_start",
+  "dnd_end",
+] as const;
+
+// V3-UIX-42: カテゴリ別通知(発火点はuib07think T1-aの実測時点で0件=実配信基盤は
+// 人間ゲート。本フィールドは設定の保持のみ)。畳み込み後、カテゴリ5キーが未設定の
+// 場合のみ push_notifications_enabled(マスタースイッチ)から導出する。イベントの
+// 書き換え・再発行はしない(投影の計算のみ=append-only不変条項③を崩さない)。
+const NOTIFY_CATEGORY_FIELDS = [
+  "notify_karma",
+  "notify_platinum",
+  "notify_dm",
+  "notify_trade",
+  "notify_system",
 ] as const;
 
 export const settingsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -82,6 +101,13 @@ export type Preferences = {
   bank_transfer_ready: string;
   scope_species: string;
   scope_lineage_id: string;
+  notify_karma: string;
+  notify_platinum: string;
+  notify_dm: string;
+  notify_trade: string;
+  notify_system: string;
+  dnd_start: string;
+  dnd_end: string;
 };
 
 // 選好投影(都度再計算)。pref-set を prefix scan → actor 一致のみ → created_at/ULID
@@ -113,12 +139,30 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
     bank_transfer_ready: "", // V3-UIX-80: 未設定(≠"yes") = 取引前ナッジの対象
     scope_species: "", // HDR-1/R112/R115: ヘッダー観測対象セレクタ・未設定=すべて
     scope_lineage_id: "", // HDR-1/R112/R115: 同上・血統ブランドタグ層(層2)
+    notify_karma: "", // V3-UIX-42: 未設定 = master(push_notifications_enabled)から導出
+    notify_platinum: "", // 同上
+    notify_dm: "", // 同上
+    notify_trade: "", // 同上
+    notify_system: "", // 同上
+    dnd_start: "22:00", // V3-UIX-42: registry.json明示値の既定(DNDは既定で有効)
+    dnd_end: "07:00", // 同上
   };
   for (const e of events) {
     for (const k of PREF_FIELDS) {
       if (typeof e[k] === "string") acc[k] = e[k] as string;
     }
   }
+  // 既存ユーザーのmasterスイッチ引き継ぎ(uib07think T2案A): カテゴリ5キーが未設定
+  // (空文字)の場合のみ push_notifications_enabled から導出する(on→push/off→off)。
+  // 既にカテゴリが明示設定されていればそれを優先し上書きしない。
+  const masterDerived = acc.push_notifications_enabled === "on" ? "push" : "off";
+  for (const k of NOTIFY_CATEGORY_FIELDS) {
+    if (acc[k] === "") acc[k] = masterDerived;
+  }
+  // ★優先順位(uib07think判断4・実配信は本Ship1の範囲外=発火点0件): 実配信を
+  // 実装する側は必ず「master=off の時はカテゴリの値に関わらず何も送らない」を守ること
+  // (masterが優先。ここでのカテゴリ値はmaster=offでも"push"等になり得る=あくまで
+  // カテゴリ単体の選好の保持であり、送信可否の最終判定ではない)。
   return acc;
 }
 

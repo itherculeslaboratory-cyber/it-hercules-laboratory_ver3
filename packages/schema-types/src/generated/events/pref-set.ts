@@ -65,6 +65,34 @@ export interface PrefSet {
    */
   scope_lineage_id?: string;
   /**
+   * カテゴリ別通知設定(V3-UIX-42)。karma系イベントの通知チャネル選好。実配信基盤(VAPID鍵・購読エンドポイント/メール送信鍵)は本番鍵投入を伴う人間ゲートであり本フィールドは設定の保持のみ(任意)。
+   */
+  notify_karma?: "off" | "push" | "mail" | "push+mail";
+  /**
+   * カテゴリ別通知設定(V3-UIX-42)。platinum系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。
+   */
+  notify_platinum?: "off" | "push" | "mail" | "push+mail";
+  /**
+   * カテゴリ別通知設定(V3-UIX-42)。dm系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。
+   */
+  notify_dm?: "off" | "push" | "mail" | "push+mail";
+  /**
+   * カテゴリ別通知設定(V3-UIX-42)。trade系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。
+   */
+  notify_trade?: "off" | "push" | "mail" | "push+mail";
+  /**
+   * カテゴリ別通知設定(V3-UIX-42)。system系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。
+   */
+  notify_system?: "off" | "push" | "mail" | "push+mail";
+  /**
+   * サイレント時間帯(DND)開始時刻(V3-UIX-42・HH:MM・registry.json V3-UIX-42明示値による既定22:00・任意)。
+   */
+  dnd_start?: string;
+  /**
+   * サイレント時間帯(DND)終了時刻(V3-UIX-42・HH:MM・registry.json V3-UIX-42明示値による既定07:00・任意)。
+   */
+  dnd_end?: string;
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;

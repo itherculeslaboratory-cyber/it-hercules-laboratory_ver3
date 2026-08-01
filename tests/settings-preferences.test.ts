@@ -62,6 +62,14 @@ describe("UIX-16 選好 append + LWW 投影", () => {
       bank_transfer_ready: "", // V3-UIX-80: 未設定 = 取引前ナッジの対象
       scope_species: "", // HDR-1/R112/R115: ヘッダー観測対象セレクタ・未設定=すべて
       scope_lineage_id: "", // HDR-1/R112/R115: 同上・血統ブランドタグ層
+      // V3-UIX-42: master(push_notifications_enabled=off)から導出(uib07think T2案A)。
+      notify_karma: "off",
+      notify_platinum: "off",
+      notify_dm: "off",
+      notify_trade: "off",
+      notify_system: "off",
+      dnd_start: "22:00", // registry.json V3-UIX-42 明示既定値
+      dnd_end: "07:00", // 同上
     });
   });
 
@@ -205,5 +213,72 @@ describe("UIX-16/I18-08 負の validation(write-time 検証配線・批評家修
     const p2 = (await (await getPrefs(env, h)).json()) as Record<string, string>;
     expect(p2.scope_species).toBe(""); // すべてに戻った
     expect(p2.scope_lineage_id).toBe("王シリーズ"); // 別フィールドは併存維持(LWWは各フィールド独立)
+  });
+});
+
+// V3-UIX-42(uib07think T2案A): カテゴリ別通知5系統+DND2キー(g78-uib07impl1)。
+describe("V3-UIX-42 通知カテゴリ + DND(uib07 Ship1)", () => {
+  it("notify_*/dnd_* が enum外・pattern外のPATCHで400", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("holly");
+    expect((await patchPrefs(env, h, { notify_karma: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { notify_platinum: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { notify_dm: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { notify_trade: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { notify_system: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { dnd_start: "24:00" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { dnd_start: "9:00" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { dnd_end: "07:60" })).status).toBe(400);
+  });
+
+  it("notify_*/dnd_* は有効な値でappendされGETに反映する", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("ivan");
+    expect(
+      (
+        await patchPrefs(env, h, {
+          notify_karma: "push+mail",
+          notify_trade: "mail",
+          dnd_start: "23:30",
+          dnd_end: "06:15",
+        })
+      ).status,
+    ).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.notify_karma).toBe("push+mail");
+    expect(p.notify_trade).toBe("mail");
+    expect(p.dnd_start).toBe("23:30");
+    expect(p.dnd_end).toBe("06:15");
+  });
+
+  it("master導出: push_notifications_enabled=on で未設定カテゴリ全てpushになる", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("jill");
+    expect((await patchPrefs(env, h, { push_notifications_enabled: "on" })).status).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.notify_karma).toBe("push");
+    expect(p.notify_platinum).toBe("push");
+    expect(p.notify_dm).toBe("push");
+    expect(p.notify_trade).toBe("push");
+    expect(p.notify_system).toBe("push");
+  });
+
+  it("master導出: push_notifications_enabled=off(既定)で未設定カテゴリ全てoffになる", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("kyle");
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.notify_karma).toBe("off");
+    expect(p.notify_system).toBe("off");
+  });
+
+  it("カテゴリの明示設定はmaster導出より優先されて残る", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("laura");
+    expect((await patchPrefs(env, h, { notify_karma: "mail" })).status).toBe(200);
+    await sleep(2);
+    expect((await patchPrefs(env, h, { push_notifications_enabled: "on" })).status).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.notify_karma).toBe("mail"); // 明示設定が優先され上書きされない
+    expect(p.notify_platinum).toBe("push"); // 未設定はmaster=onからpushへ導出
   });
 });

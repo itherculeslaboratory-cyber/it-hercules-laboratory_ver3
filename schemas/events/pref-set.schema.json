@@ -77,6 +77,41 @@
       "type": "string",
       "description": "ヘッダー常駐「観測対象」グローバル文脈スイッチの選択血統ブランドタグ(任意・空文字/未設定=すべて。c9-structure-canon.md §1c層2=育種ブランド・V3-IND-34 lineage_id と同一値域。実の親子エッジ=層3とは別軸)。scope_species と同じ理由でminLengthなし(空文字=クリア)。"
     },
+    "notify_karma": {
+      "type": "string",
+      "enum": ["off", "push", "mail", "push+mail"],
+      "description": "カテゴリ別通知設定(V3-UIX-42)。karma系イベントの通知チャネル選好。実配信基盤(VAPID鍵・購読エンドポイント/メール送信鍵)は本番鍵投入を伴う人間ゲートであり本フィールドは設定の保持のみ(任意)。"
+    },
+    "notify_platinum": {
+      "type": "string",
+      "enum": ["off", "push", "mail", "push+mail"],
+      "description": "カテゴリ別通知設定(V3-UIX-42)。platinum系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。"
+    },
+    "notify_dm": {
+      "type": "string",
+      "enum": ["off", "push", "mail", "push+mail"],
+      "description": "カテゴリ別通知設定(V3-UIX-42)。dm系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。"
+    },
+    "notify_trade": {
+      "type": "string",
+      "enum": ["off", "push", "mail", "push+mail"],
+      "description": "カテゴリ別通知設定(V3-UIX-42)。trade系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。"
+    },
+    "notify_system": {
+      "type": "string",
+      "enum": ["off", "push", "mail", "push+mail"],
+      "description": "カテゴリ別通知設定(V3-UIX-42)。system系イベントの通知チャネル選好。実配信基盤は人間ゲートにつき本フィールドは設定の保持のみ(任意)。"
+    },
+    "dnd_start": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+      "description": "サイレント時間帯(DND)開始時刻(V3-UIX-42・HH:MM・registry.json V3-UIX-42明示値による既定22:00・任意)。"
+    },
+    "dnd_end": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+      "description": "サイレント時間帯(DND)終了時刻(V3-UIX-42・HH:MM・registry.json V3-UIX-42明示値による既定07:00・任意)。"
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",
