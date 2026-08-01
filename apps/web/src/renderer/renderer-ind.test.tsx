@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Renderer } from "./renderer";
 import type { ScreenDef } from "./types";
+import { clearBatch, loadBatchDraft } from "./batch-draft";
 
 afterEach(() => cleanup());
 
@@ -149,6 +150,45 @@ describe("IND individual-detail — death recording sends schema-required eviden
     fireEvent.click(await screen.findByRole("button", { name: /●飼育中/ }));
     fireEvent.click(screen.getByRole("button", { name: /追跡不能として記録/ }));
     expect(await waitForCall(onAction, "/life-events")).toEqual(expect.objectContaining({ kind: "lost" }));
+  });
+});
+
+describe("IND batch roster — lost recording (T0b g76-uibatch2)", () => {
+  function rosterDef(): ScreenDef {
+    return {
+      screen_id: "t",
+      route: "/t",
+      title: "t",
+      nodes: [{ id: "roster", type: "batch-roster" }],
+    } as ScreenDef;
+  }
+
+  it("一括UIの行メニューから追跡不能を選ぶと、確定時にkind:lostがdraftへ積まれる", async () => {
+    clearBatch();
+    const onAction = vi.fn(async (a: { path?: string }) => {
+      if (a.path === "/api/v1/individuals")
+        return {
+          individuals: [
+            { individual_id: "ind-9", label: "ヘラクレス No.9", species: "ヘラクレス", stage: "third_early", placement_id: null, last_care_at: null },
+          ],
+        };
+      if (a.path === "/api/v1/clutches") return { clutches: [] };
+      if (a.path === "/api/v1/placements") return { placements: [] };
+      return undefined;
+    });
+    render(<Renderer def={rosterDef()} onAction={onAction} onNavigate={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /死亡・ステージ変化/ }));
+    fireEvent.click(screen.getByRole("button", { name: /追跡不能として記録/ }));
+    expect(screen.getByText(/🔍 追跡不能として記録\(今回\)/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "確認へ →" }));
+
+    const draft = loadBatchDraft();
+    expect(draft?.items).toContainEqual(
+      expect.objectContaining({ kind: "life-event", individual_id: "ind-9", body: expect.objectContaining({ kind: "lost" }) }),
+    );
+    expect(draft?.rows).toContainEqual(expect.objectContaining({ group: "lost", label: "ヘラクレス No.9", valueText: "追跡不能として記録" }));
   });
 });
 

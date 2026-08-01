@@ -50040,7 +50040,8 @@
     "req_status": "確定",
     "wave": "対象外",
     "wave_why": "tier_v2=C・status_in_ver2=未実装/不明→対象外(desire台帳未掲載・実績/根拠薄)",
-    "hold": false
+    "hold": false,
+    "ruling_note": "ユーザー裁定 2026-08-01(review-queue\\R0801-f671e2-uib10spec52-2026-08-01.json・UIB10-1・○=A案): 実装済みのknowledge-paper独立タブ運用を正式仕様として維持し、本statementが求める『記事タブ内フィルタ統合』は実装しない。上記statementは当時の要件案であり、現行実装(独立タブ)が正となる。出典: kits\\lane-research\\R0801-b64e81-REPORT-2026-08-01-g72-uiinv2.md 表2(V3-UIX-52の行)・review-queue回答JSON。"
   },
   {
     "id": "V3-UIX-65",

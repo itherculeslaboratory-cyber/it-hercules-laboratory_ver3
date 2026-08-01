@@ -9,7 +9,7 @@ const KEY = "ihl:batch-draft";
 const RESULTS_KEY = "ihl:batch-results";
 const PRESELECT_KEY = "ihl:batch-preselect";
 
-export type BatchGroup = "measure" | "move" | "death" | "stage" | "clutch-reconcile" | "clutch-promote";
+export type BatchGroup = "measure" | "move" | "death" | "lost" | "stage" | "clutch-reconcile" | "clutch-promote";
 
 // items[] entries — the EXACT shape POST /api/v1/observation/batch-commit
 // expects (kind/body/individual_id/clutch_id/subject_ref/to_placement_id/at).

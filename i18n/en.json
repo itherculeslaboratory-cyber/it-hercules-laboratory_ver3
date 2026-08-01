@@ -54,7 +54,6 @@
   "login-sent.notice.title": "The same screen appears even if this email isn't registered",
   "login-sent.notice.body": "This is a safety measure so no one outside can tell whether an address is registered (enumeration protection). If this isn't your address, re-enter it below.",
   "settings.title.text": "Settings",
-  "settings.current-title.text": "Current settings",
   "settings.locale.label": "Language",
   "settings.theme.label": "Theme",
   "settings.motion.label": "Reduce motion",

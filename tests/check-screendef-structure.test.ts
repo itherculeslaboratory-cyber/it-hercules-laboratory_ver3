@@ -2,7 +2,7 @@
 // violation (>3 sections, >3 cards, dead-end, >3-line text); every cluster-owned
 // real screen-def passes.
 import { describe, expect, it } from "vitest";
-import { checkStructure, checkSourcePaths, runGate, CLUSTER_OWNED, flattenNodes } from "../scripts/check-screendef-structure.mjs";
+import { checkStructure, checkSourcePaths, checkPrimaryCta, runGate, CLUSTER_OWNED, flattenNodes } from "../scripts/check-screendef-structure.mjs";
 import { loadScreenDefs } from "../scripts/check-navigation.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +63,38 @@ describe("V3-UIX-05 checkStructure", () => {
       forwardLink,
     ]);
     expect(checkSourcePaths(ok)).toEqual([]);
+  });
+
+  it("flags two unconditional primary CTAs in the same tab (V3-UIX-06)", () => {
+    const bad = def([
+      { id: "a", type: "button", props: { variant: "primary", label: "a" } },
+      { id: "b", type: "button", props: { variant: "primary", label: "b" } },
+      forwardLink,
+    ]);
+    expect(checkPrimaryCta(bad).some((m) => m.includes("multiple unconditional primary CTAs"))).toBe(true);
+  });
+
+  it("does not flag primary CTAs scoped to different tabs", () => {
+    const ok = def([
+      { id: "a", type: "button", props: { variant: "primary", tab_id: "1", label: "a" } },
+      { id: "b", type: "button", props: { variant: "primary", tab_id: "2", label: "b" } },
+      forwardLink,
+    ]);
+    expect(checkPrimaryCta(ok)).toEqual([]);
+  });
+
+  it("does not flag primary CTAs guarded by `when` on the button itself or an ancestor", () => {
+    const ok = def([
+      { id: "a", type: "button", props: { variant: "primary", when: { not_empty: "{{params.x}}" }, label: "a" } },
+      {
+        id: "form",
+        type: "form",
+        props: { when: { empty: "{{params.x}}" } },
+        children: [{ id: "b", type: "button", props: { variant: "primary", label: "b" } }],
+      },
+      forwardLink,
+    ]);
+    expect(checkPrimaryCta(ok)).toEqual([]);
   });
 
   it("every cluster-owned screen-def passes (real defs)", () => {

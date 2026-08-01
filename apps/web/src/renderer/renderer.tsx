@@ -2961,7 +2961,7 @@ function BatchRosterNode() {
   const setGridValue = (id: string, key: "weight" | "length", v: string) =>
     setGrid((g) => ({ ...g, [id]: { ...(g[id] ?? { weight: "", length: "" }), [key]: v } }));
 
-  type Extra = { kind: "death"; atStage: string; weightG: string } | { kind: "stage"; toStage: string };
+  type Extra = { kind: "death"; atStage: string; weightG: string } | { kind: "lost" } | { kind: "stage"; toStage: string };
   const [extras, setExtras] = useState<Record<string, Extra>>({});
   const [rowMenuOpen, setRowMenuOpen] = useState<string | null>(null);
   const [stagePick, setStagePick] = useState<Record<string, string>>({});
@@ -3092,6 +3092,15 @@ function BatchRosterNode() {
           group: "death",
           label: ind.label,
           valueText: `死亡として記録(${STAGE_LABELS_JA[extra.atStage] ?? extra.atStage}・${weight}g)`,
+          itemIndex: idx,
+        });
+      } else if (extra.kind === "lost") {
+        items.push({ kind: "life-event", individual_id: id, body: { kind: "lost", at: now } });
+        rows.push({
+          key: `lost-${id}`,
+          group: "lost",
+          label: ind.label,
+          valueText: "追跡不能として記録",
           itemIndex: idx,
         });
       } else if (extra.kind === "stage") {
@@ -3258,7 +3267,9 @@ function BatchRosterNode() {
                   <p className="civ-text">
                     {extra.kind === "death"
                       ? `☠ 死亡として記録(今回・${STAGE_LABELS_JA[extra.atStage] ?? extra.atStage}・${extra.weightG}g)`
-                      : `→ ${STAGE_LABELS_JA[extra.toStage] ?? extra.toStage} に変化(今回)`}{" "}
+                      : extra.kind === "lost"
+                        ? "🔍 追跡不能として記録(今回)"
+                        : `→ ${STAGE_LABELS_JA[extra.toStage] ?? extra.toStage} に変化(今回)`}{" "}
                     <button
                       type="button"
                       className={cn("civ-interactive", "civ-button")}
@@ -3330,6 +3341,17 @@ function BatchRosterNode() {
                         }}
                       >
                         ☠ 死亡として記録
+                      </button>
+                      <button
+                        type="button"
+                        className={cn("civ-interactive", "civ-button")}
+                        data-variant="secondary"
+                        onClick={() => {
+                          setExtras((e) => ({ ...e, [ind.individual_id]: { kind: "lost" } }));
+                          setRowMenuOpen(null);
+                        }}
+                      >
+                        🔍 追跡不能として記録
                       </button>
                     </div>
                     <div className="civ-picker-row">
@@ -3559,6 +3581,7 @@ const BATCH_GROUP_LABELS: Record<BatchGroup, string> = {
   measure: "計測",
   move: "移動",
   death: "死亡",
+  lost: "追跡不能",
   stage: "ステージ変化",
   "clutch-reconcile": "クラッチ照合",
   "clutch-promote": "クラッチ昇格",
