@@ -934,7 +934,8 @@
       "e61f50b",
       "d49dcd9",
       "3d89c63",
-      "57cc941"
+      "57cc941",
+      "01eae2c"
     ],
     "tc": [
       "tests/individual.test.ts describe(\"IND-13 個体詳細(6 文化 + timeline を 1 レスポンスに集約)\")",
@@ -942,7 +943,7 @@
       "tests/individual.test.ts it(\"V3-IND-13 environment: unbind→別placementへ再バインドされたデバイスの新データは元placementに漏れない(批評家指摘・append-onlyでstartは残る)\")",
       "tests/individual.test.ts: owner_history/environment_history 2件"
     ],
-    "note": "個体詳細(A2)実装は2系統ある: (1) projectIndividual()+GET /individuals/{id}(6文化ブロックの薄い一覧・e61f50b)は0076681で「死にUI」判定されscreen-defs/individual-detail.jsonの実画面から外され現在UI到達不可(コードのみ残存)。(2) 実際にUIが呼ぶのはprojectIndividualProfile()+GET /individuals/{id}/profile(V3-AIP-101スライスA・screen-defs/individual-detail.json準拠)— wave-2(d49dcd9+批評家修正3d89c63)でここへenvironment(現placementのopen device_binding→telemetry join、unbind後の旧placementへのデータ漏れも根治)を追加。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: bio-card/cross統計は実画面(individual-detail.json)の設計判断でスコープA対象外(意図的除外・死にUIを出さない方針)。(統合obs-finalレーン追記) projectIndividualにowner_history(市場transfer取引のindividual_idsを個体横断集計・projectOwnershipLineageの個体版)とenvironment_history(現在地だけでなくoccupancy全件=引っ越し全履歴)を追加し、旧note記載の所有者履歴欠落/現placementのみの2ギャップを解消。market_offers/improvementsはMKT-29(listing側にindividual_idsリンクが無い・別クラスタ残課題)のブロックのまま据え置き(gapが明記した通り対象外)。"
+    "note": "個体詳細(A2)実装は2系統ある: (1) projectIndividual()+GET /individuals/{id}(6文化ブロックの薄い一覧・e61f50b)は0076681で「死にUI」判定されscreen-defs/individual-detail.jsonの実画面から外され現在UI到達不可(コードのみ残存)。(2) 実際にUIが呼ぶのはprojectIndividualProfile()+GET /individuals/{id}/profile(V3-AIP-101スライスA・screen-defs/individual-detail.json準拠)— wave-2(d49dcd9+批評家修正3d89c63)でここへenvironment(現placementのopen device_binding→telemetry join、unbind後の旧placementへのデータ漏れも根治)を追加。npx vitest run tests/individual.test.tsで52/52 green再確認(wave-2 reconciliation)。残: bio-card/cross統計は実画面(individual-detail.json)の設計判断でスコープA対象外(意図的除外・死にUIを出さない方針)。(統合obs-finalレーン追記) projectIndividualにowner_history(市場transfer取引のindividual_idsを個体横断集計・projectOwnershipLineageの個体版)とenvironment_history(現在地だけでなくoccupancy全件=引っ越し全履歴)を追加し、旧note記載の所有者履歴欠落/現placementのみの2ギャップを解消。market_offers/improvementsはMKT-29(listing側にindividual_idsリンクが無い・別クラスタ残課題)のブロックのまま据え置き(gapが明記した通り対象外)。 / 2026-08-01 E3ENTRY-1(o95)履行: 「これまでの記録(観測)」一覧を個体詳細へ追加(新しい順・既定5件・前回差分・obs-detail導線復活=nav辺+完了予算#2・到達30/56→31/56)。R1同乗=projectIndividualProfileにcaptureVisibleTo適用(回帰テスト96/96緑)。非profile経路(projectIndividual=市場価格推定が使用)は未適用のまま=別途裁定要(R0801-ec29b1 §8-2)"
   },
   {
     "id": "V3-IND-15",
@@ -1790,14 +1791,15 @@
     "scope": "required",
     "status": "done",
     "commits": [
-      "f728a06"
+      "f728a06",
+      "01eae2c"
     ],
     "tc": [
       "apps/web/src/renderer/renderer.test.tsx: image-grid search_path/score_pct/citation-buttonテスト1件",
       "tests/observation-ext.test.ts: aggregate=max individual_idアサーション追加",
       "screen-def gates(validate-schemas/check-screendef-structure/check-i18n-keys/check-navigation)全緑"
     ],
-    "note": "obs-detail.jsonを高忠実度化: hero大型写真(hide_if_empty_path新設ガード)+構造化撮影条件カード+由来タグ付き測定表(measurement-table readonlyモード再利用)+類似個体サイドバー(V3-OBS-11のPOST /observation/search rerank APIをimage-gridのsearch_path/search_body/item_action_*縮退で再利用・スコア%表示用score_pct合成+この個体を引用ボタン)。observation-routes.tsのaggregate応答にindividual_id(bare id)をadditive追加。(統合obs-finalレーン)"
+    "note": "obs-detail.jsonを高忠実度化: hero大型写真(hide_if_empty_path新設ガード)+構造化撮影条件カード+由来タグ付き測定表(measurement-table readonlyモード再利用)+類似個体サイドバー(V3-OBS-11のPOST /observation/search rerank APIをimage-gridのsearch_path/search_body/item_action_*縮退で再利用・スコア%表示用score_pct合成+この個体を引用ボタン)。observation-routes.tsのaggregate応答にindividual_id(bare id)をadditive追加。(統合obs-finalレーン) / 2026-08-01: 写真セクションに空状態文言「写真はまだ記録されていません」追加(R0801-ec29b1 R3)"
   },
   {
     "id": "V3-OBS-25",
@@ -5183,10 +5185,11 @@
     "scope": "required",
     "status": "in_progress",
     "commits": [
-      "a45ae3e"
+      "a45ae3e",
+      "01eae2c"
     ],
     "tc": [],
-    "note": "大物のため部分実装(ブリーフで明示許容)。GET /individuals/{id}/graph新設: 血縁(既存buildPedigree再利用)+画像類似(既存loadVector/cosineSimilarityをobservation-routes.tsからexportし再利用)を統合したnodes/edges投影を実装・TC2件で検証(血縁+類似の統合/埋め込み無し個体でも壊れない)。残余: SVG/Canvasでのグラフ描画・ホバー簡易カード・クリック遷移のレンダラ新ノード型、およびscreen-def配線(データ投影のみ実装・次段の土台として設計済み)。統合時にroute番号をinfra-route-114へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。"
+    "note": "大物のため部分実装(ブリーフで明示許容)。GET /individuals/{id}/graph新設: 血縁(既存buildPedigree再利用)+画像類似(既存loadVector/cosineSimilarityをobservation-routes.tsからexportし再利用)を統合したnodes/edges投影を実装・TC2件で検証(血縁+類似の統合/埋め込み無し個体でも壊れない)。残余: SVG/Canvasでのグラフ描画・ホバー簡易カード・クリック遷移のレンダラ新ノード型、およびscreen-def配線(データ投影のみ実装・次段の土台として設計済み)。統合時にroute番号をinfra-route-114へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。 / 2026-08-01 UIB09-A(o85)履行: 検索ブリーダータブに注記1行(ui-copyゲート適合のためカード原文「準備中」を「これから設計します」へ言い換え。R0801-ec29b1 §5-1)"
   },
   {
     "id": "V3-CST-04",
@@ -8131,7 +8134,9 @@
     "lane": "L6-ui",
     "scope": "required",
     "status": "in_progress",
-    "commits": ["4c6a034"],
+    "commits": [
+      "4c6a034"
+    ],
     "tc": [],
     "note": "2026-08-01 g82-clickimpl: 観測登録フローの到達予算(≤3クリック)+完了予算(≤2ステップ)をnavigation.json一本化+tests/nav-reachability.test.ts+scripts/check-navigation.mjsで機械契約化・実測全充足(reach=1、flow=2)。ただしstatementが含む抽選応募/GMO振込の導線はscreen-def自体が未実装(第2波)のため、要件全体としてはdoneにできない。commits[]はHQのラウンド基準コミット後に追記されたい。"
   },
