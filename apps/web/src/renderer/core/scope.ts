@@ -275,6 +275,48 @@ export function requestInit(method: string, body?: Record<string, unknown>): Req
   return init;
 }
 
+// c8 UI磨き第2弾#1(受領10「買い手/売り手だけ表示」・ui-asset-catalog.md
+// 【最優先1】が指摘した「レンダラに scope 条件表示(when)が無い」P0ギャップの
+// 解消): ANY node may carry `props.when: { eq: [a, b] }` (or `not_eq`) — both
+// sides are `{{...}}` templates resolved against the SAME scope everything
+// else interpolates against, so a screen-def compares e.g.
+// {{viewer.actor_id}} to {{data.state.matched_with}} to show a button only to
+// the matched buyer. No `when` prop = always renders (upper-compatible; every
+// existing screen-def is unaffected). Deliberately just eq/not_eq of two
+// interpolated strings — not a rules engine; every role check this round-16
+// wave needs (buyer/seller/thread_owner) reduces to one id comparison.
+export function evalWhen(p: Record<string, unknown>, scope: Scope): boolean {
+  const w = p.when as
+    | { eq?: [string, string]; not_eq?: [string, string]; empty?: string; not_empty?: string }
+    | undefined;
+  if (!w) return true;
+  // Both templates resolving empty (the viewer/data fetch hasn't landed yet —
+  // {{viewer.actor_id}} and {{data.state.matched_with}} both "" on first
+  // render) must NOT count as a match: an eq of two unknowns is unknown, not
+  // true. Without this guard every role-gated button would flash visible for
+  // one render before the real ids arrive.
+  if (w.eq) {
+    const a = interpolate(w.eq[0], scope);
+    return a !== "" && a === interpolate(w.eq[1], scope);
+  }
+  if (w.not_eq) {
+    const a = interpolate(w.not_eq[0], scope);
+    return a !== "" && a !== interpolate(w.not_eq[1], scope);
+  }
+  // c8 UI磨きR0801-9d452f-ui03dispute是正: eq/not_eqは両辺とも空文字を
+  // 「不明」扱いするガードがあるため「値が未指定である」を表せなかった
+  // (dispute_id未指定=新規開始フォーム、指定時=進行状況、の出し分けに必要)。
+  // empty/not_empty は単項なのでこのガードは適用しない — 空文字そのものを
+  // 判定対象にする。
+  if (typeof w.empty === "string") {
+    return interpolate(w.empty, scope) === "";
+  }
+  if (typeof w.not_empty === "string") {
+    return interpolate(w.not_empty, scope) !== "";
+  }
+  return true;
+}
+
 export function defaultExecute(onNavigate?: (to: string, query?: Record<string, string>) => void): Execute {
   return async (action, body) => {
     if (action.kind === "navigate") {
