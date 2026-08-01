@@ -58401,5 +58401,69 @@
     "wave": "第1波",
     "wave_why": "V3-AIP-108/109/110(同一ユーザー要望群=データ価値のAI判定)と同一グループ・同waveに整合(記録役の判断・ambiguity参照)",
     "hold": false
+  },
+  {
+    "id": "V3-SEC-60",
+    "statement": "観測データの一括出力 `GET /observation/export`(apps/api/src/observation-routes.ts:976)は内部運用専用(バックアップ・点検)であり、第三者提供の経路ではない。第三者提供の出口を新設する場合は、その経路で consent_l3(第三者提供同意。判定関数 isThirdPartyProvisionConsented・observation-constants.ts:243・commit c7a7d7e)によるフィルタ強制を必須とする。本要件は線引きの明文化であり、現時点の `GET /observation/export` の挙動(consent_l3を参照しない全件出力)は変更しない。内部運用専用である旨のコード明記は2026-08-01に実施済み。",
+    "category": "セキュリティ/法務",
+    "kind": "機能要件",
+    "scores": {
+      "bv": {
+        "v": 3,
+        "why": "将来の第三者提供機能が同意フィルタ無しで実装される事故を、要件として先回りで防ぐ(現時点の実装変更なし)"
+      },
+      "ui": {
+        "v": 1,
+        "why": "開発者・実装判断向けの内部方針であり、ユーザーに直接見える挙動変化はない"
+      },
+      "dep": {
+        "v": 2,
+        "why": "GET /observation/export(observation-routes.ts:976)・consent_l3判定関数(observation-constants.ts:243・commit c7a7d7e)に依存"
+      },
+      "diff": {
+        "v": 1,
+        "why": "本要件は現時点で線引きの明文化のみ(実装なし)。将来出口を作る時にconsent_l3フィルタの実装が必要になる"
+      }
+    },
+    "philosophy": [
+      "その他思想"
+    ],
+    "trust": "高",
+    "human_confirm": false,
+    "novelty": "ver3新規",
+    "status_in_ver2": "不明",
+    "sources": [
+      {
+        "src_file": "00-hq/review-queue/R0801-149b70-exportline-2026-08-01.json (decisions[EXP-1] user_ruling.answers.EXP-1=o)",
+        "evidence": "ifYes逐語「○の場合: 要件1件登録(V3採番)+export仕様への内部用明記(記録艦1隻・一度きり)。」回答=o(2026-08-01T03:57:12.544Z・score=75・good欄「よきかと」)。",
+        "trust": "高",
+        "date": "2026-08-01"
+      },
+      {
+        "src_file": "00-hq/kits/lane-research/R0801-149b70-REPORT-2026-08-01-g72-consentgate.md",
+        "evidence": "中1(:75-104)。GET /observation/export(observation-routes.ts:963-970当時)がconsent_l3を一切参照せず全件出力することの実測と、「exportは第三者提供ではない=内部用」という線引きを裁定として明文化する選択肢の提示(:99-104)。",
+        "trust": "高",
+        "date": "2026-08-01"
+      },
+      {
+        "src_file": "systems/ihl-ver3 commit c7a7d7e",
+        "evidence": "consent_l3記録の実装。判定関数 isThirdPartyProvisionConsented(apps/api/src/observation-constants.ts:243)・テスト tests/g66-consent-l3.test.ts。",
+        "trust": "高",
+        "date": "2026-08-01"
+      }
+    ],
+    "superseded": null,
+    "conflict": null,
+    "ambiguity": "score_v2/tier_v2/ds/scores/waveは、ユーザー本人が個別に指定した値ではなく記録役(記録レーン)の代行判断である(同カテゴリの先例V3-SEC-59の値傾向に倣った)。報告書『判断が要った箇所』参照。",
+    "group": "g05-ガバナンス法務",
+    "v1_score": null,
+    "v1_tier": null,
+    "ds": 2,
+    "score_v2": 21,
+    "tier_v2": "B",
+    "req_status": "確定",
+    "wave": "第2波",
+    "wave_why": "現時点は線引きの明文化のみで実装を伴わない(第三者提供の出口自体が未着手のため)。V3-SEC-59と同様、将来の具体設計・実装は次回以降に回すとみなし第2波に置く(記録役の判断・ambiguity参照)",
+    "hold": false
   }
 ]
