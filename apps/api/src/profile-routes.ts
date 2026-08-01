@@ -180,6 +180,7 @@ profileRoutes.get("/users/:actor/profile", async (c) => {
 });
 
 // GET /me/status — 統合ステータス + append-only 履歴（読取投影・KRM-16）。
+// 生存率(飼育技術の指標)をこのレスポンスへ足してはならない(V3-KRM-35 表示分離・設計書§4.6)。
 profileRoutes.get("/me/status", async (c) => {
   const s = store(c);
   const actorId = c.get("actorId");

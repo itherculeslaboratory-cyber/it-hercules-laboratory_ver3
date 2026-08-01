@@ -16,6 +16,8 @@
             { "id": "title", "type": "heading", "props": { "text": "ステータス", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text": "プラチナ・カルマ・貢献度・称号を一画面で確認します。", "muted": true } },
 
+            { "id": "contribution-disclaimer", "type": "text", "props": { "text": "これは知識への貢献の記録です。飼育の巧拙を示すものではありません。", "muted": true } },
+
             { "id": "karma-title", "type": "heading", "props": { "text": "カルマ", "level": 2 } },
             {
               "id": "karma",
