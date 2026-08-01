@@ -6,6 +6,7 @@ import type { Bindings, Variables } from "./env";
 import { sourceRoutes } from "./source-routes";
 import { aiRoutes } from "./ai-kernel";
 import { aiDigestRoutes } from "./ai-digest-routes";
+import { chainRoutes } from "./chain-routes";
 import { verifySessionToken } from "./session";
 import { authRoutes } from "./auth-routes";
 import { revocationOf, type RevokeReason } from "./denylist";
@@ -104,6 +105,7 @@ export const PUBLIC_ROUTES = [
   // own secret key before recording anything — a forged body alone matches
   // nothing real.
   "/api/v1/fees/payjp-webhook",
+  "/api/v1/chain/root",
 ];
 
 // R65-7(第22回裁定 V3-AUT-15): 観測データの READ(検索・一覧・詳細)は未ログインでも見られる。
@@ -637,6 +639,7 @@ app.route("/api/v1", aiRoutes);
 // コネクタ。保存/表示は新イベント型を増やさず ihl.plaza.post.v1(channel=knowledge-board・
 // board_kind=improvement)を再利用 — 既存「改善の板」画面に無改造で表示される。
 app.route("/api/v1", aiDigestRoutes);
+app.route("/api/v1", chainRoutes);
 
 // T-71 恒久硬化(R91 承認・修正層裁定 = 自己サービス型 allowlist・参照:
 // docs/planning/c9/design-events-allowlist.md)。POST /events は薄い汎用 Truth-append
