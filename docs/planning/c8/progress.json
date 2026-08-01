@@ -8740,10 +8740,17 @@
     "tier": "S",
     "lane": null,
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=RULING-2026-08-01-gen65-ihl-backbone.md §2、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-backbone-d1d2d3.md。"
+    "status": "done",
+    "commits": [
+      "4f97169",
+      "ec6772a",
+      "7e9bf55"
+    ],
+    "tc": [
+      "tests/s2-receipt-index.test.ts",
+      "tests/s3-daily-root.test.ts"
+    ],
+    "note": "S1(received_at刻印・4f97169)+S2(受領索引index/receipt/・ec6772a)+S3(日次ルート導出+根の保存R74-1+GET /chain/root読み出しAPI・index.tsはR74-2の3行限定)で型Fが揃った。要件登録元=RULING-2026-08-01-gen65-ihl-backbone.md §2、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-backbone-d1d2d3.md、S3設計正本=00-hq/proposals/R0801-f383db-DESIGN-2026-08-01-g72-backbonedesign.md §2/§5/§6/§7、S3裁定=00-hq/RULING-2026-08-01-gen74-hqrulings.md R74-1/R74-2、S3報告書=00-hq/kits/lane-implement/R0801-239473-REPORT-2026-08-01-g75-s3root.md。"
   },
   {
     "id": "V3-OBS-75",
@@ -8753,10 +8760,10 @@
     "tier": "A",
     "lane": null,
     "scope": "required",
-    "status": "todo",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=RULING-2026-08-01-gen65-ihl-backbone.md §3、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-backbone-d1d2d3.md。"
+    "note": "D-2: ihl.obs.cadence.v1宣言+穴の導出(保存しない)実装済み(g75-s4cadence)。S5(日次ルートへの欠測サマリ同梱)が残るためin_progress。"
   },
   {
     "id": "V3-KRM-35",
@@ -8766,9 +8773,18 @@
     "tier": "A",
     "lane": null,
     "scope": "required",
-    "status": "todo",
-    "commits": [],
-    "tc": [],
-    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=RULING-2026-08-01-gen65-ihl-backbone.md §4/§8、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-backbone-d1d2d3.md。単価の読み替え方(コホート単位への変換式)は実装時にHQ裁定が要る旨をnoteとして残すべきだが、上記noteは既に長いため要点のみとした。"
+    "status": "done",
+    "commits": [
+      "cd1b577",
+      "4f97169",
+      "4d690ad",
+      "5a49b55",
+      "05638f5"
+    ],
+    "tc": [
+      "tests/cohort-payout.test.ts",
+      "tests/cohort-completeness.test.ts"
+    ],
+    "note": "S6(lost終端+死亡証拠if/then・4d690ad)+S7(完結率導出・5a49b55)+S8(貢献度接続: 完結率ゲート×evidence_grade×条件群逓減・05638f5)+S9(表示分離・cd1b577)全コミットで完了(76代目HQ判定)。逓減式=v_base10×(1+log2 n)×completeness_ratio×grade係数(R75-1〜3)。残課題(doneを覆さない): UI死亡記録の証拠収集はS6bで対応中(g76-s6bevidence)。"
   }
 ]
