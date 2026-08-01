@@ -12,6 +12,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.33.1-dev57.0",
     "@measured/puck": "^0.20.2",
     "3d-force-graph": "^1.80.0",
     "clsx": "^2.1.1",

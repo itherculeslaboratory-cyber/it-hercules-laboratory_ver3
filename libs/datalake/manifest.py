@@ -127,6 +127,7 @@ def generate_manifest_from_index_entries(
     generation: int,
     *,
     columns: frozenset[str] | set[str] | None = None,
+    generated_at: str | None = None,
 ) -> Path:
     """index_root 配下の IndexEntry JSON 群 → manifest.parquet(generation-N, 上書き禁止)。
 
@@ -135,11 +136,15 @@ def generate_manifest_from_index_entries(
     write_generation_manifest / update_latest_pointer をそのまま呼ぶだけ
     (V3-FND-06 — generation-N は immutable、これらの関数はテスト済みの
     既存契約であり本関数はその薄い合成)。
+
+    F2(design §4-4④・正直表示): `generated_at` を latest.json に刻む。省略時は
+    呼び出し時点の壁時計(UTC ISO8601)を使う — 呼び出し側が固定時刻を指定したい
+    場合(再現性の確認・テスト)のみ明示で渡す。
     """
     rows = load_index_entries(index_root)
     projected = project_columns(rows, columns)
     out = write_generation_manifest(projected, base_dir, generation)
-    update_latest_pointer(base_dir, generation)
+    update_latest_pointer(base_dir, generation, generated_at=generated_at)
     return out
 
 
@@ -178,27 +183,55 @@ def write_generation_manifest(
     return out
 
 
-def update_latest_pointer(base_dir: str | Path, generation: int) -> Path:
-    """latest.json を { "generation": N } で pointer 更新する(既存 generation manifest
-    ファイル自体は一切書き換えない — pointer のみが変わる)。
+def update_latest_pointer(
+    base_dir: str | Path, generation: int, *, generated_at: str | None = None
+) -> Path:
+    """latest.json を { "generation": N, "generated_at": ISO8601 } で pointer 更新する
+    (既存 generation manifest ファイル自体は一切書き換えない — pointer のみが変わる)。
+
+    F2(design §4-4④・正直表示 = 画面に generation番号+生成時刻を必ず表示): `generated_at`
+    は既存呼び出し元(read_latest_generation は int だけを読む・22件の既存テストは
+    generated_at を見ない)を壊さない追加フィールドとして足した。省略時は呼び出し時点の
+    UTC壁時計を使う。
     """
     import json
+    from datetime import datetime, timezone
 
     base = Path(base_dir)
     base.mkdir(parents=True, exist_ok=True)
     latest_path = base / "latest.json"
-    latest_path.write_text(json.dumps({"generation": generation}), encoding="utf-8")
+    stamp = generated_at if generated_at is not None else datetime.now(timezone.utc).isoformat()
+    latest_path.write_text(
+        json.dumps({"generation": generation, "generated_at": stamp}), encoding="utf-8"
+    )
     return latest_path
 
 
 def read_latest_generation(base_dir: str | Path) -> int | None:
-    """latest.json が指す generation 番号を返す(未作成なら None)。"""
+    """latest.json が指す generation 番号を返す(未作成なら None)。既存契約のまま
+    (generated_at を含めた全体が要る呼び出し元は read_latest_manifest_info を使う)。
+    """
     import json
 
     latest_path = Path(base_dir) / "latest.json"
     if not latest_path.exists():
         return None
     return json.loads(latest_path.read_text(encoding="utf-8"))["generation"]
+
+
+def read_latest_manifest_info(base_dir: str | Path) -> dict[str, Any] | None:
+    """latest.json の全体({"generation": N, "generated_at": ISO8601})を返す(未作成なら
+    None)。F2 が API 経由でブラウザへ渡す情報(design §4-4④)そのもの。旧形式の
+    latest.json(generated_at フィールドが無い・update_latest_pointer 追加前に書かれた
+    もの)は generated_at: None として返す(推定しない)。
+    """
+    import json
+
+    latest_path = Path(base_dir) / "latest.json"
+    if not latest_path.exists():
+        return None
+    data = json.loads(latest_path.read_text(encoding="utf-8"))
+    return {"generation": data["generation"], "generated_at": data.get("generated_at")}
 
 
 def _cosine(a: list[float], b: list[float]) -> float:

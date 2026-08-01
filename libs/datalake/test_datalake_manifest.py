@@ -24,6 +24,7 @@ from manifest import (  # noqa: E402
     load_index_entries,
     project_columns,
     read_latest_generation,
+    read_latest_manifest_info,
     search_manifest,
     should_use_subset_cosine,
     update_latest_pointer,
@@ -266,3 +267,53 @@ def test_generate_manifest_from_index_entries_can_include_actor_id_when_requeste
     )
     got = search_manifest(out)
     assert {r["actor_id"] for r in got} == {"user-1", "user-2"}
+
+
+def test_update_latest_pointer_stamps_generated_at_when_omitted(tmp_path: Path) -> None:
+    base_dir = tmp_path / "manifests"
+    update_latest_pointer(base_dir, 1)
+    info = read_latest_manifest_info(base_dir)
+    assert info is not None
+    assert info["generation"] == 1
+    assert isinstance(info["generated_at"], str) and info["generated_at"]  # non-empty ISO8601
+
+
+def test_update_latest_pointer_accepts_explicit_generated_at(tmp_path: Path) -> None:
+    base_dir = tmp_path / "manifests"
+    update_latest_pointer(base_dir, 2, generated_at="2026-08-01T00:00:00+00:00")
+    info = read_latest_manifest_info(base_dir)
+    assert info == {"generation": 2, "generated_at": "2026-08-01T00:00:00+00:00"}
+
+
+def test_read_latest_generation_unaffected_by_generated_at_addition(tmp_path: Path) -> None:
+    # 既存契約(read_latest_generation は int だけを返す)を壊していないことの回帰確認。
+    base_dir = tmp_path / "manifests"
+    update_latest_pointer(base_dir, 5, generated_at="2026-08-01T00:00:00+00:00")
+    assert read_latest_generation(base_dir) == 5
+
+
+def test_read_latest_manifest_info_returns_none_when_unset(tmp_path: Path) -> None:
+    assert read_latest_manifest_info(tmp_path / "manifests") is None
+
+
+def test_read_latest_manifest_info_handles_legacy_pointer_without_generated_at(tmp_path: Path) -> None:
+    # generated_at 追加前に書かれた latest.json(generation のみ)を読んでも壊れないこと。
+    import json
+
+    base_dir = tmp_path / "manifests"
+    base_dir.mkdir(parents=True)
+    (base_dir / "latest.json").write_text(json.dumps({"generation": 7}), encoding="utf-8")
+    info = read_latest_manifest_info(base_dir)
+    assert info == {"generation": 7, "generated_at": None}
+
+
+def test_generate_manifest_from_index_entries_accepts_explicit_generated_at(tmp_path: Path) -> None:
+    src = tmp_path / "src"
+    _write_index_receipt_fixture(src)
+    base_dir = tmp_path / "manifests" / "ihl-index"
+
+    generate_manifest_from_index_entries(
+        src / "index" / "receipt", base_dir, 1, generated_at="2026-08-01T09:00:00+09:00"
+    )
+    info = read_latest_manifest_info(base_dir)
+    assert info == {"generation": 1, "generated_at": "2026-08-01T09:00:00+09:00"}
