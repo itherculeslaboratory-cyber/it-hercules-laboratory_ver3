@@ -19,7 +19,7 @@
               "type": "card",
               "props": { "source_path": "/api/v1/me/preferences" },
               "children": [
-                { "id": "current-summary", "type": "text", "props": { "text_key": "settings.current-summary.text", "text": "現在: 言語{{data.current.locale}}・テーマ{{data.current.theme_pack_id}}・モーション{{data.current.reduced_motion_override}}・Push{{data.current.push_notifications_enabled}}・受取{{data.current.delivery_pref}}・銀行振込準備{{data.current.bank_transfer_ready}}(下のフォームで変更できます)", "muted": true } }
+                { "id": "current-summary", "type": "text", "props": { "text_key": "settings.current-summary.text", "text": "現在: 言語{{data.current.locale}}・国{{data.current.country}}・テーマ{{data.current.theme_pack_id}}・モーション{{data.current.reduced_motion_override}}・Push{{data.current.push_notifications_enabled}}・受取{{data.current.delivery_pref}}・銀行振込準備{{data.current.bank_transfer_ready}}(下のフォームで変更できます)", "muted": true } }
               ]
             },
             {
@@ -31,6 +31,13 @@
                 { "id": "locale", "type": "field", "props": { "variant": "select", "name": "locale", "label_key": "settings.locale.label", "label": "言語", "placeholder": "言語を選ぶ", "options": [
                   { "value": "ja", "label": "日本語" },
                   { "value": "en", "label": "English" }
+                ] } },
+                { "id": "country", "type": "field", "props": { "variant": "select", "name": "country", "label_key": "settings.country.label", "label": "国", "placeholder": "国を選ぶ", "options": [
+                  { "value": "JP", "label": "日本" },
+                  { "value": "US", "label": "アメリカ合衆国" },
+                  { "value": "GB", "label": "イギリス" },
+                  { "value": "DE", "label": "ドイツ" },
+                  { "value": "FR", "label": "フランス" }
                 ] } },
                 { "id": "theme", "type": "field", "props": { "variant": "select", "name": "theme_pack_id", "label_key": "settings.theme.label", "label": "テーマ", "placeholder": "テーマを選ぶ", "options": [
                   { "value": "minimal-light", "label": "ライト" },

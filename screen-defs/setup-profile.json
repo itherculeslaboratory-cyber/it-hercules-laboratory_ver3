@@ -14,7 +14,7 @@
           "type": "page",
           "children": [
             { "id": "title", "type": "heading", "props": { "text_key": "setup-profile.title.text", "text": "プロフィールを整える", "level": 1 } },
-            { "id": "lead", "type": "text", "props": { "text_key": "setup-profile.lead.text", "text": "最初に表示名と言語だけ決めます(あとで設定から変更できます)。", "muted": true } },
+            { "id": "lead", "type": "text", "props": { "text_key": "setup-profile.lead.text", "text": "最初に表示名・言語・国だけ決めます(あとで設定から変更できます)。", "muted": true } },
             {
               "id": "profile-form",
               "type": "form",
@@ -30,10 +30,23 @@
                     ]
                   }
                 },
+                {
+                  "id": "country", "type": "field", "props": {
+                    "variant": "select", "name": "country", "label_key": "setup-profile.country.label", "label": "国", "placeholder": "国を選ぶ", "required": true,
+                    "options": [
+                      { "value": "JP", "label": "日本" },
+                      { "value": "US", "label": "アメリカ合衆国" },
+                      { "value": "GB", "label": "イギリス" },
+                      { "value": "DE", "label": "ドイツ" },
+                      { "value": "FR", "label": "フランス" }
+                    ]
+                  }
+                },
+                { "id": "country-note", "type": "text", "props": { "text_key": "setup-profile.country-note.text", "text": "表示されません。地域ルールの適用にだけ使います。", "muted": true } },
                 { "id": "save", "type": "button", "props": { "label_key": "setup-profile.save.label", "label": "はじめる", "variant": "primary", "type": "submit" } }
               ]
             },
-            { "id": "note", "type": "text", "props": { "text_key": "setup-profile.note.text", "text": "この2つが揃うと初期設定が完了し、ホームへ進めます。表示名は他の人に見える名前で(一意ではありません)、いつでも変更できます。国やテーマ、タイムゾーンはあとで設定から。", "muted": true } }
+            { "id": "note", "type": "text", "props": { "text_key": "setup-profile.note.text", "text": "この3つが揃うと初期設定が完了し、ホームへ進めます。表示名は他の人に見える名前で(一意ではありません)、いつでも変更できます。テーマやタイムゾーンはあとで設定から。", "muted": true } }
           ]
         }
       ]

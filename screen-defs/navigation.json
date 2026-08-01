@@ -3,8 +3,6 @@
   "screens": [
     "login",
     "login-sent",
-    "country-select",
-    "language-select",
     "terms",
     "home",
     "obs-domain-select",
@@ -60,23 +58,13 @@
   "edges": [
     {
       "from": "login",
-      "to": "country-select",
-      "label": "オンボーディング開始"
-    },
-    {
-      "from": "country-select",
-      "to": "language-select",
-      "label": "国選択後"
-    },
-    {
-      "from": "language-select",
       "to": "terms",
-      "label": "言語選択後"
+      "label": "規約の本文を読む(login内のチェックボックスと同意のリンク・2026-08-01是正)"
     },
     {
       "from": "terms",
       "to": "home",
-      "label": "規約同意後"
+      "label": "同意して始める(terms.json自身のagreeボタン。実経路の同意記録はloginのチェックボックスで完結・termsは本文閲覧用)"
     },
     {
       "from": "login",
@@ -160,8 +148,8 @@
     },
     {
       "from": "home",
-      "to": "language-select",
-      "label": "言語・国へ(home完成予想図v2・設定サブチップ)"
+      "to": "settings",
+      "label": "言語・国へ(home完成予想図v2・設定サブチップ・2026-08-01是正=settingsへ統合)"
     },
     {
       "from": "home",

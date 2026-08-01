@@ -8038,7 +8038,7 @@ function HomeDashboardNode({ node }: { node: ScreenNode }) {
                 <a className="sub-chip" href="/s/ai-profile-settings">
                   🤖 AIの設定
                 </a>
-                <a className="sub-chip" href="/s/language-select">
+                <a className="sub-chip" href="/s/settings">
                   🌐 言語・国
                 </a>
                 <a className="sub-chip" href="/s/profile">
