@@ -150,6 +150,10 @@
     "version_id": {
       "type": "string",
       "description": "OBS-69 Ver別比較のバージョンID（任意=全optional・design19 T1-12）。"
+    },
+    "consent_l3": {
+      "type": "boolean",
+      "description": "捕獲時点のL3許諾状態（第三者提供・AI学習用コーパスとしての提供・RULING-2026-08-01-gen65-ihl-backbone.md §11-2/§12 D-5）。true=個別・明示のオプトインで許諾。省略（未指定）は未許諾として扱う（既定値を許諾ありにしない・安全側）。既存レコード（本フィールド導入前に作られたcapture）はこのフィールド自体が無く、同じく未許諾として扱われる。falseだった記録を退会後にtrueへ反転させてはならない（RULING §12-1-1。退会・帰属切断の機構は別レイヤーで未実装であり、この反転禁止則を保証する専用コードはまだ無い）。撤回（true→false）は将来分の提供にのみ効き、既に提供済みの分は取り戻せない（RULING §11-2末尾）。任意=全optional。"
     }
   },
   "additionalProperties": false

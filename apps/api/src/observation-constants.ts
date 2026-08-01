@@ -233,6 +233,37 @@ export function computeQcFlag(
   return { qc_flag: "usable", qc_score: 1, reasons };
 }
 
+// ── g66-consent: L3(第三者提供・AI学習コーパス)許諾判定(RULING-2026-08-01-gen65-
+//    ihl-backbone.md §11-2/§12 D-5) ──────────────────────────────────────
+/**
+ * 捕獲時点のL3許諾（consent_l3）が「第三者提供してよい」と機械判定できるか。
+ * 未指定(undefined)・false はどちらも未許諾(=提供不可)。既定値を許諾ありにしない
+ * (RULING D-5「初期設定は拒否です」)。true 以外は全て false を返す total function。
+ */
+export function isThirdPartyProvisionConsented(consentL3: boolean | undefined): boolean {
+  return consentL3 === true;
+}
+
+/**
+ * 既存captureのL3許諾内訳を数える(遡及書き換えの代わりに可視化する・T2禁止事項
+ * 「既存データの遡及書き換え」に抵触しない読み取り専用の集計)。
+ * missing = consent_l3 フィールド自体が無い(=本フィールド導入前のcapture、または
+ * 導入後でも未指定のまま作られたcapture)。将来「売れない在庫」として扱われる件数。
+ */
+export function countConsentL3Inventory(
+  captures: { consent_l3?: boolean }[],
+): { total: number; granted: number; denied: number; missing: number } {
+  let granted = 0;
+  let denied = 0;
+  let missing = 0;
+  for (const cap of captures) {
+    if (cap.consent_l3 === true) granted++;
+    else if (cap.consent_l3 === false) denied++;
+    else missing++;
+  }
+  return { total: captures.length, granted, denied, missing };
+}
+
 // ── V3-OBS-71: 観測データ印刷 — 選べる項目の許可リスト ────────────────────
 export const PRINT_ALLOWED_FIELDS = [
   "capture_id",

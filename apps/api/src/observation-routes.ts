@@ -20,6 +20,7 @@ import {
   QC_FLAGS,
   MEDIA_CACHE_MAX_AGE_SEC,
   PRINT_ALLOWED_FIELDS,
+  countConsentL3Inventory,
 } from "./observation-constants";
 import { ENV_QR_TYPE, projectOccupantsAt, projectOpenOccupancy, projectLabEnvironmentAt, projectCurrentOwner, projectTelemetryLatest } from "./source-routes";
 import { projectIndividualSummary } from "./individual-routes";
@@ -210,6 +211,7 @@ const CAPTURE_FIELDS = [
   "product_ref", // V3-MKT-44(観測側): mkt-product-node.schema.json への参照(任意)
   "lot_id", // V3-OBS-69: ロット別比較用(任意)
   "version_id", // V3-OBS-69: Ver別比較用(任意)
+  "consent_l3", // g66-consent: L3(第三者提供・AI学習コーパス)許諾(任意・未指定=未許諾)
 ] as const;
 
 // V3-OBS-54/A-8-b(AUT-15 観測閲覧READ公開化)の可視性判定(純関数)。
@@ -967,6 +969,16 @@ obsRoutes.get("/observation/export", async (c) => {
   });
 });
 
+// GET /observation/consent-l3-inventory — g66-consent: 既存captureのL3許諾内訳
+// (granted/denied/missing)を読み取り専用で数える(遡及書き換えの代替=T2禁止事項
+// 「既存データの遡及書き換え」を犯さずに「将来売れない在庫」を可視化する)。
+obsRoutes.get("/observation/consent-l3-inventory", async (c) => {
+  const captures = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`)).map(dataOf) as {
+    consent_l3?: boolean;
+  }[];
+  return c.json(countConsentL3Inventory(captures));
+});
+
 // V3-OBS-71: 観測データ印刷 — 個体詳細から欲しいデータ項目(チェックボックス)と
 // 期間指定で範囲選択する。実際の印刷はブラウザ print で足りる(ds_why実装方針)
 // ため、本 route はフィールド選択+期間フィルタ済みの構造化データを返すのみ
@@ -1110,7 +1122,7 @@ obsRoutes.post("/observation/measurements", async (c) => {
   const actorId = c.get("actorId");
   const captureId = typeof body.capture_id === "string" && body.capture_id ? body.capture_id : ulid();
   const data: Record<string, unknown> = { capture_id: captureId, actor_id: actorId, domain: body.domain, measurements };
-  for (const k of ["subject_ref", "template_id", "entry_mode"] as const) if (body[k] !== undefined) data[k] = body[k];
+  for (const k of ["subject_ref", "template_id", "entry_mode", "consent_l3"] as const) if (body[k] !== undefined) data[k] = body[k];
 
   const res = await store(c).putEvent(
     envelope(CAPTURE_TYPE, captureId, "schemas/events/obs-capture.schema.json", actorId, data),
