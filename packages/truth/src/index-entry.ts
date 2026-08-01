@@ -28,6 +28,12 @@ export interface IndexEntry {
   sig_verified: boolean | null;
   text_repr: string | null;
   text_repr_v: number;
+  // g80-vis1(design R0801-7b17da §2-3 案C'補強1): 可視性の判定に要る2列。
+  // envelope.data から拾うだけ(capture以外の型はどちらも undefined→null)。
+  // chain-routes.ts immutablePartOf の除外リストに同じく追加済み(可変部・
+  // 日次ルート計算対象外 — text_repr と同じ扱い)。
+  visibility: string | null;
+  consent_l3: boolean | null;
 }
 
 function formatValue(v: unknown): string {
@@ -78,6 +84,7 @@ export async function buildIndexEntry(
   payloadBytes: number,
 ): Promise<IndexEntry> {
   const provenance = (envelope.provenance ?? {}) as Record<string, unknown>;
+  const data = (envelope.data ?? {}) as Record<string, unknown>;
   return {
     event_id: envelope.id as string,
     type: envelope.type as string,
@@ -99,5 +106,7 @@ export async function buildIndexEntry(
     sig_verified: null,
     text_repr: buildTextRepr(envelope),
     text_repr_v: TEXT_REPR_VERSION,
+    visibility: typeof data.visibility === "string" ? data.visibility : null,
+    consent_l3: typeof data.consent_l3 === "boolean" ? data.consent_l3 : null,
   };
 }

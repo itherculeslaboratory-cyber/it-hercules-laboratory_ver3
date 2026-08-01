@@ -38,9 +38,18 @@ function nextDateOf(date: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** 索引エントリの不変部のみ(§6論点2: text_repr/text_repr_v はルート計算対象外)。 */
+/** 索引エントリの不変部のみ(§6論点2: text_repr/text_repr_v はルート計算対象外。
+ *  g80-vis1(design R0801-7b17da §2-3 案C'補強1): visibility/consent_l3 も同じ理由で
+ *  可変部 — 撤回されうるポリシー情報であり、元値は event_hash(不変部)でハッシュ済み
+ *  なので根の計算から外しても完全性は担保される)。 */
 function immutablePartOf(entry: Record<string, unknown>): Record<string, unknown> {
-  const { text_repr: _textRepr, text_repr_v: _textReprV, ...rest } = entry;
+  const {
+    text_repr: _textRepr,
+    text_repr_v: _textReprV,
+    visibility: _visibility,
+    consent_l3: _consentL3,
+    ...rest
+  } = entry;
   return rest;
 }
 

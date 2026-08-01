@@ -6,6 +6,7 @@
 import { Hono } from "hono";
 import { TruthStore } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
+import { captureVisibleTo, CAPTURE_TYPE } from "./observation-routes";
 
 export const crossSearchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -27,6 +28,11 @@ const DEFAULT_WINDOW_DAYS = 7;
 // 日付プレフィックス1本 = list 呼び出し1回なので、上限を超える範囲は拒否する。
 const MAX_WINDOW_DAYS = 90;
 
+// g80-vis1(design R0801-7b17da §2-3 案C'補強2「初期設定は拒否」): 可視性の判定規則が
+// 確立している型だけを出す許可リスト。visibility列を持たない型(pt_event/photo/measurement等)
+// は規則が無いため既定で出さない。captureのみ captureVisibleTo で行除外して通す。
+const VISIBILITY_RULED_TYPES = new Set<string>([CAPTURE_TYPE]);
+
 interface RawIndexEntry {
   event_id: string;
   type: string;
@@ -35,6 +41,7 @@ interface RawIndexEntry {
   payload_key: string;
   received_at: string;
   text_repr: string | null;
+  visibility: string | null;
 }
 
 interface CrossSearchResultRow {
@@ -99,6 +106,7 @@ crossSearchRoutes.get("/search", async (c) => {
   }
 
   const s = store(c);
+  const viewerActorId = c.get("actorId");
   const results: CrossSearchResultRow[] = [];
   const truncatedDates: string[] = [];
   const qLower = q?.toLowerCase();
@@ -111,6 +119,11 @@ crossSearchRoutes.get("/search", async (c) => {
     if (entries.length >= LIST_TRUNCATION_CAP) truncatedDates.push(date);
 
     for (const e of entries) {
+      // g80-vis1 補強2(既定拒否): 許可リスト外の型は無条件で出さない。
+      if (!VISIBILITY_RULED_TYPES.has(e.type)) continue;
+      // g80-vis1(案C'): captureVisibleTo は既存の読み取り経路(observation-routes.ts)
+      // と同じ純関数を再利用する — E1 専用の別ロジックを新設しない(reuse-first)。
+      if (!captureVisibleTo({ visibility: e.visibility, actor_id: e.actor_id }, viewerActorId)) continue;
       if (typeFilter && e.type !== typeFilter) continue;
       if (subjectFilter && e.subject !== subjectFilter) continue;
       if (actorIdFilter && e.actor_id !== actorIdFilter) continue;
@@ -159,5 +172,12 @@ crossSearchRoutes.get("/search", async (c) => {
       "append-only index: a corrected event's prior index entry is never removed, so old " +
       "and new revisions of the same subject may both appear in results — this endpoint does " +
       "not collapse them; use received_at to pick the latest.",
+    // 誇張ゼロ(g80-vis1 design R0801-7b17da §2-3 補強2)。可視性の判定規則が確立している
+    // 型(capture)だけを対象とし、規則の無い型は既定で拒否する。範囲を戻すには型ごとに
+    // 規則を定義する別作業が要る(同報告書§5「決められなかったこと」1)。
+    visibility_scope_note:
+      "results are currently limited to capture events (ihl.obs.capture.v1) whose visibility " +
+      "rule is established; other event types have no visibility rule yet and are excluded by " +
+      "default (deny-by-default) until their rules are defined.",
   });
 });

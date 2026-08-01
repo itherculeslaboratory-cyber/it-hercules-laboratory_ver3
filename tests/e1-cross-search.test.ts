@@ -5,29 +5,27 @@ import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore, ulid } from "@ihl/truth";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv, makeEnvelope } from "./helpers";
-
-// 索引に載る dataschema(既知型)を1つ使う — buildTextRepr が text_repr を生成するのは
-// dataschema が frozenSchemaFor/eventSchemaFor に載っている時だけ(index-entry.ts)。
-// data の必須フィールド(economy-pt-event.schema.json: pt_event_id/actor_id/delta/
-// reason_code/created_at/schema_version)は満たさないと putEvent が invalid を返し、
-// 索引自体が書かれない(validateEnvelope が dataschema 経由で data も検証するため)。
-const KNOWN_SCHEMA = "schemas/events/economy-pt-event.schema.json";
-const KNOWN_TYPE = "ihl.economy.pt_event.v1";
+//
+// g80-vis1(design R0801-7b17da §2-3 案C'補強2「初期設定は拒否」)で E1 の対象型は
+// 「可視性の判定規則が確立している型」= capture(ihl.obs.capture.v1)だけに絞られた
+// (cross-search-routes.ts VISIBILITY_RULED_TYPES)。よってこのファイルの固定フィクスチャ
+// (旧 KNOWN_TYPE=pt_event)は capture へ差し替えた — pt_event は現在の許可リスト外であり
+// 元のテスト意図(「既知dataschemaならヒットする」の一般検証)を capture で引き継ぐ。
+const KNOWN_SCHEMA = "schemas/events/obs-capture.schema.json";
+const KNOWN_TYPE = "ihl.obs.capture.v1";
 
 function knownEnvelope(overrides: Record<string, unknown> = {}) {
-  const ptEventId = ulid();
+  const captureId = ulid();
   return makeEnvelope({
     type: KNOWN_TYPE,
     dataschema: KNOWN_SCHEMA,
     subject: "individual/golden-1",
     provenance: { generator_kind: "human", actor_id: "actor-1" },
     data: {
-      pt_event_id: ptEventId,
+      capture_id: captureId,
       actor_id: "actor-1",
-      delta: 5,
-      reason_code: "mint",
-      created_at: "2026-07-10T00:00:00.000Z",
-      schema_version: "1",
+      domain: "biology",
+      visibility: "public", // g80-vis1: 既定拒否の対象外にするため明示(private/uid_linkedの回帰は e1-search-visibility.test.ts)
     },
     ...overrides,
   });
@@ -87,11 +85,14 @@ describe("GET /api/v1/search — E1 横断検索 第1段", () => {
     expect(bySubjectBody.count).toBe(1);
   });
 
-  it("未知型(dataschema無し)は text_repr=null で q 検索にヒットしないが、type フィルタでは拾える(unknown_type_noteの実挙動)", async () => {
+  it("未知型(dataschema無し)は text_repr=null で q 検索にヒットせず、type フィルタでも拾えない(g80-vis1補強2: 可視性規則の無い型は既定拒否)", async () => {
     const bucket = new FakeR2Bucket();
     const store = new TruthStore(bucket);
     const env = makeEnv(bucket);
     // makeEnvelope() 既定は dataschema 無し → buildTextRepr は null を返す(index-entry.ts)。
+    // かつ型 ihl.test.sample.v1 は VISIBILITY_RULED_TYPES(cross-search-routes.ts)に
+    // 無いため、type フィルタで明示的に狙っても行ごと出ない(g80-vis1以前は出ていた —
+    // これが設計上の「正直な代償」= 検索対象が当面capture型に狭まる)。
     await store.putEvent(makeEnvelope());
 
     const res = await app.request(
@@ -99,9 +100,10 @@ describe("GET /api/v1/search — E1 横断検索 第1段", () => {
       { method: "GET", headers: AUTH_HEADERS },
       env,
     );
-    const body = (await res.json()) as { count: number; unknown_type_note: string };
+    const body = (await res.json()) as { count: number; unknown_type_note: string; visibility_scope_note: string };
     expect(body.count).toBe(0);
     expect(body.unknown_type_note).toMatch(/text_repr is null/);
+    expect(body.visibility_scope_note).toMatch(/capture events/);
 
     const byType = await app.request(
       `/api/v1/search?type=ihl.test.sample.v1&from=${today}&to=${today}`,
@@ -109,7 +111,7 @@ describe("GET /api/v1/search — E1 横断検索 第1段", () => {
       env,
     );
     const byTypeBody = (await byType.json()) as { count: number };
-    expect(byTypeBody.count).toBe(1);
+    expect(byTypeBody.count).toBe(0);
   });
 
   it("日付プレフィックス単位で走査し、範囲外の日付は含まれない", async () => {

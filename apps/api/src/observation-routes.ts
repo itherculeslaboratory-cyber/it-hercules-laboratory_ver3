@@ -74,7 +74,9 @@ export function measurementValueOriginError(measurements: unknown): string | nul
 // embedding_dim differs is blocked from search (ver2 scoring.py:44 guard).
 export const EMBEDDING_DIM = 384;
 
-const CAPTURE_TYPE = "ihl.obs.capture.v1";
+// g80-vis1: exported so cross-search-routes.ts can build its type allow-list
+// (§2-3 案C'補強2)without duplicating the literal.
+export const CAPTURE_TYPE = "ihl.obs.capture.v1";
 const PHOTO_TYPE = "ihl.obs.photo.v1";
 const THUMBNAIL_TYPE = "ihl.obs.thumbnail.v1";
 const TEMPLATE_TYPE = "ihl.obs.template.v1";
