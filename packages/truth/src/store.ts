@@ -122,6 +122,11 @@ export class TruthStore {
         source = JSON.parse(text) as Record<string, unknown>;
       }
     }
+    // g77-apifix: received_at の無い旧形式レコード(索引キーが安全に導出できない)は
+    // 索引書込をスキップする。indexKeyFor() の .slice(0,10) が undefined で例外化していた
+    // (dev-login 500 の原因・POST /api/v1/auth/dev-login 実測)。payload 側の put-if-absent・
+    // ハッシュ計算・新規正常レコードの索引キーには一切手を入れない。
+    if (typeof source.received_at !== "string") return;
     const entry = await buildIndexEntry(source, payloadKey, payloadBytes);
     const indexKey = indexKeyFor(source as { id: string; received_at: string });
     await this.bucket.put(indexKey, JSON.stringify(entry), {

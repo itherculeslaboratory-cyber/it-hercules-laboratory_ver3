@@ -58,11 +58,16 @@ export interface OnboardingStatus {
   onboarding_complete: boolean;
   handle: string | null;
   locale_set: boolean;
+  country_set: boolean;
 }
 
-// V3-AUT-10/V3-I18-02: 必須2ゲート(handle + locale)が両方満たされて初めて
-// onboardingComplete=true。V3-AUT-45(usecase-driven-design.md)により表示名/
-// タイムゾーン/テーマは既定を通せる可変項目でゲートしない。
+// V3-AUT-10/V3-I18-02 + UI12-A(review-queue R0801-45db8d-ui12retro-2026-08-01・○85点・
+// 案B採用): 必須3ゲート(handle + locale + country)が揃って初めて onboardingComplete=true。
+// 既存ユーザーで country 未設定の行は、この変更により次回アクセス時に
+// apps/web/src/middleware.ts の onboardingComplete=false 経路で setup-profile へ誘導される
+// (誘導機構自体はui12実装(2d25a19)で稼働済み・ここで触るのは判定のみ)。
+// V3-AUT-45(usecase-driven-design.md)により表示名/タイムゾーン/テーマは既定を通せる
+// 可変項目でゲートしない(country はゲート対象=V3-GOV-35 の同国スコープ判定の前提)。
 //
 // handle ゲートの実体は projectPreferences(settings-routes.ts)の handle
 // フィールド(pref-set・PATCH /me/preferences)—— setup-profile.json 画面が実際に
@@ -72,5 +77,11 @@ export interface OnboardingStatus {
 export async function projectOnboardingStatus(s: TruthStore, actorId: string): Promise<OnboardingStatus> {
   const [prefs, localeSet] = await Promise.all([projectPreferences(s, actorId), hasExplicitLocale(s, actorId)]);
   const handle = prefs.handle ? prefs.handle : null;
-  return { onboarding_complete: handle !== null && localeSet, handle, locale_set: localeSet };
+  const countrySet = prefs.country !== "";
+  return {
+    onboarding_complete: handle !== null && localeSet && countrySet,
+    handle,
+    locale_set: localeSet,
+    country_set: countrySet,
+  };
 }

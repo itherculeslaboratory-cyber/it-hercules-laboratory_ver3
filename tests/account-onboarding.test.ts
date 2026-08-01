@@ -52,8 +52,8 @@ describe("V3-AUT-09 open registration — account row created on first verify", 
   });
 });
 
-describe("V3-AUT-10/V3-I18-02 onboardingComplete — required 2 gates (handle + locale)", () => {
-  it("GET /session + GET /me/onboarding report false until BOTH handle and locale are set", async () => {
+describe("V3-AUT-10/V3-I18-02/UI12-A onboardingComplete — required 3 gates (handle + locale + country)", () => {
+  it("GET /session + GET /me/onboarding report false until handle, locale, AND country are all set", async () => {
     const bucket = new FakeR2Bucket();
     const { cookie } = await login(bucket, "onboard@example.com");
     const h = { Cookie: cookie, ...JSON_HEADERS };
@@ -65,24 +65,39 @@ describe("V3-AUT-10/V3-I18-02 onboardingComplete — required 2 gates (handle + 
     expect(before.onboarding_complete).toBe(false);
     const onboardingBefore = (await (
       await app.request("/api/v1/me/onboarding", { headers: h }, env)
-    ).json()) as { onboarding_complete: boolean; handle: string | null; locale_set: boolean };
-    expect(onboardingBefore).toEqual({ onboarding_complete: false, handle: null, locale_set: false });
+    ).json()) as { onboarding_complete: boolean; handle: string | null; locale_set: boolean; country_set: boolean };
+    expect(onboardingBefore).toEqual({
+      onboarding_complete: false,
+      handle: null,
+      locale_set: false,
+      country_set: false,
+    });
 
-    // handle only -> still false (locale gate missing)
+    // handle only -> still false (locale + country gates missing)
     await app.request("/api/v1/me/preferences", { method: "PATCH", headers: h, body: JSON.stringify({ handle: "onboarduser" }) }, env);
     const handleOnly = (await (await app.request("/api/v1/me/onboarding", { headers: h }, env)).json()) as {
       onboarding_complete: boolean;
     };
     expect(handleOnly.onboarding_complete).toBe(false);
 
-    // + locale -> now true (both gates satisfied)
+    // + locale -> still false (country gate missing — UI12-A)
     await app.request("/api/v1/me/preferences", { method: "PATCH", headers: h, body: JSON.stringify({ locale: "ja" }) }, env);
+    const handleAndLocale = (await (await app.request("/api/v1/me/onboarding", { headers: h }, env)).json()) as {
+      onboarding_complete: boolean;
+      country_set: boolean;
+    };
+    expect(handleAndLocale.onboarding_complete).toBe(false);
+    expect(handleAndLocale.country_set).toBe(false);
+
+    // + country -> now true (all 3 gates satisfied)
+    await app.request("/api/v1/me/preferences", { method: "PATCH", headers: h, body: JSON.stringify({ country: "JP" }) }, env);
     const after = (await (await app.request("/api/v1/me/onboarding", { headers: h }, env)).json()) as {
       onboarding_complete: boolean;
       handle: string | null;
       locale_set: boolean;
+      country_set: boolean;
     };
-    expect(after).toEqual({ onboarding_complete: true, handle: "onboarduser", locale_set: true });
+    expect(after).toEqual({ onboarding_complete: true, handle: "onboarduser", locale_set: true, country_set: true });
 
     const sessionAfter = (await (await app.request("/api/v1/auth/session", { headers: h }, env)).json()) as {
       onboarding_complete: boolean;
@@ -90,7 +105,7 @@ describe("V3-AUT-10/V3-I18-02 onboardingComplete — required 2 gates (handle + 
     expect(sessionAfter.onboarding_complete).toBe(true);
   });
 
-  it("locale alone (no handle) is not enough", async () => {
+  it("locale alone (no handle, no country) is not enough", async () => {
     const bucket = new FakeR2Bucket();
     const { cookie } = await login(bucket, "localeonly@example.com");
     const h = { Cookie: cookie, ...JSON_HEADERS };
@@ -100,5 +115,38 @@ describe("V3-AUT-10/V3-I18-02 onboardingComplete — required 2 gates (handle + 
       onboarding_complete: boolean;
     };
     expect(status.onboarding_complete).toBe(false);
+  });
+
+  it("handle + locale without country is not enough (UI12-A: existing users without a country stay incomplete)", async () => {
+    const bucket = new FakeR2Bucket();
+    const { cookie } = await login(bucket, "nocountry@example.com");
+    const h = { Cookie: cookie, ...JSON_HEADERS };
+    const env = makeEnv(bucket);
+    await app.request("/api/v1/me/preferences", { method: "PATCH", headers: h, body: JSON.stringify({ handle: "nocountryuser" }) }, env);
+    await app.request("/api/v1/me/preferences", { method: "PATCH", headers: h, body: JSON.stringify({ locale: "ja" }) }, env);
+    const status = (await (await app.request("/api/v1/me/onboarding", { headers: h }, env)).json()) as {
+      onboarding_complete: boolean;
+      country_set: boolean;
+    };
+    expect(status.onboarding_complete).toBe(false);
+    expect(status.country_set).toBe(false);
+  });
+
+  it("handle + locale + country together complete onboarding", async () => {
+    const bucket = new FakeR2Bucket();
+    const { cookie } = await login(bucket, "withcountry@example.com");
+    const h = { Cookie: cookie, ...JSON_HEADERS };
+    const env = makeEnv(bucket);
+    await app.request(
+      "/api/v1/me/preferences",
+      { method: "PATCH", headers: h, body: JSON.stringify({ handle: "withcountryuser", locale: "ja", country: "US" }) },
+      env,
+    );
+    const status = (await (await app.request("/api/v1/me/onboarding", { headers: h }, env)).json()) as {
+      onboarding_complete: boolean;
+      country_set: boolean;
+    };
+    expect(status.onboarding_complete).toBe(true);
+    expect(status.country_set).toBe(true);
   });
 });

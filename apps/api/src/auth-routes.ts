@@ -245,13 +245,14 @@ authRoutes.post("/dev-login", async (c) => {
   }
   // V3-AUT-09: dev-login も同じ open registration 経路を通す(dev actor も一貫)。
   await ensureAccount(devStore, actorId);
-  // V3-AUT-10: onboarding gate (apps/web/middleware.ts) sends any logged-in
-  // visitor with no preferences.handle to /s/setup-profile. dev-login is
+  // V3-AUT-10/UI12-A: onboarding gate (apps/web/middleware.ts) sends any logged-in
+  // visitor with an incomplete handle+locale+country to /s/setup-profile. dev-login is
   // 1-click test tooling predating that gate — every e2e spec assumes it
-  // lands straight on ホーム — so seed the same handle+locale a completed
+  // lands straight on ホーム — so seed the same handle+locale+country a completed
   // setup-profile submission would produce, exactly once (guarded on the
   // projection so append-only Truth doesn't grow an event per dev-login call;
-  // screen-sweep alone calls this dozens of times per run).
+  // screen-sweep alone calls this dozens of times per run). country was added
+  // 2026-08-01 (g77-apifix) when projectOnboardingStatus started gating on it too.
   if (!(await projectPreferences(devStore, actorId)).handle) {
     const prefId = ulid();
     await devStore.putEvent({
@@ -265,6 +266,7 @@ authRoutes.post("/dev-login", async (c) => {
       data: {
         handle: "dev",
         locale: "ja",
+        country: "JP",
         pref_set_id: prefId,
         actor_id: actorId,
         created_at: new Date().toISOString(),
