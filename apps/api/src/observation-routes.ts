@@ -29,8 +29,15 @@ import { projectPreferenceWeights, dot } from "./match-routes";
 import type { Bindings, Variables } from "./env";
 import { appendContribution } from "./contribution";
 import { CONTRIB_OBSERVATION_SAVED, CONTRIB_OBSERVATION_WITH_PHOTO } from "./economy-constants";
+// 背骨S4(設計R0801-f383db §7 S4行): 新規routeのマウントに index.ts の変更を要求しない
+// ための相乗り(KIT-TEMPLATE.md「触ってよいファイル」節の例外条項どおり)。cadence-routes.ts
+// は自分の Hono サブアプリを export し、既に app.route("/api/v1", obsRoutes) で
+// マウント済みのこの obsRoutes へ .route("/") で載せる。index.ts の import/app.route 行は
+// 増やさない。
+import { cadenceRoutes } from "./cadence-routes";
 
 export const obsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+obsRoutes.route("/", cadenceRoutes);
 
 const ANNOTATION_TYPE = "ihl.obs.annotation.v1";
 const ANALYSIS_TYPE = "ihl.obs.analysis.v1";

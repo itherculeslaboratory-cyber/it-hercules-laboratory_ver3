@@ -70,6 +70,7 @@ export * from "./events/mkt-template";
 export * from "./events/mkt-transaction-event";
 export * from "./events/obs-analysis";
 export * from "./events/obs-annotation";
+export * from "./events/obs-cadence";
 export * from "./events/obs-capture";
 export * from "./events/obs-datasource";
 export * from "./events/obs-device";

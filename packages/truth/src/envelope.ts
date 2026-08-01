@@ -155,6 +155,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "obs-datasource": "obsDatasource",
   // g72-refs4(設計R0801-436936 §4案4-A・REF-1裁定=○): S4「いつでも戻せる」復元ポインタ。
   "content-current": "contentCurrent",
+  // 背骨S4(設計R0801-f383db §3 D-2): 提出ペース宣言。
+  "obs-cadence": "obsCadence",
 };
 
 const FROZEN_NAMES = new Set([
@@ -302,6 +304,9 @@ const EVENT_NAMES = new Set([
   // g72-refs4(設計R0801-436936 §4案4-A) — data validation MUST fire or putEventAt
   // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
   "content-current",
+  // 背骨S4(設計R0801-f383db §3 D-2) — data validation MUST fire or putEvent
+  // stores unchecked data permanently (Truth is INSERT ONLY, unfixable).
+  "obs-cadence",
 ]);
 
 function validatorFor(name: string): ValidateFn {

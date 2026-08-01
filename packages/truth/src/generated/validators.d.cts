@@ -100,6 +100,7 @@ export declare const krmTitle: ValidateFunction;
 export declare const mktProductNode: ValidateFunction;
 export declare const obsDatasource: ValidateFunction;
 export declare const contentCurrent: ValidateFunction;
+export declare const obsCadence: ValidateFunction;
 export declare const consentRecord: ValidateFunction;
 export declare const embeddingManifest: ValidateFunction;
 export declare const individualKey: ValidateFunction;

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-cadence.schema.json",
+  "title": "Observation Cadence declaration (ihl.obs.cadence.v1)",
+  "description": "V3-OBS-75(D-2)提出ペース宣言。append-only。1つの stream_kind/subject_id の組に複数の宣言が積まれた場合、新しい宣言は古い宣言を『上書き』せず、それぞれの宣言が有効だった期間の穴の判定に個別に使われる(遡及宣言不採用)。Truth キー truth/ihl.obs.cadence.v1/<subject_id>-<ulid>.json。穴そのものはここには保存しない(読み出し時に導出。apps/api/src/cadence-routes.ts)。",
+  "x_ihl_req": "V3-OBS-75",
+  "x_ihl_source": "D:\\claude\\00-hq\\proposals\\R0801-f383db-DESIGN-2026-08-01-g72-backbonedesign.md §3 論点1",
+  "type": "object",
+  "required": ["cadence_id", "stream_kind", "subject_id", "expected_interval_s", "effective_from", "actor_id"],
+  "properties": {
+    "cadence_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "宣言の一意キー。"
+    },
+    "stream_kind": {
+      "type": "string",
+      "minLength": 1,
+      "description": "宣言対象のストリーム種別(例: env_telemetry / individual_observation)。閉じた enum ではない — 新しいストリーム種別の追加にスキーマ変更を要求しない。"
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "宣言対象の識別子(device_id / placement_id / individual_id 等、stream_kind に応じた対象)。"
+    },
+    "expected_interval_s": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "期待する提出間隔(秒)。"
+    },
+    "tolerance_s": {
+      "type": "number",
+      "minimum": 0,
+      "description": "許容誤差(秒・任意)。省略時は0(厳格)として扱う(cadence-routes.ts)。"
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "宣言が適用され始める時刻(RFC3339・申告値)。★遡及宣言不採用: 実際の適用開始は effective_from とこの宣言イベント自身の received_at の遅い方(cadence-routes.ts)。過去に effective_from を遡らせても、既に経過した期間の穴の判定はこの宣言では変わらない。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "宣言者の actor_id(V3-AUT-17)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "記録時刻(RFC3339・任意)。"
+    }
+  },
+  "additionalProperties": false
+}

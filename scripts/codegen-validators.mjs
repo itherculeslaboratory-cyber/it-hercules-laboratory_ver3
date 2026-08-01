@@ -161,6 +161,8 @@ const SCHEMAS = [
   ["obsDatasource", "events/obs-datasource.schema.json"],
   // g72-refs4(設計R0801-436936 §4案4-A): S4「いつでも戻せる」復元ポインタ。
   ["contentCurrent", "events/content-current.schema.json"],
+  // 背骨S4(設計R0801-f383db §3 D-2): 提出ペース宣言。
+  ["obsCadence", "events/obs-cadence.schema.json"],
   ["consentRecord", "frozen/consent-record.schema.json"],
   ["embeddingManifest", "frozen/embedding-manifest.schema.json"],
   ["individualKey", "frozen/individual-key.schema.json"],
