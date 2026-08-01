@@ -21,7 +21,7 @@ import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
 import { projectOpenBindings, projectCurrentOwner } from "./source-routes";
 import { computeNextObservationAt } from "./home-routes";
 import { aggregateTags } from "./tag-routes";
-import { loadVector, EMBEDDING_DIM } from "./observation-routes";
+import { loadVector, EMBEDDING_DIM, captureVisibleTo } from "./observation-routes";
 
 export const individualRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -896,7 +896,10 @@ export async function projectLocationHistoryEnvironment(
   return out;
 }
 
-export async function projectIndividualProfile(s: TruthStore, id: string) {
+// ★2026-08-01(E3ENTRY-1同乗R1): actorId は可視性判定(captureVisibleTo)専用の
+// 追加引数(projectIndividualと同じ規約)。capturesOf() 経由で observations/
+// parent_observations/cohort_observations の全てに一様に効く。
+export async function projectIndividualProfile(s: TruthStore, id: string, actorId?: string) {
   const master = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
   const ref = `individual/${id}`;
   const m = master ? dataOf(master) : null;
@@ -916,7 +919,7 @@ export async function projectIndividualProfile(s: TruthStore, id: string) {
   );
   const capturesOf = (pid: string) =>
     allCaptures
-      .filter((d) => d.subject_ref === `individual/${pid}`)
+      .filter((d) => d.subject_ref === `individual/${pid}` && captureVisibleTo(d, actorId))
       .sort((a, b) => String(a.capture_id ?? "").localeCompare(String(b.capture_id ?? "")));
   const observations = capturesOf(id);
 
@@ -1493,7 +1496,7 @@ individualRoutes.get("/individuals/:id", async (c) => {
 
 // GET /individuals/{id}/profile — individual-detail スライスA投影 (V3-AIP-101).
 individualRoutes.get("/individuals/:id/profile", async (c) => {
-  const proj = await projectIndividualProfile(store(c), c.req.param("id"));
+  const proj = await projectIndividualProfile(store(c), c.req.param("id"), c.get("actorId"));
   if (!proj) return c.json({ error: "NOT_FOUND" }, 404);
   return c.json(proj);
 });

@@ -23,6 +23,11 @@
 //     obs-entry/obs-confirm という「もう主要導線ではない」旧フローの着地点になった。
 //     E3導線(過去の観測を後から開く。IDEA候補・§8-2 in clickthink report)が実装され
 //     obs-detail が再び主要導線に含まれたら、この対象外化を再評価すること。
+//     ★2026-08-01訂正(E3ENTRY-1○95・R0801-ec29b1実装。元の宿題文は上記のとおり残す):
+//     E3導線を実装した(individual-detail→obs-detail の辺を追加、source:"renderer")。
+//     再評価の結論 = obs-detail を到達予算(REACH_TARGETS)には入れない。CLICKBUDGET-1の
+//     定義では到達予算の対象は「主要行為を開始できる画面」であり、obs-detail は行為の
+//     開始画面ではなく着地(閲覧)画面だから。代わりに下記の完了予算#2として追加した。
 //   撤去: toBe(5) の完全一致アサーション(カードifNo欄に明記の既知の罠——実測値を
 //     そのままテストへ焼くと、裁定を経ずに契約が緩んだことを機械が追認してしまう。
 //     上限(≤)へ置き換える)。
@@ -114,5 +119,30 @@ describe("V3-UIX-02/25 navigation reachability from home (navigation.json正本)
       }
     }
     expect(flowDist.get("obs-register-done"), "obs-register-entry -> obs-register-done step count").toBeLessThanOrEqual(2);
+  });
+
+  // 完了予算#2(閲覧フロー) — individual-detail(記録を見ようと思った画面)から
+  // obs-detail(観測1件の詳しい画面)まで ≤1 ホップ(E3ENTRY-1○95・§4-3実装)。
+  // individual-detail 自体は home から1ホップで、到達予算側で既に担保されている。
+  it("the observation-view flow reaches a single record within its step budget (individual-detail -> obs-detail ≤1 hop)", () => {
+    const graph = new Map<string, string[]>();
+    for (const e of nav.edges) {
+      if (e.source === "planned") continue;
+      if (!graph.has(e.from)) graph.set(e.from, []);
+      graph.get(e.from)!.push(e.to);
+    }
+    const flowDist = new Map<string, number>([["individual-detail", 0]]);
+    const queue = ["individual-detail"];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      const d = flowDist.get(cur)!;
+      for (const next of graph.get(cur) ?? []) {
+        if (!flowDist.has(next)) {
+          flowDist.set(next, d + 1);
+          queue.push(next);
+        }
+      }
+    }
+    expect(flowDist.get("obs-detail"), "individual-detail -> obs-detail step count").toBeLessThanOrEqual(1);
   });
 });

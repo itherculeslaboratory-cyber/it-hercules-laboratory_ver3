@@ -1313,6 +1313,45 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     // openバインド — place の環境に otherPlace の新データが混ざってはいけない。
     expect(body.environment).toEqual([]);
   });
+
+  // ★2026-08-01(E3ENTRY-1同乗R1・g82-e3think §9-1の指摘の是正): projectIndividualProfile
+  // の capturesOf() が可視性フィルタ(captureVisibleTo)を通していなかった問題の回帰テスト。
+  // GET /observation/{capture_id} と GET /individuals/{id}/observations は既に通していた
+  // のに、profile 経路(E3導線が今回描画対象にする経路)だけ抜けていた。
+  it("private観測は他actorのprofileレスポンスから除外される(captureVisibleTo通過・R1是正)", async () => {
+    const { env } = ctx();
+    const aliceAuth = { Authorization: `Bearer ${await issueSessionToken("alice", SESSION_SECRET)}` };
+    const bobAuth = { Authorization: `Bearer ${await issueSessionToken("bob", SESSION_SECRET)}` };
+    const indRes = await app.request(
+      "/api/v1/individuals",
+      { method: "POST", headers: { ...aliceAuth, ...JSON_HEADERS }, body: JSON.stringify({ local_label_text: "alice-ind" }) },
+      env,
+    );
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+    await app.request(
+      "/api/v1/observation/captures",
+      {
+        method: "POST",
+        headers: { ...aliceAuth, ...JSON_HEADERS },
+        body: JSON.stringify({
+          domain: "biology",
+          subject_ref: `individual/${individualId}`,
+          visibility: "private",
+          measurements: [{ item: "weight", kind: "number", value: 12, unit: "g" }],
+        }),
+      },
+      env,
+    );
+    // bob(別actor)が alice 個体の profile を開く — private観測は見えてはいけない。
+    const bobRes = await app.request(`/api/v1/individuals/${individualId}/profile`, { headers: bobAuth }, env);
+    expect(bobRes.status).toBe(200);
+    const bobBody = (await bobRes.json()) as { observations: { capture_id: string }[] };
+    expect(bobBody.observations).toEqual([]);
+    // alice自身は自分のprivate観測を見られる(過剰にフィルタしていないことの回帰確認)。
+    const aliceRes = await app.request(`/api/v1/individuals/${individualId}/profile`, { headers: aliceAuth }, env);
+    const aliceBody = (await aliceRes.json()) as { observations: { capture_id: string }[] };
+    expect(aliceBody.observations).toHaveLength(1);
+  });
 });
 
 describe("V3-IND-34 複数系統並行管理(lineage_id タグ + ?lineage_id= フィルタ)", () => {

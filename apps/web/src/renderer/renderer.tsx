@@ -4608,7 +4608,7 @@ function GraphViewNode() {
 //   ファセット絞り込み(0件緩和バー付き)→ 4択ソート → 下部固定バスケット
 //   (選択して次の一括操作へ引き継ぐ)。
 //   状態: 取得データ2種+ファセット選択+ソート+バスケット選択集合。
-function SearchNavigatorNode() {
+function SearchNavigatorNode({ tabId }: { tabId?: string }) {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
   const headerScope = useContext(HeaderScopeCtx);
@@ -4958,6 +4958,11 @@ function SearchNavigatorNode() {
 
   return (
     <div className="civ-form civ-search-navigator">
+      {tabId === "breeder" && (
+        <p className="civ-text" data-muted="true">
+          ※ブリーダー向けの専用表示はこれから設計します。いまは「一般」と同じ内容です
+        </p>
+      )}
       <div className="civ-chip-row">
         {savedSearches.map((s) => (
           <span key={s.id} className="civ-saved-chip-wrap">
@@ -7587,7 +7592,7 @@ export function NodeView({ node }: { node: ScreenNode }) {
     case "batch-done":
       return <BatchDoneNode />;
     case "search-navigator":
-      return <SearchNavigatorNode />;
+      return <SearchNavigatorNode tabId={node.props?.tab_id != null ? String(node.props.tab_id) : undefined} />;
     case "research-panel":
       return <ResearchPanelNode />;
     case "growth-chart":
@@ -9125,6 +9130,7 @@ function IndDetailNode() {
   const auth = useIndGet<IndAuthenticity>(id ? `/api/v1/individuals/${id}/authenticity${suffix}` : null);
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [qrPending, setQrPending] = useState(false);
+  const [showAllObs, setShowAllObs] = useState(false);
 
   const issueQr = useCallback(async () => {
     if (!id) return;
@@ -9201,6 +9207,17 @@ function IndDetailNode() {
   const children = profile?.children ?? [];
   const envTiles = indLatestEnv(profile?.environment);
   const nextObs = profile?.schedule?.next_observation_at;
+
+  // ── これまでの記録(観測) — E3ENTRY-1(○95)。取得済みの profile.observations を
+  // 新しい順に描く。buildTimeline/prevValueFn/measureValue は既存の再利用
+  // (JSXは再利用しない — TimelineRow は civ-* 系デザイン、この画面は ind-* 系のため)。
+  const obsHistory = profile
+    ? buildTimeline(profile)
+        .filter((e): e is Extract<TimelineEntry, { kind: "capture" }> => e.kind === "capture")
+        .reverse()
+    : [];
+  const prevObsValue = profile ? prevValueFn(profile.observations) : () => null;
+  const visibleObs = showAllObs ? obsHistory : obsHistory.slice(0, 5);
 
   return (
     <div className="ind-zone">
@@ -9325,6 +9342,71 @@ function IndDetailNode() {
                 <div className="subhead">成長の記録(体重の変化)</div>
                 <IndGrowthChart profile={profile} />
 
+                {/* observation history (E3ENTRY-1) */}
+                <div className="subhead">これまでの記録(観測)</div>
+                {obsHistory.length === 0 ? (
+                  <p className="civ-empty">まだ観測の記録がありません。</p>
+                ) : (
+                  <>
+                    <ul className="obs-hist-list">
+                      {visibleObs.map((entry) => {
+                        const cap = entry.capture;
+                        const ms = (cap.measurements ?? [])
+                          .map((m) => ({ ...m, value: typeof m.value === "number" ? m.value : Number(m.value) }))
+                          .filter((m): m is ProfileMeasurement & { value: number } => Number.isFinite(m.value));
+                        return (
+                          <li className="obs-hist-row" key={cap.capture_id}>
+                            <div className="obs-hist-thumb">
+                              {cap.thumbnail_path ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={cap.thumbnail_path} alt="" />
+                              ) : (
+                                <span aria-hidden="true">📏</span>
+                              )}
+                            </div>
+                            <div className="obs-hist-body">
+                              <span className="obs-hist-date">{formatDateJa(entry.atIso)}</span>
+                              {ms.length === 0 ? (
+                                <span className="obs-hist-vals" data-muted="true">
+                                  計測値なし
+                                </span>
+                              ) : (
+                                <span className="obs-hist-vals">
+                                  {ms.map((m, i) => {
+                                    const prev = prevObsValue(cap.capture_id, m.item);
+                                    const delta = prev != null ? m.value - prev : null;
+                                    const sign = delta != null ? (delta > 0 ? "+" : delta < 0 ? "" : "±") : "";
+                                    return (
+                                      <span key={i}>
+                                        {m.value}
+                                        {m.unit ?? ""}
+                                        {delta != null ? ` (${sign}${delta.toFixed(1)}${m.unit ?? ""})` : ""}
+                                        {i < ms.length - 1 ? "・" : ""}
+                                      </span>
+                                    );
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                            <a className="obs-hist-link" href={`/s/obs-detail?id=${cap.capture_id}`}>
+                              くわしく →
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {obsHistory.length > 5 && (
+                      <button
+                        type="button"
+                        className="obs-hist-more"
+                        onClick={() => setShowAllObs((v) => !v)}
+                      >
+                        {showAllObs ? "閉じる" : `すべて見る(全${obsHistory.length}件)`}
+                      </button>
+                    )}
+                  </>
+                )}
+
                 {/* timeline */}
                 <div className="subhead">変わり目のできごと</div>
                 {profile.life_events.length === 0 ? (
@@ -9374,7 +9456,7 @@ function IndDetailNode() {
                 {/* action bar (mockup: 画面下端に固定される操作) */}
                 <div className="sticky-demo">
                   <span className="sd-label">この子への操作</span>
-                  <a className="btn primary" href={`/s/obs-entry?id=${id}`}>
+                  <a className="btn primary" href={`/s/obs-register-entry?id=${id}`}>
                     ＋ 記録を追加
                   </a>
                   <a className="btn ghost" href="/s/obs-register-batch">

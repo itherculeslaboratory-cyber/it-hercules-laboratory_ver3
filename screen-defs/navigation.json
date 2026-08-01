@@ -258,6 +258,12 @@
       "source": "renderer"
     },
     {
+      "from": "individual-detail",
+      "to": "obs-detail",
+      "label": "これまでの記録から1件を開く(E3導線)",
+      "source": "renderer"
+    },
+    {
       "from": "qr-resume",
       "to": "obs-register-entry",
       "label": "個体文脈付きで観測入力へ(OBS-25正本フロー)",
