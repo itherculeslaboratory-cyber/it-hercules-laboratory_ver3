@@ -8681,9 +8681,10 @@
       "ad4d644"
     ],
     "tc": [
-      "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")"
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")",
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 S4 復元(POST .../restore・GET .../current・設計R0801-436936 §4案4-A・REF-1裁定=○)\")"
     ],
-    "note": "[2026-08-01 g68-refs2/S2] 更新回数は lineage_meta.generation として実装(専用カウンタは作っていない=109と同一機構・設計R0801-436936 §3の第一原則)。POST /research/content/:id/next-generation(paper限定・protected)を2回叩くと generation が 0→1→2 になるテスト在り・2057件全緑。狭いゲートR0801-287c33=条件付き可(コード動作の誤り0件)・条件は全て是正済み(R0801-35ac10)または裁定済み(R0801-9398e1)。★正直記録: 「戻す」操作で更新回数が増えるか否かは未回答カードREF-1(R0801-436936-refrestore)の裁定による(裁定までは revert方式=戻すと+1 の暫定)。lineage_metaを持たない旧レコードへの初回next-generationは仮想root扱い(parent_uuid省略の裁定R0801-9398e1 R-1はS3 T0で適用済み(4d4d936)・generation値自体は正)。表示UIは未接続(apps/webからの呼び出しはgrep 0件・2026-08-01実測)。"
+    "note": "[2026-08-01 g68-refs2/S2, g72-refs4/S4で更新] 更新回数は lineage_meta.generation として実装(専用カウンタは作っていない=109と同一機構・設計R0801-436936 §3の第一原則)。POST /research/content/:id/next-generation(paper限定・protected)を2回叩くと generation が 0→1→2 になるテスト在り。★S4(g72-refs4・コミットe94ae4b)適用後: REF-1裁定(R0801-436936-refrestore)=○(現行ポインタ方式)を受け、POST /research/content/:id/restore + GET /research/content/:id/current を実装済み。戻しても generation は増えない(暫定revert方式は廃止・現行ポインタ方式に移行済み)ことをテストで実測確認。lineage_metaを持たない旧レコードへの初回next-generationは仮想root扱い(parent_uuid省略の裁定R0801-9398e1 R-1適用済み)。lineage_root=root世代のcontent_id(uuidではない・裁定R0801-9398e1 R-3準拠)。表示UIは未接続(apps/webからの呼び出しはgrep 0件・2026-08-01実測)。"
   },
   {
     "id": "V3-AIP-109",
@@ -8700,8 +8701,74 @@
     ],
     "tc": [
       "tests/research-content.test.ts describe(\"V3-AIP-108/109 POST /research/content/:id/next-generation\")",
-      "tests/research-content.test.ts describe(\"V3-AIP-108/109 GET /research/content/:id/generations\")"
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 GET /research/content/:id/generations\")",
+      "tests/research-content.test.ts describe(\"V3-AIP-108/109 S4 復元(POST .../restore・GET .../current・設計R0801-436936 §4案4-A・REF-1裁定=○)\")"
     ],
-    "note": "[2026-08-01 g69/S3でdone化] S2(ad4d644)=世代を別content実体として実装(世代ごとにcontent_id/envelope.idが別・専用集計コードなし=都度再計算・設計R0801-436936 §3案2-A)。S3(4d4d936・狭いゲートR0801-36ddfc条件付き可=コミット対象2ファイルへの是正指摘0件)で前回in_progress根拠4点のうち①②③を解消: ①GET /research/content/:id/generations(全世代のgeneration/content_id/reference_count/citation_count/lineage_recordedを1レスポンスで返す・fork混同防止の判別規則=世代差+1・protected既定・O(n)明記) ②仮想rootのparent_uuid/ancestor_chain省略を適用(裁定R0801-9398e1 R-1〜R-3・新規レコードは全てgen0刻印で仮想rootを増やさない=T1) ③citation_countからderived_from(系譜の辺)を除外しgen1は0から数え始める(T4・要件逐語「新たにカウントし始める」に一致。自壊検証で旧挙動[0,1,1]→現行[0,0,0]をゲート艦が実測=空回りなし)。テスト2062全緑・6スイート再検算一致(ゲート実測)。イベント件数実測はローカル永続ストア無し(FakeR2Bucket)のため計測不能の理由を記録(報告書R0801-578d62 §10)。★doneの正直記録(残る論点=旧④): 「いつでも戻せる」は暫定revert方式(旧内容で次世代を積む=Gitのrevert同型・追加部品ゼロ)で成立。戻す操作で更新回数を増やさない現行ポインタ方式(S4)へ寄せるかは未回答カードREF-1(R0801-436936-refrestore)の裁定による(カード自身が非ブロッキングを明記)。REF-2(世代=別ID実体の是非)が×の場合はS2/S3成果を採用せず設計へ差し戻す(カード明記)。表示UIは未接続(apps/webからの呼び出しはgrep 0件・2026-08-01 S2時点実測・S3もweb不触)。"
+    "note": "[2026-08-01 g69/S3でdone化、g72-refs4/S4で残る論点を解消] S2/S3で世代機構(別content実体+GET .../generations)を実装済み(詳細は既存note参照)。★旧④(いつでも戻せる)の解消: REF-1裁定(R0801-436936-refrestore)=○(現行ポインタ方式=設計§4案4-A)を受け、POST /research/content/:id/restore(現行ポインタを1件appendするだけ・generationは増やさない) + GET /research/content/:id/current(ポインタ無し系譜はgeneration最大へフォールバック・resolved_byで明示)を実装。旧内容で次世代を積む暫定revert方式は廃止。テスト6件追加(`tests/research-content.test.ts` の `it` が46→52)。`tests` ワークスペース総数は2076件・全緑(233 test files)。※総数は同時期に別レーン(c7a7d7e・g66 consent_l3)が追加した8件を含むため、S4の寄与は6件である(2062+8+6=2076・独立批評ゲートR0801-ac8938 §6-1実測)。lineage_root=root世代のcontent_id(uuidではない・裁定R0801-9398e1 R-3準拠)。表示UIは未接続(apps/webからの呼び出しはgrep 0件)。REF-2(世代=別ID実体の是非)は既に裁定済み(R0801-9398e1)につき本waveの残論点なし。"
+  },
+  {
+    "id": "V3-AIP-110",
+    "title": "引用リンクへ極性(支持/反論)フィールドを追加(却下済み案が参照数で居座る逆転の是正)",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=00-hq/review-queue/R0731-0b2830-s5saiban-2026-08-01.json S5-1(o回答・score=70)、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-s5reg.md、報告書=00-hq/kits/lane-implement/R0801-4c2cb3-REPORT-2026-08-01-g72-s5reg.md。"
+  },
+  {
+    "id": "V3-AIP-111",
+    "title": "却下理由の機械可読保存(lineage-metaへstatus/rejection_reasonを追加)",
+    "cluster": "g09-AIプロセス",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=00-hq/review-queue/R0731-0b2830-s5saiban-2026-08-01.json S5-2(o回答・score=70)、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-s5reg.md、報告書=00-hq/kits/lane-implement/R0801-4c2cb3-REPORT-2026-08-01-g72-s5reg.md。"
+  },
+  {
+    "id": "V3-OBS-74",
+    "title": "CSV受領時刻の鎖(測定主張日時とサーバ受領日時の両方保持・ズレ可視化)",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "S",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=RULING-2026-08-01-gen65-ihl-backbone.md §2、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-backbone-d1d2d3.md。"
+  },
+  {
+    "id": "V3-OBS-75",
+    "title": "測らなかったことの明示的記録(提出途切れの自動穴記録)",
+    "cluster": "g02-観測個体",
+    "wave": "第1波",
+    "tier": "A",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=RULING-2026-08-01-gen65-ihl-backbone.md §3、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-backbone-d1d2d3.md。"
+  },
+  {
+    "id": "V3-KRM-35",
+    "title": "失敗記録へのインセンティブ(コホート完結性を単位とする貢献度)",
+    "cluster": "g04-経済",
+    "wave": "第2波",
+    "tier": "A",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "実装はまだ無い(R65-2により実装が無いものをdone/in_progressにしない)。要件登録元=RULING-2026-08-01-gen65-ihl-backbone.md §4/§8、裁定台帳=docs/planning/rulings/user-ruling-2026-08-01-backbone-d1d2d3.md。単価の読み替え方(コホート単位への変換式)は実装時にHQ裁定が要る旨をnoteとして残すべきだが、上記noteは既に長いため要点のみとした。"
   }
 ]

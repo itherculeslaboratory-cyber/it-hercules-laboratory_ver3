@@ -55922,7 +55922,8 @@
     ],
     "superseded": null,
     "conflict": null,
-    "ambiguity": null
+    "ambiguity": null,
+    "ruling_note": "【2026-08-01 g73-boardapply(lane-implement)追記・R65-4(D:\\claude\\00-hq\\RULING-2026-07-31-gen65-hqrulings.md R65-4節)】V3-OBS-70は設計の段階1を採用: Ed25519署名によるC-USB無人push(秘密鍵はユーザーPC上のコンテナのみに保持・サーバは公開鍵のみ保持)。保存型はihl.cusb.ingest.v1のまま。採用理由=第20回裁定DK-1(サーバー側AES-GCM保管の廃止)・A-8-a「鍵をサーバーから追い出す」と同じ形でありV3-SEC-03とも整合(設計§利点2)。段階2(公開鍵登録のセルフサービス化)は今はやらない。発火条件=「2人目の拡張作者が現れた時」または「V3-SEC-58(レート制限)着手時」(ユーザー逐語「私はヘラクレス以外はやりません」)。要件のmod文化が半分しか実現しないことは隠さずそのまま記録する(設計§155の姿勢を採用)。担当艦=第3波のlane-implementミニ艦(発注書は未作成)。ユーザー裁定は不要(FND-20カード review-queue/R0731-573d7f-fnd20-wasmdep-2026-07-31.json のifYesが「V3-FND-20とV3-OBS-70の実装を再開します」と明記)。申し送り元=00-hq/kits/lane-research/R0801-cc16cc-REPORT-2026-08-01-g72-bbreqgate.md §8(V3-OBS-70本体にR65-4が未反映だった指摘)。statement本文・他フィールドは変更していない(append-onlyのruling_note新規追加のみ・既存ruling_noteは無かった)。"
   },
   {
     "id": "V3-VID-31",
