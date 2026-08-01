@@ -3,7 +3,7 @@
   "route": "/market/trade",
   "title": "取引",
   "layout": "standard",
-  "notes": "c8(ui-asset-catalog.md 【最優先1】)再構築版・UI磨き第2弾(受領10)で追改修。MKT-03/23/25/20。目的起点=3タブ[この出品/取引|買う|出品する]。「この出品/取引」が既定(listing_id 付きで開いた時に即詳細が見える・market.spec.ts 互換)。stage(公開1→非公開ボード2)は内側の stage-tabs が data.state.stage に自動追従(手動タップも可・タブは隠さない=stage 出し分けは tabs のまま)。4段stepper は current_from/current_map(BadgeNode の derive_from+labels 流用)で MARKET_EDGES の実 state 群を4visual stepへ縮退。振込は round-16 決済裁定どおり銀行振込P2P・GMO非関与 — pay_declare(買い手)/pay_confirm(出品者)/ship(出品者)/receive(買い手)の4トグルは磨き第2弾#1で `when`(役割別出し分けプリミティブ・{{viewer.actor_id}} vs {{data.state.seller_id}}/matched_with)を付与し、受領10「買い手/売り手のみ表示」を解消(両方常時表示だった旧UIから変更)。出品写真は磨き第2弾#2でschemas/events/mkt-listing-photo.schema.json(新イベント型・mkt-listing 本体は無変更)+POST /market/listings/{id}/photo で追加、出品フォームに photo field・「買う」タブは table から image-grid へ差し替え(カードタップ=詳細・受領10「画像を押せば詳細が出る」)。bids-table の入札者列・非公開board の from は磨き第2弾#5で actor 表示プリミティブ(表示名 or 短縮ハッシュ)化。相手選別なしdispute起票の respondent_id 自動判定(出品者/落札者どちらが起票者かの一般判定)は本波未対応(候補提示+手動確認のまま・別要件)。個体仕様table/送料見積りは対象外(schemas/events/mkt-listing.schema.json に individual_ids フィールドが無く実データ不在のため — 誇張ゼロ、飾りで埋めない)。",
+  "notes": "★2026-08-01是正(カードR0801-9d452f-ui06tradeprog): stage-tabs(2値)のラベルへstage-stepper(4段)との対応関係を追記(段数の統一までは踏み込まない=既存設計の尊重)。c8(ui-asset-catalog.md 【最優先1】)再構築版・UI磨き第2弾(受領10)で追改修。MKT-03/23/25/20。目的起点=3タブ[この出品/取引|買う|出品する]。「この出品/取引」が既定(listing_id 付きで開いた時に即詳細が見える・market.spec.ts 互換)。stage(公開1→非公開ボード2)は内側の stage-tabs が data.state.stage に自動追従(手動タップも可・タブは隠さない=stage 出し分けは tabs のまま)。4段stepper は current_from/current_map(BadgeNode の derive_from+labels 流用)で MARKET_EDGES の実 state 群を4visual stepへ縮退。振込は round-16 決済裁定どおり銀行振込P2P・GMO非関与 — pay_declare(買い手)/pay_confirm(出品者)/ship(出品者)/receive(買い手)の4トグルは磨き第2弾#1で `when`(役割別出し分けプリミティブ・{{viewer.actor_id}} vs {{data.state.seller_id}}/matched_with)を付与し、受領10「買い手/売り手のみ表示」を解消(両方常時表示だった旧UIから変更)。出品写真は磨き第2弾#2でschemas/events/mkt-listing-photo.schema.json(新イベント型・mkt-listing 本体は無変更)+POST /market/listings/{id}/photo で追加、出品フォームに photo field・「買う」タブは table から image-grid へ差し替え(カードタップ=詳細・受領10「画像を押せば詳細が出る」)。bids-table の入札者列・非公開board の from は磨き第2弾#5で actor 表示プリミティブ(表示名 or 短縮ハッシュ)化。相手選別なしdispute起票の respondent_id 自動判定(出品者/落札者どちらが起票者かの一般判定)は本波未対応(候補提示+手動確認のまま・別要件)。個体仕様table/送料見積りは対象外(schemas/events/mkt-listing.schema.json に individual_ids フィールドが無く実データ不在のため — 誇張ゼロ、飾りで埋めない)。",
   "nodes": [
     {
       "id": "shell",
@@ -94,8 +94,8 @@
                   "props": {
                     "tab_id": "detail",
                     "tabs": [
-                      { "id": "1", "label": "公開情報(価格・入札)" },
-                      { "id": "2", "label": "取引ボード(成立後)" }
+                      { "id": "1", "label": "公開情報(価格・入札)・上のステップでは「出品」に対応" },
+                      { "id": "2", "label": "取引ボード(成立後)・上のステップでは「成立・振込」以降に対応" }
                     ],
                     "default_tab": "{{data.state.stage}}"
                   },
@@ -135,7 +135,7 @@
                         "variant": "primary",
                         "static": { "kind": "list_fixed", "listing_id": "{{params.listing_id}}" }
                       },
-                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "出品を公開しました" }
                     },
                     {
                       "id": "btn-match",
@@ -146,7 +146,7 @@
                         "variant": "primary",
                         "static": { "kind": "match", "listing_id": "{{params.listing_id}}" }
                       },
-                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "申込みました" }
                     },
                     {
                       "id": "payment",
@@ -187,7 +187,7 @@
                         "static": { "kind": "pay_declare", "listing_id": "{{params.listing_id}}" },
                         "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.matched_with}}"] }
                       },
-                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "振込済みを申告しました" }
                     },
                     {
                       "id": "btn-pay-confirm",
@@ -199,7 +199,7 @@
                         "static": { "kind": "pay_confirm", "listing_id": "{{params.listing_id}}" },
                         "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.seller_id}}"] }
                       },
-                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "入金確認を記録しました" }
                     },
                     {
                       "id": "btn-ship",
@@ -211,7 +211,7 @@
                         "static": { "kind": "ship", "listing_id": "{{params.listing_id}}" },
                         "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.seller_id}}"] }
                       },
-                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "発送を記録しました" }
                     },
                     {
                       "id": "btn-receive",
@@ -223,7 +223,7 @@
                         "static": { "kind": "receive", "listing_id": "{{params.listing_id}}" },
                         "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.matched_with}}"] }
                       },
-                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition" }
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "受け取りを記録しました" }
                     },
                     {
                       "id": "dispute-hint",

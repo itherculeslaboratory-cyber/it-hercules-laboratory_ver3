@@ -967,6 +967,12 @@ export function capturesToCsv(captures: Record<string, unknown>[]): string {
 // (SIMD/LUT/ROI Lab変換)は端末側で完結する設計のため、本 route は既存 Truth データの決定論
 // シリアライズのみ(重処理なし・サーバ負荷ゼロを維持)。静的パス(/observation/:capture_id 等
 // 動的routeより前に登録=パス衝突回避・OBS-18 系の他の静的routeと同じ配置規約)。
+// ★2026-08-01裁定(カードR0801-149b70-exportline・A案○): このrouteは内部運用専用
+// (バックアップ・点検用)と位置づけ、consent_l3(第三者提供同意)フィルタは適用しない
+// (同意=第三者提供の可否であり、内部の保全・点検とは別問題 — 混ぜるとバックアップが
+// 未許諾データ欠損で壊れる)。第三者に渡りうる別の提供用routeを新設する場合は、その
+// routeにconsent_l3強制チェックを必須とする(今回は登録のみ・実装なし。批評ゲート
+// R0801-149b70の指摘への対応)。
 obsRoutes.get("/observation/export", async (c) => {
   const captures = (await store(c).listEvents(`truth/${CAPTURE_TYPE}/`))
     .map(dataOf)

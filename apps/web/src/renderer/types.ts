@@ -150,6 +150,9 @@ export type Action =
       method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
       path: string;
       body_from?: string;
+      // c8 UI磨きR0801-9d452f-ui10toast: 送信成功後に表示する共通トースト文言
+      // (省略時は無表示・上位互換)。実装=renderer.tsx writeToast/ToastHost。
+      toast?: string;
     }
   | { kind: "navigate"; to: string };
 

@@ -3,7 +3,7 @@
   "route": "/s/settings",
   "title": "設定",
   "layout": "standard",
-  "notes": "選好(locale/theme_pack_id/reduced_motion_override)を PATCH /api/v1/me/preferences で追記(append-only・LWW 投影)。現在値は GET /api/v1/me/preferences。V3-I18-08/UIX-16。V3-UIX-43: /me/settings 集約ハブとして、既に別 screen-def で自己完結する設定機能(AI接続BYOK・機器連携SwitchBot・テーマfork)への導線+この画面自身が持つ選好(表示言語/テーマ/モーション/UI露出/Push通知)+自己データ持出し(バックアップ代替のCSVエクスポート)を1画面に集約する。Push通知は選好の保持のみで実配信基盤(VAPID鍵)は人間ゲート(§5・実鍵投入)。アカウント統合(複数アカウントのマージ)はTruth append-onlyモデルとの整合設計が未確定のため対象外(裁定待ち・要検討: 統合時に元actor_idの履歴をどう畳み込むか)。",
+  "notes": "選好(locale/theme_pack_id/reduced_motion_override)を PATCH /api/v1/me/preferences で追記(append-only・LWW 投影)。現在値は GET /api/v1/me/preferences。V3-I18-08/UIX-16。V3-UIX-43: /me/settings 集約ハブとして、既に別 screen-def で自己完結する設定機能(AI接続BYOK・機器連携SwitchBot・テーマfork)への導線+この画面自身が持つ選好(表示言語/テーマ/モーション/UI露出/Push通知)+自己データ持出し(バックアップ代替のCSVエクスポート)を1画面に集約する。Push通知は選好の保持のみで実配信基盤(VAPID鍵)は人間ゲート(§5・実鍵投入)。アカウント統合(複数アカウントのマージ)はTruth append-onlyモデルとの整合設計が未確定のため対象外(裁定待ち・要検討: 統合時に元actor_idの履歴をどう畳み込むか)。★2026-08-01是正(カードR0801-9d452f-ui04settings): (1)7項目フラットのpref-formを表示/取引前準備/開発者向けの3グループに分割 (2)開発者向け(ui_exposure)はwhen(data.current.ui_exposure が user 以外の時のみ表示)で一般ユーザーから隠す (3)旧「現在の設定」カード(7項目の読み取り専用の全文重複)は1行の現在値サマリへ縮約し二重表示を解消。★判断: select系フィールドはrenderer.tsx側がdefaultValue事前選択に未対応(segmented/text/hiddenのみ対応済み・select.tsx:795-812はp.defaultを読まない)。selectへの動的プリフィルを足すのはこのカードの範囲を超える追加改修のため今回は見送り、フォーム自体は空欄から選び直す従来どおりの挙動を維持し、直上の1行サマリで現在値を確認できる形にした(判断が要った箇所として報告書に記載)。",
   "nodes": [
     {
       "id": "shell",
@@ -19,21 +19,15 @@
               "type": "card",
               "props": { "source_path": "/api/v1/me/preferences" },
               "children": [
-                { "id": "current-title", "type": "heading", "props": { "text_key": "settings.current-title.text", "text": "現在の設定", "level": 2 } },
-                { "id": "current-locale", "type": "text", "props": { "text_key": "settings.current-locale.text", "text": "言語: {{data.current.locale}}" } },
-                { "id": "current-theme", "type": "text", "props": { "text_key": "settings.current-theme.text", "text": "テーマ: {{data.current.theme_pack_id}}", "muted": true } },
-                { "id": "current-motion", "type": "text", "props": { "text_key": "settings.current-motion.text", "text": "モーション設定: {{data.current.reduced_motion_override}}", "muted": true } },
-                { "id": "current-exposure", "type": "text", "props": { "text_key": "settings.current-exposure.text", "text": "UI露出: {{data.current.ui_exposure}}", "muted": true } },
-                { "id": "current-push", "type": "text", "props": { "text_key": "settings.current-push.text", "text": "Push通知: {{data.current.push_notifications_enabled}}", "muted": true } },
-                { "id": "current-delivery", "type": "text", "props": { "text_key": "settings.current-delivery.text", "text": "受取方法: {{data.current.delivery_pref}}", "muted": true } },
-                { "id": "current-bank", "type": "text", "props": { "text_key": "settings.current-bank.text", "text": "銀行振込の受け取り準備: {{data.current.bank_transfer_ready}}", "muted": true } }
+                { "id": "current-summary", "type": "text", "props": { "text_key": "settings.current-summary.text", "text": "現在: 言語{{data.current.locale}}・テーマ{{data.current.theme_pack_id}}・モーション{{data.current.reduced_motion_override}}・Push{{data.current.push_notifications_enabled}}・受取{{data.current.delivery_pref}}・銀行振込準備{{data.current.bank_transfer_ready}}(下のフォームで変更できます)", "muted": true } }
               ]
             },
             {
               "id": "pref-form",
               "type": "form",
-              "action": { "kind": "api", "method": "PATCH", "path": "/api/v1/me/preferences", "body_from": "pref-form" },
+              "action": { "kind": "api", "method": "PATCH", "path": "/api/v1/me/preferences", "body_from": "pref-form", "toast": "設定を保存しました" },
               "children": [
+                { "id": "group-display", "type": "heading", "props": { "text_key": "settings.group-display.text", "text": "表示", "level": 2 } },
                 { "id": "locale", "type": "field", "props": { "variant": "select", "name": "locale", "label_key": "settings.locale.label", "label": "言語", "placeholder": "言語を選ぶ", "options": [
                   { "value": "ja", "label": "日本語" },
                   { "value": "en", "label": "English" }
@@ -47,15 +41,11 @@
                   { "value": "reduce", "label": "減らす" },
                   { "value": "no-preference", "label": "制限しない" }
                 ] } },
-                { "id": "ui-exposure", "type": "field", "props": { "variant": "select", "name": "ui_exposure", "label_key": "settings.ui-exposure.label", "label": "UI露出(開発者向け表示)", "placeholder": "UI露出を選ぶ", "options": [
-                  { "value": "user", "label": "一般(既定)" },
-                  { "value": "dev", "label": "開発者向け表示も見る" },
-                  { "value": "admin", "label": "管理者向け表示も見る" }
-                ] } },
                 { "id": "push-enabled", "type": "field", "props": { "variant": "select", "name": "push_notifications_enabled", "label_key": "settings.push-enabled.label", "label": "Push通知", "placeholder": "Push通知を選ぶ", "options": [
                   { "value": "off", "label": "オフ(既定)" },
                   { "value": "on", "label": "オン" }
                 ] } },
+                { "id": "group-pretrade", "type": "heading", "props": { "text_key": "settings.group-pretrade.text", "text": "取引前準備", "level": 2 } },
                 { "id": "delivery-pref", "type": "field", "props": { "variant": "select", "name": "delivery_pref", "label_key": "settings.delivery-pref.label", "label": "受取方法(取引前準備・V3-UIX-80)", "placeholder": "受取方法を選ぶ", "options": [
                   { "value": "post_office_hold", "label": "郵便局留め・はこぽす(匿名受取)" },
                   { "value": "home_delivery", "label": "自宅配送(相手と直接URLをやり取り)" }
@@ -63,6 +53,12 @@
                 { "id": "bank-transfer-ready", "type": "field", "props": { "variant": "select", "name": "bank_transfer_ready", "label_key": "settings.bank-transfer-ready.label", "label": "銀行振込の受け取り準備(取引前準備・V3-UIX-80)", "placeholder": "選ぶ", "options": [
                   { "value": "no", "label": "まだ(既定)" },
                   { "value": "yes", "label": "準備できている" }
+                ] } },
+                { "id": "group-dev", "type": "heading", "props": { "when": { "not_eq": ["{{data.current.ui_exposure}}", "user"] }, "text_key": "settings.group-dev.text", "text": "開発者向け", "level": 2 } },
+                { "id": "ui-exposure", "type": "field", "props": { "when": { "not_eq": ["{{data.current.ui_exposure}}", "user"] }, "variant": "select", "name": "ui_exposure", "label_key": "settings.ui-exposure.label", "label": "UI露出(開発者向け表示)", "placeholder": "UI露出を選ぶ", "options": [
+                  { "value": "user", "label": "一般(既定)" },
+                  { "value": "dev", "label": "開発者向け表示も見る" },
+                  { "value": "admin", "label": "管理者向け表示も見る" }
                 ] } },
                 { "id": "save", "type": "button", "props": { "label_key": "settings.save.label", "label": "設定を保存する", "variant": "primary", "type": "submit" } }
               ]

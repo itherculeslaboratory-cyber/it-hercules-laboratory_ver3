@@ -125,6 +125,10 @@
             "body_from": {
               "type": "string",
               "description": "リクエストボディを組み立てる元（フォーム node id 等・任意）。"
+            },
+            "toast": {
+              "type": "string",
+              "description": "c8 UI磨きR0801-9d452f-ui10toast: 送信成功後に表示する共通トースト文言（省略時は無表示・任意）。"
             }
           },
           "additionalProperties": false

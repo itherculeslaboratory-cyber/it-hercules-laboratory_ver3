@@ -49,8 +49,8 @@
                 "current": "login",
                 "steps": [
                   { "id": "login", "label_key": "login.step.login", "label": "ログイン" },
-                  { "id": "profile", "label_key": "login.step.profile", "label": "表示名と言語" },
-                  { "id": "locale", "label_key": "login.step.locale", "label": "国・言語(任意)" },
+                  { "id": "country", "label_key": "login.step.country", "label": "国(任意)" },
+                  { "id": "language", "label_key": "login.step.language", "label": "言語" },
                   { "id": "terms", "label_key": "login.step.terms", "label": "規約に同意" }
                 ]
               }

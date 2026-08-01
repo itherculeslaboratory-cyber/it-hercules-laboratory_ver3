@@ -19,6 +19,10 @@ export type Action =
        * リクエストボディを組み立てる元（フォーム node id 等・任意）。
        */
       body_from?: string;
+      /**
+       * c8 UI磨きR0801-9d452f-ui10toast: 送信成功後に表示する共通トースト文言（省略時は無表示・任意）。
+       */
+      toast?: string;
     }
   | {
       kind: "navigate";

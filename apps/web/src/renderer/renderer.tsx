@@ -553,6 +553,11 @@ function useRunAction(nodeId: string) {
         );
       }
       if (fromDraft) clearDraft();
+      // c8 UI磨きR0801-9d452f-ui10toast: ここまで来た時点でapi actionは成功済み
+      // (例外は上のcatchが拾う)。action.toastが明示されたformだけ、遷移が
+      // 起きる直前にsessionStorageへ退避する(navigate直後のフルリロードを
+      // 跨いでToastHostが1回だけ表示)。
+      if (action.kind === "api" && action.toast) writeToast(action.toast);
       const t = transitions.find((x) => x.from === nodeId);
       // Scalar request-body fields ride forward too (not just the response) —
       // the next screen's confirm/done recap reads them via {{params.*}} (V3-AIP-101,
@@ -705,6 +710,79 @@ function writeWorkflowContext(patch: Record<string, string>): void {
   } catch {
     /* ignore — best-effort prefill only */
   }
+}
+
+// c8 UI磨きR0801-9d452f-ui05aiprof是正: ai-profile-settings.jsonのprofile-form
+// はnode.actionが未定義で(実測確認済み)送信が文字通り何もしなかった。画面自身
+// の notes は「鍵はこの端末にのみ保存」と明記しているため、サーバ送信ではなく
+// このform専用のlocalStorage保存を実装する(props.local_key + props.local_key_field
+// によるform node汎用オプトイン — WorkflowContextと同じ縮退パターン)。
+function localFormKey(base: string, body: Record<string, unknown>, keyField?: string): string {
+  const kf = keyField ?? "feature_id";
+  const sub = body[kf];
+  return typeof sub === "string" && sub ? `ihl:form:${base}:${sub}` : `ihl:form:${base}`;
+}
+function readLocalForm(key: string): Record<string, unknown> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    const obj = raw ? JSON.parse(raw) : null;
+    return obj && typeof obj === "object" ? (obj as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+const LOCAL_FORM_SAVED_EVENT = "ihl:local-form-saved";
+function writeLocalForm(key: string, body: Record<string, unknown>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify({ ...body, saved_at: new Date().toISOString() }));
+    // 同一画面内の設定済みバッジ(AiProfileStatusNode)はマウント時読み取りのみ
+    // なので、保存直後に再読込させるための最小限の通知(フルリロードなし)。
+    window.dispatchEvent(new Event(LOCAL_FORM_SAVED_EVENT));
+  } catch {
+    /* ignore — best-effort only, this端末専用データなので失敗しても致命的ではない */
+  }
+}
+
+// c8 UI磨きR0801-9d452f-ui10toast(横断テーマ1): 送信系フォームの多くは
+// action成功後「同じ画面へ再読込」の transition しか持たず、送信できたのか
+// 何も分からない(navigate()が既定でwindow.location.assignのフルリロードで
+// あるため、React state だけのトーストは遷移で消える)。sessionStorage に
+// 1件だけ退避 → 遷移後の初回マウントで読んで表示 → 即座にクリアする
+// flash-message パターンでリロードを跨ぐ。既存の props.action.toast
+// (省略時は何もしない・上位互換)を各screen-defが明示指定した時だけ発火する。
+const TOAST_KEY = "ihl:toast-flash";
+function writeToast(message: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(TOAST_KEY, message);
+  } catch {
+    /* ignore — best-effort only, submit itself already succeeded */
+  }
+}
+function ToastHost() {
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let raw: string | null = null;
+    try {
+      raw = window.sessionStorage.getItem(TOAST_KEY);
+      if (raw) window.sessionStorage.removeItem(TOAST_KEY);
+    } catch {
+      raw = null;
+    }
+    if (!raw) return;
+    setMessage(raw);
+    const t = window.setTimeout(() => setMessage(null), 3500);
+    return () => window.clearTimeout(t);
+  }, []);
+  if (!message) return null;
+  return (
+    <div role="status" aria-live="polite" className="civ-toast">
+      {message}
+    </div>
+  );
 }
 
 function FieldNode({ node }: { node: ScreenNode }) {
@@ -908,6 +986,7 @@ function FormNode({ node }: { node: ScreenNode }) {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(p.error ? String(p.error) : null);
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
+  const [localSaved, setLocalSaved] = useState(false);
   // V3-AUT-06: a form carrying a required consent checkbox gates its submit
   // reactively (disabled from first paint until valid). Text-only forms are not
   // gated, so their submit-time field-error path (below) is unchanged.
@@ -940,7 +1019,9 @@ function FormNode({ node }: { node: ScreenNode }) {
         return;
       }
       setFormError(null);
-      if (!node.action) return;
+      // c8 UI磨きR0801-9d452f-ui05aiprof: props.local_key を持つformはAPIを
+      // 叩かず、この端末のlocalStorageにだけ保存する(node.action不要)。
+      if (!node.action && !p.local_key) return;
       // Shape the request body to the API contract: static injects first
       // (e.g. measurement.kind, species_confirmed_by), then dotted field names
       // (`measurements.0.item`) nest into the arrays the schema requires.
@@ -978,6 +1059,18 @@ function FormNode({ node }: { node: ScreenNode }) {
         }
         if (Object.keys(patch).length) writeWorkflowContext(patch);
       }
+      // c8 UI磨きR0801-9d452f-ui05aiprof: local_key保存はAPI呼び出しを経由
+      // しない(node.actionが無くても成立する唯一の分岐)。ここで完結して return。
+      if (p.local_key) {
+        writeLocalForm(
+          localFormKey(String(p.local_key), body, p.local_key_field ? String(p.local_key_field) : undefined),
+          body,
+        );
+        setLocalSaved(true);
+        window.setTimeout(() => setLocalSaved(false), 3000);
+        return;
+      }
+      if (!node.action) return;
       // HDR-1第2スライス(A1#4): props.header_scoped:true なフォーム(例: research-search
       // の POST /research/search)だけ、送信先パスへヘッダー観測対象クエリを足す
       // (useSource/BoardThreadsNode と同じオプトイン規約)。navigate kind には
@@ -1011,6 +1104,8 @@ function FormNode({ node }: { node: ScreenNode }) {
       p.static,
       p.header_scoped,
       p.header_scoped_producer,
+      p.local_key,
+      p.local_key_field,
       scope,
       headerScope.species,
       headerScope.lineageId,
@@ -1036,7 +1131,48 @@ function FormNode({ node }: { node: ScreenNode }) {
           {formError}
         </p>
       )}
+      {localSaved && (
+        <p role="status" className="civ-form-success">
+          {String(p.local_saved_text ?? "この端末に保存しました")}
+        </p>
+      )}
     </form>
+  );
+}
+
+// c8 UI磨きR0801-9d452f-ui05aiprof: props.options([{value,label}]) + props.local_key
+// を受け取り、feature_idごとに localFormKey(local_key, {feature_id}) が
+// localStorageに存在するかだけを見て「設定済み/未設定」バッジを並べる
+// (読み取り専用・サーバ通信なし)。マウント後に一度だけ読む(SSR安全)。
+function AiProfileStatusNode({ node }: { node: ScreenNode }) {
+  const p = props(node);
+  const options = toOptions(p.options);
+  const localKey = String(p.local_key ?? "");
+  const [configured, setConfigured] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!localKey) return;
+    const reread = () => {
+      const set = new Set<string>();
+      for (const o of options) {
+        if (readLocalForm(localFormKey(localKey, { feature_id: o.value }))) set.add(o.value);
+      }
+      setConfigured(set);
+    };
+    reread();
+    window.addEventListener(LOCAL_FORM_SAVED_EVENT, reread);
+    return () => window.removeEventListener(LOCAL_FORM_SAVED_EVENT, reread);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localKey, options.map((o) => o.value).join(",")]);
+  return (
+    <div className="civ-card-badges">
+      {options.map((o) => (
+        <Badge
+          key={o.value}
+          text={`${o.label}: ${configured.has(o.value) ? "設定済み" : "未設定"}`}
+          tone={configured.has(o.value) ? "success" : "neutral"}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -1048,6 +1184,12 @@ function ListNode({ node }: { node: ScreenNode }) {
   // new node type).
   if (p.variant === "threads") {
     return <BoardThreadsNode node={node} />;
+  }
+  // c8 UI磨きR0801-9d452f-ui05aiprof: 同じ in-scope トリック(list +
+  // props.variant)。5機能それぞれの設定済み/未設定バッジ(localFormKeyの
+  // 読み取りのみ・APIは叩かない)。
+  if (p.variant === "ai-profile-status") {
+    return <AiProfileStatusNode node={node} />;
   }
   // T-70 KNW wave1(知の広場ハブ・承認モックアップの verbatim 採用): same
   // in-scope trick — a `list` variant instead of a new node type (schema enum
@@ -2328,6 +2470,11 @@ function ParentPicker({
 // 取り計測があれば)POST /observation/captures を subject_ref="clutch/<id>" で
 // 連鎖させる1画面完結フォーム(F4/F5のバッチドラフトは経由しない — F6相当の
 // 完了表示までこの画面が担う・wireframes-core5 §F3の保存規定どおり)。
+//
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/obs-register-clutch.json
+// はnode {type:"clutch-intake"} 1個のみでこのコンポーネントに委譲。動作影響なし):
+//   種別選択 → 匹数/日付入力 → (任意)抜き取り計測 → 保存ボタン → 完了表示。
+//   状態: フォーム値(種別/匹数/日付/計測値)+ 保存中フラグ+ 完了後の結果表示。
 function ClutchIntakeNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
@@ -2731,6 +2878,13 @@ type PlacementRow = { placement_id: string; label: string };
 // に積んで F5b(obs-register-batch-confirm)へ渡す。昇格(promote)だけは個体ID
 // をその場で発行するため即時 API 呼び出し(batch-commit は promote 未対応 —
 // バックエンド commit 2329559 の仕様どおり)。
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/obs-register-batch.json
+// はnode {type:"batch-roster"} 1個のみでこのコンポーネントに委譲。動作影響なし):
+//   モード切替(お世話/移動) → 3種フィルタ(棚/ステージ/最終お世話) →
+//   行グリッド(選択チェック+測定入力+行メニュー) → 照合ダイアログ2種
+//   (個体数照合reconcile・ステージ昇格promote) → 一括保存は次画面(batch-summary)へ。
+//   状態: individuals/clutches/placements(fetch)+ mode/フィルタ3種+
+//   selected行集合+grid入力値+extras(死亡/ステージ変更)+ダイアログ開閉状態。
 function BatchRosterNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
@@ -2978,6 +3132,13 @@ function BatchRosterNode() {
 
   return (
     <div className="civ-form">
+      {/* c8 UI磨きR0801-9d452f-ui07batchsum: モード切替・フィルタ3種・行ごとの
+          測定入力・行ごとのメニュー・照合ダイアログ2種が1画面に同居するため、
+          選択中の行数と次の操作を1行で先に見せる(既存の設計・自動プリセレクト
+          は不変・追加は表示1行のみ)。 */}
+      <p className="civ-text" data-muted="true">
+        選択中 {selected.size}件・これから{mode === "care" ? "お世話" : "移動"}を記録します
+      </p>
       <div className="civ-segmented" role="radiogroup" aria-label="記録の種類">
         <label className="civ-segment">
           <input type="radio" checked={mode === "care"} onChange={() => setMode("care")} />
@@ -3801,6 +3962,12 @@ type TargetCandidate = { qid: string; scientific_name: string };
 // 差し替わる(navigate は一切呼ばれない) — obs-navigator画面側の呼び出しは
 // props無しのまま(挙動無変更)。confirmLabel は文言の書き分け用
 // (「今この対象を見ています」= ヘッダー / 「この記録の対象種を選ぶ」= 画面)。
+//
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/obs-navigator.json
+// はnode {type:"target-navigator"} 1個のみでこのコンポーネントに委譲。動作影響なし):
+//   3経路タブ(学名検索/yes-no二分探索/分類ツリーdrill-down)→ いずれかで
+//   候補を絞り込み → 候補カード確定ボタン1つ(捏造防止=AIは書かない・候補提示のみ)。
+//   状態: タブ選択+各経路のローカル状態(検索文字列/yes-no累積回答/ツリーpath)+候補一覧。
 function TargetNavigatorNode({
   onConfirm,
   confirmLabel,
@@ -4013,6 +4180,12 @@ function TargetNavigatorNode({
   );
 }
 
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/obs-search.json
+// はnode {type:"search-navigator"} 1個のみでこのコンポーネントに委譲。動作影響なし):
+//   GET /individuals + GET /placements 取得 → 保存検索チップ(localStorage)+
+//   ファセット絞り込み(0件緩和バー付き)→ 4択ソート → 下部固定バスケット
+//   (選択して次の一括操作へ引き継ぐ)。
+//   状態: 取得データ2種+ファセット選択+ソート+バスケット選択集合。
 function SearchNavigatorNode() {
   const execute = useContext(ExecuteCtx);
   const navigate = useContext(NavigateCtx);
@@ -6001,7 +6174,9 @@ function ThreadPostsNode({ node }: { node: ScreenNode }) {
 // interpolated strings — not a rules engine; every role check this round-16
 // wave needs (buyer/seller/thread_owner) reduces to one id comparison.
 function evalWhen(p: Record<string, unknown>, scope: Scope): boolean {
-  const w = p.when as { eq?: [string, string]; not_eq?: [string, string] } | undefined;
+  const w = p.when as
+    | { eq?: [string, string]; not_eq?: [string, string]; empty?: string; not_empty?: string }
+    | undefined;
   if (!w) return true;
   // Both templates resolving empty (the viewer/data fetch hasn't landed yet —
   // {{viewer.actor_id}} and {{data.state.matched_with}} both "" on first
@@ -6015,6 +6190,17 @@ function evalWhen(p: Record<string, unknown>, scope: Scope): boolean {
   if (w.not_eq) {
     const a = interpolate(w.not_eq[0], scope);
     return a !== "" && a !== interpolate(w.not_eq[1], scope);
+  }
+  // c8 UI磨きR0801-9d452f-ui03dispute是正: eq/not_eqは両辺とも空文字を
+  // 「不明」扱いするガードがあるため「値が未指定である」を表せなかった
+  // (dispute_id未指定=新規開始フォーム、指定時=進行状況、の出し分けに必要)。
+  // empty/not_empty は単項なのでこのガードは適用しない — 空文字そのものを
+  // 判定対象にする。
+  if (typeof w.empty === "string") {
+    return interpolate(w.empty, scope) === "";
+  }
+  if (typeof w.not_empty === "string") {
+    return interpolate(w.not_empty, scope) !== "";
   }
   return true;
 }
@@ -7114,6 +7300,12 @@ function SpeciesBookNode({ node }: { node: ScreenNode }) {
   );
 }
 
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/knowledge-hub.json
+// はnode {type:"list", props:{variant:"knowledge-hub"}} 1個のみでこの
+// コンポーネントに委譲。動作影響なし):
+//   4タブ構成(掲示板/記事/ブログ+種族の本=SpeciesBookNode)。「困った」相談から
+//   スレが育ち、ヘッダーで種族を選んでいれば自動でその種の本に紐づく。
+//   AI要約は開いた時だけ・後から任意(既定は無料・AIなしの集計のみ)。
 function KnowledgeHubNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const execute = useContext(ExecuteCtx);
@@ -7455,6 +7647,12 @@ function dueDayBadge(line: HomeScheduleLine): string {
   return `${line.days}日後`;
 }
 
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/home.jsonは
+// node {type:"list", props:{variant:"home-dashboard"}} 1個のみでこの
+// コンポーネントに委譲。動作影響なし):
+//   次の一手スケジュール行(お世話/観測の期日バッジ)+主要ゾーンへの
+//   ショートカットグリッド(pc-b等)+ドロワーナビ(DRAWER_NAV_ITEMS)への導線。
+//   信頼度平均タイルは裁定により非実装(R135-a)。
 function HomeDashboardNode({ node }: { node: ScreenNode }) {
   const execute = useContext(ExecuteCtx);
   const [summary, setSummary] = useState<HomeSummary | null>(null);
@@ -7821,6 +8019,12 @@ function KnwChatMessage({ post, me }: { post: KnwChatPost; me: boolean }) {
   );
 }
 
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/knowledge-thread.json
+// はnode {type:"list", props:{variant:"knowledge-thread-chat"}} 1個のみでこの
+// コンポーネントに委譲。動作影響なし):
+//   投稿バブル一覧(avatar/handle+本文+引用badge)+発言フォーム+スレ主のみの
+//   解決マーク。送信後は同画面内で5秒ポーリングのreload()により即時反映
+//   (画面遷移なし=navigate()を呼ばない自己完結コンポーネント)。
 function KnowledgeThreadChatNode({ node }: { node: ScreenNode }) {
   const p = props(node);
   const execute = useContext(ExecuteCtx);
@@ -8088,6 +8292,13 @@ type IndAuthenticity = {
 type IndProfileFull = IndividualProfile & { environment?: EnvReading[] };
 
 // ============ 3. 個体の詳細(individual-detail)= 中心画面 ============
+// 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/individual-detail.json
+// はnode {type:"individual-profile"} 1個のみでこのコンポーネントに委譲。動作影響なし):
+//   ヘッダ(名前/種/ステージ/状態badge・死亡記録/誤記録訂正)+血統健全度・
+//   近交リスクチップ+血縁レール(親/子/きょうだいchip・タップで対象個体を差替)+
+//   変化点タイムライン(観測+life-eventsマージ・Δ計算・値の訂正)+今の置き場所の
+//   環境センサー値+sticky下端の次の一手バー。GET /individuals/{id}/profile +
+//   /pedigree を自前取得(GrowthChartNodeと合わせ2重取得=素朴な縮退・既知)。
 function IndDetailNode() {
   const scope = useContext(ScopeCtx);
   const execute = useContext(ExecuteCtx);
@@ -9097,6 +9308,7 @@ export function Renderer({
                     {def.nodes.map((n) => (
                       <NodeView key={n.id} node={n} />
                     ))}
+                    <ToastHost />
                   </DataSinkCtx.Provider>
                 </NavigateCtx.Provider>
               </TransitionsCtx.Provider>

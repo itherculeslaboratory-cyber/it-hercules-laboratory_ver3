@@ -923,6 +923,31 @@ a.civ-thumb-card:focus-visible {
   font-size: var(--civ-fs-1);
 }
 
+/* c8 UI磨きR0801-9d452f-ui05aiprof: local_key保存(端末内保存)成功時のインライン確認。 */
+.civ-form-success {
+  background: color-mix(in srgb, var(--civ-primary) 15%, transparent);
+  color: var(--civ-primary);
+  border-radius: var(--civ-radius);
+  padding: 8px 12px;
+  font-size: var(--civ-fs-1);
+}
+
+/* c8 UI磨きR0801-9d452f-ui10toast: 送信成功トースト。design-c2 §4.3の上限
+   (shadow禁止・radius単一・motion150-300ms)を遵守。 */
+.civ-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: var(--civ-primary);
+  color: var(--civ-primary-text);
+  border-radius: var(--civ-radius);
+  padding: 10px 16px;
+  font-size: var(--civ-fs-1);
+  z-index: 40;
+  transition: opacity 200ms;
+}
+
 /* =============================================================================
  * V3-AIP-101 磨き直し(親レビュー13件反映・c7-wireframes-core5) — F1候補チップ/
  * 死亡・ステージの disclosure/写真フィールド/カスタムチェックボックス。全て
