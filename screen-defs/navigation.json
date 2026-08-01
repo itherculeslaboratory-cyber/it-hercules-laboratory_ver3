@@ -25,6 +25,7 @@
     "cross",
     "bio-card",
     "match",
+    "preference",
     "species",
     "device",
     "placement-qr",
@@ -101,6 +102,16 @@
       "from": "home",
       "to": "match",
       "label": "マッチングへ"
+    },
+    {
+      "from": "home",
+      "to": "preference",
+      "label": "好みを教える"
+    },
+    {
+      "from": "preference",
+      "to": "match",
+      "label": "好みに近い順を見る"
     },
     {
       "from": "home",

@@ -52,6 +52,7 @@ const SCREEN_IDS = [
   "paper-match",
   "placement-qr",
   "platinum-shop",
+  "preference",
   "profile",
   "project-hub",
   "qr-resume",

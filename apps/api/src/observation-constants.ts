@@ -264,6 +264,21 @@ export function countConsentL3Inventory(
   return { total: captures.length, granted, denied, missing };
 }
 
+// ── V3-UIX-22/23/79 pairwise features(HQ裁定G79-1・uib02think §5-2②) ────────
+/** feature_tags 固定語彙(one-hot)。末尾に「その他」バケツ(語彙外タグの受け皿)を
+ *  1次元追加し、未知タグでも情報を捨てず決定論的に写像する(match-routes.ts の
+ *  computeMatchFeatures が使う)。語彙を増やす時は MATCH_FEATURES_VERSION を切ること
+ *  (uib02think §5-2②「静かに間違った内積を出す」の防止・G79-1裁定「規則変更を可逆に
+ *  する」)。既存タグの実例(tests/individual.test.ts の bio-card TC)から採った暫定値
+ *  — 実タグ運用の広がりに応じて見直す前提の第1版。 */
+export const MATCH_FEATURE_TAG_VOCAB = ["体格重視", "色重視", "模様重視", "気性重視", "希少性重視"] as const;
+/** サイズ正規化の除数(mm)。latest_size(mm) / この値を末尾次元に置く。現行データの
+ *  実測レンジ分布は未計測のため暫定値(規則変更時は MATCH_FEATURES_VERSION を切る)。 */
+export const MATCH_FEATURE_SIZE_NORM_MM = 100;
+/** pairwise features 生成規則のバージョン(match-preference schema の
+ *  features_version に保存・G79-1裁定「features_version を必ず付ける」)。 */
+export const MATCH_FEATURES_VERSION = "tagvocab-v1";
+
 // ── V3-OBS-71: 観測データ印刷 — 選べる項目の許可リスト ────────────────────
 export const PRINT_ALLOWED_FIELDS = [
   "capture_id",

@@ -4,7 +4,8 @@
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
 import { TruthStore, deriveActorId } from "@ihl/truth";
-import { projectPreferenceWeights, rankByPreference, projectMatchConvergence } from "../apps/api/src/match-routes";
+import { projectPreferenceWeights, rankByPreference, projectMatchConvergence, computeMatchFeatures } from "../apps/api/src/match-routes";
+import { MATCH_FEATURE_TAG_VOCAB } from "../apps/api/src/observation-constants";
 import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
 
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -18,6 +19,13 @@ function ctx() {
 }
 async function pref(env: object, body: Record<string, unknown>) {
   return app.request("/api/v1/match/preference", { method: "POST", headers: AUTH_JSON, body: JSON.stringify(body) }, env);
+}
+async function createInd(env: object, body: Record<string, unknown> = {}): Promise<string> {
+  const res = await app.request("/api/v1/individuals", { method: "POST", headers: AUTH_JSON, body: JSON.stringify(body) }, env);
+  return ((await res.json()) as { individual_id: string }).individual_id;
+}
+async function pairChoice(env: object, body: Record<string, unknown>) {
+  return app.request("/api/v1/match/pair-choice", { method: "POST", headers: AUTH_JSON, body: JSON.stringify(body) }, env);
 }
 
 describe("IND-07 preference learning w <- w + alpha*y*x", () => {
@@ -139,5 +147,134 @@ describe("IND-08 projectMatchConvergence (evaluation log — Precision@K/AUC/sep
     expect(res.status).toBe(200);
     const body = (await res.json()) as { precision_at_k: { k: number } };
     expect(body.precision_at_k.k).toBe(1);
+  });
+});
+
+describe("E4(uib02think §5-2①): GET /match/pair — 出題", () => {
+  it("round=0 で個体マスタをID(ULID=作成時刻順)昇順に2件返す。features は含まない", async () => {
+    const { env } = ctx();
+    const a = await createInd(env, { species: "A" });
+    const b = await createInd(env, { species: "B" });
+    const sortedIds = [a, b].sort();
+    const res = await app.request("/api/v1/match/pair", { headers: AUTH }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      round: number;
+      target: number;
+      exhausted: boolean;
+      pair_id: string;
+      left: { item_id: string };
+      right: { item_id: string };
+    };
+    expect(body.round).toBe(0);
+    expect(body.target).toBe(10);
+    expect(body.exhausted).toBe(false);
+    expect(body.left.item_id).toBe(sortedIds[0]);
+    expect(body.right.item_id).toBe(sortedIds[1]);
+    expect("features" in body.left).toBe(false);
+    expect(typeof body.pair_id).toBe("string");
+  });
+
+  it("候補が2件未満(0/1件)なら exhausted:true", async () => {
+    const { env } = ctx();
+    const empty = (await (await app.request("/api/v1/match/pair", { headers: AUTH }, env)).json()) as { exhausted: boolean };
+    expect(empty.exhausted).toBe(true);
+    await createInd(env, { species: "solo" });
+    const solo = (await (await app.request("/api/v1/match/pair", { headers: AUTH }, env)).json()) as { exhausted: boolean };
+    expect(solo.exhausted).toBe(true);
+  });
+
+  it("回答済みラウンド数(distinct pair_id・V3-UIX-79)に応じて次のペアへ進む", async () => {
+    const { env } = ctx();
+    const ids: string[] = [];
+    for (let i = 0; i < 4; i++) ids.push(await createInd(env, { species: `S${i}` }));
+    const sorted = [...ids].sort();
+    const first = (await (await app.request("/api/v1/match/pair", { headers: AUTH }, env)).json()) as {
+      pair_id: string;
+      left: { item_id: string };
+      right: { item_id: string };
+    };
+    expect(await (await pairChoice(env, { pair_id: first.pair_id, left_item_id: first.left.item_id, right_item_id: first.right.item_id, choice: "left" })).status).toBe(201);
+    const second = (await (await app.request("/api/v1/match/pair", { headers: AUTH }, env)).json()) as {
+      round: number;
+      left: { item_id: string };
+      right: { item_id: string };
+    };
+    expect(second.round).toBe(1);
+    expect(second.left.item_id).toBe(sorted[2]);
+    expect(second.right.item_id).toBe(sorted[3]);
+  });
+});
+
+describe("E4(uib02think §5-2②): POST /match/pair-choice — 記録", () => {
+  it("left選択 → 左y=+1/右y=-1 の2件を同一pair_id・kind=pairwiseで記録する", async () => {
+    const { env, bucket } = ctx();
+    const a = await createInd(env, { species: "A" });
+    const b = await createInd(env, { species: "B" });
+    const res = await pairChoice(env, { pair_id: "r1", left_item_id: a, right_item_id: b, choice: "left" });
+    expect(res.status).toBe(201);
+    const s = new TruthStore(bucket);
+    const rows = (await s.listEvents(`truth/ihl.match.preference.v1/${DEV_ACTOR}-`)).map(
+      (e) => (e as { data: Record<string, unknown> }).data,
+    );
+    const pairwise = rows.filter((d) => d.kind === "pairwise");
+    expect(pairwise).toHaveLength(2);
+    const left = pairwise.find((d) => d.item_id === a)!;
+    const right = pairwise.find((d) => d.item_id === b)!;
+    expect(left.y).toBe(1);
+    expect(right.y).toBe(-1);
+    expect(left.pair_id).toBe("r1");
+    expect(right.pair_id).toBe("r1");
+    expect(left.features_version).toBe("tagvocab-v1");
+  });
+
+  it("neither選択 → 両方 y=0(G79-1裁定・neitherは候補から除外しない前提のスキーマ)", async () => {
+    const { env, bucket } = ctx();
+    const a = await createInd(env, { species: "A" });
+    const b = await createInd(env, { species: "B" });
+    expect((await pairChoice(env, { pair_id: "r2", left_item_id: a, right_item_id: b, choice: "neither" })).status).toBe(201);
+    const s = new TruthStore(bucket);
+    const rows = (await s.listEvents(`truth/ihl.match.preference.v1/${DEV_ACTOR}-`)).map(
+      (e) => (e as { data: Record<string, unknown> }).data,
+    );
+    expect(rows.every((d) => d.y === 0)).toBe(true);
+  });
+
+  it("同一pair_idの二重送信は2件目が409(put-if-absentによる自然な冪等性)", async () => {
+    const { env } = ctx();
+    const a = await createInd(env, { species: "A" });
+    const b = await createInd(env, { species: "B" });
+    const first = await pairChoice(env, { pair_id: "dup1", left_item_id: a, right_item_id: b, choice: "left" });
+    expect(first.status).toBe(201);
+    const dup = await pairChoice(env, { pair_id: "dup1", left_item_id: a, right_item_id: b, choice: "left" });
+    expect(dup.status).toBe(409);
+  });
+
+  it("choice が left/right/neither 以外、または pair_id/item_id 欠落は400", async () => {
+    const { env } = ctx();
+    const a = await createInd(env, { species: "A" });
+    const b = await createInd(env, { species: "B" });
+    expect((await pairChoice(env, { pair_id: "bad1", left_item_id: a, right_item_id: b, choice: "up" })).status).toBe(400);
+    expect((await pairChoice(env, { left_item_id: a, right_item_id: b, choice: "left" })).status).toBe(400);
+  });
+});
+
+describe("E4: computeMatchFeatures — features生成の決定論性(HQ裁定G79-1)", () => {
+  it("同一入力(feature_tags+size)は常に同一ベクトルを返す", () => {
+    const v1 = computeMatchFeatures(["色重視", "体格重視"], 62.4);
+    const v2 = computeMatchFeatures(["色重視", "体格重視"], 62.4);
+    expect(v1).toEqual(v2);
+  });
+
+  it("固定語彙のone-hot位置に1が立ち、語彙外タグは末尾の「その他」バケツへ写像される(情報を捨てない)", () => {
+    const v = computeMatchFeatures(["色重視", "未知タグ"], null);
+    expect(v[MATCH_FEATURE_TAG_VOCAB.indexOf("色重視")]).toBe(1);
+    expect(v[MATCH_FEATURE_TAG_VOCAB.length]).toBe(1); // 「その他」バケツ
+    expect(v[v.length - 1]).toBe(0); // サイズ無し
+  });
+
+  it("サイズは MATCH_FEATURE_SIZE_NORM_MM(=100)で正規化される", () => {
+    const v = computeMatchFeatures([], 100);
+    expect(v[v.length - 1]).toBeCloseTo(1, 10);
   });
 });

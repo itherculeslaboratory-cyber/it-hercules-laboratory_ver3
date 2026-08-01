@@ -1,0 +1,22 @@
+{
+  "screen_id": "preference",
+  "route": "/preference",
+  "title": "好み",
+  "layout": "standard",
+  "notes": "好み入力の一次UI(V3-UIX-22/23/79)。2画像から左右1タップで preference_event(kind:pairwise)を追記する入力専用画面。設計正本=kits\\lane-think\\R0801-fe86a2-REPORT-2026-08-01-g77-uib02think.md §5。match.json(結果を眺める画面)とは役割を分ける — 本画面は書き込み専用、match は読み取り専用。ADR-H-02(ihl-ver2、人間確定2026-06-07)は「/matchが一般ユーザー向け好み導線」と書くが、ver3では/matchが既にランキング閲覧用途で使用中のため、ADRの趣旨(dev配下にしない・一般ユーザー向け)をパス文字列ではなく意図として汲み、本画面のrouteは/preferenceとした(uib02think §7-2・HQ追認済み)。ValueCheck多次元は本画面ではなく詳細画面のみ(ADR-H-02)。正直な限界: 撮影条件はスキーマに存在するcaptured_at/温湿度のみを表示する(承認済みmockupの『LED/Sony(色補正なし)』は実データが無いため実装しない)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "pref", "type": "list", "props": { "variant": "pref-pairwise" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

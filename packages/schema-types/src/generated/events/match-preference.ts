@@ -40,4 +40,8 @@ export interface MatchPreference {
    * 同一pairwiseラウンドの2件を紐付けるID。distinct数=回答ラウンド数。任意（過去イベント互換のため required に入れない）。
    */
   pair_id?: string;
+  /**
+   * features生成規則のバージョン（HQ裁定G79-1）。pairwiseイベントのみ付与。将来の規則変更を可逆にするための識別子。任意（過去イベント互換のため required に入れない）。
+   */
+  features_version?: string;
 }

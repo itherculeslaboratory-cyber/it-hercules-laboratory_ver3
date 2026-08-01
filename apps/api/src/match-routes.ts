@@ -7,12 +7,23 @@
 import { Hono } from "hono";
 import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { LEARNING_RATE, MATCH_AUC_VALID_THRESHOLD, IND09_PAIRWISE_QUESTION_TARGET } from "./observation-constants";
+import {
+  LEARNING_RATE,
+  MATCH_AUC_VALID_THRESHOLD,
+  IND09_PAIRWISE_QUESTION_TARGET,
+  MATCH_FEATURE_TAG_VOCAB,
+  MATCH_FEATURE_SIZE_NORM_MM,
+  MATCH_FEATURES_VERSION,
+} from "./observation-constants";
+import { projectBioCard } from "./individual-routes";
 
 export const matchRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 const MATCH_TYPE = "ihl.match.preference.v1";
 const MATCH_SCHEMA = "schemas/events/match-preference.schema.json";
+// individual-routes.ts の MASTER_TYPE はモジュール private のため再宣言する
+// (envelope()/store()/dataOf() と同じ精度=批評家#3の先例に倣う)。
+const MASTER_TYPE = "ihl.ind.master.v1";
 
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
@@ -80,6 +91,23 @@ export function rankByPreference<T extends { features?: unknown }>(w: number[], 
       const { features: _f, ...rest } = cand as T & { features?: unknown };
       return rest as Omit<T, "features">;
     });
+}
+
+/**
+ * 個体 → features(number[])(HQ裁定G79-1・uib02think §5-2②)。feature_tags の固定
+ * 語彙(MATCH_FEATURE_TAG_VOCAB) one-hot(語彙外タグは末尾の「その他」バケツへ写像 —
+ * 情報を捨てず決定論を保つ)+末尾1次元に正規化サイズ(latest_size/MATCH_FEATURE_SIZE_NORM_MM、
+ * サイズ無しは0)。同一入力→同一出力の純関数(features決定論性はE4テストで担保)。
+ */
+export function computeMatchFeatures(featureTags: string[], latestSizeMm: number | null): number[] {
+  const vocabLen = MATCH_FEATURE_TAG_VOCAB.length;
+  const vec = new Array<number>(vocabLen + 2).fill(0); // [...vocab, その他, 正規化サイズ]
+  for (const tag of featureTags) {
+    const idx = (MATCH_FEATURE_TAG_VOCAB as readonly string[]).indexOf(tag);
+    vec[idx >= 0 ? idx : vocabLen] = 1;
+  }
+  vec[vocabLen + 1] = latestSizeMm == null ? 0 : latestSizeMm / MATCH_FEATURE_SIZE_NORM_MM;
+  return vec;
 }
 
 // distinct items the actor has weighed in on → latest feature vector per item.
@@ -291,4 +319,110 @@ matchRoutes.get("/match/convergence", async (c) => {
   const kParam = Number(c.req.query("k"));
   const k = Number.isInteger(kParam) && kParam > 0 ? kParam : 5;
   return c.json(await projectMatchConvergence(store(c), actorId, k));
+});
+
+// ── V3-UIX-22/23/79 pairwise 入力(uib02think §5-2) ──────────────────────────
+
+// distinct pair_id among this actor's kind="pairwise" events = 回答済みラウンド数
+// (V3-UIX-79「preference_eventから決定論的に再構築できる」)。/match/ranking の
+// progress.answered(=valuecheck数)とは別物(ADR-H-02)なので混ぜない。
+async function pairwiseRoundsAnswered(s: TruthStore, actorId: string): Promise<number> {
+  const rows = (await s.listEvents(`truth/${MATCH_TYPE}/${actorId}-`))
+    .map(dataOf)
+    .filter((d) => d.actor_id === actorId && d.kind === "pairwise" && typeof d.pair_id === "string");
+  return new Set(rows.map((d) => d.pair_id)).size;
+}
+
+// GET /match/pair — 次に出す2個体を返す(uib02think §5-2①)。features はクライアント
+// に渡さない(既存 /match/ranking が features を伏せているのと同じ理由・IND-07)。
+// ペア選択は第1版=決定論的順送り: 個体マスタをID(ULID=作成時刻順)昇順に並べ、
+// round n → items[2n], items[2n+1]。情報量最大化(active learning)は次の波。
+// ★既存 candidatePool(actorが既に評価済みのitemのみ返す)を流用してはいけない
+// — 新規ユーザーでは常に0件になり入口として機能しない(uib02think §5-2①指示)。
+matchRoutes.get("/match/pair", async (c) => {
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const round = await pairwiseRoundsAnswered(s, actorId);
+  const target = IND09_PAIRWISE_QUESTION_TARGET;
+  const masterIds = (await s.listEvents(`truth/${MASTER_TYPE}/`))
+    .map((e) => String(dataOf(e).individual_id ?? ""))
+    .filter(Boolean)
+    .sort();
+  const leftId = masterIds[round * 2];
+  const rightId = masterIds[round * 2 + 1];
+  if (!leftId || !rightId) {
+    return c.json({ round, target, exhausted: true });
+  }
+  const [leftCard, rightCard] = await Promise.all([projectBioCard(s, leftId), projectBioCard(s, rightId)]);
+  const toPairItem = (itemId: string, card: Awaited<ReturnType<typeof projectBioCard>>) => ({
+    item_id: itemId,
+    species: card?.species ?? null,
+    feature_tags: card?.feature_tags ?? [],
+    latest_size: card?.latest_size ?? null,
+    thumbnail_path: card?.thumbnail_path ?? null,
+    photo_conditions: card?.photo_conditions ?? null,
+  });
+  return c.json({
+    pair_id: ulid(),
+    round,
+    target,
+    left: toPairItem(leftId, leftCard),
+    right: toPairItem(rightId, rightCard),
+    exhausted: false,
+  });
+});
+
+// POST /match/pair-choice — 1ラウンドを記録する(uib02think §5-2②)。features は
+// クライアントに送らせず、サーバが projectBioCard から computeMatchFeatures で
+// 自分で組み立てる。同一 pair_id を持つ preference_event を2件 append する(D2拡張・
+// G79-1)。neither(y=0)の個体は候補プールから除外しない(uib02think §7-3裁定 —
+// 「甲乙つけがたい」であって「嫌い」ではないため。GET /match/pair は毎回マスタ全体
+// から機械的に順送りするので、この判断はそもそも候補プール絞り込みを行わない設計
+// (§5-2①)と整合する)。
+// 冪等性: 書き込みキーを pair_id から決定論的に導出するため、同一 pair_id の二重
+// 送信は2件目が TruthStore の put-if-absent により自然に409で弾かれる。
+matchRoutes.post("/match/pair-choice", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const actorId = c.get("actorId");
+  const s = store(c);
+  const pairId = typeof body.pair_id === "string" ? body.pair_id : "";
+  const leftItemId = typeof body.left_item_id === "string" ? body.left_item_id : "";
+  const rightItemId = typeof body.right_item_id === "string" ? body.right_item_id : "";
+  const choice = body.choice;
+  if (
+    !pairId ||
+    !leftItemId ||
+    !rightItemId ||
+    (choice !== "left" && choice !== "right" && choice !== "neither")
+  ) {
+    return c.json({ error: "INVALID_PAIR_CHOICE" }, 400);
+  }
+  const [leftY, rightY]: [number, number] =
+    choice === "left" ? [1, -1] : choice === "right" ? [-1, 1] : [0, 0];
+  const [leftCard, rightCard] = await Promise.all([projectBioCard(s, leftItemId), projectBioCard(s, rightItemId)]);
+  const now = new Date().toISOString();
+  const sides: { side: "left" | "right"; itemId: string; y: number; card: Awaited<ReturnType<typeof projectBioCard>> }[] = [
+    { side: "left", itemId: leftItemId, y: leftY, card: leftCard },
+    { side: "right", itemId: rightItemId, y: rightY, card: rightCard },
+  ];
+  for (const w of sides) {
+    const prefId = `${pairId}-${w.side}`;
+    const features = computeMatchFeatures(w.card?.feature_tags ?? [], w.card?.latest_size ?? null);
+    const data: Record<string, unknown> = {
+      pref_id: prefId,
+      actor_id: actorId,
+      item_id: w.itemId,
+      kind: "pairwise",
+      y: w.y,
+      features,
+      features_version: MATCH_FEATURES_VERSION,
+      pair_id: pairId,
+      created_at: now,
+    };
+    const key = `truth/${MATCH_TYPE}/${actorId}-${prefId}.json`;
+    const res = await s.putEventAt(key, envelope(actorId, data));
+    if (res.status === "invalid") return c.json({ error: "INVALID_PAIR_CHOICE", details: res.errors }, 400);
+    if (res.status === "conflict") return c.json({ error: "DUPLICATE_PAIR_CHOICE", key: res.key }, 409);
+  }
+  return c.json({ pair_id: pairId, recorded: true }, 201);
 });
