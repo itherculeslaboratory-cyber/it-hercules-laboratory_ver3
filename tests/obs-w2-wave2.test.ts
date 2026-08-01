@@ -286,6 +286,48 @@ describe("V3-OBS-58 QC builder blur/exposure/scale/background/occlusion", () => 
   });
 });
 
+// ── g91-putimpl: putEventAt 無言失敗の分離(2026-08-02裁定 R0802-40d3b2 案C) ──
+describe("g91-putimpl QCメタは非画像アップロードでも必ず記録される", () => {
+  it("デコード不能バイト列でも qc_flag=unchecked で QCメタが記録される", async () => {
+    const { env } = ctx();
+    const capRes = await post("/api/v1/observation/captures", { domain: "biology" }, env);
+    const { capture_id } = (await capRes.json()) as { capture_id: string };
+    const fd = new FormData();
+    fd.append("capture_id", capture_id);
+    fd.append("file", new Blob([new Uint8Array([42, 42, 42, 42])], { type: "image/png" }), "bad.png");
+    const upRes = await app.request("/api/v1/observation/upload", { method: "POST", headers: AUTH, body: fd }, env);
+    expect(upRes.status).toBe(202);
+    const body = (await upRes.json()) as { qc_recorded: boolean; qc_flag: string };
+    expect(body.qc_recorded).toBe(true);
+    expect(body.qc_flag).toBe("unchecked");
+
+    const qcRes = await get(`/api/v1/observation/${capture_id}/qc`, env);
+    const { photos } = (await qcRes.json()) as { photos: Array<{ qc_flag: string; qc_reasons: string[] }> };
+    expect(photos.length).toBe(1);
+    expect(photos[0].qc_flag).toBe("unchecked");
+    expect(photos[0].qc_reasons).toContain("thumbnail_unavailable");
+  });
+
+  it("booth_id/view が非画像アップロードでも保存される", async () => {
+    const { env } = ctx();
+    const capRes = await post("/api/v1/observation/captures", { domain: "biology" }, env);
+    const { capture_id } = (await capRes.json()) as { capture_id: string };
+    const fd = new FormData();
+    fd.append("capture_id", capture_id);
+    fd.append("file", new Blob([new Uint8Array([42, 42, 42, 42])], { type: "image/png" }), "bad.png");
+    fd.append("booth_id", "booth-1");
+    fd.append("view", "top");
+    const upRes = await app.request("/api/v1/observation/upload", { method: "POST", headers: AUTH, body: fd }, env);
+    expect(upRes.status).toBe(202);
+
+    const qcRes = await get(`/api/v1/observation/${capture_id}/qc`, env);
+    const { photos } = (await qcRes.json()) as { photos: Array<{ booth_id?: string; view?: string }> };
+    expect(photos.length).toBe(1);
+    expect(photos[0].booth_id).toBe("booth-1");
+    expect(photos[0].view).toBe("top");
+  });
+});
+
 // ── V3-OBS-65: 自分自身のもの — ハッシュ一致による使い回し検出(拒否はしない) ──
 describe("V3-OBS-65 画像ハッシュ一致検出(reject しない)", () => {
   it("同一sha256を別actorが再アップロード → possible_reuse=true。同一actorの再利用は対象外", async () => {

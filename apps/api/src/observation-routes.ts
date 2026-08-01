@@ -4,7 +4,7 @@
 // actor_id in the body is ignored, never trusted.
 import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity, canonicalJson, sha256Hex as truthSha256Hex } from "@ihl/truth";
-import { generateThumbnail } from "./thumbnail";
+import { generateThumbnail, type Thumbnail } from "./thumbnail";
 import { tagRemeasured } from "./tag-routes";
 import { deriveDeviceBindingsForCapture, type DerivedDeviceBinding } from "./source-routes";
 import { projectSellerModeration } from "./market-flag-routes";
@@ -535,8 +535,13 @@ obsRoutes.post("/observation/upload", async (c) => {
   // upload — the original blob + photo event are the append-only truth. The
   // thumbnail is a re-generatable derived artifact keyed under its own type so it
   // never leaks into the photos[] projection.
+  //
+  // ★2026-08-02 裁定(R0802-40d3b2-REPORT-2026-08-02-g90-putthink §4案C): この try は
+  // サムネイル(派生物=best-effort)だけを囲う。QCメタ(ihl.obs.photo_meta.v1)は truth
+  // イベントであり best-effort ではないため、下の try の外へ出して「必ず1回書く」。
+  let thumb: Thumbnail | null = null;
   try {
-    const thumb = await generateThumbnail(bytes, contentType);
+    thumb = await generateThumbnail(bytes, contentType);
     const thumbKey = `media/thumbnail/${photoId}`;
     await store(c).putBlob(thumbKey, thumb.bytes, "image/jpeg");
     // individual_id is required by the frozen manifest; derive it from the
@@ -560,7 +565,7 @@ obsRoutes.post("/observation/upload", async (c) => {
       run_id: photoId,
       created_at: new Date().toISOString(),
     };
-    await store(c).putEventAt(
+    const thumbRes = await store(c).putEventAt(
       `truth/${THUMBNAIL_TYPE}/${captureId}-${photoId}.json`,
       envelope(THUMBNAIL_TYPE, thumbId, "schemas/frozen/thumbnail.schema.json", actorId, manifest, {
         generator_kind: "agent",
@@ -568,34 +573,64 @@ obsRoutes.post("/observation/upload", async (c) => {
         input_event_ids: [photoId],
       }),
     );
-
-    // OBS-58: QC builder — decoded dimensions become available only once the
-    // thumbnail succeeds (blur/occlusion 判定は client-side WASM 拡張の余地・
-    // 誇張ゼロのため中立値0.5に留める。既定はLLM/Vision OFF=不変条項①)。
-    const qc = computeQcFlag(thumb.width, thumb.height, bytes.length);
-    const metaData: Record<string, unknown> = {
-      photo_id: photoId,
-      capture_id: captureId,
-      qc_flag: qc.qc_flag,
-      qc_score: qc.qc_score,
-      qc_reasons: qc.reasons,
-    };
-    if (typeof viewRaw === "string") metaData.view = viewRaw;
-    if (fileKindRaw === "raw" || fileKindRaw === "jpg") metaData.file_kind = fileKindRaw;
-    if (typeof boothIdRaw === "string" && boothIdRaw) metaData.booth_id = boothIdRaw;
-    if (typeof boothTypeRaw === "string") metaData.booth_type = boothTypeRaw;
-    await store(c).putEventAt(
-      `truth/${PHOTO_META_TYPE}/${captureId}-${photoId}.json`,
-      envelope(PHOTO_META_TYPE, photoId, "schemas/events/obs-photo-meta.schema.json", actorId, metaData),
-    );
+    // putEventAt は invalid/conflict を「例外ではなく戻り値」で返す(store.ts:92-99)。
+    // await するだけでは検出できないため明示的に見る。サムネイルは派生物なので
+    // ここではログのみ(アップロードは落とさない)。
+    if (thumbRes.status !== "inserted") {
+      console.error("thumbnail manifest not stored", {
+        capture_id: captureId,
+        photo_id: photoId,
+        status: thumbRes.status,
+      });
+    }
   } catch (e) {
-    // non-image / codec failure → skip thumbnail/QC; the upload already succeeded.
+    // non-image / codec failure → skip thumbnail; the upload already succeeded.
     // ★無言にしない(2026-08-02 裁定): ここが黙ると「非画像だからスキップ」と
     // 「wasm初期化失敗で恒久404」が外から区別できない。best-effort は維持しつつ理由は残す。
-    console.error("thumbnail/qc pipeline failed", {
+    thumb = null;
+    console.error("thumbnail pipeline failed", {
       capture_id: captureId,
       photo_id: photoId,
       err: String(e),
+    });
+  }
+
+  // OBS-58: QC builder。★裁定 §4案C: QCメタは truth イベントなので best-effort に
+  // しない = サムネイルの成否にかかわらず必ず1回書く。デコードできなかった場合は
+  // 既存の QC_FLAGS 値 "unchecked"(observation-constants.ts:213・従来どこからも
+  // 生成されていなかった)を使い「検査できなかった」を明示する。view/file_kind/
+  // booth_id/booth_type はクライアント由来の観測メタでサムネイルと無関係のため、
+  // コーデック失敗でも失われてはならない。
+  // 例外(R2障害等)はここで catch しない — store.ts:106-108 の「書き込み失敗を成功と
+  // 言わない」方針どおり app.onError → 500 へ伝播させる。
+  const qc = thumb
+    ? computeQcFlag(thumb.width, thumb.height, bytes.length)
+    : { qc_flag: "unchecked" as const, qc_score: 0.5, reasons: ["thumbnail_unavailable"] };
+  const metaData: Record<string, unknown> = {
+    photo_id: photoId,
+    capture_id: captureId,
+    qc_flag: qc.qc_flag,
+    qc_score: qc.qc_score,
+    qc_reasons: qc.reasons,
+  };
+  if (typeof viewRaw === "string") metaData.view = viewRaw;
+  if (fileKindRaw === "raw" || fileKindRaw === "jpg") metaData.file_kind = fileKindRaw;
+  if (typeof boothIdRaw === "string" && boothIdRaw) metaData.booth_id = boothIdRaw;
+  if (typeof boothTypeRaw === "string") metaData.booth_type = boothTypeRaw;
+  const metaRes = await store(c).putEventAt(
+    `truth/${PHOTO_META_TYPE}/${captureId}-${photoId}.json`,
+    envelope(PHOTO_META_TYPE, photoId, "schemas/events/obs-photo-meta.schema.json", actorId, metaData),
+  );
+  if (metaRes.status !== "inserted") {
+    // 写真 blob と photo イベントは既に append-only に確定済みで取り消せない。
+    // よって 500 は返さない(返すと「保存されていない」という誤ったシグナルになり、
+    // 再送で photoId が新規発番されて写真が重複登録される — 裁定 §4案A の棄却理由)。
+    // 代わりに 202 の本文で「写真は保存された・QCメタは未記録」を正確に伝える。
+    console.error("photo meta (truth) not stored", {
+      capture_id: captureId,
+      photo_id: photoId,
+      status: metaRes.status,
+      errors: metaRes.status === "invalid" ? metaRes.errors : undefined,
     });
   }
 
@@ -605,6 +640,10 @@ obsRoutes.post("/observation/upload", async (c) => {
     photo_conditions: conditions?.normalized ?? null,
     condition_alerts: conditions?.alerts ?? [],
     possible_reuse: reuseDetected, // OBS-65: 検出のみ・ブロックしない
+    // ★2026-08-02 裁定: truth(QCメタ)の書き込み結果を無言にしない。
+    // false のとき写真本体は保存済みだが QC/booth メタは未記録である。
+    qc_recorded: metaRes.status === "inserted",
+    qc_flag: qc.qc_flag,
   }, 202);
 });
 
