@@ -1044,7 +1044,10 @@ describe("Renderer — A層 tabs node (c7 ui-parity-map §2-5)", () => {
     );
     expect(screen.getByText("Aの中身")).toBeInTheDocument();
     expect(screen.queryByText("Bの中身")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "B" }));
+    // g84-retroB: Radix Tabs.Trigger selects on mousedown (real clicks always
+    // fire mousedown before click; fireEvent.click alone only dispatches the
+    // click event and would not exercise the new Radix-backed trigger).
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "B" }));
     expect(screen.queryByText("Aの中身")).not.toBeInTheDocument();
     expect(screen.getByText("Bの中身")).toBeInTheDocument();
   });
@@ -1065,7 +1068,7 @@ describe("Renderer — obs-search「研究者」タブ (g81-f2wiring T1)", () =>
       render(<Renderer def={def} onAction={vi.fn()} />);
       // 一般タブが既定(research-panel はまだマウントされていない = fetch未発火)。
       expect(fetchMock).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole("tab", { name: "研究者" }));
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "研究者" })); // g84-retroB: Radix Tabs selects on mousedown
       expect(
         await screen.findByText(/研究者モード: manifestはまだ生成されていません/),
       ).toBeInTheDocument();
@@ -1156,7 +1159,7 @@ describe("Renderer — obs-search「グラフ」タブ (g82-uib09wire T3)", () =
     });
     const def = loadScreenDef("obs-search");
     render(<Renderer def={def} onAction={onAction} />);
-    fireEvent.click(screen.getByRole("tab", { name: "グラフ" }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "グラフ" })); // g84-retroB: Radix Tabs selects on mousedown
     // jsdomにWebGLが無いため3d-force-graphの初期化はhonest fallbackへ倒れる
     // (individual-universeのgraph-viewテストと同じ経路。GraphView.tsx本体はimport共有=コピー0行)。
     expect(await screen.findByTestId("graph-view-fallback", {}, { timeout: 5000 })).toBeInTheDocument();

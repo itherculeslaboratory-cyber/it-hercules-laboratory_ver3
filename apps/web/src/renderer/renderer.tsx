@@ -12,6 +12,10 @@ import React, {
 import QRCode from "qrcode";
 import { Badge as ShadcnBadge } from "@/components/ui/badge";
 import { Progress as ShadcnProgress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Card as ShadcnCard } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/cn";
 import { apiUrl, unwrapEnvelope } from "@/lib/api";
 import { ApiError, mapError } from "@/lib/error-messages";
@@ -1344,7 +1348,7 @@ function CardNode({ node }: { node: ScreenNode }) {
   // bare fields ({{karma_value}}, {{listing.title}}) resolve against the
   // source_path response — the single-object twin of a list's bind_items.
   return (
-    <article className="civ-card">
+    <ShadcnCard>
       {p.draft ? <span className="civ-draft-badge">草案</span> : null}
       {(icon || title) && (
         <div className="civ-card-head">
@@ -1395,7 +1399,7 @@ function CardNode({ node }: { node: ScreenNode }) {
           ›
         </button>
       )}
-    </article>
+    </ShadcnCard>
   );
 }
 
@@ -1546,34 +1550,33 @@ function TableNode({ node }: { node: ScreenNode }) {
   return (
     // c8: a mobile-width (390px) viewport clips trailing columns without a
     // scroll wrapper — this affects every table-node screen, not just c8's,
-    // so the fix lives at the shared node rather than per-screen.
-    <div className="civ-table-scroll">
-      <table className="civ-table">
-        <thead>
-          <tr>
-            {columns.map((c, i) => (
-              <th key={i}>{displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row, ri) => (
-            <tr key={ri}>
-              {columns.map((c, ci) => (
-                // c8磨き第2弾#7: data-label feeds the <=560px responsive
-                // card-mode CSS (globals.css) — each cell shows its own
-                // column label via ::before, so a table reflows into a
-                // stacked card list instead of a squeezed horizontal scroll
-                // (受領10 モバイル「詳細を開く」ボタン潰れの根本対処)。
-                <td key={ci} data-label={displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}>
-                  {renderCell(c, row)}
-                </td>
-              ))}
-            </tr>
+    // so the fix lives at the shared node rather than per-screen. The scroll
+    // wrapper now lives inside <Table> itself (src/components/ui/table.tsx).
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((c, i) => (
+            <TableHead key={i}>{displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}</TableHead>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((row, ri) => (
+          <TableRow key={ri}>
+            {columns.map((c, ci) => (
+              // c8磨き第2弾#7: data-label feeds the <=560px responsive
+              // card-mode CSS (globals.css) — each cell shows its own
+              // column label via ::before, so a table reflows into a
+              // stacked card list instead of a squeezed horizontal scroll
+              // (受領10 モバイル「詳細を開く」ボタン潰れの根本対処)。
+              <TableCell key={ci} data-label={displayText(resolve, c.label_key, c.label, String(c.key ?? ""))}>
+                {renderCell(c, row)}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -1630,37 +1633,31 @@ function TabsNode({ node }: { node: ScreenNode }) {
   }, [resolvedDefault]);
   const children = node.children ?? [];
   return (
-    <div className="civ-tabs">
-      <div className="civ-tab-list" role="tablist">
+    <Tabs
+      value={active}
+      onValueChange={(id) => {
+        touchedRef.current = true;
+        setActive(id);
+      }}
+    >
+      <TabsList>
         {tabs.map((t) => {
           const id = String(t.id ?? "");
-          const selected = id === active;
           return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              className={cn("civ-interactive", "civ-tab")}
-              data-active={selected || undefined}
-              onClick={() => {
-                touchedRef.current = true;
-                setActive(id);
-              }}
-            >
+            <TabsTrigger key={id} value={id} active={id === active}>
               {displayText(resolve, t.label_key, t.label, id)}
-            </button>
+            </TabsTrigger>
           );
         })}
-      </div>
-      <div className="civ-tab-panel" role="tabpanel">
+      </TabsList>
+      <TabsContent value={active}>
         {children
           .filter((c) => String(c.props?.tab_id ?? "") === active)
           .map((c) => (
             <NodeView key={c.id} node={c} />
           ))}
-      </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -2346,34 +2343,35 @@ function DisclosureNode({ node }: { node: ScreenNode }) {
   }
   if (isBadge) label = `${label} ${open ? "▾" : "▸"}`;
   return (
-    <div className="civ-disclosure" data-open={open || undefined}>
-      {isBadge ? (
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-badge", "civ-disclosure-trigger")}
-          data-tone={tone ?? "neutral"}
-          aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-        >
-          {label}
-        </button>
-      ) : (
-        <button
-          type="button"
-          className={cn("civ-interactive", "civ-button", "civ-disclosure-trigger")}
-          data-variant={String(p.trigger_style ?? "secondary")}
-          aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-        >
-          {label}
-        </button>
-      )}
-      {open && (
-        <div className="civ-disclosure-body">
-          <Children nodes={node.children} />
-        </div>
-      )}
-    </div>
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="civ-disclosure"
+      data-open={open || undefined}
+    >
+      <CollapsibleTrigger asChild>
+        {isBadge ? (
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-badge", "civ-disclosure-trigger")}
+            data-tone={tone ?? "neutral"}
+          >
+            {label}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={cn("civ-interactive", "civ-button", "civ-disclosure-trigger")}
+            data-variant={String(p.trigger_style ?? "secondary")}
+          >
+            {label}
+          </button>
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="civ-disclosure-body">
+        <Children nodes={node.children} />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
