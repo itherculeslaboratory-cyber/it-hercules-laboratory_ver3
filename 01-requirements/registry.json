@@ -17522,7 +17522,7 @@
     "wave": "第1波",
     "wave_why": "tier_v2=A/status_in_ver2=部分→第1波(desire台帳未掲載・実装実績/高tier)",
     "hold": false,
-    "ruling_note": "【2026-07-31 g65-newreq(lane-record)追記・R65-16(RULING-2026-07-31-gen65-hqrulings.md)】progress.json上の status=done を in_progress へ降格する裁定。事実(自己grep実測・apps/api/src 全体): projectReferenceCounter は reference-counter.ts:11 で定義されテスト済みだが、これを呼ぶ route/呼び出し元が apps/api/src 全体に1件も無い(grep 'reference-counter' 実出力: plaza-file-board-registry.ts:71(索引の文字列列挙のみ・*-routes接尾辞なし=Pレイヤー=HTTPルートではなくBレイヤー扱い) と reference-counter.ts 自身の2ファイルのみ。grep 'projectReferenceCounter' はreference-counter.ts:11の定義1件のみ)。HTTPで叩ける経路が存在せず、画面からもAIからも参照回数を取得できない。R65-2(未mount=到達不能ならdoneにしない)にそのまま該当。★実行していないこと: progress.jsonへの反映は本レーンの権限外(触れない)。該当JSON行は報告書に貼り、HQによる適用待ち。"
+    "ruling_note": "【2026-07-31 g65-newreq(lane-record)追記・R65-16(RULING-2026-07-31-gen65-hqrulings.md)】progress.json上の status=done を in_progress へ降格する裁定。事実(自己grep実測・apps/api/src 全体): projectReferenceCounter は reference-counter.ts:11 で定義されテスト済みだが、これを呼ぶ route/呼び出し元が apps/api/src 全体に1件も無い(grep 'reference-counter' 実出力: plaza-file-board-registry.ts:71(索引の文字列列挙のみ・*-routes接尾辞なし=Pレイヤー=HTTPルートではなくBレイヤー扱い) と reference-counter.ts 自身の2ファイルのみ。grep 'projectReferenceCounter' はreference-counter.ts:11の定義1件のみ)。HTTPで叩ける経路が存在せず、画面からもAIからも参照回数を取得できない。R65-2(未mount=到達不能ならdoneにしない)にそのまま該当。★実行していないこと: progress.jsonへの反映は本レーンの権限外(触れない)。該当JSON行は報告書に貼り、HQによる適用待ち。\n\n【2026-08-01 g72-s5reg(lane-implement)追記・review-queueカードR0731-0b2830 S5-4(o回答・score=70)】方針: 参照回数(reference_counter)は価値の『主指標』にはしない(観測用・表示用に留める)。考える役の判定(R0731-0b2830 §3.3)「短期・安定領域では有効な『結果の代理指標』だが、長期価値の指標としては方向が逆に働く場面がある(①自動読込ファイルが常に最高スコアになる ②論破された定説も数字が上がり続ける ③唯一無二の未参照データが最低評価になる)。捨てるのではなく、①分解し(実装済み=V3-AIP-108/109) ②極性で符号を付け(V3-AIP-110) ③代替不能性で補完する(S5-3・保留中)。主指標にはしない。」カウンタ本体(S1〜S3)の実装・表示は本方針により変更しない(観測・表示用途は継続)。『では何が主指標か』への答えはまだ無く、当面は人(ユーザー)の判断のまま(考える役への発注で指標の自作は禁止されていた)。"
   },
   {
     "id": "V3-AIP-57",
@@ -58268,6 +58268,136 @@
     "req_status": "確定",
     "wave": "第2波",
     "wave_why": "V3-OBS-74/75(受領時刻・欠測記録)という基盤要件の上に成立する応用要件であり、既存カルマ経済(V3-KRM系)の実装状況(未実装)とも整合すると記録役が判断(ユーザー個別指定なし)",
+    "hold": false
+  },
+  {
+    "id": "V3-AIP-110",
+    "statement": "引用リンク(schemas/events/citation-link.schema.json)の link_kind は cites/discussed_in/derived_from/responds_to の4値のみで、いずれも支持(その結論を支持して引用した)か反論(その結論に反論して引用した)かの極性を表さない(同スキーマ全46行を実読して確認・R0731-0b2830 §3.2破綻④)。この結果、却下された古い結論ほど、それを否定する新しい記録から繰り返し responds_to でリンクされて参照数が上がり続けるという逆転が構造上起きうる(「よく参照される」と「よく論破される」が同じ数字に見える)。引用リンクに『極性』(支持/反論)の任意フィールドを1つ追加する。過去分は 『responds_to種別 × 却下済み裁定との結合』が機械的に確認できる組み合わせに限り自動で埋め、それ以外は不明のまま残す(全件を機械導出できるわけではないことを正直に表示する)。AIによる毎回判定は課金増のため使わない(R0731-0b2830 §2.2で既に却下済みの方針を踏襲)。",
+    "category": "AI運用/開発プロセス",
+    "kind": "機能要件",
+    "scores": {
+      "bv": {
+        "v": 4,
+        "why": "却下済みの定説が参照数で上位に居座る構造を直接修正する。ユーザー本人が「必須かと」と明言(V3-AIP-45と同種の事業価値)"
+      },
+      "ui": {
+        "v": 2,
+        "why": "開発者・AI向けのメタデータで直接UIに出にくい(V3-AIP-45/108/109と同値)"
+      },
+      "dep": {
+        "v": 3,
+        "why": "citation-link.schema.json(V3-PPR-08)・reference-counter(V3-AIP-45)・裁定台帳との結合に依存"
+      },
+      "diff": {
+        "v": 3,
+        "why": "link_kindへの任意フィールド追加+過去分の限定的な機械導出ロジックが必要(ゼロから作らないが接続作業は要る)"
+      }
+    },
+    "philosophy": [
+      "Truth-append-only",
+      "AI運用/開発プロセス"
+    ],
+    "trust": "高",
+    "human_confirm": false,
+    "novelty": "ver3新規",
+    "status_in_ver2": "不明",
+    "sources": [
+      {
+        "src_file": "00-hq/review-queue/R0731-0b2830-s5saiban-2026-08-01.json (decisions[S5-1] user_ruling.answers.S5-1=o)",
+        "evidence": "ユーザー逐語(2026-07-31 #14カードgood欄=UR-44末尾、S5-1カードのquoteに引用)「AIファーストだと、AIにとっての価値は以下に使われているデータかどうかになると思っているので！必須かと。」回答=o(2026-08-01T01:57:57.019Z・score=70)。",
+        "trust": "高",
+        "date": "2026-08-01"
+      },
+      {
+        "src_file": "00-hq/kits/lane-think/R0731-0b2830-REPORT-2026-07-31-g65-datavalue.md",
+        "evidence": "§3.2破綻④・§4.2・§11出口B/D。citation-link.schema.jsonのlink_kind 4値が支持/反論を表さないことの実測と、極性フィールド追加+限定的機械導出の設計。",
+        "trust": "高",
+        "date": "2026-07-31"
+      },
+      {
+        "src_file": "00-hq/proposals/R0801-436936-DESIGN-2026-08-01-g67-refdesign.md",
+        "evidence": "§7のS5行「要件未採番のため着手しない」・§12出口D「採番裁定=HQ」。",
+        "trust": "高",
+        "date": "2026-08-01"
+      }
+    ],
+    "superseded": null,
+    "conflict": null,
+    "ambiguity": "score_v2/tier_v2/ds/scores/waveは、直接の類似要件V3-AIP-108/109(g72-s5regレーン以前に同一群で採番済み)に倣って記録役(実装レーン)が付与した判断であり、ユーザー本人が個別に指定した値ではない(報告書『判断が要った箇所』参照)。過去分への機械導出で埋まる件数の実測は未実施(実装時に確認)。",
+    "group": "g09-AIプロセス",
+    "v1_score": null,
+    "v1_tier": null,
+    "ds": 3,
+    "score_v2": 36,
+    "tier_v2": "A",
+    "req_status": "確定",
+    "wave": "第1波",
+    "wave_why": "V3-AIP-108/109(同一ユーザー要望群=データ価値のAI判定)と同一グループ・同waveに整合(記録役の判断・ambiguity参照)",
+    "hold": false
+  },
+  {
+    "id": "V3-AIP-111",
+    "statement": "ユーザーは既に、却下した案には理由を残す書き方を運用として実際に行っている(考える役が既存記録で確認・R0731-0b2830 §2.3)。これを機械可読な形にするため、系譜メタ共用型(schemas/common/lineage-meta.schema.json・V3-FND-15)に状態(status)/却下理由(rejection_reason)の任意フィールドを追加し、AIが『これは検討済みで理由Xで捨てた案』と読めるようにする。過去分は既存の自由記述中の却下マーカー(例:「却下」「見送り」等の定型句)から一回きりの変換で埋め、抽出できなかった分は空欄ではなく『不明』と記録する(理由なしと読み取れなかったを混ぜない)。関連要件V3-AIP-75(Evaluator=生成物のOK/NG評価ループ)は『失敗(NG判断・却下理由)は成功データより貴重な学習データとして保存・活用する』とすでに定めており、本要件はその却下理由を要件レベルの意思決定(系譜メタ)にも同じ思想で機械可読化するものである(V3-AIP-75実読済み)。",
+    "category": "AI運用/開発プロセス",
+    "kind": "機能要件",
+    "scores": {
+      "bv": {
+        "v": 4,
+        "why": "同じ議論の蒸し返し(却下済み案の再提案)をAI側が避けられる。ユーザー逐語「とても、大事です。」"
+      },
+      "ui": {
+        "v": 2,
+        "why": "開発者・AI向けのメタデータで直接UIに出にくい(V3-AIP-45/108/109/110と同値)"
+      },
+      "dep": {
+        "v": 3,
+        "why": "lineage-meta(V3-FND-15)・V3-AIP-75(Evaluator/NG理由保存)に依存"
+      },
+      "diff": {
+        "v": 3,
+        "why": "lineage-metaへの任意フィールド追加+過去分の一回きり変換ロジックが必要(ゼロから作らないが接続作業は要る)"
+      }
+    },
+    "philosophy": [
+      "Truth-append-only",
+      "AI運用/開発プロセス"
+    ],
+    "trust": "高",
+    "human_confirm": false,
+    "novelty": "ver3新規",
+    "status_in_ver2": "不明",
+    "sources": [
+      {
+        "src_file": "00-hq/review-queue/R0731-0b2830-s5saiban-2026-08-01.json (decisions[S5-2] user_ruling.answers.S5-2=o)",
+        "evidence": "ユーザー逐語(comments.S5-2、2026-08-01T01:57:57.019Z回答・score=70)「とても、大事です。」",
+        "trust": "高",
+        "date": "2026-08-01"
+      },
+      {
+        "src_file": "00-hq/kits/lane-think/R0731-0b2830-REPORT-2026-07-31-g65-datavalue.md",
+        "evidence": "§2.3・§4.3・§11出口B/D。「ユーザーは既にこの書き方をしている。機械可読にするだけ。」",
+        "trust": "高",
+        "date": "2026-07-31"
+      },
+      {
+        "src_file": "01-requirements/registry.json (V3-AIP-75)",
+        "evidence": "V3-AIP-75 statement実読: 「失敗(NG判断・却下理由)は成功データより貴重な学習データとして保存・活用する」— 本要件(V3-AIP-111)はこの思想を系譜メタの却下理由フィールドとして具体化する関係にある。",
+        "trust": "高",
+        "date": "2026-08-01"
+      }
+    ],
+    "superseded": null,
+    "conflict": null,
+    "ambiguity": "score_v2/tier_v2/ds/scores/waveは、直接の類似要件V3-AIP-108/109に倣って記録役(実装レーン)が付与した判断であり、ユーザー本人が個別に指定した値ではない(報告書『判断が要った箇所』参照)。過去分の自由記述からの抽出漏れの実測件数は未実施(実装時に確認)。",
+    "group": "g09-AIプロセス",
+    "v1_score": null,
+    "v1_tier": null,
+    "ds": 3,
+    "score_v2": 36,
+    "tier_v2": "A",
+    "req_status": "確定",
+    "wave": "第1波",
+    "wave_why": "V3-AIP-108/109/110(同一ユーザー要望群=データ価値のAI判定)と同一グループ・同waveに整合(記録役の判断・ambiguity参照)",
     "hold": false
   }
 ]
