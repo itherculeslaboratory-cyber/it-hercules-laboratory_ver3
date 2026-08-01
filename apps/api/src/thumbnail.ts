@@ -19,10 +19,19 @@ let wasmReady: Promise<void> | undefined;
 // WebAssembly.Module. Workers → static `import x from "*.wasm"` (bundler yields a
 // WebAssembly.Module), isolated in thumbnail-wasm-workers.ts because raw *.wasm
 // imports break vite/vitest. Init is one-shot and cached.
+// Node判定は肯定形では足りない — workerd も process.versions.node を真にするため
+// workerd を先に排除してから判定する。
 async function ensureWasm(): Promise<void> {
   if (wasmReady) return wasmReady;
   wasmReady = (async () => {
-    const isNode = typeof process !== "undefined" && !!process.versions?.node;
+    // workerd(wrangler dev --local / 本番Workers)は process.versions.node を真に
+    // するため、「Nodeか?」の肯定判定だけでは Node と workerd を分けられない
+    // (2026-08-02 実測: createRequire(import.meta.url) が "https://localhost" を
+    //  受け取って TypeError。出典 R0802-1e6527-REPORT-2026-08-02-g88-smallfix3.md:98-103)。
+    // Cloudflare 公式のランタイム識別子で workerd を先に排除する。
+    const isWorkers =
+      typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
+    const isNode = !isWorkers && typeof process !== "undefined" && !!process.versions?.node;
     if (isNode) {
       const { readFile } = await import("node:fs/promises");
       const { createRequire } = await import("node:module");

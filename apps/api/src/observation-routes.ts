@@ -588,8 +588,15 @@ obsRoutes.post("/observation/upload", async (c) => {
       `truth/${PHOTO_META_TYPE}/${captureId}-${photoId}.json`,
       envelope(PHOTO_META_TYPE, photoId, "schemas/events/obs-photo-meta.schema.json", actorId, metaData),
     );
-  } catch {
+  } catch (e) {
     // non-image / codec failure → skip thumbnail/QC; the upload already succeeded.
+    // ★無言にしない(2026-08-02 裁定): ここが黙ると「非画像だからスキップ」と
+    // 「wasm初期化失敗で恒久404」が外から区別できない。best-effort は維持しつつ理由は残す。
+    console.error("thumbnail/qc pipeline failed", {
+      capture_id: captureId,
+      photo_id: photoId,
+      err: String(e),
+    });
   }
 
   return c.json({
