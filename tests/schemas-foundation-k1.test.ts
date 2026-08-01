@@ -62,7 +62,9 @@ const CASES: Array<[string, Record<string, unknown>, Record<string, unknown>]> =
   [
     "match-preference",
     { pref_id: "pr1", actor_id: "a1", item_id: "it1", kind: "swipe", y: 1, features: [0.1, 0.2], created_at: AT },
-    { pref_id: "pr1", actor_id: "a1", item_id: "it1", kind: "swipe", y: 0, features: [0.1], created_at: AT }, // y not in {1,-1}
+    // uib02pre D2拡張(uib02think §4-2)で y の enum に 0(neither用)を追加したため、無効値の例を
+    // 範囲外の 2 へ差し替えた(y:0 は今や pairwise で正当な値 — 旧コメント "y not in {1,-1}" は無効化)。
+    { pref_id: "pr1", actor_id: "a1", item_id: "it1", kind: "swipe", y: 2, features: [0.1], created_at: AT }, // y not in {1,-1,0}
   ],
   [
     "obs-schedule",

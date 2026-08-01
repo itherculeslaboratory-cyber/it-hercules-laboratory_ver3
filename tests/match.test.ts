@@ -47,8 +47,37 @@ describe("IND-07 preference learning w <- w + alpha*y*x", () => {
   it("valuecheck kind is accepted; invalid y is rejected 400", async () => {
     const { env } = ctx();
     expect((await pref(env, { item_id: "C", kind: "valuecheck", y: 1, features: [0.5] })).status).toBe(201);
-    expect((await pref(env, { item_id: "D", kind: "swipe", y: 0, features: [1] })).status).toBe(400);
+    // y:0 は D2拡張(uib02think §4-2)により pairwise の neither 用に enum へ追加済み=もはや無効値ではない
+    // (この行はスキーマ拡張前は y:0 で400を確認していたが、拡張後の正しい無効値=範囲外の2へ差し替えた)。
+    expect((await pref(env, { item_id: "D", kind: "swipe", y: 2, features: [1] })).status).toBe(400);
     expect((await pref(env, { item_id: "E", kind: "nope", y: 1, features: [1] })).status).toBe(400);
+  });
+});
+
+describe("uib02pre T2(=uib02think設計E3): match-preference D2拡張(kind:pairwise/y:0/pair_id)", () => {
+  it("(a) kind:pairwise + y:0 + pair_id 付きイベントはスキーマvalidationを通る", async () => {
+    const { env } = ctx();
+    const res = await pref(env, { item_id: "left1", kind: "pairwise", y: 0, features: [1, 0], pair_id: "round-1" });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { kind: string };
+    expect(body.kind).toBe("pairwise");
+  });
+
+  it("(b) pair_id 無しの既存形(swipe/valuecheck)は引き続き通る(後方互換)", async () => {
+    const { env } = ctx();
+    expect((await pref(env, { item_id: "s1", kind: "swipe", y: 1, features: [1] })).status).toBe(201);
+    expect((await pref(env, { item_id: "v1", kind: "valuecheck", y: -1, features: [1] })).status).toBe(201);
+  });
+
+  it("(c) y=0(neither)混在時、precision@Kの分母から除外される", async () => {
+    const { env, bucket } = ctx();
+    // 1件だけ正解(y=1)、残りneither(y=0)。y=0を分母に含めると precision@2 は 1/2=0.5 に不当に下がる。
+    // 分母から除外されていれば分母は1件のみ(y!=0)となり precision@2=1/1=1 になる。
+    await pref(env, { item_id: "p1", kind: "swipe", y: 1, features: [1, 0] });
+    await pref(env, { item_id: "p2", kind: "pairwise", y: 0, features: [0, 1], pair_id: "r1" });
+    await pref(env, { item_id: "p3", kind: "pairwise", y: 0, features: [0, 1], pair_id: "r1" });
+    const report = await projectMatchConvergence(new TruthStore(bucket), DEV_ACTOR, 2);
+    expect(report.precision_at_k).toEqual({ k: 1, value: 1 });
   });
 });
 

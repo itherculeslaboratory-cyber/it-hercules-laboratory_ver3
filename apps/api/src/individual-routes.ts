@@ -506,6 +506,32 @@ export async function projectBioCard(s: TruthStore, id: string) {
   // "タグ未登録" として静かに [] 扱いにする(エラーにしない)。
   const tagAgg = await aggregateTags(s, "individual", id);
   const feature_tags = tagAgg ? [...new Set([...tagAgg.ai_tags, ...tagAgg.user_tags])].sort() : [];
+
+  // pairwise前提工事(V3-UIX-22/23/79・uib02think §4-3): 写真が主役の画面(pairwise入力)で
+  // 必要になるため投影へ足す。projectIndividualProfile のヘッダ代表写真解決(:837-846、直近
+  // captureから遡って最初に写真があるものを採用)と同じ規約を流用する — 新規機構は作らない。
+  // photo_conditions は obs-capture.schema.json:112-126 に実在する temp_c/humidity_pct/
+  // captured_at の3つのみ投影する(照明/カメラ機種/色補正はスキーマに存在しないため誇張しない)。
+  let thumbnail_path: string | null = null;
+  let photo_conditions: { temp_c?: number; humidity_pct?: number; captured_at: string } | null = null;
+  for (let i = caps.length - 1; i >= 0; i--) {
+    const capId = String(caps[i].capture_id ?? "");
+    if (!capId) continue;
+    const photos = (await s.listEvents(`truth/${PHOTO_TYPE}/${capId}-`)).map(dataOf);
+    const photoId = photos.length ? String(photos[0].photo_id ?? "") : null;
+    if (!photoId) continue;
+    thumbnail_path = `/api/v1/observation/${capId}/thumbnail/${photoId}`;
+    const pc = caps[i].photo_conditions as Record<string, unknown> | undefined;
+    if (pc && typeof pc.captured_at === "string") {
+      photo_conditions = {
+        ...(typeof pc.temp_c === "number" ? { temp_c: pc.temp_c } : {}),
+        ...(typeof pc.humidity_pct === "number" ? { humidity_pct: pc.humidity_pct } : {}),
+        captured_at: pc.captured_at,
+      };
+    }
+    break;
+  }
+
   return {
     individual_id: id,
     species: typeof m.species === "string" ? m.species : null,
@@ -513,6 +539,8 @@ export async function projectBioCard(s: TruthStore, id: string) {
     latest_size: latestSize,
     feature_tags,
     qr_url: `/individuals/${id}`, // QR content = the individual URL (IND-15)
+    thumbnail_path,
+    photo_conditions,
   };
 }
 

@@ -403,6 +403,53 @@ describe("IND-15 名刺(bio-card / qr-batch)", () => {
     const card = (await (await get(`/api/v1/individuals/${id}/bio-card`, env)).json()) as { feature_tags: string[] };
     expect(card.feature_tags).toEqual(["体格重視", "色重視"]);
   });
+
+  it("pairwise前提工事(uib02think §4-3/§6 E2): 写真ありの個体は thumbnail_path/photo_conditions を投影する", async () => {
+    const { env, bucket } = ctx();
+    const id = await createInd(env, { species: "Extatosoma tiaratum" });
+    const s = new TruthStore(bucket);
+    const capId = "cap0";
+    await s.putEventAt(
+      `truth/ihl.obs.capture.v1/${capId}.json`,
+      envOf("ihl.obs.capture.v1", "schemas/events/obs-capture.schema.json", {
+        capture_id: capId,
+        actor_id: DEV_ACTOR,
+        domain: "biology",
+        subject_ref: `individual/${id}`,
+        photo_conditions: { temp_c: 24.1, humidity_pct: 60, captured_at: "2026-07-12T00:00:00Z" },
+      }),
+    );
+    const photoId = ulid();
+    await s.putEventAt(
+      `truth/ihl.obs.photo.v1/${capId}-${photoId}.json`,
+      envOf("ihl.obs.photo.v1", "schemas/events/obs-photo.schema.json", {
+        photo_id: photoId,
+        capture_id: capId,
+        actor_id: DEV_ACTOR,
+        media_key: `media/photo/${photoId}`,
+        content_type: "image/jpeg",
+        size_bytes: 123,
+        sha256: "a".repeat(64),
+      }),
+    );
+    const card = (await (await get(`/api/v1/individuals/${id}/bio-card`, env)).json()) as {
+      thumbnail_path: string | null;
+      photo_conditions: { temp_c?: number; humidity_pct?: number; captured_at: string } | null;
+    };
+    expect(card.thumbnail_path).toBe(`/api/v1/observation/${capId}/thumbnail/${photoId}`);
+    expect(card.photo_conditions).toEqual({ temp_c: 24.1, humidity_pct: 60, captured_at: "2026-07-12T00:00:00Z" });
+  });
+
+  it("pairwise前提工事(uib02think §4-3/§6 E2): 写真が無い個体は thumbnail_path/photo_conditions が null(捏造しない)", async () => {
+    const { env } = ctx();
+    const id = await createInd(env, { species: "Extatosoma tiaratum" });
+    const card = (await (await get(`/api/v1/individuals/${id}/bio-card`, env)).json()) as {
+      thumbnail_path: string | null;
+      photo_conditions: unknown;
+    };
+    expect(card.thumbnail_path).toBeNull();
+    expect(card.photo_conditions).toBeNull();
+  });
 });
 
 describe("V3-IND-16 生体の一生イベントログ(life-events append-only → stage/life_status 導出 → bio-card QR)", () => {

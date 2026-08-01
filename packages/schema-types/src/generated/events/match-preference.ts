@@ -21,13 +21,13 @@ export interface MatchPreference {
    */
   item_id: string;
   /**
-   * 評価種別（swipe=採用 / pass=見送り / valuecheck=価値確認）。
+   * 評価種別（swipe=採用 / pass=見送り / valuecheck=価値確認 / pairwise=左右比較）。
    */
-  kind: "swipe" | "pass" | "valuecheck";
+  kind: "swipe" | "pass" | "valuecheck" | "pairwise";
   /**
-   * 教師信号（+1=正 / -1=負）。w←w+α·y·x の y。
+   * 教師信号（+1=正 / -1=負 / 0=どちらでもない・pairwise専用）。w←w+α·y·x の y（y=0 は学習に無影響）。
    */
-  y: 1 | -1;
+  y: 1 | -1 | 0;
   /**
    * アイテムの特徴ベクトル x（内積 w·x の入力）。
    */
@@ -36,4 +36,8 @@ export interface MatchPreference {
    * 評価時刻（RFC3339）。
    */
   created_at: string;
+  /**
+   * 同一pairwiseラウンドの2件を紐付けるID。distinct数=回答ラウンド数。任意（過去イベント互換のため required に入れない）。
+   */
+  pair_id?: string;
 }

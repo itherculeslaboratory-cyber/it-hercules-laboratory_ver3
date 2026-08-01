@@ -203,7 +203,11 @@ export async function projectMatchConvergence(s: TruthStore, actorId: string, k 
   const events = await orderedPreferenceEvents(s, actorId);
   const w = await projectPreferenceWeights(s, actorId);
   const items = await labeledItems(s, actorId);
-  const scored = items.map((it) => ({ score: dot(w, it.features), y: it.y }));
+  // precision@K是正(uib02think §4-2 D2「壊れるもの③」): y=0(pairwiseのneither)は正例でも
+  // 負例でもないため Precision@K の分母Kから除外する(除外しないとneither多用ユーザーの
+  // 数値が不当に下がる)。auc()/scoreSeparation は元々 y>0/y<0 のみを見て y=0 を無視するため、
+  // ここで scored からy=0を落としても両者の出力は変わらない(壊れない)。
+  const scored = items.filter((it) => it.y !== 0).map((it) => ({ score: dot(w, it.features), y: it.y }));
 
   const stepMagnitudes = events.map((e) => LEARNING_RATE * Math.abs(e.y) * Math.sqrt(e.features.reduce((s2, v) => s2 + v * v, 0)));
   const vectorChange = stepMagnitudes.length ? stepMagnitudes[stepMagnitudes.length - 1] : 0;
@@ -230,7 +234,7 @@ export async function projectMatchConvergence(s: TruthStore, actorId: string, k 
 // ── routes ─────────────────────────────────────────────────────────────────────
 
 // POST /match/preference — append one preference_event (IND-07). kind/y/features
-// shape is enforced by match-preference schema (kind enum, y∈{1,-1}, number[]).
+// shape is enforced by match-preference schema (kind enum, y∈{1,-1,0}, number[]).
 matchRoutes.post("/match/preference", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
@@ -243,6 +247,9 @@ matchRoutes.post("/match/preference", async (c) => {
     features: body.features,
     created_at: typeof body.created_at === "string" ? body.created_at : new Date().toISOString(),
   };
+  // D2拡張(uib02think §4-2): pair_id は任意(過去イベント互換のため required に入れない)。
+  // body に無ければ data にも含めない(既存 swipe/pass/valuecheck の形をそのまま維持)。
+  if (typeof body.pair_id === "string") data.pair_id = body.pair_id;
   const key = `truth/${MATCH_TYPE}/${actorId}-${String(data.pref_id)}.json`;
   const res = await store(c).putEventAt(key, envelope(actorId, data));
   if (res.status === "invalid") return c.json({ error: "INVALID_PREFERENCE", details: res.errors }, 400);
@@ -262,7 +269,8 @@ matchRoutes.get("/match/ranking", async (c) => {
   const w = await projectPreferenceWeights(s, actorId);
   const pool = await candidatePool(s, actorId);
   const ranking = rankByPreference(w, pool);
-  // IND-09「進捗チップ」= 回答済みPairwise比較(valuecheck)数 / 打ち切り目安N。
+  // IND-09「進捗チップ」= valuecheck数(※pairwiseとは別物・ADR-H-02。pairwiseラウンド数は
+  // pair_id distinctで数える) / 打ち切り目安N。
   // 「空状態時の②誘導」= 候補0件ならUIが②(Pairwise比較)へ誘導する判断材料。
   const answeredValuecheck = (await s.listEvents(`truth/${MATCH_TYPE}/${actorId}-`))
     .map(dataOf)
