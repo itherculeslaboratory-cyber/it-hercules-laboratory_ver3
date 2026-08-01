@@ -37,6 +37,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "obs-device": "obsDevice",
   "obs-annotation": "obsAnnotation",
   "obs-analysis": "obsAnalysis",
+  // g80-e2color(b3think §3-3): BPCMS v1.0 派生Labレイヤー(色検索接続)。
+  "obs-color": "obsColor",
   "cusb-ingest": "cusbIngest",
   // C5 K3 economy/market events (schemas/events/*, non-frozen, reversible)
   "economy-pt-event": "economyPtEvent",
@@ -196,6 +198,9 @@ const EVENT_NAMES = new Set([
   "obs-device",
   "obs-annotation",
   "obs-analysis",
+  // g80-e2color — data validation MUST fire or putEvent stores unchecked data
+  // permanently (Truth is INSERT ONLY, unfixable).
+  "obs-color",
   "cusb-ingest",
   // C5 K3 — data validation MUST fire or putEvent stores unchecked data at 202
   // permanently (Truth is INSERT ONLY, unfixable). See design-k3 §2.1 批評家#1.

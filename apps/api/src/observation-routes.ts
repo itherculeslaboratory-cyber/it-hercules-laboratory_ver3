@@ -21,6 +21,9 @@ import {
   MEDIA_CACHE_MAX_AGE_SEC,
   PRINT_ALLOWED_FIELDS,
   countConsentL3Inventory,
+  BPCMS_VERSION,
+  deltaE76,
+  colorSimilarityFromDeltaE76,
 } from "./observation-constants";
 import { ENV_QR_TYPE, projectOccupantsAt, projectOpenOccupancy, projectLabEnvironmentAt, projectCurrentOwner, projectTelemetryLatest } from "./source-routes";
 import { projectIndividualSummary } from "./individual-routes";
@@ -81,6 +84,11 @@ const QR_TYPE = "ihl.ind.qr.v1";
 // 不可侵・packages/truthはw2-obsのglob外)、同じ capture-prefix キー規約の別
 // レイヤーとして追記する(source-routes.ts projectLabEnvironmentAt と同型)。
 const PHOTO_META_TYPE = "ihl.obs.photo_meta.v1";
+// g80-e2color(b3think §3-3): BPCMS v1.0 派生Labレイヤー。obs-capture.schema.jsonは
+// append-only下で既存captureへ後から色を足せないため触らず、別イベント型として持つ
+// (capture-prefixキー規約はPHOTO_META_TYPEと同型)。
+const COLOR_TYPE = "ihl.obs.color.v1";
+const COLOR_SCHEMA = "schemas/events/obs-color.schema.json";
 // V3-OBS-64 R64-7最小版(design19 §T1-10・bridge2-addendum が obs-datasource.schema.json を追加)。
 const DATASOURCE_TYPE = "ihl.obs.datasource.v1";
 const DATASOURCE_SCHEMA = "schemas/events/obs-datasource.schema.json";
@@ -155,6 +163,23 @@ export async function loadVector(
   const offset = m.vector_offset ?? 0;
   if (offset < 0 || offset % 4 !== 0 || offset + dim * 4 > buf.byteLength) return null;
   return new Float32Array(buf.slice(offset, offset + dim * 4));
+}
+
+// g80-e2color: そのcaptureに紐づく最新のihl.obs.color.v1(BPCMS Lab)を読む。
+// 未遡及(過去のcapture)には1件も無いので null を返す=検索側は RERANK_MISSING.color の
+// 欠測既定にそのまま落ちる(遡及バッチが無くても壊れない・G79-3の正直な設計帰結)。
+// 複数件ある場合はcolor_id(ULID=時系列順)昇順の最後=最新を採用。
+async function loadCaptureLab(
+  s: TruthStore,
+  captureId: string,
+): Promise<{ l: number; a: number; b: number } | null> {
+  const rows = (await s.listEvents(`truth/${COLOR_TYPE}/${captureId}-`)).map(dataOf);
+  if (!rows.length) return null;
+  rows.sort((a, b) => String(a.color_id).localeCompare(String(b.color_id)));
+  const latest = rows[rows.length - 1].lab as { l: number; a: number; b: number } | undefined;
+  return latest && typeof latest.l === "number" && typeof latest.a === "number" && typeof latest.b === "number"
+    ? latest
+    : null;
 }
 
 // V3-OBS-42: 数値条件(信頼性=ハードな除外ゲート)。以上(gte)/以下(lte)/付近(near)の
@@ -574,6 +599,38 @@ obsRoutes.post("/observation/upload", async (c) => {
   }, 202);
 });
 
+// POST /observation/{capture_id}/color — append a BPCMS v1.0 Lab/HSV analysis
+// result (g80-e2color・b3think §3-3). 重い画素処理はクライアント側で完結済みという
+// 前提(V3-AIP-104/invariant①)で、ここは計算済みの結果を保存するだけ(サーバでの
+// 画素処理は行わない)。obs-capture.schema.jsonは変更しない別イベント型(§3-2案1)。
+obsRoutes.post("/observation/:capture_id/color", async (c) => {
+  const captureId = c.req.param("capture_id");
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body.lab !== "object" || body.lab === null || typeof body.hsv !== "object" || body.hsv === null) {
+    return c.json({ error: "INVALID_BODY" }, 400);
+  }
+  const actorId = c.get("actorId");
+  const colorId = ulid();
+  const data: Record<string, unknown> = {
+    color_id: colorId,
+    capture_id: captureId,
+    actor_id: actorId,
+    lab: body.lab,
+    hsv: body.hsv,
+    bpcms_version: BPCMS_VERSION,
+  };
+  if (typeof body.region === "string") data.region = body.region;
+  if (typeof body.source === "string") data.source = body.source;
+
+  const res = await store(c).putEventAt(
+    `truth/${COLOR_TYPE}/${captureId}-${colorId}.json`,
+    envelope(COLOR_TYPE, colorId, COLOR_SCHEMA, actorId, data),
+  );
+  if (res.status === "invalid") return c.json({ error: "INVALID_COLOR", details: res.errors }, 400);
+  if (res.status === "conflict") return c.json({ error: "DUPLICATE_COLOR", key: res.key }, 409);
+  return c.json({ color_id: colorId }, 202);
+});
+
 // GET /observation/{capture_id}/qc — QC flags for every photo of a capture
 // (OBS-58: 検索UIでQCフィルタ可能にする土台の read 側)。
 obsRoutes.get("/observation/:capture_id/qc", async (c) => {
@@ -715,6 +772,14 @@ obsRoutes.post("/observation/search", async (c) => {
     // → preferenceScore の dot が常に0 → sigmoid(0)=0.5 で無害(中立)に縮退する。
     const personalizeOn = body.personalize === true;
     const prefWeights = personalizeOn ? await projectPreferenceWeights(store(c), c.get("actorId")) : null;
+    // g80-e2color(b3think §3-3): クエリLab1点をパラメータで受ける契約(スポイトUI=
+    // V3-UIX-40の土台。UI本体は本発注のスコープ外)。rerank=falseなら使われない
+    // (colorはcompositeScoreのスロットにしか入らない)ので rerank 時のみ読む。
+    const queryLabRaw = body.query_lab as { l?: unknown; a?: unknown; b?: unknown } | undefined;
+    const queryLab =
+      rerank && queryLabRaw && typeof queryLabRaw.l === "number" && typeof queryLabRaw.a === "number" && typeof queryLabRaw.b === "number"
+        ? { l: queryLabRaw.l, a: queryLabRaw.a, b: queryLabRaw.b }
+        : null;
     const scored: { capture_id: string; score: number; subject_ref: string }[] = [];
     for (const cap of candidates) {
       const capId = String(cap.capture_id);
@@ -723,10 +788,21 @@ obsRoutes.post("/observation/search", async (c) => {
       if (vec.length !== EMBEDDING_DIM) continue; // 遮断: manifest embedding_dim ≠ 384 (CL-08)
       const cos = cosineSimilarity(queryVec, vec);
       const subjectRef = String(cap.subject_ref ?? "");
-      // OBS-11 合成 rerank: blend embedding with lineage (shared individual);
-      // color/size stay 欠測既定 until the client-side analysis wave lands.
+      // OBS-11 合成 rerank: blend embedding with lineage (shared individual) + color
+      // (g80-e2color: query_lab指定時、capture側のihl.obs.color.v1をΔE76で比較。
+      // 色イベントが無いcapture=未遡及の過去分はcolor欠測既定(RERANK_MISSING.color)に
+      // 自然に落ちる=遡及バッチが無くても壊れない)。size stay 欠測既定(別波)。
+      let colorScore: number | undefined;
+      if (queryLab) {
+        const capLab = await loadCaptureLab(store(c), capId);
+        if (capLab) colorScore = colorSimilarityFromDeltaE76(deltaE76(queryLab, capLab));
+      }
       const baseScore = rerank
-        ? compositeScore({ embedding: cos, lineage: querySubjectRef && subjectRef === querySubjectRef ? 1 : undefined })
+        ? compositeScore({
+            embedding: cos,
+            color: colorScore,
+            lineage: querySubjectRef && subjectRef === querySubjectRef ? 1 : undefined,
+          })
         : cos;
       const score = prefWeights
         ? personalize(baseScore, preferenceScore(prefWeights, Array.from(vec)))

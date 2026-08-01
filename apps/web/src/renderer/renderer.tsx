@@ -15,6 +15,7 @@ import { apiUrl, unwrapEnvelope } from "@/lib/api";
 import { ApiError, mapError } from "@/lib/error-messages";
 import { shouldOfferTranslation, translateOnDemand } from "@/lib/ugc-translate";
 import { makeResolver, type Catalogs } from "@/lib/i18n-resolve";
+import { computeCaptureColorPayload } from "@/lib/color-analysis";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
 import {
   clearBatch,
@@ -551,6 +552,19 @@ function useRunAction(nodeId: string) {
           { kind: "api", method: "POST", path: "/api/v1/observation/upload" },
           { capture_id: captureId, file: effFile },
         );
+        // g80-e2color(b3think §3-3): 撮影経路でのクライアントLab焼き込み。重い画素
+        // 処理はブラウザ側で行い(V3-AIP-104/invariant①)、結果だけをPOSTする。
+        // ベストエフォート — 非画像/デコード失敗/保存失敗のいずれでもアップロード
+        // 自体は既に成功済みなので、ここで投げて画面遷移を壊さない(thumbnail生成の
+        // ベストエフォートと同型・observation-routes.ts:511-566)。
+        try {
+          const colorPayload = await computeCaptureColorPayload(effFile);
+          if (colorPayload) {
+            await execute({ kind: "api", method: "POST", path: `/api/v1/observation/${captureId}/color` }, colorPayload as unknown as Record<string, unknown>);
+          }
+        } catch {
+          // best-effort: 色検索の対象にならないだけで、観測記録自体は既に保存済み。
+        }
       } else if (effFile && typeof uploadListingId === "string") {
         await execute(
           { kind: "api", method: "POST", path: `/api/v1/market/listings/${uploadListingId}/photo` },

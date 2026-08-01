@@ -176,6 +176,19 @@ export function deltaE76(
   return Math.sqrt((a.l - b.l) ** 2 + (a.a - b.a) ** 2 + (a.b - b.b) ** 2);
 }
 
+/** g80-e2color: ΔE76(deltaE76)を RERANK_WEIGHTS.color スロット(0..1・大きいほど類似)へ
+ *  正規化するための上限値。Lab空間のL(0-100)+a/b(概ね-128..127)の対角線的な実用上の
+ *  上限として100を採る(この値を超えるΔE76は「もはや無関係な色」として類似度0に丸める・
+ *  RERANK_WEIGHTS の数値自体は変更しない=定数は1箇所の規約どおり別定数として追加)。 */
+export const COLOR_DELTA_E_NORM_MAX = 100;
+
+/** ΔE76 → compositeScore の color スロット値(0..1・大きいほど類似)。0除算しない
+ *  Math.max/minの単純clampで、負値や非有限値は0に丸める(誇張ゼロ=範囲外を推測しない)。 */
+export function colorSimilarityFromDeltaE76(deltaE: number): number {
+  if (!Number.isFinite(deltaE) || deltaE < 0) return 0;
+  return Math.max(0, Math.min(1, 1 - deltaE / COLOR_DELTA_E_NORM_MAX));
+}
+
 // ── V3-OBS-30: デバイス取得間隔4階層(既定/一括上書き/複数選択/個別) ───────
 /** クラウド最新値取得系(SwitchBot等)はDB格納値取得のみでリアルタイムでない=間隔設定は無意味。 */
 export const CLOUD_POLL_PROVIDERS = new Set(["switchbot"]);

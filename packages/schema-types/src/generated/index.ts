@@ -72,6 +72,7 @@ export * from "./events/obs-analysis";
 export * from "./events/obs-annotation";
 export * from "./events/obs-cadence";
 export * from "./events/obs-capture";
+export * from "./events/obs-color";
 export * from "./events/obs-datasource";
 export * from "./events/obs-device";
 export * from "./events/obs-photo";

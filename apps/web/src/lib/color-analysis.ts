@@ -8,6 +8,11 @@
 
 import type { PixelBuffer } from "./corner-detection";
 
+// g80-e2color(b3think §3-3): 撮影経路でのクライアントLab焼き込み。重い画素処理は
+// クライアント側(ブラウザ)で完結させる(V3-AIP-104/invariant①)。ここから下は
+// DOM API(createImageBitmap/OffscreenCanvas)に依存するため、上のanalyzeRegionColor等
+// (DOM非依存・vitestでテスト可能)とは分けている。
+
 export interface Hsv {
   h: number; // 0-360
   s: number; // 0-1
@@ -223,4 +228,55 @@ export function estimateSubjectBoundingBox(pixels: PixelBuffer): BoundingBox | n
   }
   if (maxX < minX || maxY < minY) return null;
   return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+/** File(画像)をピクセル配列に復号する。非画像/デコード失敗はnull(誇張ゼロ・
+ *  推測でごまかさない)。ブラウザ標準API(createImageBitmap+OffscreenCanvas)のみ使い、
+ *  package.json への新規依存追加は行わない(このファイル冒頭の制約どおり)。 */
+export async function decodeFileToPixels(file: File): Promise<PixelBuffer | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(bitmap, 0, 0);
+    const imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+    return { data: imageData.data, width: imageData.width, height: imageData.height };
+  } catch {
+    return null;
+  }
+}
+
+/** BPCMS payload の region 記述子。V3-UIX-40(スポイト/px指定ROI選択UI)は本発注の
+ *  スコープ外のため、当面は写真全体平均のみを送る。 */
+export const CAPTURE_COLOR_REGION_FULL = "full";
+/** POST /observation/{capture_id}/color の source フィールド(アップロード時自動計算)。 */
+export const CAPTURE_COLOR_SOURCE_AUTO = "client_upload_auto";
+
+export interface CaptureColorPayload {
+  lab: Lab;
+  hsv: Hsv;
+  region: string;
+  source: string;
+}
+
+/**
+ * アップロードされた写真ファイルから、写真全体の平均Lab/HSVを算出する
+ * (g80-e2color: analyzeRegionColorの呼び出し配線)。グレーカードの自動検出は
+ * このリポジトリに存在せず(V3-UIX-40のROI選択UIが前提・本発注のスコープ外)、
+ * よってcorrectLabViaGreycardによる補正はここでは適用しない — 生Lab
+ * (observation-constants.tsのコメント「生画像は無補正のまま保存」と矛盾しない、
+ * 補正は後続の別レイヤーとして残せる)をそのまま返す。デコード失敗時はnull。
+ */
+export async function computeCaptureColorPayload(file: File): Promise<CaptureColorPayload | null> {
+  const pixels = await decodeFileToPixels(file);
+  if (!pixels) return null;
+  const stats = analyzeRegionColor(pixels, { x: 0, y: 0, width: pixels.width, height: pixels.height });
+  if (!stats) return null;
+  return {
+    lab: stats.meanLab,
+    hsv: stats.meanHsv,
+    region: CAPTURE_COLOR_REGION_FULL,
+    source: CAPTURE_COLOR_SOURCE_AUTO,
+  };
 }

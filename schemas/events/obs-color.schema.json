@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.it-hercules.uk/events/obs-color.schema.json",
+  "title": "Observation Color data (ihl.obs.color.v1)",
+  "description": "BPCMS v1.0(甲虫色彩計測標準規格・V3-OBS-13凍結)派生値レイヤーの append-only イベントの data 部。Truth キー truth/ihl.obs.color.v1/<capture_id>-<color_id>.json。生画像は無補正のまま保存(OBS-23)、Lab/HSVはここに『別レイヤー』としてのみ持つ(observation-constants.ts correctLabViaGreycard のコメント通り)。重い画素処理はクライアント側(ブラウザ)で実行し(V3-AIP-104/invariant①)、このイベントは計算済みの結果を保存するのみ。obs-capture.schema.jsonは変更しない(append-onlyの下で既存captureへ後から色を足せないため別イベント型にした・遡及の可否は別途HQ裁定=G79-3)。",
+  "x_ihl_req": "V3-OBS-13 / V3-UIX-40",
+  "x_ihl_source": "kits/lane-think/R0801-c618a6-REPORT-2026-08-01-g78-b3think.md §3-3",
+  "type": "object",
+  "required": ["color_id", "capture_id", "actor_id", "lab", "hsv", "bpcms_version"],
+  "properties": {
+    "color_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "色解析結果イベントの一意キー(解析のたびに新規)。"
+    },
+    "capture_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "対象観測セッションの capture_id。"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "実行者の actor_id(V3-AUT-17)。"
+    },
+    "lab": {
+      "type": "object",
+      "required": ["l", "a", "b"],
+      "properties": {
+        "l": { "type": "number" },
+        "a": { "type": "number" },
+        "b": { "type": "number" }
+      },
+      "additionalProperties": false,
+      "description": "CIE Lab値。correctLabViaGreycard によるグレーカード基準補正が適用済みなら補正後、未適用ならクライアント算出の生Labを保存する(補正の有無は本イベントには持たず、上位のsourceで判別する運用)。"
+    },
+    "hsv": {
+      "type": "object",
+      "required": ["h", "s", "v"],
+      "properties": {
+        "h": { "type": "number" },
+        "s": { "type": "number" },
+        "v": { "type": "number" }
+      },
+      "additionalProperties": false,
+      "description": "HSV値(色相0-360・彩度/明度0-1)。"
+    },
+    "bpcms_version": {
+      "const": "1.0",
+      "description": "BPCMS規格のバージョン。observation-constants.ts の BPCMS_VERSION 定数を使う(自前で書かない)。"
+    },
+    "region": {
+      "type": "string",
+      "description": "解析対象領域の記述(任意。例: 'full'=写真全体平均。スポイト/px指定によるROI選択UIはV3-UIX-40・本発注のスコープ外のため、当面は 'full' のみを送る)。"
+    },
+    "source": {
+      "type": "string",
+      "description": "解析結果の出所(任意。例: 'client_upload_auto'=アップロード時にクライアントが自動計算)。"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "実行時刻(RFC3339・任意)。"
+    }
+  },
+  "additionalProperties": false
+}

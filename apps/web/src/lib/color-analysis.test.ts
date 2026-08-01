@@ -5,6 +5,10 @@ import {
   analyzeRegionColor,
   otsuThreshold,
   estimateSubjectBoundingBox,
+  decodeFileToPixels,
+  computeCaptureColorPayload,
+  CAPTURE_COLOR_REGION_FULL,
+  CAPTURE_COLOR_SOURCE_AUTO,
   type BoundingBox,
 } from "./color-analysis";
 import type { PixelBuffer } from "./corner-detection";
@@ -102,5 +106,24 @@ describe("otsuThreshold + estimateSubjectBoundingBox (V3-OBS-47 サイズ推定)
     const t = otsuThreshold(pixels);
     expect(t).toBeGreaterThan(5);
     expect(t).toBeLessThan(250);
+  });
+});
+
+// g80-e2color: decodeFileToPixels/computeCaptureColorPayload はDOM API
+// (createImageBitmap+OffscreenCanvas)に依存する。jsdom(このプロジェクトのvitest環境)
+// はどちらも実装していないため、実画像デコードそのものはここでは検証できない
+// (正直な断り — analyzeRegionColorの計算部分は上のdescribeで既に検証済み)。
+// ここで検証するのは「デコード不可でも例外を投げず null を返す」ベストエフォート契約
+// (renderer.tsxの呼び出し側がtry/catchで囲まなくても壊れないことの土台)。
+describe("decodeFileToPixels / computeCaptureColorPayload (g80-e2color・ベストエフォート契約)", () => {
+  it("jsdom環境(createImageBitmapが無い)ではnullを返し、例外を投げない", async () => {
+    const file = new File([new Uint8Array([1, 2, 3])], "test.jpg", { type: "image/jpeg" });
+    await expect(decodeFileToPixels(file)).resolves.toBeNull();
+    await expect(computeCaptureColorPayload(file)).resolves.toBeNull();
+  });
+
+  it("region/sourceの定数はAPI(observation-routes.ts POST /observation/{id}/color)が期待する値", () => {
+    expect(CAPTURE_COLOR_REGION_FULL).toBe("full");
+    expect(CAPTURE_COLOR_SOURCE_AUTO).toBe("client_upload_auto");
   });
 });

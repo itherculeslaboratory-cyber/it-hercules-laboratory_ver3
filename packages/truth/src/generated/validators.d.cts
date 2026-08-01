@@ -28,6 +28,7 @@ export declare const obsSchedule: ValidateFunction;
 export declare const obsDevice: ValidateFunction;
 export declare const obsAnnotation: ValidateFunction;
 export declare const obsAnalysis: ValidateFunction;
+export declare const obsColor: ValidateFunction;
 export declare const cusbIngest: ValidateFunction;
 export declare const economyPtEvent: ValidateFunction;
 export declare const economyContributionEvent: ValidateFunction;

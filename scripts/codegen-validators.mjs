@@ -60,6 +60,8 @@ const SCHEMAS = [
   ["obsDevice", "events/obs-device.schema.json"],
   ["obsAnnotation", "events/obs-annotation.schema.json"],
   ["obsAnalysis", "events/obs-analysis.schema.json"],
+  // g80-e2color(b3think §3-3): BPCMS v1.0 派生Labレイヤー(色検索接続)。
+  ["obsColor", "events/obs-color.schema.json"],
   ["cusbIngest", "events/cusb-ingest.schema.json"],
   // C5 K3 economy/market events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
   ["economyPtEvent", "events/economy-pt-event.schema.json"],
