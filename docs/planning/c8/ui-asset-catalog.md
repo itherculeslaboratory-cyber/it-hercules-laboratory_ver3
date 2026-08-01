@@ -140,6 +140,20 @@ status: active
 
 **現状**(出典 `screen-defs/market-trade.json`): `app-shell>page>` に `heading`+`text`(stepperと称すが実体はミュート文1行)+ `card`×4(detail/state/price/shipping の bind_text)+ `list`(board)+ `button`。写真・仕様table・trust・4段stepper・チャット・GMO振込table は全欠。
 
+> **失効注記(2026-08-02 g88-smallfix3・実物突合。P-2a実装=ihl-ver3コミット `d8f7014`+報告
+> `00-hq\kits\lane-implement\R0802-bc5987-REPORT-2026-08-02-g87-p2a.md` により上記「全欠」の一部が陳腐化)**:
+> 現物(`screen-defs\market-trade.json`)を実測すると:
+> - **写真**: 実装済み(`detail-photos`ノード、L43。P-2aで新規追加)。
+> - **trust**: 実装済み(`seller-trust`/`seller-trust-caution`ノード、L74/L86。P-2aで新規追加)。
+> - **4段stepper**: 実装済み(`stage-stepper`ノード、L125-133。ラベル=出品/成立・振込/発送・受取/完了の4段。
+>   P-2a報告によれば元から実装済みで今回の新規追加ではない)。
+> - **仕様table**: 部分実装のみ(`species-line`/`country-line`の2項目、L54/L64。完全なtable形式ではない。
+>   P-2a報告「仕様tableは部分実装(種/産地のみ・2/4項目)」)。
+> - **チャット**: 未実装のまま。`app-shell`の`talk_channel`(`apps\web\src\renderer\zones\app-shell.tsx:372-424`)は
+>   画面横断の「愚痴/改善」掲示板機能であり、取引当事者間の個別チャットとは別機能。
+> - **GMO振込table**: 未実装のまま。round-16裁定でGMO決済自体がP2P銀行振込へ変更され、支払情報は
+>   `payment`カードの`bind_text`1行のみ(`screen-defs\market-trade.json:206-213`)。table形式のUIコンポーネントは無い。
+
 **目標**: stage クエリ駆動(公開stage1→成立後 非公開board stage2)。第4稿ワイヤー F1出品/F2購買/F2b詳細/F3ダッシュ/F3b発送/F4検品。
 
 **ブロック→ノード割り当て**:

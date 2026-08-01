@@ -55,7 +55,7 @@ export function scanColors(text) {
 function walk(dir, exts, out = []) {
   if (!existsSync(dir)) return out;
   for (const name of readdirSync(dir)) {
-    if (name === "node_modules" || name === ".next") continue;
+    if (name === "node_modules" || name === ".next" || name.startsWith(".next-")) continue;
     const full = join(dir, name);
     if (statSync(full).isDirectory()) walk(full, exts, out);
     else if (exts.some((e) => name.endsWith(e))) out.push(full);
