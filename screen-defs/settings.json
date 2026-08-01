@@ -75,6 +75,7 @@
             { "id": "hub-device", "type": "link", "props": { "label_key": "settings.hub-device.label", "label": "機器連携(SwitchBot等IoT)", "href": "/devices" } },
             { "id": "hub-theme", "type": "link", "props": { "label_key": "settings.hub-theme.label", "label": "テーマのfork一覧", "href": "/s/theme-gallery" } },
             { "id": "hub-ai-sessions", "type": "link", "props": { "label_key": "settings.hub-ai-sessions.label", "label": "AIセッション閲覧(サブ脳)", "href": "/s/ai-sessions" } },
+            { "id": "hub-notify", "type": "link", "props": { "label_key": "settings.hub-notify.label", "label": "通知設定(カテゴリ別ON/OFF・サイレント時間帯)", "href": "/s/notification-settings" } },
             { "id": "backup-title", "type": "heading", "props": { "text_key": "settings.backup-title.text", "text": "自分のデータを持ち出す(バックアップ)", "level": 2 } },
             { "id": "backup-facts", "type": "link", "props": { "label_key": "settings.backup-facts.label", "label": "個体データをCSVで書き出す", "href": "/api/v1/export/facts.csv" } },
             { "id": "backup-photos", "type": "link", "props": { "label_key": "settings.backup-photos.label", "label": "写真参照一覧をCSVで書き出す", "href": "/api/v1/export/photos.csv" } },

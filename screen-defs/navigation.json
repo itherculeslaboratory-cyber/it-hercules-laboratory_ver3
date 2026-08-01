@@ -53,7 +53,8 @@
     "knowledge-thread",
     "dispute",
     "setup-profile",
-    "individual-finder"
+    "individual-finder",
+    "notification-settings"
   ],
   "edges": [
     {
@@ -500,6 +501,16 @@
       "from": "home",
       "to": "individual-finder",
       "label": "個体ファインダー(2026-08-01 g78-b2implC・V3-UIX-83第1段=カタログ登録のみ。renderer.tsx側の実導線/finder/finder.html直リンクは現状のまま触っていない=二重入口)"
+    },
+    {
+      "from": "settings",
+      "to": "notification-settings",
+      "label": "通知設定へ(2026-08-01 g79-uib07impl2・V3-UIX-42 Ship2)"
+    },
+    {
+      "from": "notification-settings",
+      "to": "notification-settings",
+      "label": "保存後に再読込"
     }
   ]
 }

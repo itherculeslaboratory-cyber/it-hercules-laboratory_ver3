@@ -20,6 +20,7 @@ import { loadScreenDefs } from "./check-navigation.mjs";
 export const CLUSTER_OWNED = [
   "home", "settings", "theme-gallery", "ui-templates", "login", "login-sent",
   "obs-entry", "obs-detail", "individual-detail", "qr-resume",
+  "notification-settings",
 ];
 
 const MAX_SECTIONS = 3;

@@ -31,6 +31,7 @@ const SCREEN_IDS = [
   "login-sent",
   "market-trade",
   "match",
+  "notification-settings",
   "obs-confirm",
   "obs-detail",
   "obs-entry",
