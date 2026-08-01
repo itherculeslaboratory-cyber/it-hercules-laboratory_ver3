@@ -9,7 +9,9 @@ import {
   UPSTREAM_PERCENT,
   KRM29_PRO_RESEARCHER_THRESHOLD,
   KRM29_CITIZEN_SCIENTIST_THRESHOLD,
+  CONTRIB_INDIVIDUAL_CREATED,
 } from "./economy-constants";
+import { projectCohortCompleteness } from "./cohort-completeness";
 
 export const PT_TYPE = "ihl.economy.pt_event.v1";
 export const CONTRIBUTION_TYPE = "ihl.economy.contribution_event.v1";
@@ -151,6 +153,123 @@ export async function appendContribution(
     provenance: { generator_kind: "human", actor_id: actorId },
     data,
   });
+}
+
+// ── S8 コホート完結性への接続（V3-KRM-35・design R0801-f383db §4.5・
+// RULING-2026-08-01-gen75-hqrulings.md R75-1/R75-2/R75-3）─────────────────
+// 新機構は作らない: 加算口は appendContribution(F23)をそのまま再利用し、
+// completeness_ratio は S7 projectCohortCompleteness を関数として再利用する
+// (HTTPを内部で叩かない・cohort-completeness.ts のロジックは変更しない)。
+// ★判断(報告書に記載): economy-contribution-event.schema.json の source は
+// enum固定("github"/"board"/"fork"/"vote"/"tax"/"manual"/"observation")で、
+// このスキーマファイルは発注書の「触ってよいファイル」に含まれない(スキーマ変更禁止)。
+// 新しい列挙値を足す代わりに既存の "observation" を再利用する(F24の個体作成/観測フックと
+// 同じ出所区分。「終端life-eventの記録」も観測行為の一種であり意味的に矛盾しない)。
+// 条件群の一意性は source_ref(= groupKey = clutchId:kind:atStage)側で確保する。
+const COHORT_TERMINAL_SOURCE = "observation";
+const CLUTCH_TYPE_FOR_PAYOUT = "ihl.ind.clutch.v1";
+const CLUTCH_EVENT_TYPE_FOR_PAYOUT = "ihl.ind.clutch_event.v1";
+// R75-3: 初齢除外の実装は at_stage による判定。death.detail.at_stage は
+// スキーマ上 additionalProperties:true の自由記述だが、このコードベースで
+// 齢を表す唯一の実在語彙は observation-constants.ts STAGE_TO_NEXT_TRANSITION
+// の to_stage 語彙("first"/"second"/"third_early"/"third_late")なので、
+// death.detail.at_stage が "first" と等しい場合を初齢(first_instar相当)として
+// 除外する(★判断: 報告書に記載)。
+const FIRST_INSTAR_STAGE = "first";
+// R75-1: A=1.0/B=0.5/C=0.1。
+const GRADE_COEF: Record<"A" | "B" | "C", number> = { A: 1.0, B: 0.5, C: 0.1 };
+
+/**
+ * evidence_grade 判定(design §4.3・R75-1)。環境系列の有無判定(A)は実装上
+ * 保守的に見送る(R75-1が明示的に許可)。
+ * ★判断(報告書に記載): design §4.3 の A/B/C 三値は死亡記録を念頭に定義されて
+ * いるが、design §4.2 の終端3値(成体観測済み/N令死亡/追跡不能)全体に payout を
+ * 接続する必要がある(T1)ため、death 以外にも一意に判定を広げた:
+ * - eclosion(成体観測済み): 直接観測そのものが終端証拠であり環境系列相当の
+ *   曖昧さが無い最強のケースとして A 固定。
+ * - lost(追跡不能): スキーマ上 detail 自体が任意で終端観測の要求が無く、
+ *   「申告のみ」の定義(R75-1)にそのまま一致するため C 固定。
+ * - death: スキーマ(S6 if/then)が terminal_observation を必須化しているため
+ *   新規書き込みは常に B。terminal_observation が欠落したデータ(スキーマ導入
+ *   前の旧データ等・本関数はそれも防御的に判定する)は C。
+ */
+export function evidenceGrade(kind: string, detail: Record<string, unknown> | undefined): "A" | "B" | "C" {
+  if (kind === "lost") return "C";
+  if (kind === "eclosion") return "A";
+  const hasTerminalObservation =
+    !!detail && typeof detail.terminal_observation === "object" && detail.terminal_observation !== null;
+  return hasTerminalObservation ? "B" : "C";
+}
+
+/**
+ * individual_id が属する clutch_id を promote イベント(promoted_individual_ids)
+ * から逆引きする(個体マスタ自体は clutch_id を持たないため・F19)。
+ * promote 経由で生まれていない個体(クラッチ機構の外)は null。
+ */
+async function findClutchIdForIndividual(s: TruthStore, individualId: string): Promise<string | null> {
+  const events = (await s.listEvents(`truth/${CLUTCH_EVENT_TYPE_FOR_PAYOUT}/`)).map(dataOf);
+  for (const e of events) {
+    if (e.kind === "promote" && Array.isArray(e.promoted_individual_ids) && e.promoted_individual_ids.includes(individualId)) {
+      return typeof e.clutch_id === "string" ? e.clutch_id : null;
+    }
+  }
+  return null;
+}
+
+/**
+ * 条件群(clutch_id, kind, at_stage)内での既払い件数(R75-2)。同じ groupKey を
+ * source_ref に積んだ既存 contribution_event を数えるだけ(常駐カウンタ無し・
+ * 都度再計算・不変条項①)。
+ */
+async function countPriorPayoutsInGroup(s: TruthStore, groupKey: string): Promise<number> {
+  const events = (await s.listEvents(`truth/${CONTRIBUTION_TYPE}/`)).map(dataOf);
+  return events.filter((d) => d.source === COHORT_TERMINAL_SOURCE && d.source_ref === groupKey).length;
+}
+
+/**
+ * S8 本体: コホートの終端記録(death/eclosion/lost)に対する貢献度加算
+ * (design §4.5・R75-1/R75-2/R75-3)。
+ * 式(条件群の累積) f(n) = v_base × (1 + log2 n)。この個体が条件群の n 番目なら
+ * 加算するのは f(n) − f(n−1) という増分だけ(append-only なので過去分は書き直せない
+ * ため、逓減を「増分の縮小」として実現する。f(0)=0 と定義)。
+ * v_base = CONTRIB_INDIVIDUAL_CREATED(=10・既存の1匹あたり加点相場。ユーザー例示
+ * 「一匹につき10貢献度」と一致するためこの値を再利用し新定数を作らない)。
+ * grade_coef と completeness_ratio はこの個体の増分にそのまま乗算する
+ * (★判断: 条件群全体を1回で払う設計ではなく個体ごとの終端イベントで払う都度払いの
+ * ため、conditions群内で等級が混在する場合も個体ごとの等級が正しく反映される)。
+ * 初齢(R75-3)は加算そのものをスキップする(null を返す=イベント無し)。
+ * クラッチ外(promote されていない個体)や存在しないクラッチも同様にスキップする
+ * (対象外・報告書に判断理由を記載)。
+ */
+export async function appendCohortTerminalContribution(
+  s: TruthStore,
+  individualId: string,
+  kind: string,
+  detail: Record<string, unknown> | undefined,
+): Promise<PutEventResult | null> {
+  if (kind !== "death" && kind !== "eclosion" && kind !== "lost") return null;
+  const atStage = kind === "death" && typeof detail?.at_stage === "string" ? detail.at_stage : null;
+  if (kind === "death" && atStage === FIRST_INSTAR_STAGE) return null; // R75-3
+
+  const clutchId = await findClutchIdForIndividual(s, individualId);
+  if (!clutchId) return null;
+  const clutch = await s.readEvent(`truth/${CLUTCH_TYPE_FOR_PAYOUT}/${clutchId}.json`);
+  if (!clutch) return null;
+  const clutchActorId = dataOf(clutch).actor_id;
+  if (typeof clutchActorId !== "string" || !clutchActorId) return null;
+
+  const completeness = await projectCohortCompleteness(s, clutchId);
+  const ratio = completeness ? Number(completeness.completeness_ratio ?? 0) : 0;
+  const gradeCoef = GRADE_COEF[evidenceGrade(kind, detail)];
+
+  const groupKey = `${clutchId}:${kind}:${atStage ?? "none"}`;
+  const priorCount = await countPriorPayoutsInGroup(s, groupKey);
+  const n = priorCount + 1;
+  const fPrev = n > 1 ? 1 + Math.log2(n - 1) : 0;
+  const fCur = 1 + Math.log2(n);
+  const delta = CONTRIB_INDIVIDUAL_CREATED * (fCur - fPrev) * gradeCoef * ratio;
+
+  return appendContribution(s, clutchActorId, individualId, "research", delta, COHORT_TERMINAL_SOURCE, groupKey);
 }
 
 // ── 依存グラフ配分（KRM-11・純関数 reducer）─────────────────────────────

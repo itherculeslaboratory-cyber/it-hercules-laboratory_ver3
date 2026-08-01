@@ -11,7 +11,7 @@ import { Hono, type Context } from "hono";
 import { TruthStore, ulid, cosineSimilarity, type R2BucketLite } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { QR_BATCH_SIZES, STAGE_TO_NEXT_TRANSITION } from "./observation-constants";
-import { appendContribution } from "./contribution";
+import { appendContribution, appendCohortTerminalContribution } from "./contribution";
 import { CONTRIB_INDIVIDUAL_CREATED } from "./economy-constants";
 import { projectOpenBindings, projectCurrentOwner } from "./source-routes";
 import { computeNextObservationAt } from "./home-routes";
@@ -1839,6 +1839,10 @@ export async function writeLifeEvent(
   );
   if (res.status === "invalid") return { ok: false, error: "INVALID_LIFE_EVENT", details: res.errors };
   if (res.status === "conflict") return { ok: false, error: "DUPLICATE_LIFE_EVENT" };
+  // S8(V3-KRM-35 貢献度接続): 終端(death/eclosion/lost)のみ内部で判定し加算する
+  // (非終端kindは即null・発火点はこのwriteLifeEventのみ=単一route+batch-commit両方を
+  // 同じ規約でカバーする・KIT規約「独自バッチ/常駐を作らない」)。
+  await appendCohortTerminalContribution(s, individualId, String(body.kind), body.detail as Record<string, unknown> | undefined);
   return { ok: true, individual_id: individualId, kind: body.kind };
 }
 
