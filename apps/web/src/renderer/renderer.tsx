@@ -6597,7 +6597,7 @@ function HeaderScopeSelector({
 // maxDepth=2 は上限であり下限ではないため、サブカテゴリ未定義のこの段では1段のみで
 // 要件を満たす(将来サブカテゴリが定義され次第、ここへtreeを継ぎ足す)。
 const DRAWER_NAV_ITEMS: Array<{ label: string; href: string | null }> = [
-  { label: "観測登録", href: "/s/obs-domain-select" },
+  { label: "観測登録", href: "/s/obs-entry" },
   { label: "マーケット", href: "/s/market-trade" },
   { label: "検索", href: "/s/obs-search" },
   { label: "知の広場", href: "/s/knowledge-hub" },

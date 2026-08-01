@@ -32,7 +32,6 @@ const SCREEN_IDS = [
   "match",
   "obs-confirm",
   "obs-detail",
-  "obs-domain-select",
   "obs-entry",
   "obs-freetext",
   "obs-navigator",

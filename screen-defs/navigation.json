@@ -5,7 +5,6 @@
     "login-sent",
     "terms",
     "home",
-    "obs-domain-select",
     "obs-entry",
     "obs-templates",
     "obs-navigator",
@@ -88,11 +87,6 @@
     },
     {
       "from": "home",
-      "to": "obs-domain-select",
-      "label": "観測ドメイン選択へ"
-    },
-    {
-      "from": "home",
       "to": "obs-search",
       "label": "検索へ"
     },
@@ -155,11 +149,6 @@
       "from": "home",
       "to": "dispute",
       "label": "話し合いの場へ(home完成予想図v2)"
-    },
-    {
-      "from": "obs-domain-select",
-      "to": "obs-entry",
-      "label": "ドメイン選択後に観測入力へ"
     },
     {
       "from": "obs-entry",

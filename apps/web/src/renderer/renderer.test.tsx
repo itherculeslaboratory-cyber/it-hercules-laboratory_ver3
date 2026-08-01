@@ -1376,7 +1376,8 @@ describe("Renderer — app-shell brand chrome (V3-UIX-28) + auth nav (V3-AUT-12)
     const menuBtn = await screen.findByRole("button", { name: "メニュー" });
     expect(screen.queryByRole("link", { name: "マーケット" })).not.toBeInTheDocument();
     fireEvent.click(menuBtn);
-    expect(screen.getByRole("link", { name: "観測登録" })).toHaveAttribute("href", "/s/obs-domain-select");
+    // 2026-08-01: obs-domain-select 廃止(カードR0801-9d452f=ユーザー○)に伴い遷移先を obs-entry へ。V3-UIX-39 は大分類名のみを規定し遷移先は規定していない=registry.json:25270
+    expect(screen.getByRole("link", { name: "観測登録" })).toHaveAttribute("href", "/s/obs-entry");
     expect(screen.getByRole("link", { name: "マーケット" })).toHaveAttribute("href", "/s/market-trade");
     expect(screen.getByRole("link", { name: "検索" })).toHaveAttribute("href", "/s/obs-search");
     expect(screen.getByRole("link", { name: "知の広場" })).toHaveAttribute("href", "/s/knowledge-hub");

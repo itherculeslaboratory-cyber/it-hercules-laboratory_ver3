@@ -19,7 +19,7 @@ import { loadScreenDefs } from "./check-navigation.mjs";
 // design-k4 §1.4/§5 — the 10 K4 (converted + new) screens.
 export const CLUSTER_OWNED = [
   "home", "settings", "theme-gallery", "ui-templates", "login", "login-sent",
-  "obs-domain-select", "obs-entry", "obs-detail", "individual-detail", "qr-resume",
+  "obs-entry", "obs-detail", "individual-detail", "qr-resume",
 ];
 
 const MAX_SECTIONS = 3;
@@ -138,20 +138,19 @@ export function runGate(root = process.cwd()) {
   for (const def of defs) {
     for (const msg of checkSourcePaths(def)) violations.push(`${def.screen_id}: ${msg}`);
   }
-  // (V3-UIX-06) primary-CTA discipline, checked on ALL screens. 2 pre-existing
-  // screens fail this at gate-introduction time (2026-08-01 g77-uibatch2 T
-  // UIB03-1 dry-run over all 53 on-disk screen-defs) and are excluded rather
+  // (V3-UIX-06) primary-CTA discipline, checked on ALL screens. 1 pre-existing
+  // screen fails this at gate-introduction time (2026-08-01 g77-uibatch2 T
+  // UIB03-1 dry-run over all 53 on-disk screen-defs) and is excluded rather
   // than silently "fixed" here (out of this gate-addition's scope — a design
-  // judgment on each is needed, not a mechanical edit):
+  // judgment is needed, not a mechanical edit):
   //   - market-trade: btn-publish + btn-match both unconditional/primary in
   //     tab "1" — looks like a real violation (no viewer-role `when` guard
   //     distinguishes seller-only vs buyer-only actions the way btn-pay-declare/
   //     btn-pay-confirm do a few nodes later in the same file).
-  //   - obs-domain-select: 5 domain-choice buttons (d-biology/d-mineral/
-  //     d-digital/d-place/d-custom) are all "primary" — plausibly an
-  //     intentional design (a selector menu, not a competing-CTA screen) but
-  //     needs a design call either way.
-  const PRIMARY_CTA_EXEMPT = new Set(["market-trade", "obs-domain-select"]);
+  //   - obs-domain-select was exempted here for the same reason (5 domain-choice
+  //     buttons all "primary") but the screen was retired 2026-08-01 (カード
+  //     R0801-9d452f=ユーザー○90+b1think裁定A案・R0801-439da4)。除外は画面ごと消滅済み。
+  const PRIMARY_CTA_EXEMPT = new Set(["market-trade"]);
   for (const def of defs) {
     if (PRIMARY_CTA_EXEMPT.has(def.screen_id)) continue;
     for (const msg of checkPrimaryCta(def)) violations.push(`${def.screen_id}: ${msg}`);
