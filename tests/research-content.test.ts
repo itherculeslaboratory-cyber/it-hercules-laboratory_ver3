@@ -3,7 +3,7 @@
 // 即ヒット（維持型二次インデックス不使用）。ai_tags は user_tags を上書きしない・RAG_PRIORITY 順・
 // ai_tags≤10・suggest 非永続で確認 POST のみ append。share→chat_log→chat-index 投影反映。
 import { describe, expect, it } from "vitest";
-import { TruthStore, ulid } from "@ihl/truth";
+import { TruthStore, ulid, deriveActorId } from "@ihl/truth";
 import app from "../apps/api/src/index";
 import { AUTH_HEADERS, FakeR2Bucket, makeEnv, makeEnvelope } from "./helpers";
 
@@ -621,7 +621,10 @@ describe("V3-AIP-108/109 POST /research/content/:id/next-generation (世代機�
     // T1適用後は POST /research/content が常に lineage_meta(gen0)を刻むため、HTTP経由では
     // lineage_meta を持たない旧レコードを新規に作れない(発注書T1-5)。生イベント直接書き込みで
     // 「世代機構より前に作られた既存レコード」を再現する(仮想root分岐=R-6は消えていない)。
-    await seedLegacyContent(bucket, paperBody("GEN-VROOT-1"));
+    // actor_id はセッション本人(dev@ihl.local)に合わせる — このテストの検証対象は世代機構
+    // (仮想root)であり所有者チェック(g74-restown)ではないため、legacy-seed既定のままだと
+    // 無関係な403で落ちる(既存挙動の意図は変えず、新チェックの前提を満たすだけの修正)。
+    await seedLegacyContent(bucket, { ...paperBody("GEN-VROOT-1"), actor_id: await deriveActorId("dev@ihl.local") });
     const gen1Res = await post(bucket, "/api/v1/research/content/GEN-VROOT-1/next-generation", { title: "Gen v1" });
     expect(gen1Res.status).toBe(201);
     const gen1Body = (await gen1Res.json()) as { content_id: string; generation: number };
@@ -631,6 +634,15 @@ describe("V3-AIP-108/109 POST /research/content/:id/next-generation (世代機�
     expect((detail as { lineage_meta?: Record<string, unknown> }).lineage_meta).toBeDefined();
     expect((detail as { lineage_meta: Record<string, unknown> }).lineage_meta.parent_uuid).toBeUndefined();
     expect((detail as { lineage_meta: Record<string, unknown> }).lineage_meta.ancestor_chain).toBeUndefined();
+  });
+
+  it("他人のcontentへのnext-generationは403(所有者チェック・裁定R0801-ac8938 RESTOWN-1=A案)", async () => {
+    const bucket = new FakeR2Bucket();
+    await seedLegacyContent(bucket, { ...paperBody("GEN-OWNER-1"), actor_id: "other-owner" });
+    const res = await post(bucket, "/api/v1/research/content/GEN-OWNER-1/next-generation", { title: "should be blocked" });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("NOT_OWNER");
   });
 });
 
@@ -798,6 +810,15 @@ describe("V3-AIP-108/109 S4 復元(POST .../restore・GET .../current・設計R0
       makeEnv(bucket),
     );
     expect(currentRes.status).toBe(401);
+  });
+
+  it("他人のcontentへのrestoreは403(所有者チェック・裁定R0801-ac8938 RESTOWN-1=A案)", async () => {
+    const bucket = new FakeR2Bucket();
+    await seedLegacyContent(bucket, { ...paperBody("RST-OWNER-1"), actor_id: "other-owner" });
+    const res = await post(bucket, "/api/v1/research/content/RST-OWNER-1/restore", {});
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("NOT_OWNER");
   });
 
   it("EVENT_NAMES発火の実測: 壊れた content-current data(pointer_id欠落)は putEventAt が invalid で弾く", async () => {

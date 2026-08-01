@@ -34,6 +34,12 @@ function dataOf(e: Record<string, unknown>): Record<string, unknown> {
 function contentKey(contentId: string): string {
   return `truth/${CONTENT_TYPE}/${contentId}.json`;
 }
+// 所有者チェック(A案・裁定R0801-ac8938 RESTOWN-1='o'75点): restore/next-generation は対象
+// content の actor_id と実行者を突き合わせ、他人なら403で拒否する(既存の踏襲だった無防備な
+// 状態=refs4ゲート中2の是正)。1関数を両ハンドラで共用する(発注書の指示どおり)。
+function isOwner(data: Record<string, unknown>, actorId: string): boolean {
+  return data.actor_id === actorId;
+}
 // provenanceExtra(任意・g67-refs1/g68-refs2・設計R0801-436936 §2案1-A): 同じ「任意provenance
 // 引数」の前例(observation-routes.ts:84-102)に倣うが、V3-AUT-17のactor_id刻印を保つため
 // 置換ではなくマージにした。既存呼び出し(引数省略)は無改変で通る(後方互換)。provenanceExtra
@@ -481,8 +487,11 @@ researchContentRoutes.post("/research/content/:id/next-generation", async (c) =>
       400,
     );
   }
-  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const actorId = c.get("actorId");
+  if (!isOwner(oldData, actorId)) {
+    return c.json({ error: "NOT_OWNER", details: ["next-generation は content の所有者本人のみ実行可能"] }, 403);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const newContentId = ulid();
   // 旧 data を土台に、body で来たフィールドだけ差し替え(未指定は継承・設計§3(b)手順2)。
   const newData: Record<string, unknown> = { ...oldData };
@@ -672,6 +681,9 @@ researchContentRoutes.post("/research/content/:id/restore", async (c) => {
   const targetEv = await s.readEvent(contentKey(id));
   if (!targetEv) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
   const actorId = c.get("actorId");
+  if (!isOwner(dataOf(targetEv), actorId)) {
+    return c.json({ error: "NOT_OWNER", details: ["restore は content の所有者本人のみ実行可能"] }, 403);
+  }
   // lineage_root はサーバが up-walk で解決する(クライアント指定は信用しない・
   // V3-AUT-17のactor_id強制刻印と同じ思想)。
   const rootId = await findLineageRootId(s, id);
