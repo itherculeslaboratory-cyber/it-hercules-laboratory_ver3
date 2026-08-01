@@ -1,4 +1,5 @@
 import { validateEnvelope } from "./envelope";
+import { buildIndexEntry, indexKeyFor } from "./index-entry";
 
 export interface R2PutOptions {
   onlyIf?: { etagDoesNotMatch?: string };
@@ -74,7 +75,10 @@ export class TruthStore {
     const e = stamped as { type: string; id: string };
     // ver2 event-store key layout truth/<schema_ref>/<event_id>.json
     // (libs/ihl/core/event_store.py) adapted to envelope type/id.
-    return this.writeOnce(`truth/${e.type}/${e.id}.json`, stamped);
+    const key = `truth/${e.type}/${e.id}.json`;
+    const result = await this.writeOnce(key, stamped);
+    if (result.status !== "invalid") await this.writeIndexEntry(result, stamped, key);
+    return result;
   }
 
   /**
@@ -89,7 +93,40 @@ export class TruthStore {
     const stamped = { ...(envelope as Record<string, unknown>), received_at: new Date().toISOString() };
     const v = validateEnvelope(stamped);
     if (!v.valid) return { status: "invalid", errors: v.errors };
-    return this.writeOnce(key, stamped);
+    const result = await this.writeOnce(key, stamped);
+    if (result.status !== "invalid") await this.writeIndexEntry(result, stamped, key);
+    return result;
+  }
+
+  /**
+   * S2(design R0801-f383db §6 論点3): payload put-if-absent の後に索引を put-if-absent。
+   * payload が conflict(既存)でも索引書き込みへ進む(再送で索引だけ埋まる冪等経路)。
+   * conflict時は索引キーを再送時刻ではなく「既に保存されている envelope の received_at」から
+   * 作る — でないと再送のたびに index キーが変わり冪等にならない(同じイベントの索引が
+   * 複数できてしまう)。索引の put 自体が例外を投げた場合はここで飲み込まず、そのまま
+   * 呼び出し元(Hono の app.onError → 500)へ伝播させる = 「索引書き込み失敗を成功と
+   * 言わない」の実装(index.ts 等の呼び出し元route群には一切手を入れない)。
+   */
+  private async writeIndexEntry(
+    result: PutEventResult,
+    stamped: Record<string, unknown>,
+    payloadKey: string,
+  ): Promise<void> {
+    let source = stamped;
+    let payloadBytes = new TextEncoder().encode(JSON.stringify(stamped)).length;
+    if (result.status === "conflict") {
+      const obj = await this.bucket.get(payloadKey);
+      if (obj) {
+        const text = await obj.text();
+        payloadBytes = new TextEncoder().encode(text).length;
+        source = JSON.parse(text) as Record<string, unknown>;
+      }
+    }
+    const entry = await buildIndexEntry(source, payloadKey, payloadBytes);
+    const indexKey = indexKeyFor(source as { id: string; received_at: string });
+    await this.bucket.put(indexKey, JSON.stringify(entry), {
+      onlyIf: { etagDoesNotMatch: "*" },
+    });
   }
 
   /** Put a binary blob (media/photo/<id>) with the same put-if-absent contract. */

@@ -60,6 +60,10 @@ describe("POST /api/v1/observation/batch-commit kind:reanalyze (Recompute All)",
     expect(results[0]).toEqual({ ok: false, error: "INVALID_ITEM" });
   });
 
+  // S2(index/receipt/)導入により1イベントあたりのR2書き込みが1回→2回になった
+  // (索引エントリの分。設計R0801-f383db §0で明記済みの既知コスト増)。1000件一括はその
+  // 分だけ処理時間が増え、並列実行下のCPU競合ではvitest既定の5000msに達することがある。
+  // アサーションの意図(1000件を受理できる)は変えず、余裕を持たせるだけの調整。
   it("accepts up to BATCH_MAX_ITEMS(1000) items — Recompute All 1000枚一括", async () => {
     const env = makeEnv(new FakeR2Bucket());
     const items = Array.from({ length: 1000 }, () => ({ kind: "capture", body: { domain: "biology" } }));
@@ -67,7 +71,7 @@ describe("POST /api/v1/observation/batch-commit kind:reanalyze (Recompute All)",
     expect(res.status).toBe(200);
     const { results } = (await res.json()) as { results: unknown[] };
     expect(results).toHaveLength(1000);
-  });
+  }, 15000);
 });
 
 describe("GET /api/v1/observation/export", () => {

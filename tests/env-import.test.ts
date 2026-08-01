@@ -241,6 +241,13 @@ describe("V3-OBS-32 dry-run preview (no write)", () => {
     const slice = HUB3.dataLines.slice(0, 60);
     const csvText = [HUB3.header, ...slice].join("\n");
 
+    // S2(index/receipt/): 各書き込み済みイベントは truth/ の payload に加えて
+    // index/receipt/ の索引エントリも持つ(1イベント=2オブジェクト)。この節の意図は
+    // 「dry-run は何も永続化しない/実書き込みは書いた件数ぶんだけ payload が増える」
+    // であり、payload 件数(truth/ プレフィックス)だけを数えれば意図を変えずに検証できる。
+    const truthObjectCount = () =>
+      [...bucket.objects.keys()].filter((k) => k.startsWith("truth/")).length;
+
     const dry = await importCsv(app, env, csvForm({ csv: csvText, deviceId: "dev-dry", dryRun: true }));
     expect(dry.status).toBe(200);
     const dryBody = (await dry.json()) as { dry_run: boolean; written: number; skipped_duplicate: number };
@@ -251,13 +258,13 @@ describe("V3-OBS-32 dry-run preview (no write)", () => {
     const real = await importCsv(app, env, csvForm({ csv: csvText, deviceId: "dev-dry", dryRun: false }));
     const realBody = (await real.json()) as { written: number };
     expect(realBody.written).toBe(dryBody.written); // preview matched the real outcome
-    expect(bucket.objects.size).toBe(realBody.written);
+    expect(truthObjectCount()).toBe(realBody.written);
 
     // dry-running again now that the buckets are real → previews full skip.
     const dry2 = await importCsv(app, env, csvForm({ csv: csvText, deviceId: "dev-dry", dryRun: true }));
     const dry2Body = (await dry2.json()) as { written: number; skipped_duplicate: number };
     expect(dry2Body).toMatchObject({ written: 0, skipped_duplicate: realBody.written });
-    expect(bucket.objects.size).toBe(realBody.written); // still untouched by the preview
+    expect(truthObjectCount()).toBe(realBody.written); // still untouched by the preview
   });
 });
 

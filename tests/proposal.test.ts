@@ -42,9 +42,12 @@ describe("KRM-24 create + fork", () => {
     expect(res.status).toBe(201);
     const forked = (await res.json()) as { proposal_id: string; rank: string };
     expect(forked.rank).toBe("beginner");
-    // 元イベントに forked_from が記録されている。
-    const forkEv = [...bucket.objects.values()]
-      .map((o) => JSON.parse(o.body as string))
+    // 元イベントに forked_from が記録されている。S2(index/receipt/)導入後、bucket には
+    // 索引エントリ(truth/ の envelope とは別形状・data フィールドを持たない)も混在する
+    // ため、truth/ の payload だけに絞ってから探す。
+    const forkEv = [...bucket.objects.entries()]
+      .filter(([key]) => key.startsWith("truth/"))
+      .map(([, o]) => JSON.parse(o.body as string))
       .find((e) => e.data.kind === "fork");
     expect(forkEv.data.forked_from).toBe("PR-2");
   });
