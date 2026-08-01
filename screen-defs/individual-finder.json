@@ -1,0 +1,29 @@
+{
+  "screen_id": "individual-finder",
+  "route": "/individual-finder",
+  "title": "個体ファインダー",
+  "layout": "standard",
+  "notes": "V3-UIX-83(○75「いいですよ」)第1段(b2think §4-5案3の案2部分=カタログ組み込みのみ・体験は一切変えない)。中身は完成済み静的ページ(/finder/finder.html。ユーザーがround-17で100点評価=user-ruling-2026-07-18-round-17.md:18「これ最高ですよ!絶対にIHLver3に実装する」)への入口。ScreenDefの検査(i18n/トークン/構造ゲート)は静的ページ内部には及ばない。第2段(宇宙ビューのgraph-view化=uib09-(2)と共用)はUIB11-A裁定(review-queue\\R0801-95b347-uib11finderway-2026-08-01.json)待ち。旧`individual-finder`専用ノード型はR54(caseB7直系版採用)で撤去済み(screendef.schema.json:92の撤去注記)につき本画面ではlinkノードで代替した。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            { "id": "title", "type": "heading", "props": { "text": "個体ファインダー", "level": 1 } },
+            { "id": "purpose", "type": "text", "props": { "text": "理想の個体を条件で絞り、宇宙ビューで血統ごと眺める。", "muted": true } },
+            {
+              "id": "open-finder",
+              "type": "link",
+              "props": { "label": "ファインダーを開く", "href": "/finder/finder.html" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

@@ -1574,12 +1574,36 @@ function TabsNode({ node }: { node: ScreenNode }) {
   // value — the effect below re-applies the resolved default once the data
   // arrives, but only until the visitor taps a tab themselves.
   const resolvedDefault = rawDefault.includes("{{") ? interpolate(rawDefault, scope) : rawDefault;
-  const [active, setActive] = useState<string>(resolvedDefault || String(tabs[0]?.id ?? ""));
-  const touchedRef = useRef(false);
+  // uib09-1a(b2think §3-3): 選択タブの記憶。props.persist_key が付いた画面
+  // (obs-search)だけ localStorage を読み書きする — 未指定の画面(market-trade等)
+  // は従来どおり default_tab のみで挙動不変。
+  const persistKey = p.persist_key != null ? String(p.persist_key) : null;
+  const restoredTab = (() => {
+    if (!persistKey || typeof window === "undefined") return null;
+    try {
+      const saved = window.localStorage.getItem(persistKey);
+      return saved && tabs.some((t) => String(t.id ?? "") === saved) ? saved : null;
+    } catch {
+      return null;
+    }
+  })();
+  const [active, setActiveState] = useState<string>(restoredTab ?? (resolvedDefault || String(tabs[0]?.id ?? "")));
+  const setActive = (id: string) => {
+    setActiveState(id);
+    if (!persistKey || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(persistKey, id);
+    } catch {
+      /* best effort */
+    }
+  };
+  // restoredTab がある時は復元済みタブを default_tab で上書きしない(既にタップ
+  // 済み扱いにする)。
+  const touchedRef = useRef(restoredTab != null);
   useEffect(() => {
     if (touchedRef.current) return;
     if (resolvedDefault && tabs.some((t) => String(t.id ?? "") === resolvedDefault) && resolvedDefault !== active) {
-      setActive(resolvedDefault);
+      setActiveState(resolvedDefault);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedDefault]);
@@ -4255,6 +4279,64 @@ function TargetNavigatorNode({
   );
 }
 
+// V3-UIX-37(uib05・b2think §1-4案1): 体長/体重の数値レンジ絞り込み行は構造完全一致
+// のため共通化。DOM構造(civ-picker-row/civ-label/civ-input/civ-text[data-muted]・
+// id・aria)は元の2ブロックと1文字も変えていない。
+type NumericFilterRowProps = {
+  label: string;
+  idBase: string;
+  centerDraft: string;
+  widthDraft: string;
+  onCenterChange: (v: string) => void;
+  onWidthChange: (v: string) => void;
+  onCommit: () => void;
+  widthAriaLabel: string;
+};
+
+function NumericFilterRow({
+  label,
+  idBase,
+  centerDraft,
+  widthDraft,
+  onCenterChange,
+  onWidthChange,
+  onCommit,
+  widthAriaLabel,
+}: NumericFilterRowProps) {
+  return (
+    <div className="civ-picker-row">
+      <label className="civ-label" htmlFor={`${idBase}-x`}>
+        {label}
+      </label>
+      <input
+        id={`${idBase}-x`}
+        className="civ-input"
+        type="number"
+        inputMode="decimal"
+        placeholder="中心値"
+        value={centerDraft}
+        onChange={(e) => onCenterChange(e.target.value)}
+        onBlur={onCommit}
+        onKeyDown={(e) => e.key === "Enter" && onCommit()}
+      />
+      <span className="civ-text" data-muted="true">
+        ±
+      </span>
+      <input
+        className="civ-input"
+        type="number"
+        inputMode="decimal"
+        placeholder="幅"
+        aria-label={widthAriaLabel}
+        value={widthDraft}
+        onChange={(e) => onWidthChange(e.target.value)}
+        onBlur={onCommit}
+        onKeyDown={(e) => e.key === "Enter" && onCommit()}
+      />
+    </div>
+  );
+}
+
 // 構造要約(c8 UI磨きR0801-9d452f-ui13rendererdoc・screen-defs/obs-search.json
 // はnode {type:"search-navigator"} 1個のみでこのコンポーネントに委譲。動作影響なし):
 //   GET /individuals + GET /placements 取得 → 保存検索チップ(localStorage)+
@@ -4615,66 +4697,26 @@ function SearchNavigatorNode() {
                 ))}
               </div>
             )}
-            <div className="civ-picker-row">
-              <label className="civ-label" htmlFor="search-length-x">
-                体長(mm)
-              </label>
-              <input
-                id="search-length-x"
-                className="civ-input"
-                type="number"
-                inputMode="decimal"
-                placeholder="中心値"
-                value={lengthXDraft}
-                onChange={(e) => setLengthXDraft(e.target.value)}
-                onBlur={commitLength}
-                onKeyDown={(e) => e.key === "Enter" && commitLength()}
-              />
-              <span className="civ-text" data-muted="true">
-                ±
-              </span>
-              <input
-                className="civ-input"
-                type="number"
-                inputMode="decimal"
-                placeholder="幅"
-                aria-label="体長の幅"
-                value={lengthYDraft}
-                onChange={(e) => setLengthYDraft(e.target.value)}
-                onBlur={commitLength}
-                onKeyDown={(e) => e.key === "Enter" && commitLength()}
-              />
-            </div>
-            <div className="civ-picker-row">
-              <label className="civ-label" htmlFor="search-weight-x">
-                体重(g)
-              </label>
-              <input
-                id="search-weight-x"
-                className="civ-input"
-                type="number"
-                inputMode="decimal"
-                placeholder="中心値"
-                value={weightXDraft}
-                onChange={(e) => setWeightXDraft(e.target.value)}
-                onBlur={commitWeight}
-                onKeyDown={(e) => e.key === "Enter" && commitWeight()}
-              />
-              <span className="civ-text" data-muted="true">
-                ±
-              </span>
-              <input
-                className="civ-input"
-                type="number"
-                inputMode="decimal"
-                placeholder="幅"
-                aria-label="体重の幅"
-                value={weightYDraft}
-                onChange={(e) => setWeightYDraft(e.target.value)}
-                onBlur={commitWeight}
-                onKeyDown={(e) => e.key === "Enter" && commitWeight()}
-              />
-            </div>
+            <NumericFilterRow
+              label="体長(mm)"
+              idBase="search-length"
+              centerDraft={lengthXDraft}
+              widthDraft={lengthYDraft}
+              onCenterChange={setLengthXDraft}
+              onWidthChange={setLengthYDraft}
+              onCommit={commitLength}
+              widthAriaLabel="体長の幅"
+            />
+            <NumericFilterRow
+              label="体重(g)"
+              idBase="search-weight"
+              centerDraft={weightXDraft}
+              widthDraft={weightYDraft}
+              onCenterChange={setWeightXDraft}
+              onWidthChange={setWeightYDraft}
+              onCommit={commitWeight}
+              widthAriaLabel="体重の幅"
+            />
           </div>
         )}
       </div>

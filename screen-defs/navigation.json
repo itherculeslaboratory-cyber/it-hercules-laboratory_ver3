@@ -52,7 +52,8 @@
     "ai-profile-settings",
     "knowledge-thread",
     "dispute",
-    "setup-profile"
+    "setup-profile",
+    "individual-finder"
   ],
   "edges": [
     {
@@ -494,6 +495,11 @@
       "from": "login",
       "to": "setup-profile",
       "label": "middleware誘導(オンボーディング未完了・V3-AUT-10)—ログイン成功後handleが未設定ならここへ307誘導"
+    },
+    {
+      "from": "home",
+      "to": "individual-finder",
+      "label": "個体ファインダー(2026-08-01 g78-b2implC・V3-UIX-83第1段=カタログ登録のみ。renderer.tsx側の実導線/finder/finder.html直リンクは現状のまま触っていない=二重入口)"
     }
   ]
 }

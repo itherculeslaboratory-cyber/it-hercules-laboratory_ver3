@@ -21,6 +21,7 @@ const SCREEN_IDS = [
   "economy-status",
   "home",
   "individual-detail",
+  "individual-finder",
   "knowledge-board",
   "knowledge-github",
   "knowledge-hub",

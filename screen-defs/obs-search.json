@@ -3,7 +3,7 @@
   "route": "/observe/search",
   "title": "検索",
   "layout": "standard",
-  "notes": "V3-AIP-101 検索スライスA(c7-wireframes-core5 §2 obs-navigator のトーン/語彙のみ流用・F3類似度検索/ステージ別グルーピング/F1L軽量グリッド/コールドスタート自動プリセットは明示的に対象外)。実装は search-navigator ノード1個: GET /individuals + GET /placements を取得し、localStorage 保存検索チップ+ファセット絞り込み(種/ステージ/棚+体長/体重の±レンジ)+0件時の1タップ緩和バー+4択ソート+下部固定バスケットをクライアント側で組み立てる。[→ 計測グリッドへ]でバスケットの個体IDを savePreselect() 経由で sessionStorage に積み obs-register-batch へハンドオフする。トーンは中立(2026-07-12ユーザー裁定: 赤/催促表現禁止)。",
+  "notes": "V3-AIP-101 検索スライスA(c7-wireframes-core5 §2 obs-navigator のトーン/語彙のみ流用・F3類似度検索/ステージ別グルーピング/F1L軽量グリッド/コールドスタート自動プリセットは明示的に対象外)。実装は search-navigator ノード1個: GET /individuals + GET /placements を取得し、localStorage 保存検索チップ+ファセット絞り込み(種/ステージ/棚+体長/体重の±レンジ)+0件時の1タップ緩和バー+4択ソート+下部固定バスケットをクライアント側で組み立てる。[→ 計測グリッドへ]でバスケットの個体IDを savePreselect() 経由で sessionStorage に積み obs-register-batch へハンドオフする。トーンは中立(2026-07-12ユーザー裁定: 赤/催促表現禁止)。★2026-08-01(uib09-1a・b2think §3-3): 一般/ブリーダーの3モードタブの器を追加(研究者モードは設計待ちのため未着手・死にタブは出さない)。出し分けの見た目(何を一般に見せ何をブリーダーに見せるか)は未裁定のため、両タブとも現行の search-navigator UIをそのまま表示する(b2think §3-3の指示どおり=器が主目的。出し分けは実物スクショの上でUIB09-Aカードにて別途裁定)。選択タブは localStorage(`ihl:obs-search-tab`。既存 `ihl:obs-search-last-filter` 命名規約に倣う)に記憶。",
   "nodes": [
     {
       "id": "shell",
@@ -14,7 +14,22 @@
           "type": "page",
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "検索", "level": 1 } },
-            { "id": "navigator", "type": "search-navigator" }
+            {
+              "id": "search-mode-tabs",
+              "type": "tabs",
+              "props": {
+                "tabs": [
+                  { "id": "general", "label": "一般" },
+                  { "id": "breeder", "label": "ブリーダー" }
+                ],
+                "default_tab": "general",
+                "persist_key": "ihl:obs-search-tab"
+              },
+              "children": [
+                { "id": "navigator-general", "type": "search-navigator", "props": { "tab_id": "general" } },
+                { "id": "navigator-breeder", "type": "search-navigator", "props": { "tab_id": "breeder" } }
+              ]
+            }
           ]
         }
       ]
