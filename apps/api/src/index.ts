@@ -679,12 +679,35 @@ const SELF_SERVICE_EVENT_TYPES = new Set<string>([
   "ihl.research.query.v1",
 ]);
 
+// g93 裁定(00-hq\kits\lane-think\R0802-37b8e4-REPORT-2026-08-02-g93-truththink.md §4)。
+// type は上で fail-closed しているが dataschema は無検査で putEvent へ素通りしていた。
+// envelope.schema.json は dataschema を required にしておらず(:8)、validateEnvelope は
+// dataschema が未登録名または省略なら data 検証を丸ごと飛ばす(envelope.ts:381-392)。
+// 結果、allowlist 内の type を名乗ったまま任意形状の data を INSERT ONLY の Truth へ
+// 恒久投入できた。ここを type ごとのポジティブリストで塞ぐ。
+// 空配列 = 「dataschema を持たないことだけを許可」(ihl.test.sample.v1 は対応スキーマが
+// 存在しない設計 = 上の :671-673 コメント。tests/helpers.ts makeEnvelope の既定値も
+// dataschema を持たないため、無条件必須化すると既存テストが広範囲に落ちる)。
+const SELF_SERVICE_DATASCHEMAS: Record<string, readonly string[]> = {
+  "ihl.ui.vote.v1": ["schemas/events/ui-vote.schema.json"],
+  "ihl.process.intent.v1": ["schemas/events/intent.schema.json"],
+  "ihl.test.sample.v1": [],
+  "ihl.research.query.v1": ["schemas/events/research-query.schema.json"],
+};
+
 app.post("/events", async (c) => {
   const body = await c.req.json().catch(() => null);
   const actorId = c.get("actorId");
   const eventType = body && typeof body === "object" ? (body as { type?: unknown }).type : undefined;
   if (typeof eventType !== "string" || !SELF_SERVICE_EVENT_TYPES.has(eventType)) {
     return c.json({ error: "USE_TYPED_ROUTE", type: eventType }, 403);
+  }
+  const allowedSchemas = SELF_SERVICE_DATASCHEMAS[eventType] ?? [];
+  const ds = body && typeof body === "object" ? (body as { dataschema?: unknown }).dataschema : undefined;
+  const dsOk = ds === undefined ? allowedSchemas.length === 0
+    : typeof ds === "string" && allowedSchemas.includes(ds);
+  if (!dsOk) {
+    return c.json({ error: "DATASCHEMA_NOT_ALLOWED", type: eventType, dataschema: ds }, 403);
   }
   if (body && typeof body === "object" && typeof (body as { provenance?: unknown }).provenance === "object" && (body as { provenance?: unknown }).provenance) {
     (body as { provenance: Record<string, unknown> }).provenance.actor_id = actorId;

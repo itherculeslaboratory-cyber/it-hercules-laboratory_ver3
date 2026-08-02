@@ -18,7 +18,7 @@
 // Usage:
 //   node scripts/codegen-validators.mjs          # regenerate in place
 //   node scripts/codegen-validators.mjs --check   # regen to temp, byte-compare
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createRequire } from "node:module";
 
@@ -52,6 +52,11 @@ const SCHEMAS = [
   // C7 スライス2 クラッチ(匿名プール) events (must match envelope.ts VALIDATOR_NAME + EVENT_NAMES)
   ["indClutch", "events/ind-clutch.schema.json"],
   ["indClutchEvent", "events/ind-clutch-event.schema.json"],
+  // g93 裁定②(00-hq\kits\lane-think\R0802-709a2e-REPORT-2026-08-02-prep-truthruling2.md R1)。
+  // 監査12型リストの対象外で発見された単純な登録漏れ2件。schema/生成型は既に実在しており、
+  // 書込みコードとの突合は0差分(同裁定 R1-1 理由3)。
+  ["indLineageDoubt", "events/ind-lineage-doubt.schema.json"],
+  ["actorDisplayName", "events/actor-display-name.schema.json"],
   ["taxonSpecies", "events/taxon-species.schema.json"],
   ["taxonMorph", "events/taxon-morph.schema.json"],
   ["taxonAlias", "events/taxon-alias.schema.json"],
@@ -76,6 +81,11 @@ const SCHEMAS = [
   ["mktReservationEvent", "events/mkt-reservation-event.schema.json"],
   // round-15拡張(V3-GOV-35違法出品ユーザー自治)
   ["mktListingFlag", "events/mkt-listing-flag.schema.json"],
+  // g93 裁定T2(00-hq\kits\lane-think\R0802-37b8e4-REPORT-2026-08-02-g93-truththink.md):
+  // #12 単純な登録漏れの是正。schemaファイルは86dfb03で導入済みだったがSCHEMAS未登録だった。
+  ["mktListingPhoto", "events/mkt-listing-photo.schema.json"],
+  // g93裁定T3: #11 obs-photo-meta のスキーマ起草+登録(実データ5件から確定)。
+  ["obsPhotoMeta", "events/obs-photo-meta.schema.json"],
   ["socialEval", "events/social-eval.schema.json"],
   ["socialPlatinumVote", "events/social-platinum-vote.schema.json"],
   ["researchProposal", "events/research-proposal.schema.json"],
@@ -219,6 +229,48 @@ function generateDts() {
   const decls = SCHEMAS.map(([exportName]) => `export declare const ${exportName}: ValidateFunction;\n`).join("");
   return banner + decls;
 }
+
+// g93裁定T1(00-hq\kits\lane-think\R0802-37b8e4-REPORT-2026-08-02-g93-truththink.md §3-2):
+// schemas/ 全ファイル網羅検査。SCHEMAS配列に載っていないファイルが在れば、それは
+// 検証がスキップされる未登録イベント型を意味する(Truth is INSERT ONLY, unfixable)。
+// 除外してよいのは UNREGISTERED_DEBT に相当する型のみ。この定数は tests/event-registry-wiring.test.ts
+// の同名定数と内容を一致させること(2箇所に書く理由・単一正本化しない理由は同テストのコメント参照)。
+// ★この配列は増やすな。増やす必要が出たら設計判断として考える役へ差し戻せ(g93裁定§3-3)。
+const UNREGISTERED_DEBT = [
+  "mkt-listing-intl",
+  "mkt-intl-shipping-rate",
+  "mkt-platinum-symbol",
+  "mkt-platinum-symbol-right",
+  "mkt-relist-policy",
+  "mkt-relist-event",
+  "plaza-dm-thread",
+  "plaza-dm-message",
+  "wiki-template",
+  "obs-poll-interval",
+];
+
+function checkFullCoverage() {
+  const registered = new Set(SCHEMAS.map(([, rel]) => rel));
+  const missing = [];
+  for (const category of ["events", "frozen"]) {
+    const dir = join(ROOT, "schemas", category);
+    for (const f of readdirSync(dir).sort()) {
+      if (!f.endsWith(".schema.json")) continue;
+      if (category === "events" && f === "envelope.schema.json") continue;
+      const rel = `${category}/${f}`;
+      const kebab = f.replace(/\.schema\.json$/, "");
+      if (UNREGISTERED_DEBT.includes(kebab)) continue;
+      if (!registered.has(rel)) missing.push(rel);
+    }
+  }
+  if (missing.length > 0) {
+    console.error("codegen-validators: schemas/ 全ファイル網羅検査 FAILED — SCHEMAS配列に未登録のファイルがあります:");
+    for (const m of missing) console.error(`  ${m}`);
+    console.error("fix: SCHEMAS配列に追加するか、意図的な先送りなら UNREGISTERED_DEBT に追加する設計判断を仰げ(勝手に追加しない)。");
+    process.exit(1);
+  }
+}
+checkFullCoverage();
 
 const out = generate();
 const dtsOut = generateDts();

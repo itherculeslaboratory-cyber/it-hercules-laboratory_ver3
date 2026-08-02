@@ -75,6 +75,7 @@ export * from "./events/obs-capture";
 export * from "./events/obs-color";
 export * from "./events/obs-datasource";
 export * from "./events/obs-device";
+export * from "./events/obs-photo-meta";
 export * from "./events/obs-photo";
 export * from "./events/obs-schedule";
 export * from "./events/obs-template";

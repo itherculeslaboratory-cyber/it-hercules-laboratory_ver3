@@ -51,7 +51,16 @@ describe("CL-02 provenance meta", () => {
     expect(validateEnvelope(bad).valid).toBe(false);
   });
 
-  it("POST /events with broken provenance data → 400", async () => {
+  // g93 裁定②(00-hq\kits\lane-think\R0802-709a2e-REPORT-2026-08-02-prep-truthruling2.md R2)。
+  // 趣旨は不変 =「壊れた provenance を載せた envelope は POST /events で受理されない」。
+  // 変わったのは拒否する層とコード: 以前は putEvent まで到達して 400 INVALID_ENVELOPE
+  // だったが、T5 の dataschema ポジティブリスト(apps/api/src/index.ts:691-711)により
+  // frozen/provenance は self-service のどの type にも許可されておらず、putEvent へ
+  // 到達する前に 403 DATASCHEMA_NOT_ALLOWED で弾かれる。
+  // ★これは緩和ではなく強化 — T5 以前は「正しい形の provenance data」なら 201 で通っていた。
+  // 400 INVALID_ENVELOPE の層レベルの意味論は tests/f2-research-query-truth.test.ts:61-70 が、
+  // provenance 固有の data 検証は上の validateEnvelope 直呼びが引き続き守る。
+  it("POST /events with a frozen provenance dataschema → 403 (rejected before putEvent)", async () => {
     const badData = { ...sample };
     delete badData.run_id;
     const res = await app.request(
@@ -65,6 +74,7 @@ describe("CL-02 provenance meta", () => {
       },
       makeEnv(),
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("DATASCHEMA_NOT_ALLOWED");
   });
 });

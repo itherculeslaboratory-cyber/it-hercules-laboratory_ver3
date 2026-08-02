@@ -29,6 +29,9 @@ const VALIDATOR_NAME: Record<string, string> = {
   // C7 スライス2 クラッチ(匿名プール) events
   "ind-clutch": "indClutch",
   "ind-clutch-event": "indClutchEvent",
+  // g93 裁定②(00-hq\kits\lane-think\R0802-709a2e-REPORT-2026-08-02-prep-truthruling2.md R1)。
+  "ind-lineage-doubt": "indLineageDoubt",
+  "actor-display-name": "actorDisplayName",
   "taxon-species": "taxonSpecies",
   "taxon-morph": "taxonMorph",
   "taxon-alias": "taxonAlias",
@@ -39,6 +42,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "obs-analysis": "obsAnalysis",
   // g80-e2color(b3think §3-3): BPCMS v1.0 派生Labレイヤー(色検索接続)。
   "obs-color": "obsColor",
+  // g93裁定T3: #11単純な登録漏れの是正(00-hq\kits\lane-think\R0802-37b8e4-REPORT-2026-08-02-g93-truththink.md)。
+  "obs-photo-meta": "obsPhotoMeta",
   "cusb-ingest": "cusbIngest",
   // C5 K3 economy/market events (schemas/events/*, non-frozen, reversible)
   "economy-pt-event": "economyPtEvent",
@@ -53,6 +58,8 @@ const VALIDATOR_NAME: Record<string, string> = {
   "mkt-reservation-event": "mktReservationEvent",
   // round-15拡張(V3-GOV-35違法出品ユーザー自治)
   "mkt-listing-flag": "mktListingFlag",
+  // g93裁定T2: #12単純な登録漏れの是正(00-hq\kits\lane-think\R0802-37b8e4-REPORT-2026-08-02-g93-truththink.md)。
+  "mkt-listing-photo": "mktListingPhoto",
   "social-eval": "socialEval",
   "social-platinum-vote": "socialPlatinumVote",
   "research-proposal": "researchProposal",
@@ -194,6 +201,10 @@ const EVENT_NAMES = new Set([
   // at 201 permanently (Truth is INSERT ONLY, unfixable).
   "ind-clutch",
   "ind-clutch-event",
+  // g93 裁定② — data validation MUST fire or putEvent stores unchecked data
+  // permanently (Truth is INSERT ONLY, unfixable).
+  "ind-lineage-doubt",
+  "actor-display-name",
   "taxon-species",
   "taxon-morph",
   "taxon-alias",
@@ -205,6 +216,9 @@ const EVENT_NAMES = new Set([
   // g80-e2color — data validation MUST fire or putEvent stores unchecked data
   // permanently (Truth is INSERT ONLY, unfixable).
   "obs-color",
+  // g93裁定T3 — data validation MUST fire or putEvent stores unchecked data
+  // permanently (Truth is INSERT ONLY, unfixable).
+  "obs-photo-meta",
   "cusb-ingest",
   // C5 K3 — data validation MUST fire or putEvent stores unchecked data at 202
   // permanently (Truth is INSERT ONLY, unfixable). See design-k3 §2.1 批評家#1.
@@ -220,6 +234,9 @@ const EVENT_NAMES = new Set([
   "mkt-reservation",
   "mkt-reservation-event",
   "mkt-listing-flag",
+  // g93裁定T2 — data validation MUST fire or putEvent stores unchecked data
+  // permanently (Truth is INSERT ONLY, unfixable).
+  "mkt-listing-photo",
   "social-eval",
   "social-platinum-vote",
   "research-proposal",
