@@ -29,6 +29,15 @@ const SRC_EXT = /\.(ts|tsx|mjs|cjs|js)$/;
 const IMPORT_RE = /\b(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g;
 const BINDING_DENY = /\b(d1_databases|kv_namespaces|durable_objects|hyperdrive)\b/g;
 
+// 揮発運用状態としてレビュー済みの KV binding 名(不変条項①の例外ではなく、
+// 「SSOT ではない」ことを確認済みという宣言)。いずれも TTL 付きで、未バインド時は
+// no-op フォールバックが設計されている(apps/api/src/env.ts)。新しい名前をここへ
+// 足すのは、その binding が永続 SSOT でないことをレビューで確認した時だけ。
+//   AUTH_DENYLIST    : 失効 denylist(V3-AUT-03)  — userId→失効時刻。失効時刻で消える
+//   AUTH_CODE_STATE  : 数字コード verify(V3-AUT-46)— 試行回数/消費済み iat。ワンタイム
+//   RATE_LIMIT       : 固定ウィンドウカウンタ(V3-SEC-14 / V3-SEC-58)— ウィンドウ幅で消える
+const KV_BINDING_ALLOW = new Set(["AUTH_DENYLIST", "AUTH_CODE_STATE", "RATE_LIMIT"]);
+
 /** Repo-relative posix path → {layer, owner}. owner = top two segments for known layers. */
 function topInfo(rel) {
   const seg = rel.split("/");
@@ -80,9 +89,24 @@ export function isNestedPkg(rel) {
   return !/^(apps|packages)\/[^/]+\/package\.json$/.test(rel) && rel !== "tests/package.json";
 }
 
-/** Resident-store bindings found in a wrangler.toml body (empty = clean). */
+/**
+ * Resident-store bindings found in a wrangler.toml body (empty = clean).
+ * d1_databases / durable_objects / hyperdrive は無条件で違反。
+ * kv_namespaces は、その節に属する binding 名が全て KV_BINDING_ALLOW に
+ * 載っている場合にのみ緑(1つでも未承認名があれば違反として返す)。
+ */
 export function scanBindings(tomlText) {
-  return [...tomlText.matchAll(BINDING_DENY)].map((m) => m[1]);
+  const hits = [];
+  for (const m of tomlText.matchAll(BINDING_DENY)) {
+    if (m[1] !== "kv_namespaces") { hits.push(m[1]); continue; }
+    // 当該 kv_namespaces 節から次の節見出しまでを切り出し、binding 名を拾う
+    const rest = tomlText.slice(m.index);
+    const section = rest.slice(0, (rest.slice(1).search(/^\s*\[/m) + 1) || rest.length);
+    const names = [...section.matchAll(/^\s*binding\s*=\s*["']([^"']+)["']/gm)].map((b) => b[1]);
+    // 名前が1つも書かれていない = 判定できないので従来どおり違反に倒す
+    if (names.length === 0 || names.some((n) => !KV_BINDING_ALLOW.has(n))) hits.push(m[1]);
+  }
+  return hits;
 }
 
 // Resident DB / dedicated vector-store client packages (invariant ①: R2/Truth is
@@ -263,6 +287,18 @@ function selftest() {
   assert(!!checkImport("apps/api/src/x.ts", "@ihl/shared", ws), "D3 shared (pkg name)");
   assert(scanBindings("[[d1_databases]]").length > 0, "binding d1 flagged");
   assert(scanBindings("kv_namespaces = []").length > 0, "binding kv flagged");
+  assert(
+    scanBindings('[[kv_namespaces]]\nbinding = "RATE_LIMIT"\nid = "x"').length === 0,
+    "allowlisted kv clean"
+  );
+  assert(
+    scanBindings('[[kv_namespaces]]\nbinding = "USER_PROFILES"\nid = "x"').length > 0,
+    "non-allowlisted kv flagged"
+  );
+  assert(
+    scanBindings('[[d1_databases]]\nbinding = "AUTH_DENYLIST"').length > 0,
+    "d1 flagged even with allowlisted name"
+  );
   assert(isNestedPkg("apps/api/src/sub/package.json"), "nested pkg deep");
   assert(isNestedPkg("components/collector-switchbot/package.json"), "nested pkg in components");
   // known-good → must NOT flag
