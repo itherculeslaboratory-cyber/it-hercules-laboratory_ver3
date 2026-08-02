@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { middleware, requiresAuth, skipsOnboardingCheck } from "./middleware";
+import { middleware, requiresAuth, skipsConsentCheck, skipsOnboardingCheck } from "./middleware";
 
 describe("requiresAuth — V3-AUT-12 protected-route guard (pure)", () => {
   it("exempts the login entry screens", () => {
     expect(requiresAuth("/s/login")).toBe(false);
     expect(requiresAuth("/s/login-sent")).toBe(false);
+  });
+  it("T2/V3-SEC-20: exempts /s/terms (unauthenticated visitors can read the full terms text)", () => {
+    expect(requiresAuth("/s/terms")).toBe(false);
   });
   it("requires a session for every other screen, including home and setup-profile", () => {
     expect(requiresAuth("/")).toBe(true);
@@ -24,6 +27,19 @@ describe("skipsOnboardingCheck — V3-AUT-10 onboarding gate (pure)", () => {
   it("checks every other screen", () => {
     expect(skipsOnboardingCheck("/")).toBe(false);
     expect(skipsOnboardingCheck("/s/settings")).toBe(false);
+  });
+});
+
+describe("skipsConsentCheck — T2/V3-SEC-20 consent gate (pure)", () => {
+  it("skips the login screens and /s/terms itself (same PUBLIC_PATHS set)", () => {
+    expect(skipsConsentCheck("/s/login")).toBe(true);
+    expect(skipsConsentCheck("/s/login-sent")).toBe(true);
+    expect(skipsConsentCheck("/s/terms")).toBe(true);
+  });
+  it("checks every other screen", () => {
+    expect(skipsConsentCheck("/")).toBe(false);
+    expect(skipsConsentCheck("/s/settings")).toBe(false);
+    expect(skipsConsentCheck("/s/setup-profile")).toBe(false);
   });
 });
 
@@ -129,6 +145,39 @@ describe("middleware — V3-AUT-12 redirect behavior", () => {
       expect(res.headers.get("location")).toBeNull();
       // exactly one call: the single /auth/session fetch covers both gates.
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // ── T2/V3-SEC-20 consent gate ───────────────────────────────────────────
+  // Order is auth -> consent -> onboarding: an authenticated visitor who
+  // hasn't agreed yet is sent to /s/terms, ahead of the onboarding check.
+  it("redirects an authenticated visitor with consent_complete:false to /s/terms", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchSequence({
+        "/auth/session": { authenticated: true, actor_id: "a", onboarding_complete: true, consent_complete: false },
+      }),
+    );
+    try {
+      const req = new NextRequest("http://localhost:3000/s/home", { headers: { cookie: "ihl_session=v1.x.y" } });
+      const res = await middleware(req);
+      expect(res.status).toBe(307);
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/s/terms");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("does NOT redirect-loop: /s/terms itself is reachable (exempt via PUBLIC_PATHS, no fetch call)", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const req = new NextRequest("http://localhost:3000/s/terms");
+      const res = await middleware(req);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(res.headers.get("location")).toBeNull();
     } finally {
       vi.unstubAllGlobals();
     }

@@ -51,7 +51,7 @@
   "login.arc-in.title": "迷わず入る",
   "login.arc-in.body": "メールにリンクを送るだけ。リンクを開けない時は、届いた数字コードでも入れます。",
   "login.arc-start.title": "自分の場を整える",
-  "login.arc-start.body": "最初に表示名・言語・国を決めます(必須はこの3つだけ)。規約への同意はこのページのチェックボックスで完了します。",
+  "login.arc-start.body": "最初に表示名・言語・国を決めます(必須はこの3つだけ)。規約への同意は、送信前のこのチェックと、ログイン後の規約ページでの本同意の2段階です。",
   "login.step.login": "ログイン",
   "login.step.profile": "表示名と言語",
   "login.step.locale": "国・言語(任意)",

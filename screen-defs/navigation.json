@@ -68,7 +68,7 @@
     {
       "from": "terms",
       "to": "home",
-      "label": "同意して始める(terms.json自身のagreeボタン。実経路の同意記録はloginのチェックボックスで完結・termsは本文閲覧用)",
+      "label": "同意して始める(terms.json自身のagree-formがPOST /api/v1/onboarding/agreeを叩きCL-05同意記録を作る。2026-08-02是正=旧記述『実経路の同意記録はloginのチェックボックスで完結』は誤りだった)",
       "source": "screendef"
     },
     {

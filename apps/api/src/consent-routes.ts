@@ -1,10 +1,14 @@
-// V3-SEC-20(仕上げ): 利用規約(ToS)機能の残余。既存で満たされている部分は本ファイルに
-// 含めない(コードでなく設計の再確認): (a)未認証ユーザーの /onboarding/terms 全文閲覧は
-// apps/web にルーターレベルの認証ガードが無く screen-defs/terms.json 自体も API 呼び出しを
-// 持たないため既に成立(no code change)。(b)ログインリンク送信前の同意チェック必須(未同意
-// 時disabled)は screen-defs/login.json の required checkbox("terms")を renderer.tsx の
-// V3-AUT-06 ゲート(anyField(...,isRequiredCheckbox) → 送信ボタン disabled)が既に担保
-// (no code change)。
+// V3-SEC-20(仕上げ): 利用規約(ToS)機能の残余。
+// (a)未認証ユーザーの /s/terms 全文閲覧は、当初「apps/web にルーターレベルの認証ガードが
+// 無く既に成立(no code change)」と自己申告していたが、後から入った V3-AUT-12
+// middleware(apps/web/src/middleware.ts)がこれを無効化していた(/s/terms が未公開だった)。
+// 2026-08-02(R0802-3e4e1b T2)で middleware.ts の PUBLIC_PATHS に "/s/terms" を追加して
+// 是正済み。(b)ログインリンク送信前の同意チェック必須(未同意時disabled)は
+// screen-defs/login.json の required checkbox("terms")を renderer.tsx の V3-AUT-06 ゲート
+// (anyField(...,isRequiredCheckbox) → 送信ボタン disabled)が担保(no code change、変更なし)。
+// ただしこのチェックは送信前の確認にすぎず、法的な同意記録(CL-05)はこのファイルの
+// POST /onboarding/agree を screen-defs/terms.json の agree-form が叩いた時にのみ作られる
+// (2026-08-02是正・旧コメントの「同意記録はloginで完結」は誤りだった)。
 //
 // 本ファイルが埋める残余ギャップ: 「初回オンボーディングで利用規約とプライバシー両方への
 // 同意をAPIで検証(MUST_AGREE_TO_TERMS)し、同意状態を永続化する」というオンボーディング

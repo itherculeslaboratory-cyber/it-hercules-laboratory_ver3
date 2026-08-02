@@ -163,7 +163,29 @@ describe("C2 auth — session state + middleware paths", () => {
 
     const { cookie, actorId } = await login("user@example.com");
     const authed = await app.request("/api/v1/auth/session", { headers: { Cookie: cookie } }, makeEnv());
-    expect(await authed.json()).toEqual({ authenticated: true, actor_id: actorId, onboarding_complete: false });
+    expect(await authed.json()).toEqual({
+      authenticated: true,
+      actor_id: actorId,
+      onboarding_complete: false,
+      consent_complete: false,
+    });
+  });
+
+  it("T1/V3-SEC-20: GET /session reports consent_complete:false before agreeing, true after POST /onboarding/agree", async () => {
+    const env = makeEnv(); // same bucket for both requests — consent state must persist
+    const { cookie } = await login("consent-t1@example.com");
+    const before = await app.request("/api/v1/auth/session", { headers: { Cookie: cookie } }, env);
+    expect((await before.json()) as { consent_complete: boolean }).toMatchObject({ consent_complete: false });
+
+    const agree = await app.request(
+      "/api/v1/onboarding/agree",
+      { method: "POST", headers: { Cookie: cookie, ...JSON_HEADERS }, body: JSON.stringify({ agreedTerms: true, agreedPrivacy: true }) },
+      env,
+    );
+    expect(agree.status).toBe(201);
+
+    const after = await app.request("/api/v1/auth/session", { headers: { Cookie: cookie } }, env);
+    expect((await after.json()) as { consent_complete: boolean }).toMatchObject({ consent_complete: true });
   });
 
   it("cookie authenticates a protected write", async () => {

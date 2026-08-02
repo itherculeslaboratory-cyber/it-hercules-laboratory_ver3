@@ -40,7 +40,7 @@
               "props": {
                 "icon": "🌱",
                 "title_key": "login.arc-start.title", "title": "自分の場を整える",
-                "meta_key": "login.arc-start.body", "meta": "最初に表示名・言語・国を決めます(必須はこの3つだけ)。規約への同意はこのページのチェックボックスで完了します。"
+                "meta_key": "login.arc-start.body", "meta": "最初に表示名・言語・国を決めます(必須はこの3つだけ)。規約への同意は、送信前のこのチェックと、ログイン後の規約ページでの本同意の2段階です。"
               }
             },
             {

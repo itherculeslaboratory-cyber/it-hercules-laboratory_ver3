@@ -6,6 +6,7 @@ import type { KVNamespaceLite } from "./kv";
 import { isBanned } from "./ledger-routes";
 import { sendMagicLink } from "./mail";
 import { ensureAccount, projectOnboardingStatus } from "./account";
+import { projectConsent } from "./consent-routes";
 import { PREF_SCHEMA, PREF_TYPE, SCHEMA_VERSION, projectPreferences } from "./settings-routes";
 import { checkRateLimit, clientIp } from "./rate-limit";
 import {
@@ -226,8 +227,15 @@ authRoutes.get("/session", async (c) => {
   const token = getCookie(c, "ihl_session") ?? bearerToken(c.req.header("Authorization"));
   const payload = token ? await verifySessionToken(token, c.env.SESSION_SECRET) : null;
   if (!payload) return c.json({ authenticated: false });
-  const status = await projectOnboardingStatus(new TruthStore(c.env.TRUTH), payload.sub);
-  return c.json({ authenticated: true, actor_id: payload.sub, onboarding_complete: status.onboarding_complete });
+  const truthStore = new TruthStore(c.env.TRUTH);
+  const status = await projectOnboardingStatus(truthStore, payload.sub);
+  const consent = await projectConsent(truthStore, payload.sub);
+  return c.json({
+    authenticated: true,
+    actor_id: payload.sub,
+    onboarding_complete: status.onboarding_complete,
+    consent_complete: consent.agreedTerms && consent.agreedPrivacy,
+  });
 });
 
 // POST /dev-login (公開・dev 限定): §1.4 V3-AUT-05「画面内トークン認証ボタン」の実体。

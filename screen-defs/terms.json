@@ -3,12 +3,12 @@
   "route": "/onboarding/terms",
   "title": "利用規約",
   "layout": "standard",
-  "notes": "ENTRY実装(entry-forecast.html R145○)。規約同意はログイン画面のチェックボックス(terms)で記録し、この画面は本文の確認と同意の置き場所。規約の最終文面は公開前に確定する人間ゲート(AGENTS.md 人間ゲート①)なので、本文は暫定版であることを画面に明記する(契約=仮文言と画面に明記)。同意後はホーム(司令塔)へ。",
+  "notes": "ENTRY実装(entry-forecast.html R145○)。是正(2026-08-02 R0802-3e4e1b T3・案A採用): ログイン後にここで明示同意し、法的記録(CL-05 consent-record)を残す画面。未ログインでもPUBLIC_PATHS(middleware.ts)経由で本文は読める。ログイン画面(login.json)のチェックボックスは送信前の確認にすぎず、同意の法的記録はこの画面の同意フォームがPOST /api/v1/onboarding/agreeを叩いた時にのみ作られる(旧記述『実経路の同意記録はloginのチェックボックスで完結』は誤りだったため削除)。規約の最終文面は公開前に確定する人間ゲート(AGENTS.md 人間ゲート①)なので、本文は暫定版であることを画面に明記する(契約=仮文言と画面に明記)。同意後はホーム固定(オンボーディング未完了なら既存のonboardingゲートがsetup-profileへ寄せる。新しい分岐は書かない)。",
   "nodes": [
     {
       "id": "shell",
       "type": "app-shell",
-      "props": { "page_info": { "purpose": "利用規約を確認し、同意する画面。本文はまだ最終版ではない(仮のもの)であることを明記しています。" } },
+      "props": { "page_info": { "purpose": "利用規約とプライバシーポリシーを確認し、明示的に同意する画面。本文はまだ最終版ではない(仮のもの)であることを明記しています。" } },
       "children": [
         {
           "id": "page",
@@ -16,6 +16,7 @@
           "children": [
             { "id": "title", "type": "heading", "props": { "text": "規約に同意して始める", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text": "観測を始める前に、データの扱いとコミュニティの決まりに同意します。", "muted": true } },
+            { "id": "anon-notice", "type": "text", "props": { "text": "同意の記録はログイン後に行います。ログインしていない場合は下の同意ボタンは使えません(本文はどなたでも読めます)。", "muted": true } },
             { "id": "provisional", "type": "text", "props": { "text": "下記は暫定版です。正式な規約は公開時に確定します。", "muted": true } },
             { "id": "h-data", "type": "heading", "props": { "text": "観測データの取り扱い", "level": 2 } },
             { "id": "t-data", "type": "text", "props": { "text": "あなたの観測記録は、消さずに積み重ねる(追記のみ)方式で扱います。住所や口座番号などの個人を特定する情報は、サーバに平文で持ちません。" } },
@@ -23,12 +24,16 @@
             { "id": "t-comm", "type": "text", "props": { "text": "他の観測者への敬意、記録の正直さ、疑義は当事者どうしで落ち着いて解決すること。良いテンプレートは、真似されるほど作者の得になる文化を尊重します。" } },
             { "id": "h-agree", "type": "heading", "props": { "text": "同意すると", "level": 2 } },
             { "id": "t-agree", "type": "text", "props": { "text": "観測を始められます。データはいつでもCSVで持ち出せます(設定→バックアップ)。" } },
-            { "id": "agree-check", "type": "field", "props": { "variant": "checkbox", "name": "agree", "label": "上記に同意します", "required": true } },
             {
-              "id": "agree",
-              "type": "button",
-              "props": { "label": "同意して始める", "variant": "primary" },
-              "action": { "kind": "navigate", "to": "home" }
+              "id": "agree-form",
+              "type": "form",
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/onboarding/agree" },
+              "props": { "static": { "agreedTerms": true, "agreedPrivacy": true } },
+              "children": [
+                { "id": "agree-check-terms", "type": "field", "props": { "variant": "checkbox", "name": "agree_terms_ack", "label": "利用規約に同意します", "required": true } },
+                { "id": "agree-check-privacy", "type": "field", "props": { "variant": "checkbox", "name": "agree_privacy_ack", "label": "プライバシーポリシーに同意します", "required": true } },
+                { "id": "agree", "type": "button", "props": { "label": "同意して始める", "variant": "primary", "type": "submit" } }
+              ]
             }
           ]
         }
@@ -36,6 +41,6 @@
     }
   ],
   "transitions": [
-    { "from": "agree", "to_screen_id": "home", "label": "規約同意後" }
+    { "from": "agree-form", "to_screen_id": "home", "label": "規約・プライバシー両方に同意しCL-05記録が作られた後" }
   ]
 }

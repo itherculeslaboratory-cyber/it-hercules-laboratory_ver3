@@ -22,12 +22,21 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787";
 // screenHref() maps screen_id "login"/"login-sent" -> "/s/login"/"/s/login-sent"
 // (apps/web/src/renderer/renderer.tsx) — these are the only screens reachable
 // without a session.
-const PUBLIC_PATHS = new Set(["/s/login", "/s/login-sent"]);
+// V3-SEC-20: /s/terms must stay reachable without a session (unauthenticated
+// visitors can read the full terms text before logging in).
+const PUBLIC_PATHS = new Set(["/s/login", "/s/login-sent", "/s/terms"]);
 
 // setup-profile itself must stay reachable once logged in, whether or not
 // onboarding is complete yet (otherwise a visitor with no handle could never
 // reach the one screen that lets them set one — a redirect loop).
 const ONBOARDING_EXEMPT_PATHS = new Set(["/s/setup-profile"]);
+
+/** Pure: does this pathname skip the consent-completeness check? /s/terms is
+ * already in PUBLIC_PATHS (reachable pre-auth), which also keeps it reachable
+ * for a logged-in-but-not-consented visitor — no separate exempt set needed. */
+export function skipsConsentCheck(pathname: string): boolean {
+  return PUBLIC_PATHS.has(pathname);
+}
 
 /** Pure: does this pathname require a session? Exported for a direct unit test. */
 export function requiresAuth(pathname: string): boolean {
@@ -49,13 +58,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // a malformed/missing field never traps an otherwise-authenticated visitor
   // in a redirect loop (the auth check above is the fail-closed gate).
   let onboardingComplete = true;
+  let consentComplete = true;
   try {
     const res = await fetch(`${API_BASE}/api/v1/auth/session`, { headers: { cookie } });
     const body = (await res.json().catch(() => null)) as
-      | { authenticated?: unknown; onboarding_complete?: unknown }
+      | { authenticated?: unknown; onboarding_complete?: unknown; consent_complete?: unknown }
       | null;
     authenticated = body?.authenticated === true;
     onboardingComplete = body?.onboarding_complete !== false;
+    consentComplete = body?.consent_complete !== false;
   } catch {
     // ponytail: API unreachable — fail closed (treat as unauthenticated) so a
     // backend outage never silently exposes a protected screen.
@@ -64,6 +75,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   if (!authenticated) {
     const url = req.nextUrl.clone();
     url.pathname = "/s/login";
+    url.search = "";
+    return NextResponse.redirect(url, 307);
+  }
+
+  // V3-SEC-20/T2: authenticated but not yet consented → /s/terms, ahead of the
+  // onboarding gate (consent precedes profile data collection).
+  if (!skipsConsentCheck(pathname) && !consentComplete) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/s/terms";
     url.search = "";
     return NextResponse.redirect(url, 307);
   }

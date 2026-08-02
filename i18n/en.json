@@ -40,7 +40,7 @@
   "login.arc-in.title": "Get in without fuss",
   "login.arc-in.body": "We just email you a link. If you can't open it, the numeric code in the same email works too.",
   "login.arc-start.title": "Set up your space",
-  "login.arc-start.body": "First choose a display name and language, then agree to the terms (only those two are required).",
+  "login.arc-start.body": "First choose a display name and language. Agreeing to the terms is two steps: this checkbox before login, and the full agreement on the terms page after login.",
   "login.step.login": "Sign in",
   "login.step.profile": "Name & language",
   "login.step.locale": "Country & language (optional)",
