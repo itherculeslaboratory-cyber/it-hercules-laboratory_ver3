@@ -16,3 +16,5 @@ import "./ind-screens/pref-pairwise";
 import "./ind-screens/ind-species";
 import "./ind-screens/ind-cross";
 import "./ind-screens/ind-bio-card";
+import "./ind-screens/ind-card-batch";
+import "./ind-screens/ind-qr-hub";

@@ -24,12 +24,14 @@
     "individual-detail",
     "cross",
     "bio-card",
+    "ind-card-batch",
     "match",
     "preference",
     "species",
     "device",
     "placement-qr",
     "qr-resume",
+    "qr-individual-hub",
     "economy-status",
     "costs",
     "profile",
@@ -59,6 +61,18 @@
     "notification-settings"
   ],
   "edges": [
+    {
+      "from": "qr-individual-hub",
+      "to": "individual-detail",
+      "label": "個体QR(物理ラベル)を読んだ既定動線(観測者本人以外・未ログイン・設定=detailはここへ自動遷移。QRLINK-1 2026-08-08)",
+      "source": "renderer"
+    },
+    {
+      "from": "qr-individual-hub",
+      "to": "obs-register-entry",
+      "label": "観測者本人限定の例外動線(選択画面で『追加観測』を選ぶ/設定=observe。QRLINK-1 2026-08-08)",
+      "source": "renderer"
+    },
     {
       "from": "login",
       "to": "terms",
@@ -237,6 +251,12 @@
       "from": "individual-detail",
       "to": "bio-card",
       "label": "バイオカードへ",
+      "source": "planned"
+    },
+    {
+      "from": "bio-card",
+      "to": "ind-card-batch",
+      "label": "バイオカード一括出力へ",
       "source": "planned"
     },
     {

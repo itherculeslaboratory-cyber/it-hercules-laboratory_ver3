@@ -3,7 +3,7 @@
   "route": "/research/paper/detail",
   "title": "論文の詳細",
   "layout": "standard",
-  "notes": "PPR-03/09/18 — content(paper) を 1 レスポンスに集約投影。6 節(PaperSectionsV1)/充足度/計測(value_origin バッジ)/引用/再解析マニフェスト。paper-match と data-descriptor へ id を引き継ぐ。source_path=GET /api/v1/research/content/{id}(protected・deny-by-default)。★2026-08-02(g89-w2paper)是正: この notes 自身が「計測(value_originバッジ)」と書いていたのに実装は素のテキスト箇条書きだったため、既存語彙(table cell:\"badge\"・research-newspaper.json digest-table と同型)でバッジ化。充足度も素のテキストからprogressノードへ差し替え。★再現できなかった要素(誇張ゼロ・正直に列挙): 「5段ステッパー」はカタログ(ui-asset-catalog.md)が挙げる ver2 部品 PaperProgressW2 を参照根拠にしているが、当該コンポーネントは本リポジトリに実体が無く(grep 0件)、かつ detail 投影に stepper の current_from に使える単一の状態フィールドが無いため実装しなかった。「条件チップ」も同様に、conditions は自由記述の1フィールドであり、動的なバッジ配列を作れる場所(card.badges[]は静的リテラルのみ・list/tableはbind_itemsの行データからのみ生成可)が既存語彙に無いため対応を見送った。両方とも汎用ノードの拡張が要る(このレーンの専有範囲外)ため、対応を見送り本欄に要望として記録する。★2026-08-07(w1-uifix)是正: sectionsノードの bind_items=\"data.paper.section_list\" は実データを一度も返さない配線ミスだった(GET /api/v1/research/content/:id は data.sections という『{purpose:{filled,text},...}』形のオブジェクトを返すのみで、section_list という配列キーは存在しなかった=grep 0件)。list vocab の bind_items は配列前提でオブジェクト→配列変換の語彙が無いため、単純な改名では直らない(sections自体をlistに渡すと.mapクラッシュ→白画面になる)。そこでAPI側にsections_completeness_pctと同型の投影 sections_list(PAPER_SECTIONS×PAPER_SECTION_LABELS_JAで{label,text}配列化・research-content-routes.ts)を1つ追加し、bind_itemsをそちらへ向けた。data.sections自体の形は変更していない(書込側スキーマ・他消費者に影響なし)。",
+  "notes": "PPR-03/09/18 — content(paper) を 1 レスポンスに集約投影。6 節(PaperSectionsV1)/充足度/計測(value_origin バッジ)/引用/再解析マニフェスト。paper-match と data-descriptor へ id を引き継ぐ。source_path=GET /api/v1/research/content/{id}(protected・deny-by-default)。★2026-08-02(g89-w2paper)是正: この notes 自身が「計測(value_originバッジ)」と書いていたのに実装は素のテキスト箇条書きだったため、既存語彙(table cell:\"badge\"・research-newspaper.json digest-table と同型)でバッジ化。充足度も素のテキストからprogressノードへ差し替え。★再現できなかった要素(誇張ゼロ・正直に列挙): 「5段ステッパー」はカタログ(ui-asset-catalog.md)が挙げる ver2 部品 PaperProgressW2 を参照根拠にしているが、当該コンポーネントは本リポジトリに実体が無く(grep 0件)、かつ detail 投影に stepper の current_from に使える単一の状態フィールドが無いため実装しなかった。「条件チップ」も同様に、conditions は自由記述の1フィールドであり、動的なバッジ配列を作れる場所(card.badges[]は静的リテラルのみ・list/tableはbind_itemsの行データからのみ生成可)が既存語彙に無いため対応を見送った。両方とも汎用ノードの拡張が要る(このレーンの専有範囲外)ため、対応を見送り本欄に要望として記録する。★2026-08-07(w1-uifix)是正: sectionsノードの bind_items=\"data.paper.section_list\" は実データを一度も返さない配線ミスだった(GET /api/v1/research/content/:id は data.sections という『{purpose:{filled,text},...}』形のオブジェクトを返すのみで、section_list という配列キーは存在しなかった=grep 0件)。list vocab の bind_items は配列前提でオブジェクト→配列変換の語彙が無いため、単純な改名では直らない(sections自体をlistに渡すと.mapクラッシュ→白画面になる)。そこでAPI側にsections_completeness_pctと同型の投影 sections_list(PAPER_SECTIONS×PAPER_SECTION_LABELS_JAで{label,text}配列化・research-content-routes.ts)を1つ追加し、bind_itemsをそちらへ向けた。data.sections自体の形は変更していない(書込側スキーマ・他消費者に影響なし)。★2026-08-07(W1-05)追記: to-descriptor ボタンの action.to に `?content_id={{params.id}}` を足し、data-descriptor 側の hidden field(content_id)へ id を引き継ぐようにした(このpaper-detail自身が持つ節はsectionsノードのみで変更なし。data-descriptor.json側のPOST先修正= /api/v1/research/paper-match=に伴う配線)。",
   "nodes": [
     {
       "id": "shell",
@@ -60,7 +60,7 @@
               "id": "to-descriptor",
               "type": "button",
               "props": { "label": "Data Descriptor を編集する", "variant": "secondary" },
-              "action": { "kind": "navigate", "to": "data-descriptor" }
+              "action": { "kind": "navigate", "to": "data-descriptor?content_id={{params.id}}" }
             }
           ]
         }

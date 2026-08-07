@@ -181,6 +181,30 @@
                       }
                     },
                     {
+                      "id": "bid-price-hint",
+                      "type": "text",
+                      "props": {
+                        "tab_id": "1",
+                        "when": { "eq": ["{{data.state.state}}", "listed_auction"] },
+                        "text": "現在価格 {{data.state.auction.current_price}} 円・次の最低入札額 {{data.state.auction.next_min_bid}} 円(この価格帯の入札刻みは {{data.state.auction.bid_step}} 円。¥1,000未満は¥10、¥1,000〜¥5,000未満は¥100、¥5,000〜¥10,000未満は¥250、¥10,000以上は¥500刻みです)"
+                      }
+                    },
+                    {
+                      "id": "bid-form",
+                      "type": "form",
+                      "props": {
+                        "tab_id": "1",
+                        "when": { "eq": ["{{data.state.state}}", "listed_auction"] },
+                        "static": { "kind": "bid", "listing_id": "{{params.listing_id}}" }
+                      },
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "入札しました" },
+                      "children": [
+                        { "id": "bid-amount", "type": "field", "props": { "variant": "number", "name": "amount", "label": "入札額(円・現在価格+刻み以上・刻みの倍数)", "required": true } },
+                        { "id": "bid-max", "type": "field", "props": { "variant": "number", "name": "max_bid", "label": "予算上限(円・任意・ヤフオク型自動入札。設定すると上限内で自動的に1刻みずつ再入札します)" } },
+                        { "id": "bid-submit", "type": "button", "props": { "type": "submit", "label": "入札する", "variant": "primary" } }
+                      ]
+                    },
+                    {
                       "id": "btn-publish",
                       "type": "button",
                       "props": {
@@ -334,12 +358,41 @@
                   ]
                 },
                 {
+                  "id": "low-rating-filter-hint",
+                  "type": "text",
+                  "props": {
+                    "tab_id": "browse",
+                    "text": "低評価の目安(悪い評価5件以上・カルマ0以下・平均評価2以下のいずれか)に該当する出品者を除外できます。",
+                    "muted": true
+                  }
+                },
+                {
+                  "id": "low-rating-filter-on",
+                  "type": "link",
+                  "props": {
+                    "tab_id": "browse",
+                    "when": { "not_eq": ["{{params.exclude_low_rating}}", "true"] },
+                    "label": "低評価の出品者を除外する",
+                    "href": "/s/market-trade?exclude_low_rating=true"
+                  }
+                },
+                {
+                  "id": "low-rating-filter-off",
+                  "type": "link",
+                  "props": {
+                    "tab_id": "browse",
+                    "when": { "eq": ["{{params.exclude_low_rating}}", "true"] },
+                    "label": "低評価の出品者の除外を解除する(現在: 除外中)",
+                    "href": "/s/market-trade"
+                  }
+                },
+                {
                   "id": "listings-grid",
                   "type": "image-grid",
                   "props": {
                     "tab_id": "browse",
                     "header_scoped": true,
-                    "source_path": "/api/v1/market/listings",
+                    "source_path": "/api/v1/market/listings?exclude_low_rating={{params.exclude_low_rating}}",
                     "bind_items": "data.listings-grid.listings",
                     "item_image": "/api/v1/market/listings/{{listing_id}}/photo/{{cover_photo_id}}",
                     "item_alt": "{{title}}",
@@ -400,6 +453,7 @@
     { "from": "btn-ship", "to_screen_id": "market-trade", "label": "発送後に再読込" },
     { "from": "btn-receive", "to_screen_id": "market-trade", "label": "受取確定後に再読込" },
     { "from": "create-listing-form", "to_screen_id": "market-trade", "label": "下書き作成後に再読込" },
-    { "from": "ship-link-form", "to_screen_id": "market-trade", "label": "発送URL共有後に再読込" }
+    { "from": "ship-link-form", "to_screen_id": "market-trade", "label": "発送URL共有後に再読込" },
+    { "from": "bid-form", "to_screen_id": "market-trade", "label": "入札後に再読込" }
   ]
 }

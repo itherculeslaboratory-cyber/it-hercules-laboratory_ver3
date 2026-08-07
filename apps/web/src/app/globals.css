@@ -4300,6 +4300,133 @@ a.civ-thumb-card:focus-visible {
   color: var(--primary);
 }
 
+/* ind-card-batch(R0807-w1-04・×20是正) — 検索絞り込み+チェックボックス選択の
+ * 一般的な帯/リスト。既存 .civ-input/.civ-button/.civ-segmented を流用し、
+ * このゾーン専用の新規クラスは選択リストと印刷シートの2種類のみ。 */
+.ind-zone .card-batch-controls + .card-batch-controls {
+  margin-top: 20px;
+}
+.ind-zone .civ-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ind-zone .civ-filter-row .civ-input {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+.ind-zone .civ-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ind-zone .civ-check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.ind-zone .civ-check-row {
+  border-bottom: 1px solid var(--border);
+}
+.ind-zone .civ-check-row:last-child {
+  border-bottom: none;
+}
+.ind-zone .civ-check-row label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.ind-zone .civ-check-row .ccr-name {
+  font-weight: 700;
+  flex: 1 1 auto;
+}
+
+/* 印刷用タイル配置(トンボ=切り取り線代わりの破線)。@page/@media print は
+ * 本 repo 初出(design R0807-d763a2 §6 — サーバでPDFを作らずブラウザ印刷に
+ * 委ねる方針。新規依存パッケージ0)。 */
+@page {
+  size: A4;
+  margin: 8mm;
+}
+.card-batch-sheet {
+  display: grid;
+  gap: 0;
+  margin-top: 16px;
+}
+.card-batch-sheet.cell-meishi {
+  grid-template-columns: repeat(2, 1fr);
+}
+.card-batch-sheet.cell-small {
+  grid-template-columns: repeat(3, 1fr);
+}
+.card-batch-sheet.cell-tiny {
+  grid-template-columns: repeat(6, 1fr);
+}
+.card-batch-cell {
+  border: 0.2mm dashed var(--muted);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-batch-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.card-batch-compact .cbc-qr {
+  width: 72px;
+  height: 72px;
+}
+.card-batch-compact .cbc-qr svg {
+  width: 100%;
+  height: 100%;
+}
+.card-batch-compact .cbc-id {
+  font-size: 12px;
+  font-weight: 800;
+}
+.card-batch-compact .cbc-sp,
+.card-batch-compact .cbc-size {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+@media print {
+  .card-batch-controls {
+    display: none !important;
+  }
+  .card-batch-sheet {
+    gap: 0;
+  }
+  .card-batch-cell {
+    break-inside: avoid;
+  }
+  /* 2026-08-08 G-04-2是正: 上の `.civ-app-shell-nav` は実DOMに存在しないセレクタ
+   * (実際のヘッダーは app-shell.tsx の `<header className="civ-chrome-header headbar">`)
+   * のため、印刷時にアプリ共通ヘッダーが1枚目に残っていた(検分実測)。
+   * `.card-batch-sheet` は ind-card-batch.tsx にのみ存在するクラス(他の ind-*.tsx
+   * 画面も `.ind-zone` を共有しているため `:has(.ind-zone)` では全個体画面に効いてしまう
+   * — grep実測=apps/web/src配下8ファイルが.ind-zoneを持つがcard-batch-sheetは
+   * ind-card-batch.tsx1ファイルのみ)。カード印刷画面限定でヘッダーを隠す
+   * (:has() スコープなので他画面の印刷には影響しない。全画面共通化は今回の対象外
+   * — HQ裁定=kits/lane-implement/ORDER-2026-08-08-w1-fixups.md T4)。 */
+  .civ-app-shell:has(.card-batch-sheet) > .civ-chrome-header {
+    display: none !important;
+  }
+}
+
 /* =============================================================================
  * g84-retroA shadcn/ui retrofit (RETRO-1 ○85, T0) — shadcn init writes its own
  * --background/--primary/... oklch greyscale palette + a .dark class variant.

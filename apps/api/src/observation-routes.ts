@@ -32,6 +32,10 @@ import { projectPreferenceWeights, dot } from "./match-routes";
 import type { Bindings, Variables } from "./env";
 import { appendContribution } from "./contribution";
 import { CONTRIB_OBSERVATION_SAVED, CONTRIB_OBSERVATION_WITH_PHOTO } from "./economy-constants";
+// 2026-08-07 order-w1-08-unwired-guards T1/T2: policy.ts/pii.mjs に実装済み・
+// テスト済みだが呼び出し元0件だった関数の配線(作るのではなく繋ぐ)。
+import { buildImageReuseSilentWarning } from "./policy";
+import { redactForPublic } from "./pii.mjs";
 // 背骨S4(設計R0801-f383db §7 S4行): 新規routeのマウントに index.ts の変更を要求しない
 // ための相乗り(KIT-TEMPLATE.md「触ってよいファイル」節の例外条項どおり)。cadence-routes.ts
 // は自分の Hono サブアプリを export し、既に app.route("/api/v1", obsRoutes) で
@@ -509,6 +513,31 @@ obsRoutes.post("/observation/upload", async (c) => {
     .map(dataOf)
     .filter((d) => d.sha256 === sha256 && d.actor_id !== actorId);
   const reuseDetected = priorSameHash.length > 0;
+
+  // V3-OBS-54 T1(2026-08-07 order-w1-08-unwired-guards): 静かな警告の原則
+  // (buildImageReuseSilentWarningという関数名どおり)— アップロードはブロックせず、
+  // 他ユーザーにも見せない。dHash/EXIF整合/成長曲線整合/特徴点整合の4関数は upload
+  // 時点でその入力(グレースケール画素配列・EXIFメタ・過去の成長記録・斑紋データ)が
+  // 本発注の書いてよい範囲内で手に入らず配線できなかった(報告書参照)。実際に手に
+  // 入る唯一のシグナルは既存のsha256完全一致検出であり、これを
+  // buildImageReuseSilentWarning() で警告オブジェクト化する。
+  // ★未完了(報告書「決められなかったこと」参照): 「イベントとして台帳に追記」までは
+  // 実装できなかった。新しい event 型を1つ追加するだけで
+  // tests/event-registry-wiring.test.ts(g93裁定)の UNREGISTERED_DEBT 上限アサート
+  // (現在ちょうど10件で上限・「増える方向を許さない」と明記済み)に必ず抵触する。
+  // 型を登録するには packages/truth 配下と codegen 台本の変更が要るが、これらは本発注の
+  // 「触ってよいファイル」の外(observation-routes.ts専有の範囲外)。よってここでは
+  // ブロックしない・他ユーザーに見せない、の2条件のみ満たし、記録は構造化サーバログに
+  // 留める(Truthの永続台帳ではない)。
+  if (reuseDetected) {
+    const warning = buildImageReuseSilentWarning(["sha256_exact"], new Date().toISOString());
+    console.warn("image reuse suspect (silent, non-blocking, sha256_exact)", {
+      capture_id: captureId,
+      photo_id: photoId,
+      actor_id: actorId,
+      ...warning,
+    });
+  }
 
   const data = {
     photo_id: photoId,
@@ -1595,7 +1624,17 @@ obsRoutes.get("/observation/:capture_id", async (c) => {
   const individual_id = subjectRef.startsWith("individual/")
     ? subjectRef.slice("individual/".length)
     : undefined;
-  return c.json({ capture: cap, photos, individual_id });
+  // V3-IND-30 T2(2026-08-07 order-w1-08-unwired-guards): note は観測者本人の自由記述
+  // で、この経路は非公開(private/uid_linked)以外は誰でも読める=最も明確な公開経路の
+  // 1つ(発注書「候補」該当)。本人が自分の記録を見る時はマスクしない(redactは公開
+  // 閲覧=他者向けの保護であり、本人向け表示を壊す理由がない)。
+  const viewerId = c.get("actorId");
+  const isOwner = viewerId !== undefined && viewerId === cap.actor_id;
+  const captureOut =
+    typeof cap.note === "string" && !isOwner
+      ? { ...cap, note: redactForPublic(cap.note).redacted }
+      : cap;
+  return c.json({ capture: captureOut, photos, individual_id });
 });
 
 // GET /observation/{capture_id}/image/{photo_id} — media blob.
@@ -1635,7 +1674,14 @@ obsRoutes.get("/individuals/:individual_id/observations", async (c) => {
     .map(dataOf)
     .filter((d) => d.subject_ref === ref)
     .filter((d) => captureVisibleTo(d, actorId)); // V3-OBS-54段階2
-  return c.json({ individual_id: individualId, observations });
+  // V3-IND-30 T2(2026-08-07 order-w1-08-unwired-guards): 候補②(発注書列挙の
+  // 「観測の公開コメント欄」該当)。詳細routeと同じ規約=本人自身の観測は非マスク。
+  const observationsOut = observations.map((d) =>
+    typeof d.note === "string" && d.actor_id !== actorId
+      ? { ...d, note: redactForPublic(d.note).redacted }
+      : d,
+  );
+  return c.json({ individual_id: individualId, observations: observationsOut });
 });
 
 // GET /individuals/{individual_id}/lab-environment — chains occupancy →

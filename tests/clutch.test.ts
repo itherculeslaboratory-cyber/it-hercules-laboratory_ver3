@@ -223,6 +223,41 @@ describe("clutch promote (個別容器へ分割 / 昇格)", () => {
   });
 });
 
+describe("GET /clutches/:id/individuals(割り出し世代単位の一括選択・R0807-d763a2 §3-B)", () => {
+  it("1波promote後、promoted_individual_idsが昇格順で全件返る", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { initial_count: 10 });
+    const promote = await post(`/api/v1/clutches/${id}/promote`, { count: 3, at: "2026-08-01T00:00:00Z" }, env);
+    const promoted = ((await promote.json()) as { individual_ids: string[] }).individual_ids;
+
+    const res = await get(`/api/v1/clutches/${id}/individuals`, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { clutch_id: string; individual_ids: string[] };
+    expect(body.clutch_id).toBe(id);
+    expect(body.individual_ids).toEqual(promoted);
+  });
+
+  it("2波promote後、両方の波が昇格順で連結して返る", async () => {
+    const { env } = ctx();
+    const id = await createClutch(env, { initial_count: 10 });
+    const first = await post(`/api/v1/clutches/${id}/promote`, { count: 2, at: "2026-08-01T00:00:00Z" }, env);
+    const firstIds = ((await first.json()) as { individual_ids: string[] }).individual_ids;
+    const second = await post(`/api/v1/clutches/${id}/promote`, { count: 3, at: "2026-08-02T00:00:00Z" }, env);
+    const secondIds = ((await second.json()) as { individual_ids: string[] }).individual_ids;
+
+    const res = await get(`/api/v1/clutches/${id}/individuals`, env);
+    const body = (await res.json()) as { individual_ids: string[] };
+    expect(body.individual_ids).toEqual([...firstIds, ...secondIds]);
+  });
+
+  it("存在しないクラッチ → 404", async () => {
+    const { env } = ctx();
+    const res = await get("/api/v1/clutches/does-not-exist/individuals", env);
+    expect(res.status).toBe(404);
+    expect((await res.json()) as { error: string }).toEqual({ error: "NOT_FOUND" });
+  });
+});
+
 describe("clutch promote ownership guard (fail-closed — promote mints individuals, so only the clutch's creator may promote it)", () => {
   it("route: actor B promoting actor A's clutch -> 403 NOT_OWNER, no individuals minted, no promote event; actor A promoting own clutch still succeeds", async () => {
     const { bucket, env } = ctx();

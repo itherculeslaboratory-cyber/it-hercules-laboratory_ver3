@@ -582,6 +582,75 @@ describe("V3-IND-16 生体の一生イベントログ(life-events append-only �
   });
 });
 
+describe("bio-card-batch(登録済み個体の可変選択一括出力・R0807-d763a2/×20是正)", () => {
+  it("正常: 3個体を指定すると3枚のカードが返り、label_text/nameが付く", async () => {
+    const { env } = ctx();
+    const a = await createInd(env, { species: "Dynastes hercules", local_label_text: "王_001" });
+    const b = await createInd(env, { species: "Dynastes hercules", local_label_text: "王_002" });
+    const c = await createInd(env, { species: "Dynastes hercules" });
+    const res = await post("/api/v1/individuals/bio-card-batch", { individual_ids: [a, b, c] }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { cards: { individual_id: string; label_text: string | null }[]; missing: string[] };
+    expect(body.cards).toHaveLength(3);
+    expect(body.missing).toEqual([]);
+    const byId = new Map(body.cards.map((card) => [card.individual_id, card]));
+    expect(byId.get(a)?.label_text).toBe("王_001");
+    expect(byId.get(b)?.label_text).toBe("王_002");
+  });
+
+  it("空配列 → 400 EMPTY_SELECTION", async () => {
+    const { env } = ctx();
+    const res = await post("/api/v1/individuals/bio-card-batch", { individual_ids: [] }, env);
+    expect(res.status).toBe(400);
+    expect((await res.json()) as { error: string }).toEqual({ error: "EMPTY_SELECTION" });
+  });
+
+  it("201件 → 400 TOO_MANY(上限200)", async () => {
+    const { env } = ctx();
+    const ids = Array.from({ length: 201 }, () => ulid());
+    const res = await post("/api/v1/individuals/bio-card-batch", { individual_ids: ids }, env);
+    expect(res.status).toBe(400);
+    expect((await res.json()) as { error: string; max: number }).toEqual({ error: "TOO_MANY", max: 200 });
+  });
+
+  it("存在しないIDを混ぜると missing[] に入り、実在分は 200 で返る", async () => {
+    const { env } = ctx();
+    const real = await createInd(env, { species: "Dynastes hercules" });
+    const ghost = ulid();
+    const res = await post("/api/v1/individuals/bio-card-batch", { individual_ids: [real, ghost] }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { cards: { individual_id: string }[]; missing: string[] };
+    expect(body.cards.map((c) => c.individual_id)).toEqual([real]);
+    expect(body.missing).toEqual([ghost]);
+  });
+
+  it("15件(ユーザー逐語の実運用規模): 実在個体15件を選ぶと15枚全件返る", async () => {
+    const { env } = ctx();
+    const ids: string[] = [];
+    for (let i = 0; i < 15; i++) {
+      ids.push(await createInd(env, { species: "Dynastes hercules", local_label_text: `王_${String(i + 1).padStart(3, "0")}` }));
+    }
+    const res = await post("/api/v1/individuals/bio-card-batch", { individual_ids: ids }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { cards: { individual_id: string }[]; missing: string[] };
+    expect(body.cards).toHaveLength(15);
+    expect(body.missing).toEqual([]);
+  });
+
+  it("200件(上限ちょうど): 実在個体200件は TOO_MANY にならず全件返る", async () => {
+    const { env } = ctx();
+    const ids: string[] = [];
+    for (let i = 0; i < 200; i++) {
+      ids.push(await createInd(env, { species: "Dynastes hercules" }));
+    }
+    const res = await post("/api/v1/individuals/bio-card-batch", { individual_ids: ids }, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { cards: unknown[]; missing: string[] };
+    expect(body.cards).toHaveLength(200);
+    expect(body.missing).toEqual([]);
+  }, 30000);
+});
+
 describe("IND-21 真正性(projectAuthenticity)", () => {
   it("画像 hash + event 連続性で continuity_score=1・登録数vs実在数照合", async () => {
     const { env, bucket } = ctx();
@@ -1431,6 +1500,63 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     const aliceRes = await app.request(`/api/v1/individuals/${individualId}`, { headers: aliceAuth }, env);
     const aliceBody = (await aliceRes.json()) as { observations: { capture_id: string }[] };
     expect(aliceBody.observations).toHaveLength(1);
+  });
+
+  // QRLINK-1(2026-08-08ユーザー裁定・R0807-1ef084-qr-deeplink): 個体QR着地(qr-individual-hub)
+  // が「観測者本人か」を判定する唯一の材料。所有者=作成者(projectCurrentOwner)・別actor・
+  // 未ログインの3通りで is_owner の値を確認する。
+  it("is_owner: 観測者本人=true・別actor=false・未ログイン=false", async () => {
+    const { env } = ctx();
+    const aliceAuth = { Authorization: `Bearer ${await issueSessionToken("alice", SESSION_SECRET)}` };
+    const bobAuth = { Authorization: `Bearer ${await issueSessionToken("bob", SESSION_SECRET)}` };
+    const indRes = await app.request(
+      "/api/v1/individuals",
+      { method: "POST", headers: { ...aliceAuth, ...JSON_HEADERS }, body: JSON.stringify({ local_label_text: "alice-ind" }) },
+      env,
+    );
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+
+    const aliceRes = await app.request(`/api/v1/individuals/${individualId}/profile`, { headers: aliceAuth }, env);
+    expect(((await aliceRes.json()) as { is_owner: boolean }).is_owner).toBe(true);
+
+    const bobRes = await app.request(`/api/v1/individuals/${individualId}/profile`, { headers: bobAuth }, env);
+    expect(((await bobRes.json()) as { is_owner: boolean }).is_owner).toBe(false);
+
+    const anonRes = await app.request(`/api/v1/individuals/${individualId}/profile`, {}, env);
+    expect(((await anonRes.json()) as { is_owner: boolean }).is_owner).toBe(false);
+  });
+
+  // w2-gatefix T3(2026-08-08 HQ裁定): 匿名(未ログイン)時は master.actor_id / life_events[].actor_id
+  // を落とす。本人・別actorは従来どおり見える(過剰にフィルタしていないことの回帰確認)。
+  it("匿名時は master.actor_id / life_events[].actor_id を落とす(本人・別actorは見える)", async () => {
+    const { env } = ctx();
+    const aliceAuth = { Authorization: `Bearer ${await issueSessionToken("alice", SESSION_SECRET)}` };
+    const bobAuth = { Authorization: `Bearer ${await issueSessionToken("bob", SESSION_SECRET)}` };
+    const indRes = await app.request(
+      "/api/v1/individuals",
+      { method: "POST", headers: { ...aliceAuth, ...JSON_HEADERS }, body: JSON.stringify({ local_label_text: "alice-ind2" }) },
+      env,
+    );
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+    await post(`/api/v1/individuals/${individualId}/life-events`, { kind: "molt", at: "2026-02-01T00:00:00Z", detail: { to_stage: "third_late" } }, env, { ...aliceAuth, ...JSON_HEADERS });
+
+    const aliceBody = (await (
+      await app.request(`/api/v1/individuals/${individualId}/profile`, { headers: aliceAuth }, env)
+    ).json()) as { master: { actor_id?: string }; life_events: { actor_id?: string }[] };
+    expect(aliceBody.master.actor_id).toBeTruthy();
+    expect(aliceBody.life_events[0].actor_id).toBeTruthy();
+
+    const bobBody = (await (
+      await app.request(`/api/v1/individuals/${individualId}/profile`, { headers: bobAuth }, env)
+    ).json()) as { master: { actor_id?: string }; life_events: { actor_id?: string }[] };
+    expect(bobBody.master.actor_id).toBeTruthy();
+    expect(bobBody.life_events[0].actor_id).toBeTruthy();
+
+    const anonBody = (await (
+      await app.request(`/api/v1/individuals/${individualId}/profile`, {}, env)
+    ).json()) as { master: { actor_id?: string }; life_events: { actor_id?: string }[] };
+    expect(anonBody.master.actor_id).toBeUndefined();
+    expect(anonBody.life_events[0].actor_id).toBeUndefined();
   });
 });
 

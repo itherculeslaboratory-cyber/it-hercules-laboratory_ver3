@@ -1,0 +1,31 @@
+{
+  "screen_id": "qr-individual-hub",
+  "route": "/individuals/{id}",
+  "title": "個体QRの着地",
+  "layout": "standard",
+  "notes": "QRLINK-1(2026-08-08ユーザー裁定・R0807-1ef084-qr-deeplink・カードscore30=×・対案採用)の実装。個体に貼る物理QR(IND-15 bio-card qr_url / qr-batch)の着地点。★基本動線=誰が読んでも個体の詳細(individual-detail)画面へ行ける(未ログイン/観測者本人でない閲覧者は追加観測できないが詳細は見える=GET /individuals/{id}/profile・/pedigree をPUBLIC_READ_ROUTES化・index.ts不可侵につき本文に逐語を報告書へ記載しHQ適用)。★例外動線=QRを読んだ人が観測者本人と一致する時だけ『追加観測しますか?/詳細画面に行きますか?』の選択を出す(個体ごとの所有者判定はGET /individuals/{id}/profileのis_owner)。★確認抑止設定=選択画面のチェックボックス、または設定画面(settings.json qr_individual_action・PATCH /api/v1/me/preferences)のどちらからも変更できる(ask=既定/observe/detail)。判定・選択UI・遷移はすべて1個のカスタムノード(IndQrHubNode・list:qr-individual-hub)に閉じる(ind-detail.tsx他5画面と同じ『screen-defはlistノード1個+実装はzones/ind-screens/』規約に倣う・二重実装しない)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "props": { "page_info": { "purpose": "個体に貼られたQRコードを読んだ直後に最初に開く画面。誰が読んだかで行き先を自動で決める。", "talk_channel": true } },
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            {
+              "id": "hub",
+              "type": "list",
+              "props": {
+                "variant": "qr-individual-hub",
+                "next_step": "詳細画面(individual-detail)へ / 観測者本人なら追加観測(obs-register-entry)へ — IndQrHubNode 内の実導線"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}

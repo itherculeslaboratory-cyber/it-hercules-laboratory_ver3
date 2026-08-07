@@ -1436,7 +1436,7 @@ function BatchSummaryNode() {
           checked={registerSchedule}
           onChange={(e) => setRegisterSchedule(e.target.checked)}
         />
-        <span className="civ-label">次の観測目安を登録</span>
+        <span className="civ-label">次の観測目安を自動設定</span>
       </label>
       <button
         type="button"
@@ -1533,7 +1533,7 @@ function BatchDoneNode() {
       </ul>
       {results.scheduledAt && measureCount > 0 && (
         <p className="civ-text">
-          ✓ 次の観測目安 登録済み — {measureCount}件 → {results.scheduledAt} 頃(間隔30日)
+          ✓ 次の観測目安 設定済み — {measureCount}件 → {results.scheduledAt} 頃(間隔30日)
         </p>
       )}
       <div className="civ-roster-row">

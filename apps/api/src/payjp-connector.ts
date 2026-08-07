@@ -63,6 +63,32 @@ export interface CreatePlatformChargeParams {
   currency?: string;
 }
 
+// ── Checkout v2(外部リンク型決済・2026-08-07裁定TDS-1 ifNo「絶対にB」)────────────
+// T2-A 一次資料(docs.pay.jp/v2/guide/payments/checkout.mdx 実測取得・逐語引用は報告書参照):
+// - 作成: POST https://api.pay.jp/v2/checkout/sessions (JSON body。line_items[].price_data 等)
+// - 認証: Authorization: Bearer <secret key>(v1 と同じ秘密鍵・スキームだけ Basic→Bearer)
+// - 完了通知: webhook event type "checkout.session.completed"・X-Payjp-Webhook-Token ヘッダの
+//   token 一致確認のみ(HMAC 署名検証ではない・v1 と同型の弱い保証)。
+// - GET によるセッション再照会 API は一次資料に確認できなかった(報告書「決められなかったこと」
+//   参照)。よって v1 webhook のような「ID で再照会」は採れず、token 検証を信頼境界とする。
+export interface PayjpCheckoutSession {
+  id: string;
+  url: string;
+  status: string;
+  amount?: number;
+  currency?: string;
+  metadata: Record<string, string>;
+}
+
+export interface CreateCheckoutSessionParams {
+  amount: number;
+  currency?: string;
+  productName: string;
+  successUrl: string;
+  cancelUrl: string;
+  metadata: Record<string, string>;
+}
+
 export interface PayjpConnector {
   readonly mode: string;
   /** charge id で GET /v1/charges/:id を照会。存在しない(404)は null。 */
@@ -71,15 +97,19 @@ export interface PayjpConnector {
   createTenant(params: CreateTenantParams): Promise<PayjpTenant>;
   /** POST /v1/charges でテナント宛て Platform charge(5%自動控除)を作成。カードトークンはログ禁止。 */
   createPlatformCharge(params: CreatePlatformChargeParams): Promise<PayjpPlatformCharge>;
+  /** POST /v2/checkout/sessions で外部リンク型決済ページを作成(カード入力欄は自社で持たない)。 */
+  createCheckoutSession(params: CreateCheckoutSessionParams): Promise<PayjpCheckoutSession>;
 }
 
 export interface PayjpEnv {
   PAYJP_MODE?: string;
   PAYJP_SECRET_KEY?: string;
   PAYJP_API_BASE?: string;
+  PAYJP_API_BASE_V2?: string;
 }
 
 const DEFAULT_API_BASE = "https://api.pay.jp/v1";
+const DEFAULT_API_BASE_V2 = "https://api.pay.jp/v2";
 
 // PAY.JP オブジェクト id の許容形状(charge/tenant 共通・英数字+アンダースコア)。
 // 外部入力の無害化・URL 注入防止(charge id 個別の意味合いは safeChargeId で保つ)。
@@ -199,6 +229,83 @@ export function parsePlatformCharge(raw: unknown): PayjpPlatformCharge | null {
   };
 }
 
+/**
+ * POST /v2/checkout/sessions 用 JSON body を構築(T2-A 実測の line_items[].price_data 形)。
+ * amount>0・productName/successUrl/cancelUrl 非空を検証。カード情報はここに一切含まれない
+ * (方式B=PAY.JPホスト決済ページへのリダイレクトのみ・裁定TDS-1)。
+ */
+export function buildCheckoutSessionBody(params: CreateCheckoutSessionParams): Record<string, unknown> {
+  if (!(params.amount > 0)) throw new Error("payjp checkout session amount must be > 0");
+  if (!params.productName) throw new Error("payjp checkout session productName is required");
+  if (!params.successUrl || !params.cancelUrl) {
+    throw new Error("payjp checkout session successUrl/cancelUrl are required");
+  }
+  return {
+    mode: "payment",
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+    line_items: [
+      {
+        price_data: {
+          currency: params.currency ?? "jpy",
+          unit_amount: params.amount,
+          product_data: { name: params.productName },
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: params.metadata,
+  };
+}
+
+/** PAY.JP /v2/checkout/sessions の生レスポンス → PayjpCheckoutSession へ防御的パース。 */
+export function parseCheckoutSession(raw: unknown): PayjpCheckoutSession | null {
+  const s = raw as Record<string, unknown> | null;
+  if (!s || typeof s.id !== "string" || typeof s.url !== "string") return null;
+  const rawMeta = s.metadata && typeof s.metadata === "object" ? (s.metadata as Record<string, unknown>) : {};
+  const metadata: Record<string, string> = {};
+  for (const [k, v] of Object.entries(rawMeta)) if (typeof v === "string") metadata[k] = v;
+  return {
+    id: s.id,
+    url: s.url,
+    status: typeof s.status === "string" ? s.status : "open",
+    ...(typeof s.amount === "number" ? { amount: s.amount } : {}),
+    ...(typeof s.currency === "string" ? { currency: s.currency } : {}),
+    metadata,
+  };
+}
+
+/**
+ * PAY.JP checkout webhook 本文(event オブジェクト・type: "checkout.session.completed")から
+ * session id を防御的に抽出する。他フィールド(amount/metadata)は信用しない方針
+ * (payjp-connector.ts 冒頭の Webhook 検証方針コメント・T2-A で GET 再照会 API を一次資料で
+ * 確認できなかったため、token 検証を信頼境界とし、amount 等は使わず session id のみ扱う)。
+ */
+export function parseCheckoutSessionIdFromWebhook(
+  rawBody: string,
+): { id: string; type: string; obligationId: string | null } | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(rawBody);
+  } catch {
+    return null;
+  }
+  const evt = json as {
+    type?: unknown;
+    data?: { object?: { id?: unknown; metadata?: { obligation_id?: unknown } } };
+  };
+  const id = evt?.data?.object?.id;
+  const type = evt?.type;
+  if (typeof id !== "string" || !safeId(id) || typeof type !== "string") return null;
+  const rawObligationId = evt?.data?.object?.metadata?.obligation_id;
+  // ★ここで取り出す obligation_id は「どの義務を消し込むか」のルーティングにのみ使う
+  // (token 検証済みチャネルからの値)。amount/actor_id は必ず loadObligation() で得た
+  // 自前の Truth Store 側の値を使い、webhook 本文の amount は一切使わない(route側の実装
+  // 参照)。
+  const obligationId = typeof rawObligationId === "string" && rawObligationId ? rawObligationId : null;
+  return { id, type, obligationId };
+}
+
 export function makePayjpConnector(env: PayjpEnv): PayjpConnector {
   const mode = env.PAYJP_MODE ?? "test";
 
@@ -210,11 +317,18 @@ export function makePayjpConnector(env: PayjpEnv): PayjpConnector {
         "PAY.JP live connector not implemented — 本番接続は人間ゲート(実鍵投入/live 昇格)",
       );
     };
-    return { mode, getCharge: throwLive, createTenant: throwLive, createPlatformCharge: throwLive };
+    return {
+      mode,
+      getCharge: throwLive,
+      createTenant: throwLive,
+      createPlatformCharge: throwLive,
+      createCheckoutSession: throwLive,
+    };
   }
   if (mode !== "test") throw new Error(`unknown PAYJP_MODE: ${mode}`);
 
   const base = env.PAYJP_API_BASE ?? DEFAULT_API_BASE;
+  const baseV2 = env.PAYJP_API_BASE_V2 ?? DEFAULT_API_BASE_V2;
   const secret = env.PAYJP_SECRET_KEY;
   return {
     mode,
@@ -260,6 +374,23 @@ export function makePayjpConnector(env: PayjpEnv): PayjpConnector {
       const charge = parsePlatformCharge(await res.json());
       if (!charge) throw new Error("payjp charges response missing id");
       return charge;
+    },
+    async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<PayjpCheckoutSession> {
+      if (!secret) throw new Error("payjp connector missing PAYJP_SECRET_KEY");
+      const body = buildCheckoutSessionBody(params);
+      // T2-A 実測: v2 は Authorization: Bearer <secret>(v1 の Basic とは異なるスキーム)。
+      const res = await fetch(`${baseV2}/checkout/sessions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${secret}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`payjp checkout sessions HTTP ${res.status}`);
+      const session = parseCheckoutSession(await res.json());
+      if (!session) throw new Error("payjp checkout sessions response missing id/url");
+      return session;
     },
   };
 }

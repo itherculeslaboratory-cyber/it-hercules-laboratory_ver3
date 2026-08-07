@@ -3,7 +3,7 @@
   "route": "/research/descriptor",
   "title": "Data Descriptor の記入",
   "layout": "standard",
-  "notes": "PPR-03/30 — Data Descriptor 6 節の穴埋め form(field variant=text/number/select)。送信で autoFillDescriptor が観測を節に投影して自動充填し、充足キーは claim を証拠付き(evidenced)に、未検証は仮説(hypothesis)ラベルで表示。LaTeX 禁止(LATEX_FORBIDDEN)。★2026-08-02(g89-w2paper)気づき(未修正・担当外のため報告のみ): この画面のform actionはPOST /api/v1/research/content(research-content-routes.ts)であり、返り値は{content_id,key}のみでclaims/matchを含まない。autoFillDescriptor は実際には POST /api/v1/research/paper-match(paper-match-routes.ts:126)側でのみ呼ばれている。つまりpreview cardの result.claims は現状の配線では常に空(empty_text表示)になる設計不一致がある — 本レーンのスコープ(4画面のscreen-defs実装)を超えるAPI配線判断のため実装はせず、この notes とS4報告書の「気づき」欄に記録するに留めた。★同ラウンドでclaims一覧をlist→table(status列をbadge化)に変更したのは、配線が直った場合に備えた表示側の語彙統一(research-newspaper.json等の既存tableと同型)であり、この不一致自体を解消するものではない。「progressバー」「条件chip分割」(カタログ提案)は、それぞれ①提出後の充足度をサーバから受け取る経路が無い ②conditionsが単一自由記述フィールドで構造化キー入力の新規フィールド型が要る、という理由で既存語彙合成の範囲を超えるため対応を見送った(誇張ゼロ)。",
+  "notes": "PPR-03/30 — Data Descriptor 6 節の穴埋め form(field variant=text/number/select)。送信で autoFillDescriptor が観測を節に投影して自動充填し、充足キーは claim を証拠付き(evidenced)に、未検証は仮説(hypothesis)ラベルで表示。LaTeX 禁止(LATEX_FORBIDDEN)。★2026-08-07 修正済み(W1-05): 2026-08-02(g89-w2paper)が記録した不一致(action が POST /api/v1/research/content を叩いており、claims/match を返さないため result.claims が常に空だった)を解消した。action.path を POST /api/v1/research/paper-match(paper-match-routes.ts:126。返り値 {match,descriptor,hint,hints,llm_advice} の descriptor.claims に FilledClaim[] が入る)へ変更し、preview の bind_items も result.claims → result.descriptor.claims へ直した。paper-match-routes.ts の DescriptorTemplate は sections(dotted field名 sections.<key>.text がそのままネストして一致・変更不要)に加え content_id 指定時は既存 paper の conditions/claims を「土台」として引き継ぐ(body の同名キーで上書き可)ため、paper-detail の『Data Descriptor を編集する』ボタン(paper-detail.json)から遷移する際に {{params.id}} を content_id として引き継ぐ hidden field を追加した(obs-register-entry.json の carry-id と同型パターン)。★限界(誇張ゼロ・正直に記録): この画面自身には conditions(構造化P条件)・claims(statement/evidence_keys)を新規入力する field が無い(元々6節の自由記述formのみ)。したがって content_id 未指定(=既存 paper に紐付かない単発アクセス)で送信した場合は claims は今後も空配列のまま(autoFillDescriptor の template.claims ?? [] が空)——これは今回のスコープ(action/bind_items の配線修正)を超える新規フィールド追加が要る別課題であり、対応していない。★status=\"hypothesis\" の「仮説」和訳ラベル表示は見送った(誇張ゼロ): renderer.tsx の cell:\"badge\" は tone/tone_key(色)と真偽値専用の true_label/false_label のみを持ち、任意文字列→日本語ラベルへの汎用マップ機構が無い(grep実測=renderCellのbadge分岐に該当なし)。追加するには renderer.tsx の変更が要るが本レーンの専有ファイル外のため今後の対応(現在は生値表示のみ)。badge には claim.status の生値(\"hypothesis\"/\"evidenced\")がそのまま表示される。★2026-08-02(g89-w2paper)の記述はここまでで置き換えた(claims一覧のlist→table変更履歴自体は変更なし)。",
   "nodes": [
     {
       "id": "shell",
@@ -19,8 +19,9 @@
               "id": "descriptor-form",
               "type": "form",
               "props": { "header_scoped_producer": true },
-              "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/content" },
+              "action": { "kind": "api", "method": "POST", "path": "/api/v1/research/paper-match" },
               "children": [
+                { "id": "carry-content-id", "type": "field", "props": { "variant": "hidden", "name": "content_id", "default": "{{params.content_id}}" } },
                 { "id": "content-type", "type": "field", "props": { "variant": "select", "name": "content_type", "label": "種別", "required": true, "options": [ { "value": "paper", "label": "論文" } ] } },
                 { "id": "title-field", "type": "field", "props": { "variant": "text", "name": "title", "label": "タイトル", "required": true, "placeholder": "例: ヘラクレスオオカブトの飼育条件" } },
                 { "id": "purpose", "type": "field", "props": { "variant": "text", "name": "sections.purpose.text", "label": "目的" } },
@@ -42,7 +43,7 @@
                   "id": "claims",
                   "type": "table",
                   "props": {
-                    "bind_items": "result.claims",
+                    "bind_items": "result.descriptor.claims",
                     "empty_text": "claim はまだありません",
                     "columns": [
                       { "key": "statement", "label": "claim" },

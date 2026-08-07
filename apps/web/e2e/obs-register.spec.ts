@@ -67,21 +67,21 @@ test("観測登録スライス1: F1(検索)→F2(Δ)→F5→F6(Δ+次の観測�
   await shot(page, "f2");
   await page.getByRole("button", { name: "確認へ →" }).click();
 
-  // 4. F5: recap + 「次の観測目安を登録」既定ON.
+  // 4. F5: recap + 「次の観測目安を自動設定」既定ON.
   await expect(page.getByRole("heading", { name: "確認" })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await expect(page.getByText("体重 85.8g")).toBeVisible();
   await expect(page.getByText("体長 20mm")).toBeVisible();
-  await expect(page.getByLabel(/次の観測目安を登録/)).toBeChecked();
+  await expect(page.getByLabel(/次の観測目安を自動設定/)).toBeChecked();
   await shot(page, "f5");
   await page.getByRole("button", { name: "保存" }).click();
 
-  // 5. F6: 保存直後のΔ + 次の観測目安のゼロタップ登録.
+  // 5. F6: 保存直後のΔ + 次の観測目安のゼロタップ設定.
   await expect(page.getByRole("heading", { name: "保存しました" })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(/体重 85\.8g/)).toBeVisible();
   await expect(page.getByText(/\+3\.3g↑/)).toBeVisible();
-  await expect(page.getByText(/✓ 次の観測目安 登録済み/)).toBeVisible();
+  await expect(page.getByText(/✓ 次の観測目安 設定済み/)).toBeVisible();
   await shot(page, "f6");
 
   // 6. もう一度 F1 を開くと、F2 で開いた個体が候補チップに浮上する(localStorage 履歴).

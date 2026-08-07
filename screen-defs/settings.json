@@ -20,7 +20,7 @@
               "type": "card",
               "props": { "source_path": "/api/v1/me/preferences" },
               "children": [
-                { "id": "current-summary", "type": "text", "props": { "text_key": "settings.current-summary.text", "text": "現在: 言語{{data.current.locale}}・国{{data.current.country}}・テーマ{{data.current.theme_pack_id}}・モーション{{data.current.reduced_motion_override}}・Push{{data.current.push_notifications_enabled}}・受取{{data.current.delivery_pref}}・銀行振込準備{{data.current.bank_transfer_ready}}(下のフォームで変更できます)", "muted": true } }
+                { "id": "current-summary", "type": "text", "props": { "text_key": "settings.current-summary.text", "text": "現在: 言語{{data.current.locale}}・国{{data.current.country}}・テーマ{{data.current.theme_pack_id}}・モーション{{data.current.reduced_motion_override}}・Push{{data.current.push_notifications_enabled}}・受取{{data.current.delivery_pref}}・銀行振込準備{{data.current.bank_transfer_ready}}・個体QR{{data.current.qr_individual_action}}(下のフォームで変更できます)", "muted": true } }
               ]
             },
             {
@@ -61,6 +61,12 @@
                 { "id": "bank-transfer-ready", "type": "field", "props": { "variant": "select", "name": "bank_transfer_ready", "label_key": "settings.bank-transfer-ready.label", "label": "銀行振込の受け取り準備(取引前準備・V3-UIX-80)", "placeholder": "選ぶ", "options": [
                   { "value": "no", "label": "まだ(既定)" },
                   { "value": "yes", "label": "準備できている" }
+                ] } },
+                { "id": "group-qr", "type": "heading", "props": { "text_key": "settings.group-qr.text", "text": "個体QR", "level": 2 } },
+                { "id": "qr-individual-action", "type": "field", "props": { "variant": "select", "name": "qr_individual_action", "label_key": "settings.qr-individual-action.label", "label": "自分の個体のQRを自分で読んだ時(観測者本人限定・QRLINK-1)", "placeholder": "動作を選ぶ", "options": [
+                  { "value": "ask", "label": "毎回『追加観測しますか?/詳細画面に行きますか?』を聞く(既定)" },
+                  { "value": "observe", "label": "聞かずに追加観測へ進む" },
+                  { "value": "detail", "label": "聞かずに詳細画面へ進む" }
                 ] } },
                 { "id": "group-dev", "type": "heading", "props": { "when": { "not_eq": ["{{data.current.ui_exposure}}", "user"] }, "text_key": "settings.group-dev.text", "text": "開発者向け", "level": 2 } },
                 { "id": "ui-exposure", "type": "field", "props": { "when": { "not_eq": ["{{data.current.ui_exposure}}", "user"] }, "variant": "select", "name": "ui_exposure", "label_key": "settings.ui-exposure.label", "label": "UI露出(開発者向け表示)", "placeholder": "UI露出を選ぶ", "options": [

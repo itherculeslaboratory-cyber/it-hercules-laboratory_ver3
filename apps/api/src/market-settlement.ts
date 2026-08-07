@@ -10,6 +10,10 @@ import {
   OFFER_RESPONSE_HOURS,
   NO_PAY_CANCEL_HOURS,
   GRACE_CANCEL_MINUTES,
+  BID_STEP_UNDER_1000,
+  BID_STEP_UNDER_5000,
+  BID_STEP_UNDER_10000,
+  BID_STEP_10000_PLUS,
 } from "./economy-constants";
 
 export type MarketKind =
@@ -162,6 +166,16 @@ export function highestBid(bids: MarketState["bids"]): MarketState["bids"][numbe
     if (!best || b.amount > (best.amount as number) || (b.amount === best.amount && b.at < best.at)) best = b;
   }
   return best;
+}
+
+/** V3-MKT-05(w1-01実装): 価格帯別の入札単位刻み。帯は「現在価格」(次の入札の
+ * 直前の価格)で決まる(要件文の「現在価格帯」表記に対応)。¥1,000/¥5,000/¥10,000
+ * ちょうどは、それぞれ「以上」側(1つ上の帯)に属する(要件文の閉区間表記どおり)。 */
+export function bidStepFor(currentPrice: number): number {
+  if (currentPrice < 1000) return BID_STEP_UNDER_1000;
+  if (currentPrice < 5000) return BID_STEP_UNDER_5000;
+  if (currentPrice < 10000) return BID_STEP_UNDER_10000;
+  return BID_STEP_10000_PLUS;
 }
 
 /** V3-MKT-07: 抽選(listed_lottery)締切(ends_at)経過時に決着すべきか。auction と

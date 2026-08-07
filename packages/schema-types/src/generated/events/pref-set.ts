@@ -93,6 +93,10 @@ export interface PrefSet {
    */
   dnd_end?: string;
   /**
+   * 個体QR(物理ラベル・IND-15 qr_url)を観測者本人がスキャンした時の既定挙動(QRLINK-1・2026-08-08ユーザー裁定)。ask=毎回『追加観測しますか?/詳細画面に行きますか?』を聞く(既定)。observe/detail=聞かずに直行。観測者本人以外・未ログインは本設定に関わらず常に詳細画面のみ(追加観測不可)。
+   */
+  qr_individual_action?: "ask" | "observe" | "detail";
+  /**
    * 発生時刻（RFC3339）。
    */
   created_at: string;

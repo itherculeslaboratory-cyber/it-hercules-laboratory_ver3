@@ -103,3 +103,9 @@ export const KRM29_CITIZEN_SCIENTIST_THRESHOLD = 100; // いずれかの軸が�
 // 発生する development 軸の基礎貢献度(この値の10%が UPSTREAM_PERCENT により上流lineageへ
 // 分配される・appendForkContribution 経由)。既存 CONTRIB_INDIVIDUAL_CREATED(=10)と同水準。
 export const MKT36_FORK_CONTRIBUTION = 10;
+
+// V3-MKT-05(w1-01実装): オークション入札の価格帯別入札単位刻み(要件文の固定値)。
+export const BID_STEP_UNDER_1000 = 10;
+export const BID_STEP_UNDER_5000 = 100;
+export const BID_STEP_UNDER_10000 = 250;
+export const BID_STEP_10000_PLUS = 500;

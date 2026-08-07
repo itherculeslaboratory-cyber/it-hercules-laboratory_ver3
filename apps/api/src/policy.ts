@@ -317,11 +317,18 @@ export function checkFeaturePointConsistency(
   return matched / a.length >= minMatchRatio;
 }
 
+// "sha256_exact" 追加(2026-08-07 order-w1-08-unwired-guards T1): 既存の
+// V3-OBS-65 バイト完全一致検出(observation-routes.ts)を、この「ひっそり警告」
+// event 形へ配線するために追加した reason 値。dHash/EXIF/成長曲線/特徴点の4関数は
+// upload 時点で入力(グレースケール画素配列・EXIF・過去の成長記録・斑紋データ)が
+// 揃わず配線できなかった(報告書参照)ため、実際に得られる唯一のシグナルである
+// sha256完全一致をこの型に載せる。ロジックは変更しない(型の追加のみ)。
 export type ImageReuseFlagReason =
   | "dhash_similar"
   | "exif_inconsistent"
   | "growth_curve_inconsistent"
-  | "feature_point_mismatch";
+  | "feature_point_mismatch"
+  | "sha256_exact";
 
 export interface ImageReuseSilentWarning {
   event_type: "image_reuse_suspect";

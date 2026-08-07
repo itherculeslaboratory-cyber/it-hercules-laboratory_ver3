@@ -41,6 +41,7 @@ const PREF_FIELDS = [
   "notify_system",
   "dnd_start",
   "dnd_end",
+  "qr_individual_action",
 ] as const;
 
 // V3-UIX-42: カテゴリ別通知(発火点はuib07think T1-aの実測時点で0件=実配信基盤は
@@ -108,6 +109,7 @@ export type Preferences = {
   notify_system: string;
   dnd_start: string;
   dnd_end: string;
+  qr_individual_action: string;
 };
 
 // 選好投影(都度再計算)。pref-set を prefix scan → actor 一致のみ → created_at/ULID
@@ -146,6 +148,7 @@ export async function projectPreferences(store: TruthStore, actorId: string): Pr
     notify_system: "", // 同上
     dnd_start: "22:00", // V3-UIX-42: registry.json明示値の既定(DNDは既定で有効)
     dnd_end: "07:00", // 同上
+    qr_individual_action: "ask", // QRLINK-1(2026-08-08): 既定は毎回選択画面を出す
   };
   for (const e of events) {
     for (const k of PREF_FIELDS) {

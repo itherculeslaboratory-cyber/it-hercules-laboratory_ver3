@@ -1,0 +1,32 @@
+{
+  "screen_id": "ind-card-batch",
+  "route": "/individuals/card-batch",
+  "title": "バイオカード一括出力",
+  "layout": "standard",
+  "notes": "R0802-a7205d(×20点)の是正(R0807-d763a2-DESIGN §2)。登録済み個体を可変数チェックボックス選択(検索絞り込み→表示中を全選択/割り出し(クラッチ)単位で追加選択)し、様式2種(名刺型フル情報/省スペース版=QR+管理番号のみ)から選んで、印刷用のタイル配置プレビューを組む。PDF化はサーバでファイルを作らずブラウザの印刷ダイアログ(window.print → PDFに保存)に委ねる(repoにPDF生成ライブラリ0件・既存方針=truth-backup-connector.ts等3箇所と同じ)。等倍印刷の位置合わせは自動化しない(V3-IND-15裁定=人間ゲート維持)。タブ2本目に既存の空ラベル先刷り(POST /individuals/qr-batch・100/500/1000固定)を維持(仕様は変えない・拡張しない)。実装ノード= list:ind-card-batch(ind-card-batch.tsx)。取得= GET /individuals(既存クエリq/species/stage流用)+GET /clutches+GET /clutches/{id}/individuals(新規)。出力データ= POST /individuals/bio-card-batch(新規・上限200)。",
+  "nodes": [
+    {
+      "id": "shell",
+      "type": "app-shell",
+      "props": {
+        "page_info": {
+          "purpose": "登録済みの飼育個体を検索・チェックボックスで可変選択し、それぞれ違うバイオカードを1つのPDFにまとめて印刷できる画面。切ってケースに貼る管理ラベル用途。",
+          "talk_channel": true
+        }
+      },
+      "children": [
+        {
+          "id": "page",
+          "type": "page",
+          "children": [
+            {
+              "id": "card-batch",
+              "type": "list",
+              "props": { "variant": "ind-card-batch" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -19,6 +19,7 @@ import {
   isOfferExpired,
   isAuctionSettleDue,
   highestBid,
+  bidStepFor,
   isLotteryDrawDue,
   isPlatinumPriorityDue,
   pickLotteryWinner,
@@ -45,6 +46,11 @@ import { projectPreferences } from "./settings-routes";
 import { isBlockedPair } from "./market-block-routes";
 import { projectSellerModeration, projectListingModeration } from "./market-flag-routes";
 import { OBLIGATION_TYPE, safeKeyPart } from "./gmo-routes";
+// V3-MKT-27(w1-01実装): 低評価フィルタは market-rating-routes.ts の判定関数をそのまま
+// 再利用する(判定ロジックの二重定義は禁止=発注書固有の地雷)。projectLedger は
+// market-rating-routes.ts と同じ karma 値の読み方(ledger-routes.ts)。
+import { lowRatingFlag, projectRating } from "./market-rating-routes";
+import { projectLedger } from "./ledger-routes";
 import {
   NO_PAY_LIMIT_COUNT,
   NO_PAY_LIMIT_WINDOW_DAYS,
@@ -226,6 +232,10 @@ marketRoutes.get("/market/listings", async (c) => {
   // lang/species と同じ完全一致(大小無視)フィルタで足りる(既存in-memoryフィルタ→
   // ID順ソート→スライスの複合インデックスに country 軸を1本追加するだけ)。
   const countryFilter = (c.req.query("country") ?? "").trim().toLowerCase();
+  // V3-MKT-27(w1-01実装): 低評価出品者の除外はオプトイン(既定=除外しない)。要件文が
+  // 「除外できる」であって「常に除外する」ではないため、既定で全件から出品者を
+  // 黙って消す挙動は不可逆な影響が大きいと判断した(判断が要った箇所・報告書に明記)。
+  const excludeLowRating = (c.req.query("exclude_low_rating") ?? "").trim() === "true";
   const cursor = (c.req.query("cursor") ?? "").trim();
   const limitRaw = Number(c.req.query("limit"));
   const limit = Number.isInteger(limitRaw) && limitRaw > 0 && limitRaw <= 200 ? limitRaw : 50;
@@ -241,12 +251,17 @@ marketRoutes.get("/market/listings", async (c) => {
   const listings = [];
   for (const l of page) {
     const moderation = await projectListingModeration(s, String(l.listing_id), String(l.actor_id));
-    if (!moderation.hidden) {
-      // c8#2: browse card cover image — first uploaded photo only (full photos[]
-      // rides the single-listing detail route; the list route stays a light card).
-      const photos = await loadListingPhotos(s, String(l.listing_id));
-      listings.push({ ...l, cover_photo_id: photos[0]?.photo_id });
+    if (moderation.hidden) continue;
+    // V3-MKT-27(w1-01実装): lowRatingFlag をそのまま import して使う(二重定義しない)。
+    if (excludeLowRating) {
+      const summary = await projectRating(s, String(l.actor_id));
+      const { karma_value } = await projectLedger(s, String(l.actor_id));
+      if (lowRatingFlag(summary, karma_value)) continue;
     }
+    // c8#2: browse card cover image — first uploaded photo only (full photos[]
+    // rides the single-listing detail route; the list route stays a light card).
+    const photos = await loadListingPhotos(s, String(l.listing_id));
+    listings.push({ ...l, cover_photo_id: photos[0]?.photo_id });
   }
   const nextCursor = page.length === limit ? String(page[page.length - 1].listing_id) : undefined;
   return c.json({ listings, next_cursor: nextCursor });
@@ -590,11 +605,75 @@ async function settleNoPayCancel(
 // V3-MKT-05: オークション締切(ends_at)経過の read-time 自己修復(settleNoPayCancel と
 // 同型パターン)。listed_auction のまま ends_at を過ぎたら、最高入札があれば match
 // (=matched へ・落札額=最高額)、入札が無ければ delist(「入札なしでも決着」)を系統
-// actor が deterministic key で put-if-absent する。ヤフオク型自動入札(価格帯別入札
-// 単位刻み・予算上限までの自動再入札)は bid 発行側(POST /market/offers 相当の別経路)の
-// 仕様であり、既存の無条件 bid append 経路を壊さないよう本波では対象外(ponytail・
-// 決着ロジックのみ先行実装)。
+// actor が deterministic key で put-if-absent する。★w1-01実装で価格帯別入札単位刻み・
+// ヤフオク型自動入札(予算上限までの自動再入札)を POST /transition の kind==="bid"
+// 分岐(下記 auctionPricing/appendAuctionProxyRebid)へ実装した。自動入札の再入札も
+// 「実効額(2番手+1刻み)」を通常の bid イベントとして append するため、この決着関数は
+// highestBid(cur.bids) を呼ぶだけで自動的に実効額(max_bid ではない)で確定する
+// (変更不要・以前の「本波では対象外」コメントは是正済み)。
 const SYSTEM_AUCTION_ACTOR = "system:auction-settle";
+
+// V3-MKT-05(w1-01実装): 現在価格・刻み・次の最低入札額を算出する。開始価格(入札0件時の
+// 基準)は出品時の希望価格(listing.price・省略時0)を流用する既定値とした — 要件文には
+// 「初回入札の最低額」の基準が明記されていないため(判断が要った箇所・報告書に明記)。
+async function auctionPricing(
+  s: TruthStore,
+  listingId: string,
+  cur: MarketState,
+): Promise<{ currentPrice: number; step: number; nextMinBid: number }> {
+  const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+  const startingPrice = listingEv && typeof dataOf(listingEv).price === "number" ? Number(dataOf(listingEv).price) : 0;
+  const currentPrice = highestBid(cur.bids)?.amount ?? startingPrice;
+  const step = bidStepFor(currentPrice);
+  return { currentPrice, step, nextMinBid: currentPrice + step };
+}
+
+// V3-MKT-05(w1-01実装): 入札者本人の直近(最新)の bid イベントから payload.max_bid を
+// 読む。MarketState.bids(公開投影)には max_bid を載せない — bids-table は公開情報
+// (stage1)であり、ここに max_bid を混ぜると「max_bid を露出させない」というヤフオク型
+// 自動入札の要点(要件文)に反するため、生の TxnEvent[] からだけ読む設計にした。
+function findBidMaxBid(events: TxnEvent[], bidder: string): number | undefined {
+  const mine = events
+    .filter((e) => e.kind === "bid" && e.actor_id === bidder)
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
+  const raw = (mine[mine.length - 1]?.payload as { max_bid?: unknown } | undefined)?.max_bid;
+  return typeof raw === "number" ? raw : undefined;
+}
+
+// V3-MKT-05(w1-01実装): ヤフオク型自動入札の再入札を「新しい bid イベントの追記」として
+// append-only 台帳に記録する(過去イベントの書き換え禁止)。data.actor_id は実際の
+// 入札者本人(bids-table の bidder 判定・highestBid の落札者判定に使われるため system
+// 固定値にしない)。provenance だけを system 生成として正直に記録する(CL-02)。
+const SYSTEM_AUCTION_PROXY_AGENT = "market-auction-proxy-bid";
+async function appendAuctionProxyRebid(
+  s: TruthStore,
+  listingId: string,
+  bidderId: string,
+  amount: number,
+  maxBid: number,
+): Promise<void> {
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    transaction_event_id: id,
+    listing_id: listingId,
+    actor_id: bidderId,
+    kind: "bid",
+    amount,
+    payload: { max_bid: maxBid, proxy_rebid: true },
+    created_at: new Date().toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  await s.putEvent({
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: TXN_TYPE,
+    time: new Date().toISOString(),
+    dataschema: TXN_SCHEMA,
+    provenance: { generator_kind: "agent", agent_name: SYSTEM_AUCTION_PROXY_AGENT },
+    data,
+  });
+}
 
 async function settleDueAuctions(
   s: TruthStore,
@@ -920,6 +999,50 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
       return c.json({ error: "BID_TOO_LOW", current_top: currentTop.amount }, 409);
     }
   }
+  // V3-MKT-05(w1-01実装): オークション入札は「現在価格+その価格帯の刻み」以上・
+  // 刻みの倍数に整合すること(要件文)。負値/0/非数は明示的に拒否する(元は
+  // Number.isFinite だけ通っていた=負値でも append されていたギャップの是正)。
+  // ★判断: 「刻みの倍数に整合」は amount 自体を刻みグリッドに揃える(amount % step
+  // === 0)と解釈した(現在価格からの差分ではなく金額そのものを揃える方が、複数入札者
+  // が混在しても検算しやすいため。要件文はどちらとも取れる書き方で、報告書に明記する)。
+  let auctionProxyRebid: { bidder: string; amount: number; maxBid: number } | undefined;
+  if (kind === "bid" && cur.state === "listed_auction") {
+    const amount = extra.amount;
+    if (typeof amount !== "number" || !Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
+      return c.json({ error: "INVALID_TRANSITION", details: ["bid amount must be a positive integer"] }, 400);
+    }
+    const pricing = await auctionPricing(s, listingId, cur);
+    if (amount < pricing.nextMinBid || amount % pricing.step !== 0) {
+      return c.json(
+        { error: "BID_TOO_LOW", current_price: pricing.currentPrice, min_next_bid: pricing.nextMinBid, bid_step: pricing.step },
+        409,
+      );
+    }
+    // V3-MKT-05(w1-01実装・T2): ヤフオク型自動入札の予算上限(任意)。amount 以上を要求する
+    // (max_bid が amount 未満なら即座に自分自身の入札にすら勝てない矛盾した入力のため)。
+    const maxBidRaw = body?.max_bid;
+    if (maxBidRaw !== undefined) {
+      const maxBid = Number(maxBidRaw);
+      if (!Number.isFinite(maxBid) || !Number.isInteger(maxBid) || maxBid < amount) {
+        return c.json({ error: "INVALID_TRANSITION", details: ["max_bid must be an integer >= amount"] }, 400);
+      }
+      extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), max_bid: maxBid };
+    }
+    // 既存の最高額入札者(直前のリーダー)が max_bid を持ち、その上限がこの新しい入札への
+    // 「1刻み上乗せ」を賄えるなら、リーダーの入札を1刻みだけ自動で引き上げて再入札する
+    // (ヤフオク型・max_bid 自体は露出しない)。同額時「先に入れた方」が勝つのは
+    // highestBid() の既存タイブレーク(created_at 昇順)がそのまま担保する。
+    const prevBest = highestBid(cur.bids);
+    if (prevBest && prevBest.bidder !== actorId) {
+      const prevMaxBid = findBidMaxBid(events, prevBest.bidder);
+      if (typeof prevMaxBid === "number") {
+        const raised = amount + bidStepFor(amount);
+        if (prevMaxBid >= raised) {
+          auctionProxyRebid = { bidder: prevBest.bidder, amount: raised, maxBid: prevMaxBid };
+        }
+      }
+    }
+  }
   if (kind === "cancel" && cur.state === "matched" && actorId === cur.matched_with) {
     // 猶予キャンセル(成立後60分・買い手無条件)。窓が閉じた後は cancel_request/
     // cancel_approve/cancel_decline(相互承認フロー・HANDOFF §3.4)を使う。
@@ -972,6 +1095,12 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   if (res.status === "invalid") return c.json({ error: "INVALID_TRANSITION", details: res.errors }, 400);
   if (res.status === "conflict") return c.json({ error: "DUPLICATE_TRANSITION", key: res.key }, 409);
 
+  // V3-MKT-05(w1-01実装): この入札の直後にヤフオク型自動入札の再入札を追記する
+  // (append-only・過去イベントは書き換えない)。
+  if (auctionProxyRebid) {
+    await appendAuctionProxyRebid(s, listingId, auctionProxyRebid.bidder, auctionProxyRebid.amount, auctionProxyRebid.maxBid);
+  }
+
   const merged = [...events, data];
   const next = reduceMarket(listingId, merged);
   if (kind === "receive" || kind === "rate") {
@@ -995,8 +1124,14 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
   events = await settleDueLottery(s, listingId, events, now); // V3-MKT-07(自己修復)
   events = await settleDuePlatinum(s, listingId, events, now); // V3-MKT-08(自己修復)
   const cur = reduceMarket(listingId, events);
+  // V3-MKT-05(w1-01実装・T3): 入札フォームが表示する「現在価格・次の最低入札額・刻み」。
+  // listed_auction のときだけ算出する(それ以外は入札できないため無意味)。
+  const auctionPricingInfo = cur.state === "listed_auction" ? await auctionPricing(s, listingId, cur) : undefined;
   return c.json({
     ...cur,
+    auction: auctionPricingInfo
+      ? { current_price: auctionPricingInfo.currentPrice, next_min_bid: auctionPricingInfo.nextMinBid, bid_step: auctionPricingInfo.step }
+      : undefined,
     settlement: projectSettlement(events, now),
     payment: projectPayment(events),
     no_pay_cancel_due: isNoPayCancelDue(events, now),

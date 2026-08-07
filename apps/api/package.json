@@ -7,6 +7,7 @@
   "scripts": {
     "test": "vitest run",
     "dev:e2e": "wrangler dev --port 8787 --local --ip 127.0.0.1 --compatibility-date 2026-05-03",
+    "seed:dev": "node scripts/seed-dev.mjs",
     "deploy": "wrangler deploy"
   },
   "dependencies": {

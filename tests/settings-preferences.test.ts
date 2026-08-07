@@ -70,6 +70,7 @@ describe("UIX-16 選好 append + LWW 投影", () => {
       notify_system: "off",
       dnd_start: "22:00", // registry.json V3-UIX-42 明示既定値
       dnd_end: "07:00", // 同上
+      qr_individual_action: "ask", // QRLINK-1(2026-08-08): 既定は毎回選択画面を出す
     });
   });
 
@@ -280,5 +281,18 @@ describe("V3-UIX-42 通知カテゴリ + DND(uib07 Ship1)", () => {
     const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
     expect(p.notify_karma).toBe("mail"); // 明示設定が優先され上書きされない
     expect(p.notify_platinum).toBe("push"); // 未設定はmaster=onからpushへ導出
+  });
+});
+
+// QRLINK-1(2026-08-08ユーザー裁定): 個体QR(物理ラベル)を観測者本人が読んだ時の既定挙動
+// (ask/observe/detail)。設定画面(qr-individual-hub選択画面のチェックボックスと同じ経路)。
+describe("QRLINK-1 個体QRの既定挙動(qr_individual_action)", () => {
+  it("enum外は400、有効値はappendされGETに反映する", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const h = await authOf("mia");
+    expect((await patchPrefs(env, h, { qr_individual_action: "bogus" })).status).toBe(400);
+    expect((await patchPrefs(env, h, { qr_individual_action: "observe" })).status).toBe(200);
+    const p = (await (await getPrefs(env, h)).json()) as Record<string, string>;
+    expect(p.qr_individual_action).toBe("observe");
   });
 });

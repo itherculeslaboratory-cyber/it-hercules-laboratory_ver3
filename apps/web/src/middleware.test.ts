@@ -16,6 +16,10 @@ describe("requiresAuth — V3-AUT-12 protected-route guard (pure)", () => {
     expect(requiresAuth("/qr/abc123")).toBe(true);
     expect(requiresAuth("/s/setup-profile")).toBe(true); // still needs a SESSION, just not onboarding
   });
+  it("QRLINK-1(2026-08-08): exempts /individuals/{id} (physical QR label landing, unauthenticated)", () => {
+    expect(requiresAuth("/individuals/01ABC")).toBe(false);
+    expect(requiresAuth("/individuals/01KXQKZTYWJ4WN00M41K3A9JNV")).toBe(false);
+  });
 });
 
 describe("skipsOnboardingCheck — V3-AUT-10 onboarding gate (pure)", () => {

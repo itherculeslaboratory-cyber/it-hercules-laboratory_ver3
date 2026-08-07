@@ -18,6 +18,7 @@ import { ledgerAuditRoutes } from "./ledger-audit-routes";
 import { contributionRoutes } from "./contribution-routes";
 import { shopRoutes } from "./shop-routes";
 import { feeRoutes } from "./fee-routes";
+import { payjpCheckoutRoutes } from "./payjp-checkout-routes";
 import { marketRoutes } from "./market-routes";
 import { marketReservationRoutes } from "./market-reservation-routes";
 import { marketBlockRoutes } from "./market-block-routes";
@@ -108,7 +109,13 @@ export const PUBLIC_ROUTES = [
   // own secret key before recording anything — a forged body alone matches
   // nothing real.
   "/api/v1/fees/payjp-webhook",
+  "/api/v1/fees/payjp-checkout-webhook",
   "/api/v1/chain/root",
+  // 広場ルール (V3-WIK-30): 静的・非個人化の公開GET。buildPlazaRules() は actorId 不使用の
+  // 純関数で、/chain/root と同型の先例に従い PUBLIC_ROUTES(生URL完全一致)で公開する。
+  // 根拠: SB-1=×/SB-2=○(R0731-sec32boundary-2026-07-31・「透明性が大事です」)+
+  // W1-09 調査(R0807-2cbf9b T1#4: PUBLIC_READ_ROUTES の3条件のいずれにも該当しない)。
+  "/api/v1/plaza/rules",
 ];
 
 // R65-7(第22回裁定 V3-AUT-15): 観測データの READ(検索・一覧・詳細)は未ログインでも見られる。
@@ -144,6 +151,8 @@ export const PUBLIC_READ_ROUTES = new Set([
   // セッション解決ごとスキップされ既存経路が壊れる(批評R0801-c16d84 A5実測)。
   // readでない項目が3つ目に入ったらSet改名を検討。
   "POST /api/v1/cusb",                                        // infra-route-117(R66-1)
+  "GET /api/v1/individuals/:id/profile",                      // QRLINK-1(2026-08-08): 個体QR(物理ラベル)基本動線 — 未ログイン/観測者本人以外でも詳細画面を見られる
+  "GET /api/v1/individuals/:id/pedigree",                     // QRLINK-1: 詳細画面の血縁レール表示に必要(profileと同じ理由)
 ]);
 
 // CORS (design-k7 FND-11 §1.5). credentials=true → `*` is forbidden; only an origin
@@ -389,6 +398,7 @@ app.route("/api/v1", shopRoutes);
 // = charge id 再照会)・GET /me/fees(本人スコープ・保護・未払い投影)。GMO route は retired
 // (gmo-routes.ts 冒頭コメント参照・義務台帳イベント型はそのまま継承)。
 app.route("/api/v1", feeRoutes);
+app.route("/api/v1", payjpCheckoutRoutes);
 
 // Market skeleton (design-c4 §3 / V3-MKT-01): POST /market/listings(出品)・
 // GET /market/listings(一覧投影)・GET /market/listings/{id}(詳細)。全て保護。
@@ -442,7 +452,7 @@ app.route("/api/v1", knowledgeLintRoutes);
 
 // w1-plaza 新規4ルート (V3-BBS-16/WIK-24/WIK-31/WIK-30): file-board索引・知識タイムライン・
 // GitHub連携・広場ルール。mount は HQ が検収時に適用(艦は index.ts 不可侵・R0731-feb2a1 §mount指示)。
-// PUBLIC_ROUTES への /plaza/rules 追加は SB-1/2 回答待ちで保留(現状は保護既定のまま)。
+// PUBLIC_ROUTES への /plaza/rules 追加は SB-1/2 回答(2026-07-31・SB-1=×/SB-2=○=全公開方向)により適用済み(2026-08-07 HQ)。
 app.route("/api/v1", plazaFileBoardRoutes);
 app.route("/api/v1", knowledgeTimelineRoutes);
 app.route("/api/v1", plazaGithubRoutes);

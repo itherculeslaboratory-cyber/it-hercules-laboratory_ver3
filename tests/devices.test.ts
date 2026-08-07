@@ -6,7 +6,7 @@
 // POST /devices/:id/test; the server never persists it.
 import { describe, expect, it } from "vitest";
 import app from "../apps/api/src/index";
-import { TruthStore } from "@ihl/truth";
+import { TruthStore, ulid } from "@ihl/truth";
 import { DEV_TOKEN, FakeR2Bucket, makeEnv } from "./helpers";
 
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -106,5 +106,40 @@ describe("OBS-31 device registration (placement-bound)", () => {
     const { env } = ctx();
     const res = await app.request("/api/v1/devices/nope/test", { method: "POST", headers: AUTH_JSON, body: "{}" }, env);
     expect(res.status).toBe(404);
+  });
+
+  // R0807-e87196 w1-07-uifix T1(ユーザー裁定「けせよ。それ は。」): append-only
+  // ストアに誤って永続化された文字化けdisplay_nameを、既知IDの除外リスト
+  // (CORRUPTED_DEVICE_IDS)で一覧から隠すことを検証する。
+  it("filters known mojibake device ids (CORRUPTED_DEVICE_IDS) from the list", async () => {
+    const { env, bucket } = ctx();
+    const res = await createDevice(env, { provider: "dummy", display_name: "Good Sensor" });
+    const deviceId = ((await res.json()) as { device_id: string }).device_id;
+    const rec = await new TruthStore(bucket).readEvent(`truth/ihl.obs.device.v1/${deviceId}.json`);
+    const actorId = (rec!.data as Record<string, unknown>).actor_id as string;
+
+    const corruptedId = "01KYZQXRXN4TZB2BMVXX908RZ2";
+    await new TruthStore(bucket).putEventAt(`truth/ihl.obs.device.v1/${corruptedId}.json`, {
+      specversion: "1.0",
+      id: ulid(),
+      source: "apps/api",
+      type: "ihl.obs.device.v1",
+      time: new Date().toISOString(),
+      dataschema: "schemas/events/obs-device.schema.json",
+      provenance: { generator_kind: "human", actor_id: actorId },
+      data: {
+        device_id: corruptedId,
+        provider: "dummy",
+        display_name: "���",
+        actor_id: actorId,
+        created_at: new Date().toISOString(),
+      },
+    });
+
+    const list = (await (await app.request("/api/v1/devices", { headers: AUTH }, env)).json()) as {
+      devices: Record<string, unknown>[];
+    };
+    expect(list.devices.some((d) => d.device_id === corruptedId)).toBe(false);
+    expect(list.devices.some((d) => d.device_id === deviceId)).toBe(true);
   });
 });

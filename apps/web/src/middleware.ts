@@ -26,6 +26,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787";
 // visitors can read the full terms text before logging in).
 const PUBLIC_PATHS = new Set(["/s/login", "/s/login-sent", "/s/terms"]);
 
+// QRLINK-1(2026-08-08): 物理QRラベルの着地 /individuals/{id} は、未ログインでも
+// 詳細画面へ到達できなければならない(ユーザー対案・仕様1)。{id} は動的セグメントなので
+// Set の完全一致では表現できず、前方一致で判定する。API 側は index.ts の
+// PUBLIC_READ_ROUTES で既に公開済み(profile/pedigree)。
+const PUBLIC_PATH_PREFIXES = ["/individuals/"];
+
 // setup-profile itself must stay reachable once logged in, whether or not
 // onboarding is complete yet (otherwise a visitor with no handle could never
 // reach the one screen that lets them set one — a redirect loop).
@@ -40,7 +46,7 @@ export function skipsConsentCheck(pathname: string): boolean {
 
 /** Pure: does this pathname require a session? Exported for a direct unit test. */
 export function requiresAuth(pathname: string): boolean {
-  return !PUBLIC_PATHS.has(pathname);
+  return !PUBLIC_PATHS.has(pathname) && !PUBLIC_PATH_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 /** Pure: does this pathname skip the onboarding-completeness check? */

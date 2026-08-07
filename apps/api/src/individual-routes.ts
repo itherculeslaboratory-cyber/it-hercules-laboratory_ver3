@@ -12,6 +12,7 @@ import { TruthStore, ulid, cosineSimilarity, type R2BucketLite } from "@ihl/trut
 import type { Bindings, Variables } from "./env";
 import {
   QR_BATCH_SIZES,
+  BIO_CARD_BATCH_MAX,
   STAGE_TO_NEXT_TRANSITION,
   deltaE76,
   colorSimilarityFromDeltaE76,
@@ -1669,10 +1670,27 @@ individualRoutes.get("/individuals/:id", async (c) => {
 });
 
 // GET /individuals/{id}/profile — individual-detail スライスA投影 (V3-AIP-101).
+// is_owner(QRLINK-1・2026-08-08): 物理QR着地(qr-individual-hub)がこの1フィールドだけで
+// 「観測者本人か」を判定する(未ログインはactorId未確定 → 常にfalse)。projectCurrentOwner
+// は既存の所有権判定(POST /occupancy 等と同じ trust boundary・source-routes.ts)を
+// そのまま再利用し、新規の判定機構は作らない。
 individualRoutes.get("/individuals/:id/profile", async (c) => {
-  const proj = await projectIndividualProfile(store(c), c.req.param("id"), c.get("actorId"));
+  const id = c.req.param("id");
+  const actorId = c.get("actorId");
+  const proj = await projectIndividualProfile(store(c), id, actorId);
   if (!proj) return c.json({ error: "NOT_FOUND" }, 404);
-  return c.json(proj);
+  const owner = actorId ? await projectCurrentOwner(c.env.TRUTH, id) : null;
+  // QRLINK-1(2026-08-08・w2-gatefix T3・HQ裁定): 匿名(actorId未確定)時は master.actor_id /
+  // life_events[].actor_id を落とす。画面はこの内部IDを参照しない
+  // (apps/web/src/renderer/zones/ind-screens/ grep=0件・検分ゲート確認済み)。
+  const master = proj.master && actorId == null && typeof proj.master === "object"
+    ? { ...(proj.master as Record<string, unknown>), actor_id: undefined }
+    : proj.master;
+  const life_events =
+    actorId == null
+      ? proj.life_events.map((e) => ({ ...e, actor_id: undefined }))
+      : proj.life_events;
+  return c.json({ ...proj, master, life_events, is_owner: actorId != null && owner === actorId });
 });
 
 // POST /individuals/{id}/parents — append a blood link (IND-01/12). Key by
@@ -2015,6 +2033,39 @@ individualRoutes.post("/individuals/qr-batch", async (c) => {
   }
   const urls = Array.from({ length: count }, () => `/individuals/${ulid()}`);
   return c.json({ count, urls }, 201);
+});
+
+// POST /individuals/bio-card-batch — bio-cards for a caller-chosen set of
+// already-registered individuals (management labels for a home collection —
+// distinct from qr-batch's unbound blank labels above; see is-different-thing
+// rationale in R0807-d763a2-DESIGN §3-0). Loops the existing projectBioCard;
+// adds label_text/name so the batch screen doesn't need an N+1 profile fetch
+// per card (ind-bio-card.tsx does that today for a single card).
+individualRoutes.post("/individuals/bio-card-batch", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const ids = Array.isArray(body.individual_ids) ? body.individual_ids.map(String) : null;
+  if (!ids || ids.length === 0) return c.json({ error: "EMPTY_SELECTION" }, 400);
+  if (ids.length > BIO_CARD_BATCH_MAX) {
+    return c.json({ error: "TOO_MANY", max: BIO_CARD_BATCH_MAX }, 400);
+  }
+  const s = store(c);
+  const cards: Record<string, unknown>[] = [];
+  const missing: string[] = [];
+  for (const id of ids) {
+    const card = await projectBioCard(s, id);
+    if (!card) {
+      missing.push(id);
+      continue;
+    }
+    const masterEv = await s.readEvent(`truth/${MASTER_TYPE}/${id}.json`);
+    const m = masterEv ? dataOf(masterEv) : {};
+    cards.push({
+      ...card,
+      label_text: typeof m.local_label_text === "string" ? m.local_label_text : null,
+      name: await projectName(s, id),
+    });
+  }
+  return c.json({ cards, missing }, 200);
 });
 
 // GET /individuals/{id}/authenticity — continuity + lineage-conflict score (IND-21).

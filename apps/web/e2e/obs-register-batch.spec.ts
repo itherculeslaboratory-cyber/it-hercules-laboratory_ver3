@@ -175,7 +175,7 @@ test("観測登録スライス2: F3(割り出し)→F4(まとめて記録)→F5b
   await expect(page.getByText("-2.5g")).toBeVisible();
   await expect(page.getByText(/72→68匹\(死亡4\)/)).toBeVisible();
   await expect(page.getByText(/8体を昇格/)).toBeVisible();
-  await expect(page.getByText(/✓ 次の観測目安 登録済み — \d+件/)).toBeVisible();
+  await expect(page.getByText(/✓ 次の観測目安 設定済み — \d+件/)).toBeVisible();
   await shot(page, "f6b");
 
   // 一括保存が完了して初めて昇格が反映される(遅延コミットの契約): 保存前は

@@ -584,7 +584,7 @@ export function FieldNode({ node }: { node: ScreenNode }) {
     // data-required='true' means "must be checked"; scanFormValidity + the
     // submit-time missing scan (unchecked => fd.get null) both cover it.
     // props.default:true = checked from first paint (F5's opt-out-by-default
-    // "次の観測目安を登録" checkbox, V3-AIP-101). labelText may carry a
+    // "次の観測目安を自動設定" checkbox, V3-AIP-101). labelText may carry a
     // client-computed {{date}} (label_date_offset_days, see above).
     return (
       <div className="civ-field">
@@ -870,6 +870,8 @@ export function ListNode({ node }: { node: ScreenNode }) {
     "ind-species",
     "ind-cross",
     "ind-bio-card",
+    "ind-card-batch",
+    "qr-individual-hub",
   ];
   if (typeof p.variant === "string" && zoneVariants.includes(p.variant)) {
     const Comp = lookupNode(`list:${p.variant}`);

@@ -49,6 +49,10 @@ export type Bindings = {
   PAYJP_MODE?: string;
   PAYJP_SECRET_KEY?: string;
   PAYJP_API_BASE?: string;
+  // Checkout v2(外部リンク型決済・2026-08-07裁定TDS-1)。v1 と同じ秘密鍵・別 base URL。
+  PAYJP_API_BASE_V2?: string;
+  // Checkout webhook(X-Payjp-Webhook-Token ヘッダ比較用の固定トークン)。実値は env のみ。
+  PAYJP_WEBHOOK_TOKEN?: string;
   // 研究 LLM 助言モード(design-k5 §2.5). 既定 off=静的ヒントのみ. on は実 API キー
   // 必須で人間ゲート「実鍵投入」まで throw. 実値は env のみ(コミット禁止)。
   RESEARCH_LLM_MODE?: string;

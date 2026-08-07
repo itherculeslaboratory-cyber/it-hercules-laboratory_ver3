@@ -3,7 +3,7 @@
   "route": "/observe/register/done",
   "title": "保存しました",
   "layout": "standard",
-  "notes": "V3-AIP-101 観測登録スライス1(F6)。保存直後のΔrecap+次の観測目安のゼロタップ登録(POST /observation/schedule)。この画面では間隔30日固定(stage:'unspecified')で登録する簡略版 — 個体の現ステージに応じた間隔自動選択は今後の波(ponytail: stage_interval のスキーマ採番後にテンプレ側へ)。register_schedule opt-out時は自動登録せず、ボタンは手動登録として残る(死んだボタンにしない)。params.id はここでは capture_id(useRunAction の queryFromResult が API 応答の capture_id/individual_id を常に `id` に載せる規約のため)。個体参照は F2 が hidden field で運んだ params.individual_id を使う。",
+  "notes": "V3-AIP-101 観測登録スライス1(F6)。保存直後のΔrecap+次の観測目安のゼロタップ設定(POST /observation/schedule)。この画面では間隔30日固定(stage:'unspecified')で登録する簡略版 — 個体の現ステージに応じた間隔自動選択は今後の波(ponytail: stage_interval のスキーマ採番後にテンプレ側へ)。register_schedule opt-out時は自動登録せず、ボタンは手動登録として残る(死んだボタンにしない)。params.id はここでは capture_id(useRunAction の queryFromResult が API 応答の capture_id/individual_id を常に `id` に載せる規約のため)。個体参照は F2 が hidden field で運んだ params.individual_id を使う。",
   "nodes": [
     {
       "id": "shell",
@@ -50,10 +50,10 @@
               "id": "schedule-register",
               "type": "button",
               "props": {
-                "label": "次の観測目安を登録",
+                "label": "次の観測目安を自動設定",
                 "auto": true,
                 "auto_when": "{{params.register_schedule}}",
-                "success_label": "✓ 次の観測目安 登録済み — {{date}} 頃(間隔30日)",
+                "success_label": "✓ 次の観測目安 設定済み — {{date}} 頃(間隔30日)",
                 "success_label_date_from": "result.next_observation_at",
                 "static": {
                   "individual_id": "{{params.individual_id}}",

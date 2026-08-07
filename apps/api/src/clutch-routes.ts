@@ -507,3 +507,27 @@ clutchRoutes.post("/clutches/:id/promote", async (c) => {
   }
   return c.json({ individual_ids: r.individual_ids, current_count: r.current_count }, 201);
 });
+
+// GET /clutches/{id}/individuals — 昇格順(波をまたいで連結)で promote 済み
+// individual_ids を返す。「割り出しした世代単位で一括選択」(R0807-d763a2 §3-B)
+// の唯一の実現手段 — データ自体は promoteClutch が既に promoted_individual_ids
+// として記録済みで(上記)、これを読み出す公開ルートが無かっただけ。
+// projectClutchCurrentCount と同じイベント走査を再利用し、新しい保存も常駐
+// カウンタも作らない。
+clutchRoutes.get("/clutches/:id/individuals", async (c) => {
+  const clutchId = c.req.param("id");
+  const s = store(c);
+  const clutch = await s.readEvent(`truth/${CLUTCH_TYPE}/${clutchId}.json`);
+  if (!clutch) return c.json({ error: "NOT_FOUND" }, 404);
+  const promotes = (await s.listEvents(`truth/${CLUTCH_EVENT_TYPE}/${clutchId}-`))
+    .map(dataOf)
+    .filter((e) => e.kind === "promote")
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)) || String(a.event_id).localeCompare(String(b.event_id)));
+  const individualIds: string[] = [];
+  for (const e of promotes) {
+    if (Array.isArray(e.promoted_individual_ids)) {
+      for (const id of e.promoted_individual_ids) individualIds.push(String(id));
+    }
+  }
+  return c.json({ clutch_id: clutchId, individual_ids: individualIds });
+});

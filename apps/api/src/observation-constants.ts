@@ -35,6 +35,12 @@ export const PERSONALIZE_WEIGHT = 0.25;
 /** allowed QR batch sizes (IND-15). */
 export const QR_BATCH_SIZES = [100, 500, 1000] as const;
 
+/** max individual_ids per POST /individuals/bio-card-batch request. Design
+ * placeholder, not measured (real usage: user reports 15 individuals kept —
+ * 200 is a ~13x headroom, not a load-tested ceiling). Raise if it turns out
+ * insufficient (R0807-d763a2-DESIGN §3-A). */
+export const BIO_CARD_BATCH_MAX = 200;
+
 /** stage→next-observation interval in days (OBS-21 example values). */
 export const SCHEDULE_STAGE_INTERVAL_DAYS = {
   first_to_second: 30,
