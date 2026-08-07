@@ -6,6 +6,8 @@ status: proposed
 source: "01-requirements/srs.md V3-FND-20"
 ---
 
+> **ステータス確認(2026-08-07 機械grep実測)**: `apps/api/src/script-driver-manifest.ts` に AST 最小仕様(ScriptManifest等)は実装済みだが、本ADRの決定事項であるランタイム選定(Extism/Spin)自体はコードコメント上でも「埋め込みは行わない」と明記されており未実装。ADRも「2つの妥当な選択肢がありarchitect確認を推奨」と自己申告しているため `proposed` を維持(判断: 決定未了のため昇格しない)。
+
 # ADR-V3-WASM-01 — WASM スクリプトドライバ最小仕様
 
 - **Status**: Proposed(未実装・in_progress)。ランタイム選定(Extism vs Spin)は本 ADR で

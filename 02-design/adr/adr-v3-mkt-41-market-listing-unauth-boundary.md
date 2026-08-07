@@ -23,10 +23,11 @@ status: active
 ## 決定(Decision)
 
 1. **マーケットレジストリ(`/market/listings` 系)の公開範囲 = 非公開(認証必須)。**
-   `apps/api/src/index.ts` の `PUBLIC_ROUTES`(:76-94)に `market` 系パスは含まれておらず、
-   認証ミドルウェア(:165-215)が `PUBLIC_ROUTES` 外のパスを既定で `401 AUTH_REQUIRED` に
-   倒す(deny-by-default、V3-CL-04 不変条項)。未認証の GET/POST いずれも閲覧・出品ともに
-   拒否される。
+   `apps/api/src/index.ts` の `PUBLIC_ROUTES` 定義(識別子 `export const PUBLIC_ROUTES`)に
+   `market` 系パスは含まれておらず、認証ミドルウェア(`app.use("*", ...)` の `PUBLIC_ROUTES`
+   判定ブロック。`AUTH_REQUIRED` を返す箇所)が `PUBLIC_ROUTES` 外のパスを既定で
+   `401 AUTH_REQUIRED` に倒す(deny-by-default、V3-CL-04 不変条項)。未認証の GET/POST
+   いずれも閲覧・出品ともに拒否される。
 2. **`POST /listing-registry`(ver2由来のパス)は ver3 に実装されていない。** 未定義ルートも
    認証ゲートが先に発火するため `401`(隠しルートとして 200 で成功してしまうことはない)。
    これにより NFR-MKT-03/06 が懸念する「無認証書込」の経路は ver3 では構造的に存在しない。

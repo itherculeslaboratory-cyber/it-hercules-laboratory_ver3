@@ -2,13 +2,15 @@
 id: ADR-V3-LAYER-01
 title: Truth 層（append-only・不変）と投影層（再生成可）の分離
 date: "2026-07-10"
-status: proposed
+status: active
 source: "docs/planning/ver3/ver3-最終要件定義書-v1.md@4a56cf6 (§5.3 ADR-V3-LAYER-01, lines 1305-1328)"
 ---
 
 # ADR-V3-LAYER-01 — Truth 層（append-only・不変）と投影層（再生成可）の分離
 
-- **Status**: Proposed（DIFF-C-26 の層分離裁定に接続。§5.2.1 の 42 制約・§5.4 の CL-01/02/05/12/13 を束ねる ADR）
+> **ステータス更新(2026-08-07 機械grep実測)**: `apps/api/src` で `append-only`/`no-overwrite`/`INSERT ONLY`/`put-if-absent` 系の記述が70ファイル186箇所に実装済みであることを確認したため `proposed` → `active` へ更新。出典: `D:\claude\00-hq\kits\lane-implement\R0807-051ca2-REPORT-2026-08-07-docs-plan-a.md`。
+
+- **Status**: Active（DIFF-C-26 の層分離裁定に接続。§5.2.1 の 42 制約・§5.4 の CL-01/02/05/12/13 を束ねる ADR）
 - **Date**: 2026-07-10
 - **抽出元**: `docs/planning/ver3/ver3-最終要件定義書-v1.md` §5.3（@4a56cf6）。本文は抽出コピーで無変更。
 

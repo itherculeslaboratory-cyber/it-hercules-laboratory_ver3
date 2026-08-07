@@ -15,8 +15,19 @@ import { join } from "node:path";
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "04-traceability", "rtm.json");
+const REGISTRY = join(ROOT, "01-requirements", "registry.json");
 const CSV = join(ROOT, "04-traceability", "rtm.csv");
 const MD = join(ROOT, "04-traceability", "rtm.md");
+
+// 網羅率注記(2026-08-07 order-2026-08-07-docs-plan-a T2④): registry.json の総件数を
+// 分母に実測する。ハードコード値は書かない(ズレたら次に読む者を欺くため)。
+function coverageNote(rtm) {
+  if (!existsSync(REGISTRY)) return null;
+  const total = JSON.parse(readFileSync(REGISTRY, "utf8")).length;
+  const covered = rtm.requirements.length;
+  const pct = total > 0 ? ((covered / total) * 100).toFixed(1) : "0.0";
+  return `現在網羅率${pct}%(${covered}/${total})・全数トレースは本格整備(案B)で対応`;
+}
 
 const GATES = ["req", "det", "test", "trn_ui", "retrofit"];
 
@@ -56,6 +67,7 @@ function mdCell(list) {
 }
 
 function buildMd(rtm) {
+  const note = coverageNote(rtm);
   const header = [
     "<!-- GENERATED FILE — do not edit by hand. -->",
     "<!-- source: 04-traceability/rtm.json -->",
@@ -66,6 +78,7 @@ function buildMd(rtm) {
     `- 正本: \`04-traceability/rtm.json\`（本表は生成物・手編集禁止）`,
     `- mode: \`${rtm.mode}\`（warn = 未閉包を警告し exit 0 / enforce = exit 1）`,
     `- 5 点ゲート: req / det / **test**（テスト設計免除不可）/ trn_ui / retrofit`,
+    ...(note ? [`- **${note}**`] : []),
     "",
     "| ID | タイトル | req | det | test | trn_ui | retrofit |",
     "|----|----------|-----|-----|------|--------|----------|",

@@ -7,6 +7,7 @@
 - 正本: `04-traceability/rtm.json`（本表は生成物・手編集禁止）
 - mode: `warn`（warn = 未閉包を警告し exit 0 / enforce = exit 1）
 - 5 点ゲート: req / det / **test**（テスト設計免除不可）/ trn_ui / retrofit
+- **現在網羅率2.2%(17/773)・全数トレースは本格整備(案B)で対応**
 
 | ID | タイトル | req | det | test | trn_ui | retrofit |
 |----|----------|-----|-----|------|--------|----------|

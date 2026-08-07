@@ -5,6 +5,8 @@ date: "2026-08-01"
 status: proposed
 ---
 
+> **ステータス確認(2026-08-07 機械grep実測)**: `VideoArchive`/`era_id`+`tags`+`category` の実装は `apps/` 全体で0件(grep実測)。ADR本文も「設計方針のみ・実装は別発注」と自己申告している一方、3階層の定義自体は選択肢を残さず確定済みの決定文になっている。`active`(決定確定)にすべきか`proposed`(未実装のまま)を維持すべきかは本タスクの範囲では判断できず、HQへ差し戻す(report frontmatterの`差し戻し`参照)。
+
 # ADR: 文明史タイムライン(Global/User/Object 3階層)+ VideoArchive 設計(V3-WIK-21)
 
 > 本文書は法的助言ではない。設計ドラフト(未実装)である。誇張ゼロ規約により、
