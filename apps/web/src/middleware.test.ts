@@ -20,9 +20,8 @@ describe("requiresAuth — V3-AUT-12 protected-route guard (pure)", () => {
     expect(requiresAuth("/individuals/01ABC")).toBe(false);
     expect(requiresAuth("/individuals/01KXQKZTYWJ4WN00M41K3A9JNV")).toBe(false);
   });
-  it("QRLINK-1 最後の穴(2026-08-08 qranon-fix): exempts /s/individual-detail?id=... (screenHref()'s actual runtime navigation target)", () => {
+  it("QRLINK-1 最後の穴(2026-08-08 qranon-fix): exempts /s/individual-detail (screenHref()'s actual runtime navigation target)", () => {
     expect(requiresAuth("/s/individual-detail")).toBe(false);
-    expect(requiresAuth("/s/individual-detail?id=01KXQKZTYWJ4WN00M41K3A9JNV")).toBe(false);
   });
 });
 

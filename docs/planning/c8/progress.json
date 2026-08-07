@@ -1290,14 +1290,14 @@
     "tier": "B",
     "lane": "L1/PAY",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [
       "31fc4f9"
     ],
     "tc": [
       "tests/market-auction-settle.test.ts describe(\"V3-MKT-05 オークション自動決着\")"
     ],
-    "note": "listed_auctionのまま締切(ends_at)経過を過ぎた出品を、settleDueAuctionsがread-time自己修復(既存settleNoPayCancelと同型)で自動決着。最高額入札があればmatch(matched・落札額=最高額)、入札が無ければdelist(「入札なしでも決着」)。listing schemaにends_at(任意)を追加。価格帯別入札単位刻み+ヤフオク型自動入札(予算上限までの自動再入札)は既存の無条件bid append経路への影響リスクを避け本波では対象外(決着ロジックのみ先行実装)。"
+    "note": "listed_auctionのまま締切(ends_at)経過を過ぎた出品を、settleDueAuctionsがread-time自己修復(既存settleNoPayCancelと同型)で自動決着。最高額入札があればmatch(matched・落札額=最高額)、入札が無ければdelist(「入札なしでも決着」)。listing schemaにends_at(任意)を追加。価格帯別入札単位刻み+ヤフオク型自動入札(予算上限までの自動再入札)は既存の無条件bid append経路への影響リスクを避け本波では対象外(決着ロジックのみ先行実装)。 ★2026-08-08 W2-G2検分の裁定により done→in_progress。要件文が名指しする3要素のうち「即決価格以上は即落札」が未実装(即決価格|即落札|buyout|buy_now_price|buyNowPrice を apps/api/src・screen-defs・schemas・apps/web/src・tests に対して grep=0 hits。mkt-listing.schema.json にも該当フィールド無し)。実装済みは①settleDueAuctions自動決着(market-routes.ts:718)②価格帯別入札単位刻み+ヤフオク型自動入札(market-routes.ts:612-646,1068,1152)の2要素。残りは即決価格フィールドのスキーマ拡張+落札分岐。"
   },
   {
     "id": "V3-MKT-06",
@@ -5030,7 +5030,7 @@
     "tc": [
       "npm run lint の ui-copy/screendef-structure/i18n-keys GATE + apps/web screendef-snapshots.test.tsx(全50件)で構造確認"
     ],
-    "note": "P2P個人間送金アプリ(PayPay送金等)によるユーザー間代金決済の利用禁止を、非公開ボード(Stage2)の決済カード直下に明示テキストとして追加(screen-defs/market-trade.json)。IHL宛徴収のPayPay OPA商用契約は対象外である旨は要件文どおり。利用規約全文(onboarding/terms.json)への追記はg05/g06クラスタ・UI磨きレーンとの競合を避け対象外。"
+    "note": "P2P個人間送金アプリ(PayPay送金等)によるユーザー間代金決済の利用禁止を、非公開ボード(Stage2)の決済カード直下に明示テキストとして追加(screen-defs/market-trade.json)。IHL宛徴収のPayPay OPA商用契約は対象外である旨は要件文どおり。利用規約全文(onboarding/terms.json)への追記はg05/g06クラスタ・UI磨きレーンとの競合を避け対象外。 ★2026-08-08 W2-G2検分による是正: 本noteの「利用規約全文(onboarding/terms.json)への追記は…対象外」は現在の現物と食い違う。W1-06(R0807-08b473)により docs/legal/tos-legal.md:60「第6条の3(ユーザー間決済における個人間送金の制限)」および screen-defs/terms.json:26 の平易文が追加済みで、要件文「規約で明示禁止する」は充足している。tos-legal.md 側は「[社内ドラフト・法的助言ではない]」の但し書き付き=弁護士レビューは未了(実装ではなく事業側ゲート)。"
   },
   {
     "id": "V3-AIP-104",
@@ -6013,7 +6013,7 @@
     "status": "done",
     "commits": [],
     "tc": [],
-    "note": "[n61検収・n61obscritic中2是正=完了根拠差し替え] 旧根拠のgrep主張(apps/api/src全体でdew_point等0件)は偽(csv-import.tsのSWITCHBOT_METRIC_HEADERSに存在)のため破棄。正しい根拠: ①サーバsecretで環境スナップショットを取得しに行くrouteが存在しない(collector-routesはEd25519署名済みingestのみ・自動取得routeの不在) ②photo_conditionsは常にクライアント提供(observation-routes.ts:255-260,347-353)。判定doneは維持。"
+    "note": "[n61検収・n61obscritic中2是正=完了根拠差し替え] 旧根拠のgrep主張(apps/api/src全体でdew_point等0件)は偽(csv-import.tsのSWITCHBOT_METRIC_HEADERSに存在)のため破棄。正しい根拠: ①サーバsecretで環境スナップショットを取得しに行くrouteが存在しない(collector-routesはEd25519署名済みingestのみ・自動取得routeの不在) ②photo_conditionsは常にクライアント提供(observation-routes.ts:255-260,347-353)。判定doneは維持。 ★2026-08-08 W2-G2検分による行番号是正: 根拠②の引用 observation-routes.ts:255-260,347-353 は誤り(実物は :255-260=captureVisibleTo / :347-353=CatalogLeaf型)。正しい根拠行は observation-routes.ts:466(const pcRaw = form?.get(\"photo_conditions\") — multipartのクライアント提供値のみを読む)および :368-378(validatePhotoConditions)。判定 done は維持(サーバsecretで環境値を取得するrouteは存在せず、禁止要件に適合)。"
   },
   {
     "id": "V3-OBS-18",
