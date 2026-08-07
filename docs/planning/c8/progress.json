@@ -1445,8 +1445,11 @@
     "commits": [
       "3631352"
     ],
-    "tc": [],
-    "note": "ADR-H-08良い/普通/悪い件数モデルをprojectRating+POST /market/ratings(bad理由必須)+GET公開評価+低評価フィルタ(悪い評価≥5 or カルマ≤0 or 評価平均≤2★)として実装。TC: tests/market-rating.test.ts describe(\"MKT-27 projectRating 件数モデル\"/\"MKT-27 lowRatingFlag 低評価フィルタ\"/ルートTC)。カルマ・好み学習とは独立ドメイン(LOW_RATING_*定数はフィルタ条件として参照するのみで統合はしない)。"
+    "tc": [
+      "tests/market-rating.test.ts describe(\"MKT-27 lowRatingFlag 低評価フィルタ\")",
+      "tests/market-low-rating-filter.test.ts"
+    ],
+    "note": "ADR-H-08良い/普通/悪い件数モデルをprojectRating+POST /market/ratings(bad理由必須)+GET公開評価+低評価フィルタ(悪い評価≥5 or カルマ≤0 or 評価平均≤2★)として実装。TC: tests/market-rating.test.ts describe(\"MKT-27 projectRating 件数モデル\"/\"MKT-27 lowRatingFlag 低評価フィルタ\"/ルートTC)。カルマ・好み学習とは独立ドメイン(LOW_RATING_*定数はフィルタ条件として参照するのみで統合はしない)。 | 低評価フィルタ判定(lowRatingFlag)は既存実装(projectRating/market-rating-routes.ts)。本ラウンド(w1-01実装・R0807-c6ccb0)でGET /market/listingsへexclude_low_rating(オプトイン・クエリパラメータ)として配線し、screen-defs/market-trade.jsonの「買う」タブにトグルリンクを追加。判定ロジックはlowRatingFlagをそのままimportして再利用(二重定義なし)。"
   },
   {
     "id": "V3-MKT-29",
@@ -1518,7 +1521,7 @@
     "tc": [
       "tests/mkt-40-ledger-audit.test.ts"
     ],
-    "note": "受領(market-finalレーン): GET /ledger/audit新設。貸方(coin_event)/借方(platinum_vote+研究支援ストア注文の2ストリーム差引き)から残高非負+重複ID検知の健全性サマリを都度再計算。新規台帳テーブルは作らず既存の2ストリーム差引きモデル(social-routes.ts既存実装)を検算に転用。今後コイン系新機能を追加するたびdebit側を追記登録する運用が必要。"
+    "note": "受領(market-finalレーン): GET /ledger/audit新設。貸方(coin_event)/借方(platinum_vote+研究支援ストア注文の2ストリーム差引き)から残高非負+重複ID検知の健全性サマリを都度再計算。新規台帳テーブルは作らず既存の2ストリーム差引きモデル(social-routes.ts既存実装)を検算に転用。今後コイン系新機能を追加するたびdebit側を追記登録する運用が必要。 | 2026-08-07 T1調査(R0807-2cbf9b): idempotency_key UNIQUE制約はTruth putEvent(store.ts:64-66)が一元保証・複式簿記検算はledger-audit-routes.ts auditLedger()で実在。マーケット台帳専用の別実装が無いのは単一正本設計(意図的)。8/9判断事項から降ろしてよい"
   },
   {
     "id": "V3-MKT-45",
@@ -2285,7 +2288,7 @@
     "tc": [
       "tests/paper-match.test.ts describe(\"PPR-30 autoFillDescriptor section fill + claim evidence link\")"
     ],
-    "note": "監査のみ(新規コミットなし・progress.json記載漏れの発見)。C5期commit 33b8a6dで既にPOST /research/paper-matchがData Descriptor自動充填(autoFillDescriptor: 節穴埋め+観測投影による主張-証拠リンク+未検証claimはhypothesis固定)+V3-PPR-01条件突合の再利用+llm_advice任意トグル(既定OFF・AiDisabledErrorで無効化)を要件文どおり実装・テスト済み。"
+    "note": "監査のみ(新規コミットなし・progress.json記載漏れの発見)。C5期commit 33b8a6dで既にPOST /research/paper-matchがData Descriptor自動充填(autoFillDescriptor: 節穴埋め+観測投影による主張-証拠リンク+未検証claimはhypothesis固定)+V3-PPR-01条件突合の再利用+llm_advice任意トグル(既定OFF・AiDisabledErrorで無効化)を要件文どおり実装・テスト済み。 | W1-05(2026-08-07): data-descriptor の action を POST /api/v1/research/paper-match へ配線し直し、descriptor.claims が実データで非空になることを wrangler --local で実証済み(R0807-c6c861)。paper-detail→data-descriptor 遷移に content_id 引き継ぎを追加。ただし conditions/claims の新規入力fieldは無く、content_id無しアクセス時のclaimsは空のまま(別課題・未対応)。claim.statusの和訳(仮説)ラベルはrenderer.tsx側の汎用マップ機構が無く未実装(スコープ外)。型F3点: コード✓/検証✓(vitest353件緑+wrangler実測)/progress行✓。★HQ/考える役: done継続の妥当性は要確認(claims常時空になりうる条件・和訳ラベル未実装の2限界あり)。"
   },
   {
     "id": "V3-SEC-03",
@@ -2398,7 +2401,7 @@
     "tc": [
       "tests/sec-56-listing-registry-boundary.test.ts"
     ],
-    "note": "ver3にはver2由来のPOST /listing-registryは存在せず、既存のCL-04 deny-by-default(index.ts)が唯一かつ十分な認可境界として全出品状態書込・テンプレ公開・GMO routeを保護していると確認(requireMarketListingStateWrite等の個別関数は不要)。ADR(02-design/adr)で明示+回帰ガードテストを追加。実際の再設計はV3-MKT-41(市場レーン・別要件)へ引き継ぎ。"
+    "note": "ver3にはver2由来のPOST /listing-registryは存在せず、既存のCL-04 deny-by-default(index.ts)が唯一かつ十分な認可境界として全出品状態書込・テンプレ公開・GMO routeを保護していると確認(requireMarketListingStateWrite等の個別関数は不要)。ADR(02-design/adr)で明示+回帰ガードテストを追加。実際の再設計はV3-MKT-41(市場レーン・別要件)へ引き継ぎ。 | 2026-08-07 T1調査(R0807-2cbf9b): ver3にPOST /listing-registryは存在せず、deny-by-default(index.ts CL-04)が唯一かつ十分な認可境界。ADR(adr-v3-sec-56-listing-registry-boundary.md)+回帰テスト(sec-56-listing-registry-boundary.test.ts)により実質充足。8/9判断事項から降ろしてよい"
   },
   {
     "id": "V3-UIX-04",
@@ -5186,10 +5189,11 @@
     "status": "in_progress",
     "commits": [
       "a45ae3e",
-      "01eae2c"
+      "01eae2c",
+      "d2c8a7f"
     ],
     "tc": [],
-    "note": "大物のため部分実装(ブリーフで明示許容)。GET /individuals/{id}/graph新設: 血縁(既存buildPedigree再利用)+画像類似(既存loadVector/cosineSimilarityをobservation-routes.tsからexportし再利用)を統合したnodes/edges投影を実装・TC2件で検証(血縁+類似の統合/埋め込み無し個体でも壊れない)。残余: SVG/Canvasでのグラフ描画・ホバー簡易カード・クリック遷移のレンダラ新ノード型、およびscreen-def配線(データ投影のみ実装・次段の土台として設計済み)。統合時にroute番号をinfra-route-114へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。 / 2026-08-01 UIB09-A(o85)履行: 検索ブリーダータブに注記1行(ui-copyゲート適合のためカード原文「準備中」を「これから設計します」へ言い換え。R0801-ec29b1 §5-1)"
+    "note": "大物のため部分実装(ブリーフで明示許容)。GET /individuals/{id}/graph新設: 血縁(既存buildPedigree再利用)+画像類似(既存loadVector/cosineSimilarityをobservation-routes.tsからexportし再利用)を統合したnodes/edges投影を実装・TC2件で検証(血縁+類似の統合/埋め込み無し個体でも壊れない)。残余: SVG/Canvasでのグラフ描画・ホバー簡易カード・クリック遷移のレンダラ新ノード型、およびscreen-def配線(データ投影のみ実装・次段の土台として設計済み)。統合時にroute番号をinfra-route-114へ採番替え(080/081は先に基盤コスト/AIP-67レーンが採ったため)。 / 2026-08-01 UIB09-A(o85)履行: 検索ブリーダータブに注記1行(ui-copyゲート適合のためカード原文「準備中」を「これから設計します」へ言い換え。R0801-ec29b1 §5-1) | 2026-08-07 w1-universe(R0807-422e57)でGraphView.tsxに残る4機能(6D射影の実測軸代替/cosine近傍相当+他種族件数/呼吸発光/近接ラベル→画像カード+?focus=ディープリンク)を実装・screen-def配線済み(obs-search.json navigator-graph)。renderer.test.tsx+universe-utils.test.ts(19/19)でtc追加検証。残余=種族専用色トークンのSSOT新設(design-tokens.json)のみ未実施(触ってよいファイル権限外・lane-think差し戻し済み・重複差し戻ししない)。"
   },
   {
     "id": "V3-CST-04",
@@ -6130,7 +6134,7 @@
     "tc": [
       "tests/obs-w-obs2-2026-08-01.test.ts describe(V3-OBS-54段階2/3 / A-8-b captureVisibleTo)"
     ],
-    "note": "[2026-08-01 w-obs2] bridgeが追加済みのvisibilityフィールドをCAPTURE_FIELDSへ追加(write経路の不備を修正)。captureVisibleTo()純関数(research-content-routes.ts:258と同型)を段階2(POST /observation/search・GET /individuals/:id/observations)と段階3(GET /observation/:capture_id・GET /observation/:capture_id/image/:photo_id、非公開はNOT_FOUNDで存在ごと隠す)の両方に適用。store.tsへの汎用visibility追加はしていない(発注書指示どおり)。★A-8-b(index.ts PUBLIC_ROUTES側の未ログイン公開化)はw-aut2担当のため未着地=観測側の可視性ゲートは準備完了だが実際に未ログインで到達できる状態にはまだなっていない。"
+    "note": "[2026-08-01 w-obs2] bridgeが追加済みのvisibilityフィールドをCAPTURE_FIELDSへ追加(write経路の不備を修正)。captureVisibleTo()純関数(research-content-routes.ts:258と同型)を段階2(POST /observation/search・GET /individuals/:id/observations)と段階3(GET /observation/:capture_id・GET /observation/:capture_id/image/:photo_id、非公開はNOT_FOUNDで存在ごと隠す)の両方に適用。store.tsへの汎用visibility追加はしていない(発注書指示どおり)。★A-8-b(index.ts PUBLIC_ROUTES側の未ログイン公開化)はw-aut2担当のため未着地=観測側の可視性ゲートは準備完了だが実際に未ログインで到達できる状態にはまだなっていない。 | sha256完全一致検出をbuildImageReuseSilentWarningでconsole.warn化(2026-08-07)。dHash/EXIF/成長曲線/特徴点は入力データが範囲内で手に入らず未配線。台帳event化はevent-registry-wiring.test.ts(g93裁定)のUNREGISTERED_DEBT上限(10件で満杯)に抵触するため未達=要packages/truth着手の次波発注。R0807-fdd192-REPORT-2026-08-07-w1-08-unwired-guards.md参照。"
   },
   {
     "id": "V3-OBS-63",
@@ -6702,7 +6706,7 @@
       "apps/api/src/plaza-rules-routes.ts",
       "tests/plaza-rules.test.ts"
     ],
-    "note": "R0731 w1-plaza新規実装。buildPlazaRules()がplaza-constants.ts(単一正本)の値(BOARD_KINDS/FORK_RANKS/STANCE_VALUES/consensus閾値/ranking_weights/promotion閾値等)をそのままJSON化。GET /plaza/rules。「全公開」完成にはindex.ts PUBLIC_ROUTESへの追加が必要(index.ts不可侵のため報告書でHQに提案・mount指示参照)。"
+    "note": "R0731 w1-plaza新規実装。buildPlazaRules()がplaza-constants.ts(単一正本)の値(BOARD_KINDS/FORK_RANKS/STANCE_VALUES/consensus閾値/ranking_weights/promotion閾値等)をそのままJSON化。GET /plaza/rules。「全公開」完成にはindex.ts PUBLIC_ROUTESへの追加が必要(index.ts不可侵のため報告書でHQに提案・mount指示参照)。 | 2026-08-07 T1調査(R0807-2cbf9b): plaza-rules-routesは実装・mount済み。残タスクはindex.ts PUBLIC_ROUTES配列への1行追加のみ(SB-1/SB-2回答2026-07-31により根拠あり)。HQ適用待ち。逐語=R0807-2cbf9b T1 #4節"
   },
   {
     "id": "V3-BBS-15",
@@ -6760,7 +6764,7 @@
     "tc": [
       "tests/gov-flag.test.ts"
     ],
-    "note": "既存実装で充足済みを確認。gov-routes.ts:671-707(POST /gov/flags・requireRole(operator,admin)・Δcount+10・R2 DELETE無し・denylist即時失効配線済み)。"
+    "note": "既存実装で充足済みを確認。gov-routes.ts:671-707(POST /gov/flags・requireRole(operator,admin)・Δcount+10・R2 DELETE無し・denylist即時失効配線済み)。 | 2026-08-07 T1調査(R0807-2cbf9b): Δcount+10反映箇所を特定(gov-routes.ts:915 grantKarmaCountIncrease呼び出し・plaza-constants.ts:86 GOV_FLAG_COUNT_STEPS=10)。監査報告のpartial判定はimplementedへ訂正すべき(判断はHQに委ねる・本行はnote追記のみ)"
   },
   {
     "id": "V3-GOV-12",
@@ -8797,5 +8801,122 @@
       "tests/cohort-completeness.test.ts"
     ],
     "note": "S6(lost終端+死亡証拠if/then・4d690ad)+S7(完結率導出・5a49b55)+S8(貢献度接続: 完結率ゲート×evidence_grade×条件群逓減・05638f5)+S9(表示分離・cd1b577)全コミットで完了(76代目HQ判定)。逓減式=v_base10×(1+log2 n)×completeness_ratio×grade係数(R75-1〜3)。残課題(doneを覆さない): UI死亡記録の証拠収集はS6bで対応中(g76-s6bevidence)。"
+  },
+  {
+    "id": "V3-VID-33",
+    "title": "動画作成システムの事前整備: Fable級モデルが使える間に手本の台本…",
+    "cluster": "g08-動画その他",
+    "wave": "対象外",
+    "tier": "A",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。第13回裁定で新規採番。第20回裁定GD-1=○によりver3本体の実装対象から外しIHL.ver3video側の台帳で扱う方針(registry.json ruling_note)。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-VID-34",
+    "title": "ゆっくり動画方式による多言語展開(日英+追加言語はAI裁量)",
+    "cluster": "g08-動画その他",
+    "wave": "対象外",
+    "tier": "B",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。第13回裁定で新規採番。第20回裁定GD-1=○によりver3本体の実装対象から外しIHL.ver3video側の台帳で扱う方針(registry.json ruling_note)。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-UIX-85",
+    "title": "スケール紙だけを編集できる軽量編集機能(UIBuilderとは別機能)",
+    "cluster": "g07-UIUX",
+    "wave": "実験枠",
+    "tier": "C",
+    "lane": null,
+    "scope": "required",
+    "status": "blocked",
+    "commits": [],
+    "tc": [],
+    "note": "registry.json hold=true・adjudication.conclusion=『保留(根拠不足)』(第19回裁定)。本人表現が『必要かもですが』『別機能でいいかもね』に留まり実装確約ではない。優先度・具体スコープの本人確認待ち。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-SEC-59",
+    "title": "全公開方針の裏付けとしての不正検知(異常検知・監視)強化",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。第22回裁定(R637-1・○)で新規採番。具体的な検知手法・閾値は次回以降に個別設計とされている(registry.json)。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-FND-36",
+    "title": "APIは決定論的ページングを持つ(元V3-FND-22分割)",
+    "cluster": "g01-基盤コスト",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。2026-08-01のV3-FND-22分割(FND-1=○)で新規採番。既存要件の条項分割によるID増加であり新機能追加ではない(R0807-c41478 §2参照)。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-FND-37",
+    "title": "APIはスナップショットバージョン管理を持つ(元V3-FND-22分割)",
+    "cluster": "g01-基盤コスト",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。2026-08-01のV3-FND-22分割(FND-1=○)で新規採番。既存要件の条項分割によるID増加であり新機能追加ではない(R0807-c41478 §2参照)。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-FND-38",
+    "title": "API本数は最小(6〜8本程度)の薄いパイプとする(元V3-FND-22分割・実測533本と矛盾)",
+    "cluster": "g01-基盤コスト",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。2026-08-01のV3-FND-22分割(FND-1=○)で新規採番。★registry.json conflict欄: 実測533本(2026-08-01)と本条項の目標値(6〜8本程度)が正面から矛盾しHQ判断待ち。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-FND-39",
+    "title": "未実装APIは501スタブで先行定義する(元V3-FND-22分割)",
+    "cluster": "g01-基盤コスト",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。2026-08-01のV3-FND-22分割(FND-1=○)で新規採番。既存要件の条項分割によるID増加であり新機能追加ではない(R0807-c41478 §2参照)。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
+  },
+  {
+    "id": "V3-SEC-60",
+    "title": "観測データexport(GET /observation/export)は内部運用専用・第三者提供は別途consent_l3必須",
+    "cluster": "g05-ガバナンス法務",
+    "wave": "第2波",
+    "tier": "B",
+    "lane": null,
+    "scope": "required",
+    "status": "todo",
+    "commits": [],
+    "tc": [],
+    "note": "未着手(F3点=commits/tc/実装証拠なし)。2026-08-01 exportline裁定(EXP-1=○)で新規採番。線引きの明文化のみで現行挙動(consent_l3を参照しない全件出力)は変更しない(registry.json)。第三者提供の出口新設時にconsent_l3フィルタ実装が必要。R0807-c41478で未登録9件のうち1件として検出・本行で登録。"
   }
 ]

@@ -18,6 +18,9 @@ import {
   isGraceCancelWindowOpen,
   isOfferExpired,
   isAuctionSettleDue,
+  effectiveAuctionEndsAt,
+  nextAuctionExtension,
+  auctionExtensionCount,
   highestBid,
   bidStepFor,
   isLotteryDrawDue,
@@ -663,7 +666,7 @@ async function appendAuctionProxyRebid(
     created_at: new Date().toISOString(),
     schema_version: TXN_SCHEMA_VERSION,
   };
-  await s.putEvent({
+  const rebidRes = await s.putEvent({
     specversion: "1.0",
     id,
     source: "apps/api",
@@ -673,6 +676,43 @@ async function appendAuctionProxyRebid(
     provenance: { generator_kind: "agent", agent_name: SYSTEM_AUCTION_PROXY_AGENT },
     data,
   });
+  // AUTOBID-1: スキーマ未再生成時に putEvent が status:"invalid" を返しても黙って
+  // 握りつぶすと「再入札が記録されない」サイレント失敗になる(実際に w2-market2 実装中に
+  // 発生した=同型の appendAuctionExtension で観測。w2b-gate §6-4 是正)。少なくとも観測できる形にしておく。
+  if (rebidRes.status !== "inserted") console.warn("auction_proxy_rebid not persisted", rebidRes);
+}
+
+// AUTOBID-1(w2-market2実装・review-queue R0807-1ef084 ○ score90): 終了間際(残り5分
+// 以内)の入札で締切を延長した記録を append-only 台帳に追記する(過去イベントの書き換え
+// 禁止・ends_at 自体を書き換えない — listing envelope は出品時に1回 put されるだけの
+// immutable な設計のため、延長は txn イベント側に積む。effectiveAuctionEndsAt が
+// この履歴から実効締切を都度再計算する)。
+const SYSTEM_AUCTION_EXTEND_AGENT = "market-auction-extend";
+async function appendAuctionExtension(s: TruthStore, listingId: string, newEndsAt: string, now: Date): Promise<void> {
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    transaction_event_id: id,
+    listing_id: listingId,
+    actor_id: SYSTEM_AUCTION_ACTOR,
+    kind: "auction_extend",
+    payload: { new_ends_at: newEndsAt, reason: "snipe_guard" },
+    created_at: now.toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  const extRes = await s.putEvent({
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: TXN_TYPE,
+    time: now.toISOString(),
+    dataschema: TXN_SCHEMA,
+    provenance: { generator_kind: "agent", agent_name: SYSTEM_AUCTION_EXTEND_AGENT },
+    data,
+  });
+  // AUTOBID-1: スキーマ未再生成時に putEvent が status:"invalid" を返しても黙って
+  // 握りつぶすと「締切が延びない」サイレント失敗になる(実際に w2-market2 実装中に
+  // 発生した=同報告書§3)。少なくとも観測できる形にしておく。
+  if (extRes.status !== "inserted") console.warn("auction_extend not persisted", extRes);
 }
 
 async function settleDueAuctions(
@@ -683,8 +723,12 @@ async function settleDueAuctions(
 ): Promise<TxnEvent[]> {
   const cur = reduceMarket(listingId, events);
   const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
-  const endsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
-  if (!isAuctionSettleDue(cur.state, typeof endsAt === "string" ? endsAt : undefined, now)) return events;
+  const rawEndsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+  // AUTOBID-1(w2-market2実装): 決着判定は延長後の実効締切(effectiveAuctionEndsAt)で行う。
+  // 生の listing.ends_at をそのまま使うと、直近の延長が無視されて延長前の時刻で決着して
+  // しまう(延長の意味が失われる)。
+  const endsAt = effectiveAuctionEndsAt(events, typeof rawEndsAt === "string" ? rawEndsAt : undefined);
+  if (!isAuctionSettleDue(cur.state, endsAt, now)) return events;
 
   const best = highestBid(cur.bids);
   const id = ulid();
@@ -1006,6 +1050,9 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   // === 0)と解釈した(現在価格からの差分ではなく金額そのものを揃える方が、複数入札者
   // が混在しても検算しやすいため。要件文はどちらとも取れる書き方で、報告書に明記する)。
   let auctionProxyRebid: { bidder: string; amount: number; maxBid: number } | undefined;
+  // AUTOBID-1(w2-market2実装): 残り5分以内の入札で締切を5分延長(review-queue
+  // R0807-1ef084 AUTOBID-1=○ score90「必須!これがないと楽しくない」)。
+  let auctionExtendTo: string | undefined;
   if (kind === "bid" && cur.state === "listed_auction") {
     const amount = extra.amount;
     if (typeof amount !== "number" || !Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
@@ -1042,6 +1089,13 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
         }
       }
     }
+    // AUTOBID-1: この入札の時点(延長前)で「残り5分以内」なら締切を延長する。判定は
+    // effectiveAuctionEndsAt(過去の延長を織り込んだ実効締切)を基準にする——生の
+    // listing.ends_at のままだと、既に1回延長済みのオークションで毎回「まだ残り5分
+    // 切ってない」と誤判定してしまう。
+    const rawEndsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+    const currentEndsAt = effectiveAuctionEndsAt(events, typeof rawEndsAt === "string" ? rawEndsAt : undefined);
+    auctionExtendTo = nextAuctionExtension(events, currentEndsAt, now);
   }
   if (kind === "cancel" && cur.state === "matched" && actorId === cur.matched_with) {
     // 猶予キャンセル(成立後60分・買い手無条件)。窓が閉じた後は cancel_request/
@@ -1100,6 +1154,11 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   if (auctionProxyRebid) {
     await appendAuctionProxyRebid(s, listingId, auctionProxyRebid.bidder, auctionProxyRebid.amount, auctionProxyRebid.maxBid);
   }
+  // AUTOBID-1(w2-market2実装): 締切延長は入札そのものが成功した後にだけ記録する
+  // (入札が400/409で弾かれたのに締切だけ延びる、という不整合を防ぐ)。
+  if (auctionExtendTo) {
+    await appendAuctionExtension(s, listingId, auctionExtendTo, now);
+  }
 
   const merged = [...events, data];
   const next = reduceMarket(listingId, merged);
@@ -1127,10 +1186,27 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
   // V3-MKT-05(w1-01実装・T3): 入札フォームが表示する「現在価格・次の最低入札額・刻み」。
   // listed_auction のときだけ算出する(それ以外は入札できないため無意味)。
   const auctionPricingInfo = cur.state === "listed_auction" ? await auctionPricing(s, listingId, cur) : undefined;
+  // AUTOBID-1(w2-market2実装): ifYes文の欠点(a)「締切時刻が確定しないため断言できない」に
+  // 対応する正直表示用の値(ends_at=実効締切・extended=1回でも延長されたか)。画面側の
+  // 「延長される場合があります」注記はこの2値を見て出す想定(本ラウンドは配線のみ
+  // 未着手=API側の値を返すところまで。DoDのT1にはUI配線は明記されていない)。
+  let auctionScheduleInfo: { ends_at?: string; extended: boolean; extension_count: number } | undefined;
+  if (cur.state === "listed_auction") {
+    const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
+    const rawEndsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+    const effectiveEndsAt = effectiveAuctionEndsAt(events, typeof rawEndsAt === "string" ? rawEndsAt : undefined);
+    const extensionCount = auctionExtensionCount(events);
+    auctionScheduleInfo = { ends_at: effectiveEndsAt, extended: extensionCount > 0, extension_count: extensionCount };
+  }
   return c.json({
     ...cur,
     auction: auctionPricingInfo
-      ? { current_price: auctionPricingInfo.currentPrice, next_min_bid: auctionPricingInfo.nextMinBid, bid_step: auctionPricingInfo.step }
+      ? {
+          current_price: auctionPricingInfo.currentPrice,
+          next_min_bid: auctionPricingInfo.nextMinBid,
+          bid_step: auctionPricingInfo.step,
+          ...auctionScheduleInfo,
+        }
       : undefined,
     settlement: projectSettlement(events, now),
     payment: projectPayment(events),

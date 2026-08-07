@@ -8,6 +8,7 @@ import {
   listMarketTemplates,
   publishTemplate,
   forkTemplate,
+  likeTemplate,
   kindLabel,
   PUBLISH_KINDS,
   type RankedTemplate,
@@ -33,6 +34,7 @@ export default function ForkZone() {
   const [theme, setThemeState] = useState<"light" | "dark">("light");
   const [tpls, setTpls] = useState<RankedTemplate[] | null>(null);
   const [busyFork, setBusyFork] = useState<string | null>(null);
+  const [busyLike, setBusyLike] = useState<string | null>(null);
   const [showPub, setShowPub] = useState(false);
   const [pubTitle, setPubTitle] = useState("");
   const [pubKind, setPubKind] = useState("ui_skin");
@@ -72,6 +74,20 @@ export default function ForkZone() {
       setMsg({ text: `fork できませんでした(${(e as Error).message})。`, err: true });
     } finally {
       setBusyFork(null);
+    }
+  }
+
+  async function onLike(id: string) {
+    setBusyLike(id);
+    setMsg(null);
+    try {
+      await likeTemplate(id);
+      setMsg({ text: "いいねしました。" });
+      refetch();
+    } catch (e) {
+      setMsg({ text: `いいねできませんでした(${(e as Error).message})。`, err: true });
+    } finally {
+      setBusyLike(null);
     }
   }
 
@@ -176,7 +192,7 @@ export default function ForkZone() {
                       <div className={cx("rk-title")}>{t.title}</div>
                       <div className={cx("rk-sub")}>
                         <span className={cx("kind-chip")}>{kindLabel(t.kind)}</span>
-                        fork {t.fork_count}
+                        fork {t.fork_count} ・ 👍 {t.like_count}
                         {t.forked_from ? " ・ 🍴 派生" : ""}
                       </div>
                     </div>
@@ -184,6 +200,9 @@ export default function ForkZone() {
                       <div className={cx("rs-num")}>{t.score}</div>
                       <div className={cx("rs-label")}>スコア</div>
                     </div>
+                    <button className={cx("fork-btn")} onClick={() => onLike(t.template_id)} disabled={busyLike === t.template_id}>
+                      {busyLike === t.template_id ? "…" : `👍 ${t.like_count}`}
+                    </button>
                     <button className={cx("fork-btn")} onClick={() => onFork(t.template_id)} disabled={busyFork === t.template_id}>
                       {busyFork === t.template_id ? "…" : "🍴 fork"}
                     </button>
@@ -243,7 +262,7 @@ export default function ForkZone() {
             )}
 
             <p className={cx("source-note")}>
-              API=<code>GET /api/v1/market/templates</code>(一覧: <code>title</code>/<code>kind</code>種別[論文/UIスキン/グラフ/重み/AIパック/プロンプト]/<code>score</code>)+ <code>POST /market/templates</code>(出品)+ <code>POST /market/templates/{"{id}"}/fork</code>(fork)。ランキング重み=使用40/継続20/評価20/fork10/改善10(MKT-22)。
+              API=<code>GET /api/v1/market/templates</code>(一覧: <code>title</code>/<code>kind</code>種別[論文/UIスキン/グラフ/重み/AIパック/プロンプト]/<code>score</code>/<code>like_count</code>)+ <code>POST /market/templates</code>(出品)+ <code>POST /market/templates/{"{id}"}/fork</code>(fork)+ いいねは既存の自己サービス <code>POST /events</code>(<code>ihl.ui.vote.v1</code>・UIテンプレのlike/platinum投票と同じ経路を再利用)。ランキング重み=使用40/継続20/評価20/fork10/改善10(MKT-22。いいねはこの重みには未算入=表示・探索用の付随値)。
               <b> 正直な現況:</b> <span className={cx("prep-tag")}>ランキングの重み付けは設計中</span> 現状の実データはfork数が中心で、継続・改善などの指標はまだ着地していません(still_shallow #5①・後の波)。表示スコアは設計値どおりに揃えた時の見え方です。
             </p>
           </div>

@@ -1,13 +1,49 @@
 // MKT-22 テンプレマーケット。ランキングは RANKING_WEIGHTS(40/20/20/10/10)重み付き
 // 合計、fork は forked_from で系譜連結し fork グラフから forks を導出。
+// V3-MKT-47(w2-market2実装): いいね数は新規イベント型を作らず、既存の
+// ihl.ui.vote.v1(自己サービス POST /events)+ theme-routes.ts projectTemplateVotes を
+// そのまま再利用する(ui-template.test.ts の voteEnvelope/postVote と同型)。
 import { describe, expect, it } from "vitest";
+import { ulid } from "@ihl/truth";
 import app from "../apps/api/src/index";
 import {
   rankingScore,
   rankTemplates,
 } from "../apps/api/src/market-template-routes";
 import { RANKING_WEIGHTS } from "../apps/api/src/economy-constants";
-import { AUTH_HEADERS, FakeR2Bucket, makeEnv } from "./helpers";
+import { issueSessionToken } from "../apps/api/src/session";
+import { AUTH_HEADERS, FakeR2Bucket, SESSION_SECRET, makeEnv } from "./helpers";
+
+function bearer(tok: string) {
+  return { Authorization: `Bearer ${tok}`, "content-type": "application/json" };
+}
+const authOf = async (actor: string) => bearer(await issueSessionToken(actor, SESSION_SECRET));
+
+// ui-template.test.ts の voteEnvelope と同型(いいねは template market でも同じ
+// ihl.ui.vote.v1 自己サービス経路を叩く=新規typed routeを作らない)。
+function voteEnvelope(actor: string, targetId: string, kind: "like" | "platinum") {
+  const id = ulid();
+  return {
+    specversion: "1.0",
+    id,
+    source: "apps/api",
+    type: "ihl.ui.vote.v1",
+    time: new Date().toISOString(),
+    dataschema: "schemas/events/ui-vote.schema.json",
+    provenance: { generator_kind: "human", actor_id: actor },
+    data: {
+      vote_id: id,
+      actor_id: actor,
+      target_kind: "template",
+      target_id: targetId,
+      vote_kind: kind,
+      created_at: new Date().toISOString(),
+      schema_version: "1",
+    },
+  };
+}
+const postVote = (env: object, h: Record<string, string>, body: unknown) =>
+  app.request("/events", { method: "POST", headers: h, body: JSON.stringify(body) }, env);
 
 describe("MKT-22 rankingScore 重み 40/20/20/10/10", () => {
   it("各指標へ正しい重みを掛ける", () => {
@@ -38,6 +74,24 @@ describe("MKT-22 rankTemplates fork グラフ由来 forks + 降順整列", () =>
     const t2 = ranked.find((r) => r.template_id === "T2");
     expect(t2?.forked_from).toBe("T1");
     expect(t2?.fork_count).toBe(0);
+  });
+
+  it("V3-MKT-47: likeCounts が無指定なら like_count=0(既存呼び出しとの後方互換)", () => {
+    const templates = [{ template_id: "T1", actor_id: "a", kind: "paper", title: "base" }];
+    expect(rankTemplates(templates)[0].like_count).toBe(0);
+  });
+
+  it("V3-MKT-47: likeCounts map の値が like_count に反映され、score(fork重み)には混ざらない", () => {
+    const templates = [
+      { template_id: "T1", actor_id: "a", kind: "paper", title: "base" },
+      { template_id: "T2", actor_id: "b", kind: "paper", title: "unliked", forked_from: "T1" },
+    ];
+    const ranked = rankTemplates(templates, new Map([["T1", 3]]));
+    const t1 = ranked.find((r) => r.template_id === "T1");
+    const t2 = ranked.find((r) => r.template_id === "T2");
+    expect(t1?.like_count).toBe(3);
+    expect(t1?.score).toBe(10); // fork 1件分のみ(rankingScore は forks だけで算出・likes 非算入)
+    expect(t2?.like_count).toBe(0);
   });
 });
 
@@ -93,5 +147,26 @@ describe("template routes", () => {
       makeEnv(),
     );
     expect(res.status).toBe(404);
+  });
+
+  it("V3-MKT-47: いいね(POST /events ihl.ui.vote.v1) → GET /market/templates の like_count に反映", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const created = await app.request(
+      "/api/v1/market/templates",
+      { method: "POST", headers: AUTH_HEADERS, body: JSON.stringify({ kind: "prompt", title: "likeable" }) },
+      env,
+    );
+    const templateId = ((await created.json()) as { template_id: string }).template_id;
+
+    expect((await postVote(env, await authOf("v1"), voteEnvelope("v1", templateId, "like"))).status).toBe(201);
+    expect((await postVote(env, await authOf("v2"), voteEnvelope("v2", templateId, "like"))).status).toBe(201);
+    // 同一 actor の二重いいねは projectTemplateVotes の (actor,target,kind) dedup で 1 票に畳まれる
+    // (ui-template.test.ts の既存挙動と同型・409 を期待しない)。
+    expect((await postVote(env, await authOf("v1"), voteEnvelope("v1", templateId, "like"))).status).toBe(201);
+
+    const list = await app.request("/api/v1/market/templates", { headers: AUTH_HEADERS }, env);
+    const { templates } = (await list.json()) as { templates: { template_id: string; like_count: number }[] };
+    const row = templates.find((t) => t.template_id === templateId);
+    expect(row?.like_count).toBe(2);
   });
 });

@@ -19,7 +19,14 @@ const nextConfig = {
   // 足さない)。
   devIndicators: false,
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${API_BASE}/api/:path*` }];
+    return [
+      { source: "/api/:path*", destination: `${API_BASE}/api/:path*` },
+      // 自己サービス POST /events は API 側でルート直下にマウントされている
+      // (apps/api/src/index.ts の app.post("/events", ...) — /api/v1 の外)。
+      // ここを rewrite しないとブラウザからの呼び出しは Next に吸われて 404 になる
+      // (2026-08-08 w2b-gate 実機検証で fork-zone のいいねが 404・カウント不変を確認)。
+      { source: "/events", destination: `${API_BASE}/events` },
+    ];
   },
 };
 export default nextConfig;

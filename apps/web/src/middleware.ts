@@ -30,7 +30,14 @@ const PUBLIC_PATHS = new Set(["/s/login", "/s/login-sent", "/s/terms"]);
 // 詳細画面へ到達できなければならない(ユーザー対案・仕様1)。{id} は動的セグメントなので
 // Set の完全一致では表現できず、前方一致で判定する。API 側は index.ts の
 // PUBLIC_READ_ROUTES で既に公開済み(profile/pedigree)。
-const PUBLIC_PATH_PREFIXES = ["/individuals/"];
+//
+// QRLINK-1 最後の穴(2026-08-08 R0808-620af2-REPORT-2026-08-08-w2b-gatefix.md §5・
+// HQ裁定 kits/lane-implement/ORDER-2026-08-08-qranon-fix.md): screenHref()
+// (apps/web/src/renderer/scope.ts:229-233) は screen-defs の route 宣言を見ず、
+// 常に `/s/<screen_id>` を組む。よって QR着地画面からの実際の遷移先は
+// `/individuals/` ではなく `/s/individual-detail?id=...` になる。この実URLも
+// 前方一致で許可しないと、未ログイン訪問者は詳細画面の手前で /s/login に弾かれる。
+const PUBLIC_PATH_PREFIXES = ["/individuals/", "/s/individual-detail"];
 
 // setup-profile itself must stay reachable once logged in, whether or not
 // onboarding is complete yet (otherwise a visitor with no handle could never

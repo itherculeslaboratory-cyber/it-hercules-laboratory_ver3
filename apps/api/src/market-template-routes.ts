@@ -8,6 +8,14 @@ import { TruthStore, ulid } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
 import { RANKING_WEIGHTS, MKT36_FORK_CONTRIBUTION } from "./economy-constants";
 import { appendForkContribution } from "./contribution";
+// V3-MKT-47(w2-market2実装): いいね数は新規イベント型を作らず、UIテンプレの
+// like/platinum投票と同じ既存基盤(ihl.ui.vote.v1・自己サービス POST /events・
+// theme-routes.ts の projectTemplateVotes)をそのまま再利用する。target_kind="template"・
+// target_id=マーケットテンプレのtemplate_idを渡すだけで、projectTemplateVotesは
+// target_idの一致だけで集計するためui.templateとmkt.templateの型差を意識しない
+// (design-k4 route-matrix 57行凍結=「投票は新route を作らない」をここでも踏襲・
+// 新規typed routeは追加しない=reuse-first)。
+import { projectTemplateVotes } from "./theme-routes";
 
 const TEMPLATE_TYPE = "ihl.mkt.template.v1";
 const TEMPLATE_SCHEMA = "schemas/events/mkt-template.schema.json";
@@ -52,13 +60,23 @@ export interface RankedTemplate {
   title: string;
   forked_from?: string;
   fork_count: number;
+  like_count: number;
   score: number;
 }
 
 /** テンプレ一覧を fork グラフから forks を導出しランキング降順に整列(MKT-22)。
  *  ponytail: usage/retention/rating/improvements は専用ストリーム未実装のため 0。
- *  そのストリームが着地したら metricsById を差し込む(重み式 rankingScore は据置)。 */
-export function rankTemplates(templates: Record<string, unknown>[]): RankedTemplate[] {
+ *  そのストリームが着地したら metricsById を差し込む(重み式 rankingScore は据置)。
+ *  V3-MKT-47(w2-market2実装): like_count は RANKING_WEIGHTS に無い指標(V3-MKT-22の
+ *  凍結スナップショットは 40/20/20/10/10 のまま=既存テストを壊さない)なので score には
+ *  混ぜず、カードの探索・評価用の付随値としてのみ返す(要件文「いいね/プラチナ/フォーク数
+ *  付きカードとして探索・評価」=表示要件であり、ランキング式の変更は要求されていない)。
+ *  likeCounts は呼び出し側(GET /market/templates)が projectTemplateVotes を1回ずつ
+ *  await した結果を渡す(この関数自体は純関数のまま・非同期化しない)。 */
+export function rankTemplates(
+  templates: Record<string, unknown>[],
+  likeCounts: Map<string, number> = new Map(),
+): RankedTemplate[] {
   const forkCount = new Map<string, number>();
   for (const t of templates) {
     const parent = typeof t.forked_from === "string" ? t.forked_from : undefined;
@@ -75,6 +93,7 @@ export function rankTemplates(templates: Record<string, unknown>[]): RankedTempl
         title: String(t.title),
         forked_from: typeof t.forked_from === "string" ? t.forked_from : undefined,
         fork_count: forks,
+        like_count: likeCounts.get(id) ?? 0,
         score: rankingScore({ forks }),
       };
     })
@@ -132,10 +151,20 @@ marketTemplateRoutes.post("/market/templates", async (c) => {
   return c.json({ template_id: id }, 201);
 });
 
-// GET /market/templates — 一覧 + ランキング(RANKING_WEIGHTS・fork グラフ由来 forks)。
+// GET /market/templates — 一覧 + ランキング(RANKING_WEIGHTS・fork グラフ由来 forks)+
+// いいね数(V3-MKT-47・ihl.ui.vote.v1 投影 projectTemplateVotes の likes を1テンプレ毎に集計)。
 marketTemplateRoutes.get("/market/templates", async (c) => {
-  const templates = (await store(c).listEvents(`truth/${TEMPLATE_TYPE}/`)).map(dataOf);
-  return c.json({ templates: rankTemplates(templates) });
+  const s = store(c);
+  const templates = (await s.listEvents(`truth/${TEMPLATE_TYPE}/`)).map(dataOf);
+  const likeCounts = new Map<string, number>();
+  await Promise.all(
+    templates.map(async (t) => {
+      const id = String(t.template_id);
+      const { likes } = await projectTemplateVotes(s, id);
+      likeCounts.set(id, likes);
+    }),
+  );
+  return c.json({ templates: rankTemplates(templates, likeCounts) });
 });
 
 // POST /market/templates/{id}/fork — フォーク出品(forked_from=親で系譜連結・MKT-22)。

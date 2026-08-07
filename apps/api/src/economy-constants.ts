@@ -109,3 +109,14 @@ export const BID_STEP_UNDER_1000 = 10;
 export const BID_STEP_UNDER_5000 = 100;
 export const BID_STEP_UNDER_10000 = 250;
 export const BID_STEP_10000_PLUS = 500;
+
+// AUTOBID-1(w2-market2実装・review-queue R0807-1ef084 ○ score90): 終了間際の入札で
+// 締切を自動延長するスナイプ防止(ヤフオク型)。ifYes文の「残り5分以内の入札で締切を5分
+// 延長」をそのまま定数化。延長は「今から5分後」まで押し出す形(累積加算ではない・
+// effectiveAuctionEndsAt 参照)。上限回数(MAX_COUNT)は要件文に明記が無いため、
+// ifYes文(c)が予告した「延長が連鎖すると長時間終わらない可能性があるため、上限の
+// 追加判断が要ります — その既定値はこちらで置いて報告します」に対する既定値として
+// このラウンドで置いた(判断が要った箇所・報告書に明記)。
+export const AUCTION_EXTEND_WINDOW_MINUTES = 5;
+export const AUCTION_EXTEND_BY_MINUTES = 5;
+export const AUCTION_EXTEND_MAX_COUNT = 10; // 既定値(判断が要った箇所): 最大50分延長で頭打ち

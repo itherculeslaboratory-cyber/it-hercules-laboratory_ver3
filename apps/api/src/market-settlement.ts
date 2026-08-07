@@ -14,6 +14,9 @@ import {
   BID_STEP_UNDER_5000,
   BID_STEP_UNDER_10000,
   BID_STEP_10000_PLUS,
+  AUCTION_EXTEND_WINDOW_MINUTES,
+  AUCTION_EXTEND_BY_MINUTES,
+  AUCTION_EXTEND_MAX_COUNT,
 } from "./economy-constants";
 
 export type MarketKind =
@@ -21,7 +24,11 @@ export type MarketKind =
   | "offer" | "love_letter" | "bid" | "match" | "ship" | "receive"
   | "rate" | "settle" | "delist" | "transfer" | "tax_debt" | "tax_pay" | "fee_unpaid"
   | "pay_declare" | "pay_confirm" | "cancel" | "ship_link"
-  | "cancel_request" | "cancel_approve" | "cancel_decline";
+  | "cancel_request" | "cancel_approve" | "cancel_decline"
+  // AUTOBID-1(w2-market2実装): tax_debt等と同型の経済副次イベント(MARKET_EDGESに
+  // 未登録=状態を動かさない・POST /transitionのTRANSITION_KINDSにも入れない=システムのみ
+  // が発行し、ユーザーが直接kindを指定して呼べない)。
+  | "auction_extend";
 
 /** ihl.mkt.transaction_event.v1 の data。route は listing 単位に prefix-scan して渡す。 */
 export interface TxnEvent {
@@ -176,6 +183,41 @@ export function bidStepFor(currentPrice: number): number {
   if (currentPrice < 5000) return BID_STEP_UNDER_5000;
   if (currentPrice < 10000) return BID_STEP_UNDER_10000;
   return BID_STEP_10000_PLUS;
+}
+
+/** AUTOBID-1(w2-market2実装・review-queue R0807-1ef084 ○ score90): このlisting分の
+ * txnイベントから直近のオークション延長後の締切を返す。auction_extend イベントが
+ * 1件も無ければ base(listing.ends_at)をそのまま返す。複数回延長された場合は最後
+ * (created_at最大)の new_ends_at を採る(累積加算ではなく都度「今から5分後」まで
+ * 押し出す方式=ヤフオクと同じ挙動・ifYes文どおり)。 */
+export function effectiveAuctionEndsAt(events: TxnEvent[], baseEndsAt: string | undefined): string | undefined {
+  const extensions = sortEvents(events.filter((e) => e.kind === "auction_extend"));
+  const last = extensions[extensions.length - 1];
+  const extended = last ? (last.payload as { new_ends_at?: unknown } | undefined)?.new_ends_at : undefined;
+  return typeof extended === "string" ? extended : baseEndsAt;
+}
+
+/** 延長回数(AUCTION_EXTEND_MAX_COUNT 上限判定に使う。ifYes文(c)「延長が連鎖すると
+ * 長時間終わらない可能性があるため、上限の追加判断が要ります」への対応・
+ * 既定値は economy-constants.ts 側で置いた=判断が要った箇所)。 */
+export function auctionExtensionCount(events: TxnEvent[]): number {
+  return events.filter((e) => e.kind === "auction_extend").length;
+}
+
+/** AUTOBID-1: 今回の入札で延長すべきならその新しい締切(ISO文字列)を返す。残り時間が
+ * AUCTION_EXTEND_WINDOW_MINUTES 分以内・かつ延長回数が上限未満の時だけ発火。延長先は
+ * 「今から AUCTION_EXTEND_BY_MINUTES 分後」まで押し出す(currentEndsAt への加算ではない
+ * =何度延長されても常に「あと5分」で確定できる=ヤフオクの挙動どおり)。 */
+export function nextAuctionExtension(
+  events: TxnEvent[],
+  currentEndsAt: string | undefined,
+  now: Date,
+): string | undefined {
+  if (!currentEndsAt) return undefined;
+  if (auctionExtensionCount(events) >= AUCTION_EXTEND_MAX_COUNT) return undefined;
+  const remainingMs = new Date(currentEndsAt).getTime() - now.getTime();
+  if (remainingMs > AUCTION_EXTEND_WINDOW_MINUTES * 60 * 1000) return undefined;
+  return new Date(now.getTime() + AUCTION_EXTEND_BY_MINUTES * 60 * 1000).toISOString();
 }
 
 /** V3-MKT-07: 抽選(listed_lottery)締切(ends_at)経過時に決着すべきか。auction と
