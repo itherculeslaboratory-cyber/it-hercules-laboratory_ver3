@@ -198,7 +198,7 @@ export function formatDateJa(value: unknown): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Today + `days`, as a Date (local time) — F5/F6's client-computed "次の目安". */
+/** Today + `days`, as a Date (local time) — F5/F6's client-computed "次の観測目安". */
 export function todayPlusDays(days: number): Date {
   const d = new Date();
   d.setDate(d.getDate() + days);

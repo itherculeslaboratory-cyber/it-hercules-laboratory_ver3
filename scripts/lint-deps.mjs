@@ -97,10 +97,16 @@ export function isNestedPkg(rel) {
  */
 export function scanBindings(tomlText) {
   const hits = [];
-  for (const m of tomlText.matchAll(BINDING_DENY)) {
+  // TOML の行コメント(# 始まりの行)を「同じ長さの空白」へ潰してから走査する。
+  // 削除ではなく空白詰めにするのは、m.index と節の切り出し位置を元テキストと
+  // 一致させたまま保つため。
+  // (2026-08-07 w1-canary 実測: wrangler.toml:70-76 の解説コメント5行が
+  //  「kv_namespaces」の語を含むだけで違反と数えられ dep lint が赤になっていた)
+  const scrubbed = tomlText.replace(/^[ \t]*#[^\n]*/gm, (s) => " ".repeat(s.length));
+  for (const m of scrubbed.matchAll(BINDING_DENY)) {
     if (m[1] !== "kv_namespaces") { hits.push(m[1]); continue; }
     // 当該 kv_namespaces 節から次の節見出しまでを切り出し、binding 名を拾う
-    const rest = tomlText.slice(m.index);
+    const rest = scrubbed.slice(m.index);
     const section = rest.slice(0, (rest.slice(1).search(/^\s*\[/m) + 1) || rest.length);
     const names = [...section.matchAll(/^\s*binding\s*=\s*["']([^"']+)["']/gm)].map((b) => b[1]);
     // 名前が1つも書かれていない = 判定できないので従来どおり違反に倒す
@@ -287,6 +293,14 @@ function selftest() {
   assert(!!checkImport("apps/api/src/x.ts", "@ihl/shared", ws), "D3 shared (pkg name)");
   assert(scanBindings("[[d1_databases]]").length > 0, "binding d1 flagged");
   assert(scanBindings("kv_namespaces = []").length > 0, "binding kv flagged");
+  assert(
+    scanBindings('# kv_namespaces についての解説コメント\n[[kv_namespaces]]\nbinding = "RATE_LIMIT"').length === 0,
+    "comment mentioning kv_namespaces is not a binding"
+  );
+  assert(
+    scanBindings('# [[kv_namespaces]]\n# binding = "EVIL"').length === 0,
+    "commented-out binding is not live"
+  );
   assert(
     scanBindings('[[kv_namespaces]]\nbinding = "RATE_LIMIT"\nid = "x"').length === 0,
     "allowlisted kv clean"

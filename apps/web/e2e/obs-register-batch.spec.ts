@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 // V3-AIP-101 観測登録スライス2(c7-wireframes-core5 §F3/F4/F5/F6・バッチ)。
 // F3(割り出し・クラッチ一括)→F4(まとめて記録: フィルタ・そろそろプリセレクト・
 // 計測グリッド・クラッチ照合/昇格)→F5b(バッチ確認: サマリ+注意行)→F6b(バッチ
-// 完了: Δ+次の目安+クラッチ結果)を実ブラウザで打鍵まで通す(目視ゲート用
+// 完了: Δ+次の観測目安+クラッチ結果)を実ブラウザで打鍵まで通す(目視ゲート用
 // スクリーンショット5枚)。バックエンド(クラッチ/batch-commit/occupancy start-end
 // /individuals拡張)はコミット 2329559 で完成済み — このテストはフロントの結線
 // を検証する。
@@ -168,14 +168,14 @@ test("観測登録スライス2: F3(割り出し)→F4(まとめて記録)→F5b
   const saveButton = page.getByRole("button", { name: /件を一括保存/ });
   await saveButton.click();
 
-  // 5. F6b: Δ+次の目安+クラッチ結果.
+  // 5. F6b: Δ+次の観測目安+クラッチ結果.
   await expect(page.getByRole("heading", { name: "保存しました — 今日の成長" })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(new RegExp(`${seed.ind1Label}`))).toBeVisible();
   await expect(page.getByText("-2.5g")).toBeVisible();
   await expect(page.getByText(/72→68匹\(死亡4\)/)).toBeVisible();
   await expect(page.getByText(/8体を昇格/)).toBeVisible();
-  await expect(page.getByText(/✓ 次の目安 登録済み — \d+件/)).toBeVisible();
+  await expect(page.getByText(/✓ 次の観測目安 登録済み — \d+件/)).toBeVisible();
   await shot(page, "f6b");
 
   // 一括保存が完了して初めて昇格が反映される(遅延コミットの契約): 保存前は

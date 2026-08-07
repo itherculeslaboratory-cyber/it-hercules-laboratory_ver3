@@ -121,6 +121,24 @@ describe("T4: NumericFilterRow — 以上/以下/付近の3ボタン常時表示
   });
 });
 
+describe("T1(ORDER-2026-08-07-release-fixes): 中心値/幅/単一値入力がgetByLabelで発見できる", () => {
+  it("体長・体重の中心値/幅/以上値/以下値がaria-labelで取得できる", async () => {
+    const onAction = makeOnAction();
+    render(<Renderer def={searchDef()} onAction={onAction} onNavigate={vi.fn()} />);
+    await waitFor(() => expect(screen.getAllByText(/個体 \//).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText(/絞り込み/)[0]);
+
+    expect(screen.getByLabelText("体長の中心値")).toBeInTheDocument();
+    expect(screen.getByLabelText("体長の幅")).toBeInTheDocument();
+    expect(screen.getByLabelText("体重の中心値")).toBeInTheDocument();
+    expect(screen.getByLabelText("体重の幅")).toBeInTheDocument();
+
+    const lengthRow = screen.getAllByText("体長(mm)")[0].closest(".civ-picker-row") as HTMLElement;
+    fireEvent.click(within(lengthRow).getByRole("radio", { name: "以上" }));
+    expect(screen.getByLabelText("体長の値")).toBeInTheDocument();
+  });
+});
+
 describe("T2: 横断検索UI導線(GET /api/v1/search)", () => {
   it("打ち切りありの応答を正直に表示する", async () => {
     const crossResponse = {

@@ -11,7 +11,7 @@ import { GraphView, type GraphViewIndividual, type PedigreeLink } from "../graph
 import { savePreselect } from "../batch-draft";
 
 import { ExecuteCtx, HeaderScopeCtx, MessagesCtx, NavigateCtx, ScopeCtx } from "../core/context";
-import { headerScopeQuery, STAGE_LABELS_JA, safeLabel, type PlacementRow } from "../core/scope";
+import { errorText, headerScopeQuery, STAGE_LABELS_JA, safeLabel, type PlacementRow } from "../core/scope";
 import { registerNode } from "../core/registry";
 import { Badge } from "../core/primitives";
 
@@ -225,15 +225,6 @@ function sortRows(rows: SearchRow[], sort: SearchSort): SearchRow[] {
     if (bv == null) return -1;
     return bv - av; // 降順
   });
-}
-// 主要数値(bold): ステージが成虫寄り(adult/pupa/prepupa)なら体長優先、それ
-// 以外は体重優先。片方しか値が無ければ他方にフォールバック。
-function primaryMeasure(row: SearchRow): { text: string; unit: string } | null {
-  const lengthFirst = row.stage === "adult" || row.stage === "pupa" || row.stage === "prepupa";
-  if (lengthFirst && row.latest_length_mm != null) return { text: String(row.latest_length_mm), unit: "mm" };
-  if (row.latest_weight_g != null) return { text: String(row.latest_weight_g), unit: "g" };
-  if (row.latest_length_mm != null) return { text: String(row.latest_length_mm), unit: "mm" };
-  return null;
 }
 
 // V3-OBS-02 観測対象ナビゲータ: 学名検索(substring) / アキネーター式yes-no
@@ -490,6 +481,8 @@ type NumericFilterRowProps = {
   onWidthChange: (v: string) => void;
   onCommit: () => void;
   widthAriaLabel: string;
+  centerAriaLabel: string;
+  valueAriaLabel: string;
 };
 
 const NUMERIC_FILTER_MODE_LABELS: Record<NumericFilterMode, string> = {
@@ -512,6 +505,8 @@ function NumericFilterRow({
   onWidthChange,
   onCommit,
   widthAriaLabel,
+  centerAriaLabel,
+  valueAriaLabel,
 }: NumericFilterRowProps) {
   return (
     <div className="civ-picker-row">
@@ -537,6 +532,7 @@ function NumericFilterRow({
             type="number"
             inputMode="decimal"
             placeholder="中心値"
+            aria-label={centerAriaLabel}
             value={centerDraft}
             onChange={(e) => onCenterChange(e.target.value)}
             onBlur={onCommit}
@@ -564,6 +560,7 @@ function NumericFilterRow({
           type="number"
           inputMode="decimal"
           placeholder={mode === "gte" ? "以上の値" : "以下の値"}
+          aria-label={valueAriaLabel}
           value={valueDraft}
           onChange={(e) => onValueChange(e.target.value)}
           onBlur={onCommit}
@@ -663,38 +660,64 @@ function GraphViewNode() {
   const [individuals, setIndividuals] = useState<GraphViewIndividual[]>([]);
   const [links, setLinks] = useState<PedigreeLink[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [ind, pl] = await Promise.all([
-        execute({
-          kind: "api",
-          method: "GET",
-          path: `/api/v1/individuals${headerScopeQuery(headerScope)}`,
-        }) as Promise<{ individuals?: GraphViewIndividual[] } | undefined>,
-        execute({
-          kind: "api",
-          method: "GET",
-          path: `/api/v1/individuals/pedigree-links${headerScopeQuery(headerScope)}`,
-        }) as Promise<{ links?: PedigreeLink[] } | undefined>,
-      ]);
-      if (!alive) return;
-      setIndividuals(ind?.individuals ?? []);
-      setLinks(pl?.links ?? []);
-      setLoaded(true);
+      setLoadError(null);
+      try {
+        const [ind, pl] = await Promise.all([
+          execute({
+            kind: "api",
+            method: "GET",
+            path: `/api/v1/individuals${headerScopeQuery(headerScope)}`,
+          }) as Promise<{ individuals?: GraphViewIndividual[] } | undefined>,
+          execute({
+            kind: "api",
+            method: "GET",
+            path: `/api/v1/individuals/pedigree-links${headerScopeQuery(headerScope)}`,
+          }) as Promise<{ links?: PedigreeLink[] } | undefined>,
+        ]);
+        if (!alive) return;
+        setIndividuals(ind?.individuals ?? []);
+        setLinks(pl?.links ?? []);
+      } catch (e) {
+        if (alive) setLoadError(errorText(e));
+      } finally {
+        if (alive) setLoaded(true);
+      }
     })();
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headerScope.species, headerScope.lineageId]);
+  }, [headerScope.species, headerScope.lineageId, retryTick]);
 
   if (!loaded) {
     return (
       <p className="civ-text" data-muted="true">
         読み込み中…
       </p>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="civ-empty">
+        <p className="civ-text">読み込みに失敗しました。({loadError})</p>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="secondary"
+          onClick={() => {
+            setLoaded(false);
+            setRetryTick((t) => t + 1);
+          }}
+        >
+          再試行
+        </button>
+      </div>
     );
   }
   return (
@@ -723,6 +746,8 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
   const [individuals, setIndividuals] = useState<SearchRow[]>([]);
   const [placements, setPlacements] = useState<PlacementRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
 
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
   const [sort, setSort] = useState<SearchSort>(DEFAULT_SEARCH_SORT);
@@ -784,40 +809,46 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      // HDR-1(c9-structure-canon.md §1/R112/R115): ヘッダー観測対象セレクタの
-      // 選択をサーバ側フィルタとして付ける(individual-routes.ts の既存
-      // ?species=/?lineage_id= に配線するだけ)。画面内の種/ステージ/棚チップ
-      // (filters state)はこの母集団に対する二次的な絞り込みのまま(A1#4:
-      // localStorage 内だけで完結する旧・画面内ファセットではなくサーバ母集団
-      // 自体がヘッダー選択に従う)。
-      const [ind, pl] = await Promise.all([
-        execute({ kind: "api", method: "GET", path: `/api/v1/individuals${headerScopeQuery(headerScope)}` }) as Promise<
-          { individuals?: SearchRow[] } | undefined
-        >,
-        execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
-          { placements?: PlacementRow[] } | undefined
-        >,
-      ]);
-      if (!alive) return;
-      setIndividuals((ind?.individuals ?? []).map((i) => ({ ...i, label: safeLabel(i.label, i.species) })));
-      setPlacements(pl?.placements ?? []);
-      setSavedSearches(loadSavedSearches());
-      // 直近条件の自動復元: 「読み込み中…」ゲートの裏でここまで適用してから
-      // loaded を立てるので、未フィルタの全件表示が一瞬でも画面に出ない。
-      const last = loadLastFilter();
-      if (last) {
-        setFilters(last.filters);
-        setSort(last.sort);
-        setLengthMode(last.filters.lengthMode);
-        setLengthValueDraft(last.filters.lengthValue != null ? String(last.filters.lengthValue) : "");
-        setLengthXDraft(last.filters.lengthCenter != null ? String(last.filters.lengthCenter) : "");
-        setLengthYDraft(last.filters.lengthWidth != null ? String(last.filters.lengthWidth) : "");
-        setWeightMode(last.filters.weightMode);
-        setWeightValueDraft(last.filters.weightValue != null ? String(last.filters.weightValue) : "");
-        setWeightXDraft(last.filters.weightCenter != null ? String(last.filters.weightCenter) : "");
-        setWeightYDraft(last.filters.weightWidth != null ? String(last.filters.weightWidth) : "");
+      setLoadError(null);
+      try {
+        // HDR-1(c9-structure-canon.md §1/R112/R115): ヘッダー観測対象セレクタの
+        // 選択をサーバ側フィルタとして付ける(individual-routes.ts の既存
+        // ?species=/?lineage_id= に配線するだけ)。画面内の種/ステージ/棚チップ
+        // (filters state)はこの母集団に対する二次的な絞り込みのまま(A1#4:
+        // localStorage 内だけで完結する旧・画面内ファセットではなくサーバ母集団
+        // 自体がヘッダー選択に従う)。
+        const [ind, pl] = await Promise.all([
+          execute({ kind: "api", method: "GET", path: `/api/v1/individuals${headerScopeQuery(headerScope)}` }) as Promise<
+            { individuals?: SearchRow[] } | undefined
+          >,
+          execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
+            { placements?: PlacementRow[] } | undefined
+          >,
+        ]);
+        if (!alive) return;
+        setIndividuals((ind?.individuals ?? []).map((i) => ({ ...i, label: safeLabel(i.label, i.species) })));
+        setPlacements(pl?.placements ?? []);
+        setSavedSearches(loadSavedSearches());
+        // 直近条件の自動復元: 「読み込み中…」ゲートの裏でここまで適用してから
+        // loaded を立てるので、未フィルタの全件表示が一瞬でも画面に出ない。
+        const last = loadLastFilter();
+        if (last) {
+          setFilters(last.filters);
+          setSort(last.sort);
+          setLengthMode(last.filters.lengthMode);
+          setLengthValueDraft(last.filters.lengthValue != null ? String(last.filters.lengthValue) : "");
+          setLengthXDraft(last.filters.lengthCenter != null ? String(last.filters.lengthCenter) : "");
+          setLengthYDraft(last.filters.lengthWidth != null ? String(last.filters.lengthWidth) : "");
+          setWeightMode(last.filters.weightMode);
+          setWeightValueDraft(last.filters.weightValue != null ? String(last.filters.weightValue) : "");
+          setWeightXDraft(last.filters.weightCenter != null ? String(last.filters.weightCenter) : "");
+          setWeightYDraft(last.filters.weightWidth != null ? String(last.filters.weightWidth) : "");
+        }
+      } catch (e) {
+        if (alive) setLoadError(errorText(e));
+      } finally {
+        if (alive) setLoaded(true);
       }
-      setLoaded(true);
     })();
     return () => {
       alive = false;
@@ -826,7 +857,7 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
     // 値で比較 — AppShellNode 側の再レンダーで参照が変わっても値が同じなら
     // 再フェッチしない)。ヘッダーで選択を変えたら個体母集団を取り直す。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headerScope.species, headerScope.lineageId]);
+  }, [headerScope.species, headerScope.lineageId, retryTick]);
 
   // 直近条件の永続化(初回ロード後のみ — 復元直後の再書き込みで壊さない)。
   useEffect(() => {
@@ -1110,6 +1141,24 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
       </p>
     );
   }
+  if (loadError) {
+    return (
+      <div className="civ-empty">
+        <p className="civ-text">読み込みに失敗しました。({loadError})</p>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="secondary"
+          onClick={() => {
+            setLoaded(false);
+            setRetryTick((t) => t + 1);
+          }}
+        >
+          再試行
+        </button>
+      </div>
+    );
+  }
 
   const basketIds = [...selected];
   const activeSaved = savedSearches.find((s) => s.id === activeSavedId) ?? null;
@@ -1230,6 +1279,8 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
               onWidthChange={setLengthYDraft}
               onCommit={() => commitLength()}
               widthAriaLabel="体長の幅"
+              centerAriaLabel="体長の中心値"
+              valueAriaLabel="体長の値"
             />
             <NumericFilterRow
               label="体重(g)"
@@ -1245,6 +1296,8 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
               onWidthChange={setWeightYDraft}
               onCommit={() => commitWeight()}
               widthAriaLabel="体重の幅"
+              centerAriaLabel="体重の中心値"
+              valueAriaLabel="体重の値"
             />
           </div>
         )}
@@ -1447,6 +1500,13 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
         </p>
       )}
 
+      {/* T2(w1-finder・LAUNCH1600-1 B案採用 — finder.htmlの表(Tabulator)ライクな
+          見た目に寄せる。列ヘッダをクリックすると即sortされる(finder.htmlの
+          「列ヘッダクリックで即sort」を踏襲)。既存の並び替えセグメントは
+          finder.htmlに無い日付系ソート(最終観測日/羽化日)のために残す。
+          新規CSSクラスは追加しない(既存 .civ-table を obs-batch.tsx から再利用
+          =reuse-first。触ってよいファイルが zones/search.tsx のみのため
+          globals.css には触れない)。 */}
       <div className="civ-segmented" role="radiogroup" aria-label="並び替え">
         {(Object.keys(SEARCH_SORT_LABELS) as SearchSort[]).map((k) => (
           <label key={k} className="civ-segment">
@@ -1456,81 +1516,104 @@ function SearchNavigatorNode({ tabId }: { tabId?: string }) {
         ))}
       </div>
 
-      <ul className="civ-list">
-        {sorted.map((row) => {
-          const checked = selected.has(row.individual_id);
-          const primary = primaryMeasure(row);
-          let dateIso: string | null = null;
-          let dateLabel = "";
-          if (row.eclosion_at) {
-            dateIso = row.eclosion_at;
-            dateLabel = "羽化";
-          } else if (row.last_care_at) {
-            dateIso = row.last_care_at;
-            dateLabel = "最終観測";
-          }
-          return (
-            <li key={row.individual_id} className="civ-roster-row">
-              <label className="civ-checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleSelect(row.individual_id)}
-                  aria-label={`${row.label} を選択`}
-                />
-              </label>
-              <article
-                className="civ-card"
-                data-clickable="true"
-                role="button"
-                tabIndex={0}
-                aria-label={`${row.label} の個体詳細を開く`}
-                onClick={() => navigate("individual-detail", { id: row.individual_id })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    navigate("individual-detail", { id: row.individual_id });
-                  }
-                }}
-              >
-                <div className="civ-card-head">
-                  {row.thumbnail_path && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img className="civ-search-thumb" src={row.thumbnail_path} alt="" />
-                  )}
-                  <h3 className="civ-card-title">{row.label}</h3>
-                </div>
-                <div className="civ-card-badges">
-                  {row.species && <Badge text={row.species} tone="neutral" />}
-                  {row.stage && <Badge text={STAGE_LABELS_JA[row.stage] ?? row.stage} tone="neutral" />}
-                </div>
-                {primary && (
-                  <p className="civ-search-primary">
-                    {primary.text}
-                    <span className="civ-search-primary-unit">{primary.unit}</span>
-                  </p>
-                )}
-                <p className="civ-text" data-muted="true">
-                  {dateIso ? `${dateLabel} ${relativeLabel(new Date(dateIso).getTime())}` : "観測記録なし"}
-                  {`・観測${row.capture_count}回`}
-                </p>
+      <div className="civ-table-scroll">
+        <table className="civ-table">
+          <thead>
+            <tr>
+              <th aria-label="選択"></th>
+              <th>個体</th>
+              <th>種族</th>
+              <th>ステージ</th>
+              <th>
                 <button
                   type="button"
                   className={cn("civ-interactive", "civ-button")}
-                  data-variant="secondary"
+                  data-variant="ghost"
                   data-compact
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate("obs-register-entry", { id: row.individual_id });
-                  }}
+                  aria-pressed={sort === "length_desc"}
+                  onClick={() => setSort("length_desc")}
                 >
-                  追観測 →
+                  体長mm{sort === "length_desc" ? " ↓" : ""}
                 </button>
-              </article>
-            </li>
-          );
-        })}
-      </ul>
+              </th>
+              <th>
+                <button
+                  type="button"
+                  className={cn("civ-interactive", "civ-button")}
+                  data-variant="ghost"
+                  data-compact
+                  aria-pressed={sort === "weight_desc"}
+                  onClick={() => setSort("weight_desc")}
+                >
+                  体重g{sort === "weight_desc" ? " ↓" : ""}
+                </button>
+              </th>
+              <th>記録</th>
+              <th>個体ID</th>
+              <th aria-label="操作"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((row) => {
+              const checked = selected.has(row.individual_id);
+              let dateIso: string | null = null;
+              let dateLabel = "";
+              if (row.eclosion_at) {
+                dateIso = row.eclosion_at;
+                dateLabel = "羽化";
+              } else if (row.last_care_at) {
+                dateIso = row.last_care_at;
+                dateLabel = "最終観測";
+              }
+              return (
+                <tr
+                  key={row.individual_id}
+                  onClick={() => navigate("individual-detail", { id: row.individual_id })}
+                  aria-label={`${row.label} の個体詳細を開く`}
+                >
+                  <td data-label="選択" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSelect(row.individual_id)}
+                      aria-label={`${row.label} を選択`}
+                    />
+                  </td>
+                  <td data-label="個体" className="civ-cell-clip" title={row.label}>
+                    {row.thumbnail_path && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="civ-search-thumb" src={row.thumbnail_path} alt="" />
+                    )}
+                    {row.label}
+                  </td>
+                  <td data-label="種族">{row.species ? <Badge text={row.species} tone="neutral" /> : "—"}</td>
+                  <td data-label="ステージ">{row.stage ? STAGE_LABELS_JA[row.stage] ?? row.stage : "—"}</td>
+                  <td data-label="体長mm">{row.latest_length_mm ?? "—"}</td>
+                  <td data-label="体重g">{row.latest_weight_g ?? "—"}</td>
+                  <td data-label="記録">
+                    {dateIso ? `${dateLabel} ${relativeLabel(new Date(dateIso).getTime())}` : "記録なし"}
+                    {`・観測${row.capture_count}回`}
+                  </td>
+                  <td data-label="個体ID" className="civ-cell-clip" title={row.individual_id}>
+                    {row.individual_id}
+                  </td>
+                  <td data-label="操作" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className={cn("civ-interactive", "civ-button")}
+                      data-variant="secondary"
+                      data-compact
+                      onClick={() => navigate("obs-register-entry", { id: row.individual_id })}
+                    >
+                      追観測 →
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {(basketIds.length > 0 || snack) && (
         <div className="civ-basket-tray">

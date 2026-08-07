@@ -9,6 +9,16 @@ export const CONTENT_TYPES = ["article", "blog", "paper", "chat_log", "newspaper
 // PPR-03: PaperSectionsV1 6 節(目的/仮説/条件/検証/現在のフェーズ/ギャップ)。
 export const PAPER_SECTIONS = ["purpose", "hypothesis", "conditions", "verification", "phase", "gap"] as const;
 
+// PAPER_SECTIONS のキー→日本語ラベル(表示専用・順序はPAPER_SECTIONSと1:1)。
+export const PAPER_SECTION_LABELS_JA: Record<(typeof PAPER_SECTIONS)[number], string> = {
+  purpose: "目的",
+  hypothesis: "仮説",
+  conditions: "条件",
+  verification: "検証",
+  phase: "現在のフェーズ",
+  gap: "ギャップ",
+};
+
 // WIK-14: AI 提案タグの上限(非永続・提案のみ)。
 export const AI_TAGS_MAX = 10;
 

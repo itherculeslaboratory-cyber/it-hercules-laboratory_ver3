@@ -18,11 +18,15 @@
             { "id": "lead", "type": "text", "props": { "text_key": "theme-gallery.lead.text", "text": "テーマパックを選び、設定画面で適用します。", "muted": true } },
             {
               "id": "packs",
-              "type": "list",
+              "type": "image-grid",
               "props": {
                 "source_path": "/api/v1/theme-packs",
                 "bind_items": "data.packs.theme_packs",
-                "item_text": "{{name}}（{{mode}}）",
+                "item_label": "{{name}}",
+                "item_meta": "{{pack_id}}",
+                "item_badge": "{{mode}}",
+                "item_action_screen": "settings",
+                "item_action_label": "設定で適用",
                 "empty_text": "テーマパックはまだありません。"
               }
             },

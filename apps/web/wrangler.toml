@@ -1,0 +1,7 @@
+# Cloudflare Pages — build output (source of truth when present).
+# Root directory in dashboard must be apps/web so this file is the project root.
+# 構成は姉妹プロジェクト ihl-ver2/apps/web/wrangler.toml を踏襲(reuse-first)。
+name = "ihl-ver3-web"
+pages_build_output_dir = ".vercel/output/static"
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]

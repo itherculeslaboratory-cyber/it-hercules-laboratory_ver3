@@ -259,7 +259,7 @@ export function ButtonNode({ node }: { node: ScreenNode }) {
   const scope = useContext(ScopeCtx);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(p.error ? String(p.error) : null);
-  // V3-AIP-101 zero-tap registration (F6 "次の目安"): props.auto fires this
+  // V3-AIP-101 zero-tap registration (F6 "次の観測目安"): props.auto fires this
   // button's action once on mount instead of waiting for a click; `done` swaps
   // the button for a status line once it succeeds.
   const [done, setDone] = useState(false);
@@ -584,7 +584,7 @@ export function FieldNode({ node }: { node: ScreenNode }) {
     // data-required='true' means "must be checked"; scanFormValidity + the
     // submit-time missing scan (unchecked => fd.get null) both cover it.
     // props.default:true = checked from first paint (F5's opt-out-by-default
-    // "次の目安を登録" checkbox, V3-AIP-101). labelText may carry a
+    // "次の観測目安を登録" checkbox, V3-AIP-101). labelText may carry a
     // client-computed {{date}} (label_date_offset_days, see above).
     return (
       <div className="civ-field">

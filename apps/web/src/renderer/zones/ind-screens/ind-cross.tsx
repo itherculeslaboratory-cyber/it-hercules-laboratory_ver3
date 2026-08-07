@@ -19,7 +19,20 @@ type MissingLaneRow = { clutch_id: string; event_id: string; at: string; discrep
 type IndCross = {
   cohort_size: number;
   weight_by_instar: { first: number | null; second: number | null; third_early: number | null; third_late: number | null };
-  size_extremes: { max_weight: number | null; max_length: number | null; min_length: number | null };
+  // R0807-92d58e w1-small T2: 令(=世代)ごとの最大・最小(既存weight_by_instarの平均とは別枠)。
+  weight_by_instar_extremes: {
+    first: { min: number | null; max: number | null };
+    second: { min: number | null; max: number | null };
+    third_early: { min: number | null; max: number | null };
+    third_late: { min: number | null; max: number | null };
+  };
+  size_extremes: {
+    max_weight: number | null;
+    max_length: number | null;
+    min_length: number | null;
+    max_horn_length: number | null;
+    min_horn_length: number | null;
+  };
   rates: {
     mortality: number;
     survival: number;
@@ -153,29 +166,44 @@ function IndCrossNode() {
                   </div>
                 </div>
 
-                <div className="subhead">令ごとの平均体重</div>
-                <div className="instar-row">
-                  <div className="instar-tile">
-                    <div className="i-num">{data.weight_by_instar.first == null ? "—" : `${indNum(data.weight_by_instar.first)}g`}</div>
-                    <div className="i-label">1令</div>
-                  </div>
-                  <div className="instar-tile">
-                    <div className="i-num">{data.weight_by_instar.second == null ? "—" : `${indNum(data.weight_by_instar.second)}g`}</div>
-                    <div className="i-label">2令</div>
-                  </div>
-                  <div className="instar-tile">
-                    <div className="i-num">
-                      {data.weight_by_instar.third_early == null ? "—" : `${indNum(data.weight_by_instar.third_early)}g`}
+                <div className="subhead">令(世代)ごとの平均体重</div>
+                {(() => {
+                  // R0807-92d58e w1-small T2: 「グラフ」要望への最小実装。新規チャートライブラリは
+                  // 導入せず(reuse-first)、既存instar-tileへ相対バー(CSS width%)を1本足すだけの
+                  // 簡易グラフ。4令分のavgのうち最大値を100%として各バーの幅を決める。
+                  const instars = [
+                    { key: "first", label: "1令", avg: data.weight_by_instar.first, ex: data.weight_by_instar_extremes?.first },
+                    { key: "second", label: "2令", avg: data.weight_by_instar.second, ex: data.weight_by_instar_extremes?.second },
+                    { key: "third_early", label: "3令 前期", avg: data.weight_by_instar.third_early, ex: data.weight_by_instar_extremes?.third_early },
+                    { key: "third_late", label: "3令 後期", avg: data.weight_by_instar.third_late, ex: data.weight_by_instar_extremes?.third_late },
+                  ];
+                  const maxAvg = Math.max(0, ...instars.map((i) => i.avg ?? 0));
+                  return (
+                    <div className="instar-row">
+                      {instars.map((i) => (
+                        <div className="instar-tile" key={i.key}>
+                          <div className="i-num">{i.avg == null ? "—" : `${indNum(i.avg)}g`}</div>
+                          {i.avg != null && maxAvg > 0 && (
+                            <div style={{ height: "4px", background: "var(--border)", borderRadius: "2px", margin: "4px 0" }}>
+                              <div
+                                style={{
+                                  height: "100%",
+                                  width: `${Math.max(4, (i.avg / maxAvg) * 100)}%`,
+                                  background: "var(--primary)",
+                                  borderRadius: "2px",
+                                }}
+                              />
+                            </div>
+                          )}
+                          <div className="i-label">{i.label}</div>
+                          <div style={{ fontSize: "10.5px", color: "var(--muted)" }}>
+                            最大 {i.ex?.max == null ? "—" : `${indNum(i.ex.max)}g`} / 最小 {i.ex?.min == null ? "—" : `${indNum(i.ex.min)}g`}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="i-label">3令 前期</div>
-                  </div>
-                  <div className="instar-tile">
-                    <div className="i-num">
-                      {data.weight_by_instar.third_late == null ? "—" : `${indNum(data.weight_by_instar.third_late)}g`}
-                    </div>
-                    <div className="i-label">3令 後期</div>
-                  </div>
-                </div>
+                  );
+                })()}
                 <div className="extremes">
                   <span>
                     最大体重 <b>{data.size_extremes.max_weight == null ? "—" : `${indNum(data.size_extremes.max_weight)}g`}</b>
@@ -185,6 +213,14 @@ function IndCrossNode() {
                   </span>
                   <span>
                     最小体長 <b>{data.size_extremes.min_length == null ? "—" : `${indNum(data.size_extremes.min_length)}mm`}</b>
+                  </span>
+                  <span>
+                    最大胸角長{" "}
+                    <b>{data.size_extremes.max_horn_length == null ? "—" : `${indNum(data.size_extremes.max_horn_length)}mm`}</b>
+                  </span>
+                  <span>
+                    最小胸角長{" "}
+                    <b>{data.size_extremes.min_horn_length == null ? "—" : `${indNum(data.size_extremes.min_horn_length)}mm`}</b>
                   </span>
                 </div>
               </>
@@ -241,7 +277,7 @@ function IndCrossNode() {
               rates/instar/extremes/クラッチ層/消息不明レーンは <code>GET /individuals/{"{id}"}/cross</code>、系統は{" "}
               <code>GET /individuals/{"{id}"}/pedigree</code> の実データ(生存・完品・羽化不全・孵化・死亡・性比・令別平均体重・サイズ極値・色の再現性・クラッチ匹数はすべて観測/クラッチ記録から都度計算)。色の再現性は親・子それぞれの色記録(ihl.obs.color.v1)のΔE76(色差)から算出し、色記録が無い個体は集計から除きます。
               <br />
-              <b>再現できない要素:</b> 産地層別統計はここには載せていません(個体・クラッチいずれのTruthスキーマにも産地/countryフィールドが存在しないため、捏造せず対応を見送っています)。系統は個体IDのみの表示で、祖先の名前・種は本画面では解決していません(個体詳細から辿って確認してください)。
+              <b>再現できない要素:</b> 産地層別統計はここには載せていません(個体・クラッチいずれのTruthスキーマにも産地/countryフィールドが存在しないため、捏造せず対応を見送っています)。胸角の<b>太さ</b>も同様に見送っています(観測データに太さの計測項目が一件も存在しないため)。系統は個体IDのみの表示で、祖先の名前・種は本画面では解決していません(個体詳細から辿って確認してください)。
             </p>
           </div>
         </section>

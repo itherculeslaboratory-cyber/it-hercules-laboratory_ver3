@@ -17,6 +17,24 @@
             { "id": "title", "type": "heading", "props": { "text": "テンプレート市場", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text": "テンプレートを出品・フォークし、ランキングで探します。", "muted": true } },
 
+            {
+              "id": "fork-steps",
+              "type": "stepper",
+              "props": {
+                "current": 0,
+                "steps": [
+                  { "id": "find", "label": "良いテンプレを見つける" },
+                  { "id": "fork", "label": "複製する（fork）" },
+                  { "id": "edit", "label": "計測項目などを編集する" }
+                ]
+              }
+            },
+            {
+              "id": "builder-link",
+              "type": "link",
+              "props": { "label": "実際に fork・出品するにはこちら（組み立てページ）", "href": "/fork#template-market" }
+            },
+
             { "id": "ranking-title", "type": "heading", "props": { "text": "ランキング", "level": 2 } },
             {
               "id": "templates",

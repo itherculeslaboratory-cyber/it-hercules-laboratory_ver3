@@ -177,6 +177,7 @@
   "ui-templates.tpl-level.label": "推奨度",
   "ui-templates.tpl-author.label": "作者名（任意）",
   "ui-templates.save.label": "テンプレートとして保存する",
+  "ui-templates.builder-link.label": "3ペインの組み立て（Puckビルダー）を開く",
   "ui-templates.next.label": "ホームに戻る",
   "home.guide-select.label": "ドメインから選んで始める",
   "home.open-knowledge.label": "知の広場を開く",

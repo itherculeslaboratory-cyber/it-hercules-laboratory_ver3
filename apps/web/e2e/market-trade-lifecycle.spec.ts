@@ -125,6 +125,31 @@ test("market-trade lifecycle via real UI, 2 actors: draft -> publish -> apply(ma
   await page.waitForLoadState("networkidle");
   await page.getByRole("tab", { name: "取引ボード(成立後)" }).click();
   await expect(page.getByText(/入金確認 \d{4}-\d{2}-\d{2}/)).toBeVisible();
+
+  // 5.5 出品者: 匿名配送URL(V3-MKT-20 ship_link)を共有する(prep-p2b新設・
+  //     T0検証で「発送」側は実データ(API projectShippingLink)が存在するのに
+  //     UI未接続だったため追加。「検品」側はschemas/eventsに対応フィールドが
+  //     無く未追加=誇張ゼロ)。
+  const shippingUrl = "https://example-post.local/track/e2e-p2b-test";
+  await page
+    .getByLabel("匿名配送URL(郵便局等の匿名配送サービスの追跡URL・入金確認後のみ送信可) *")
+    .fill(shippingUrl);
+  await page.getByRole("button", { name: "発送URLを共有する(出品者)" }).click();
+  await waitForKind(page, "ship_link");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("tab", { name: "取引ボード(成立後)" }).click();
+  await expect(
+    page.getByRole("link", { name: "共有された配送URL(匿名配送・住所非保持)を開く" }),
+  ).toHaveAttribute("href", shippingUrl);
+
+  // 買い手側にも同じ非公開ボード経由で見える(認可=当事者2人のみ・MKT-03既存実装)。
+  await buyer.reload();
+  await buyer.waitForLoadState("networkidle");
+  await buyer.getByRole("tab", { name: "取引ボード(成立後)" }).click();
+  await expect(
+    buyer.getByRole("link", { name: "共有された配送URL(匿名配送・住所非保持)を開く" }),
+  ).toHaveAttribute("href", shippingUrl);
+
   await page.getByRole("button", { name: "発送した(出品者)" }).click();
   await waitForKind(page, "ship");
   await page.waitForLoadState("networkidle");

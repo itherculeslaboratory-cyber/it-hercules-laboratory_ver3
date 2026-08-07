@@ -3,7 +3,7 @@
   "route": "/market/trade",
   "title": "取引",
   "layout": "standard",
-  "notes": "★2026-08-01是正(カードR0801-9d452f-ui06tradeprog): stage-tabs(2値)のラベルへstage-stepper(4段)との対応関係を追記(段数の統一までは踏み込まない=既存設計の尊重)。c8(ui-asset-catalog.md 【最優先1】)再構築版・UI磨き第2弾(受領10)で追改修。MKT-03/23/25/20。目的起点=3タブ[この出品/取引|買う|出品する]。「この出品/取引」が既定(listing_id 付きで開いた時に即詳細が見える・market.spec.ts 互換)。stage(公開1→非公開ボード2)は内側の stage-tabs が data.state.stage に自動追従(手動タップも可・タブは隠さない=stage 出し分けは tabs のまま)。4段stepper は current_from/current_map(BadgeNode の derive_from+labels 流用)で MARKET_EDGES の実 state 群を4visual stepへ縮退。振込は round-16 決済裁定どおり銀行振込P2P・GMO非関与 — pay_declare(買い手)/pay_confirm(出品者)/ship(出品者)/receive(買い手)の4トグルは磨き第2弾#1で `when`(役割別出し分けプリミティブ・{{viewer.actor_id}} vs {{data.state.seller_id}}/matched_with)を付与し、受領10「買い手/売り手のみ表示」を解消(両方常時表示だった旧UIから変更)。出品写真は磨き第2弾#2でschemas/events/mkt-listing-photo.schema.json(新イベント型・mkt-listing 本体は無変更)+POST /market/listings/{id}/photo で追加、出品フォームに photo field・「買う」タブは table から image-grid へ差し替え(カードタップ=詳細・受領10「画像を押せば詳細が出る」)。bids-table の入札者列・非公開board の from は磨き第2弾#5で actor 表示プリミティブ(表示名 or 短縮ハッシュ)化。相手選別なしdispute起票の respondent_id 自動判定(出品者/落札者どちらが起票者かの一般判定)は本波未対応(候補提示+手動確認のまま・別要件)。個体仕様table/送料見積りは対象外(schemas/events/mkt-listing.schema.json に individual_ids フィールドが無く実データ不在のため — 誇張ゼロ、飾りで埋めない)。★2026-08-02追記(g87-p2a・c8【最優先1】market-trade組み立て手順の実装差分): カタログの「現状=全欠」記述は既に陳腐化していた(4段stepper/kpi-tile/bids-table/board chat/image-gridはこの追記以前から実装済み)。本ラウンドで追加したのは3点のみ — ①detail-photos(image-grid・出品写真ギャラリー・GET /market/listings/{id}のphotos[]配列を新規bind。バックエンドはloadListingPhotosにlisting_idフィールドを追加しitem_imageテンプレートを解決可能にした) ②species-line/country-line(text・species_id/countryは実在フィールドだが値が無い出品も多いため not_empty when で空の時は非表示。サイズ/血統に相当するフィールドはschema上に存在せず追加せず=誇張ゼロ) ③seller-trust(card・GET /market/users/{actor_id}/ratings の実データ=trades/star_avg/karma_valueをbind_text表示・low_rating=trueの時だけ注意テキストをwhen表示)。仕様tableノードは採用しなかった — table/bind_itemsは配列前提で、species_id/countryの2スカラー値からtable行配列を作る手段が既存語彙に無く(新規ノード型の追加は最終手段の原則により見送り)、既存card/textの組み合わせで表現した。★seller-trustカードは detail カード自身のfetch結果(data.detail.listing.actor_id)にsource_pathが依存する初のケースであり、実機検証で「detailのデータ到着前に actor_id が空文字のままfetchが1回走り404になる」競合を実測(コンソールエラー3件)。source_pathの解決順は保証されないため、when: not_empty で actor_id が届くまでカード自体のマウント(=useSourceの発火)を遅延させて解消(既存のpii-nudge-link等と同型のwhenガード。新しい仕組みは追加していない)。",
+  "notes": "★2026-08-01是正(カードR0801-9d452f-ui06tradeprog): stage-tabs(2値)のラベルへstage-stepper(4段)との対応関係を追記(段数の統一までは踏み込まない=既存設計の尊重)。c8(ui-asset-catalog.md 【最優先1】)再構築版・UI磨き第2弾(受領10)で追改修。MKT-03/23/25/20。目的起点=3タブ[この出品/取引|買う|出品する]。「この出品/取引」が既定(listing_id 付きで開いた時に即詳細が見える・market.spec.ts 互換)。stage(公開1→非公開ボード2)は内側の stage-tabs が data.state.stage に自動追従(手動タップも可・タブは隠さない=stage 出し分けは tabs のまま)。4段stepper は current_from/current_map(BadgeNode の derive_from+labels 流用)で MARKET_EDGES の実 state 群を4visual stepへ縮退。振込は round-16 決済裁定どおり銀行振込P2P・GMO非関与 — pay_declare(買い手)/pay_confirm(出品者)/ship(出品者)/receive(買い手)の4トグルは磨き第2弾#1で `when`(役割別出し分けプリミティブ・{{viewer.actor_id}} vs {{data.state.seller_id}}/matched_with)を付与し、受領10「買い手/売り手のみ表示」を解消(両方常時表示だった旧UIから変更)。出品写真は磨き第2弾#2でschemas/events/mkt-listing-photo.schema.json(新イベント型・mkt-listing 本体は無変更)+POST /market/listings/{id}/photo で追加、出品フォームに photo field・「買う」タブは table から image-grid へ差し替え(カードタップ=詳細・受領10「画像を押せば詳細が出る」)。bids-table の入札者列・非公開board の from は磨き第2弾#5で actor 表示プリミティブ(表示名 or 短縮ハッシュ)化。相手選別なしdispute起票の respondent_id 自動判定(出品者/落札者どちらが起票者かの一般判定)は本波未対応(候補提示+手動確認のまま・別要件)。個体仕様table/送料見積りは対象外(schemas/events/mkt-listing.schema.json に individual_ids フィールドが無く実データ不在のため — 誇張ゼロ、飾りで埋めない)。★2026-08-02追記(g87-p2a・c8【最優先1】market-trade組み立て手順の実装差分): カタログの「現状=全欠」記述は既に陳腐化していた(4段stepper/kpi-tile/bids-table/board chat/image-gridはこの追記以前から実装済み)。本ラウンドで追加したのは3点のみ — ①detail-photos(image-grid・出品写真ギャラリー・GET /market/listings/{id}のphotos[]配列を新規bind。バックエンドはloadListingPhotosにlisting_idフィールドを追加しitem_imageテンプレートを解決可能にした) ②species-line/country-line(text・species_id/countryは実在フィールドだが値が無い出品も多いため not_empty when で空の時は非表示。サイズ/血統に相当するフィールドはschema上に存在せず追加せず=誇張ゼロ) ③seller-trust(card・GET /market/users/{actor_id}/ratings の実データ=trades/star_avg/karma_valueをbind_text表示・low_rating=trueの時だけ注意テキストをwhen表示)。仕様tableノードは採用しなかった — table/bind_itemsは配列前提で、species_id/countryの2スカラー値からtable行配列を作る手段が既存語彙に無く(新規ノード型の追加は最終手段の原則により見送り)、既存card/textの組み合わせで表現した。★seller-trustカードは detail カード自身のfetch結果(data.detail.listing.actor_id)にsource_pathが依存する初のケースであり、実機検証で「detailのデータ到着前に actor_id が空文字のままfetchが1回走り404になる」競合を実測(コンソールエラー3件)。source_pathの解決順は保証されないため、when: not_empty で actor_id が届くまでカード自体のマウント(=useSourceの発火)を遅延させて解消(既存のpii-nudge-link等と同型のwhenガード。新しい仕組みは追加していない)。★2026-08-02追記(prep-p2b・market-trade取引系4機能のT0着手前検証結果): 発注書の4機能のうち入札履歴table(bids-table)・非公開ボードchat(board)は既にg87-p2aで実装済みと確定(boardは/board routeのGET側でstage<2は404・当事者以外403の認可を実測=`apps/api/src/market-routes.ts:1017-1019`、非公開要件を満たすため無変更)。GMO振込tableは「GMO」自体が実在せず(round-16決済裁定で銀行振込P2P/payjp_platformに変更済み・GMO非関与は既存notes記載どおり)、誇張ゼロの原則によりGMO名称のtable新設は行わなかった。ただし`market-settlement.ts:projectPayment`が返す実データ(declared_amount/confirmed_amount/mismatch)が画面に未表示だったため、既存paymentカードのbind_textへ追加表示+mismatch専用textノード(payment-mismatch)を新設(新規ノード型は追加せず既存card/textの組み合わせ=P-2a方式踏襲)。発送・検品formは「検品」に対応するevent/フィールドがschemas/events配下に一切存在しないため今回追加しなかった(実データ不在・誇張ゼロ)。「発送」側はV3-MKT-20 ship_link(匿名配送URL中継・`transaction_event.schema.json`kind enum実在)の実データがAPI(`/board`のshipping_link投影)には既に存在するのにUI未接続だったため、ship-link-form(出品者・入金確認後のみサーバ側409で拒否)+shipping-link-display(当事者向けURL表示)を新設。両方とも既存語彙(form/field/link/when)のみ使用。",
   "nodes": [
     {
       "id": "shell",
@@ -208,7 +208,17 @@
                       "props": {
                         "tab_id": "2",
                         "source_path": "/api/v1/market/listings/{{params.listing_id}}/state",
-                        "bind_text": "支払い方法 {{payment.method}}・振込済み申告 {{payment.declared_at}}・入金確認 {{payment.confirmed_at}}(round-16決済裁定: 銀行振込P2P・IHL非関与)"
+                        "bind_text": "支払い方法 {{payment.method}}・振込済み申告 {{payment.declared_at}}(申告額 {{payment.declared_amount}} 円)・入金確認 {{payment.confirmed_at}}(確認額 {{payment.confirmed_amount}} 円)(round-16決済裁定: 銀行振込P2P・GMO非関与)"
+                      }
+                    },
+                    {
+                      "id": "payment-mismatch",
+                      "type": "text",
+                      "props": {
+                        "tab_id": "2",
+                        "when": { "not_empty": "{{data.payment.payment.mismatch}}" },
+                        "text": "金額相違の自己申告あり: {{data.payment.payment.mismatch}}(partial=部分入金・残債再申告待ち / over=過入金・クレジット記録のみ。自動制裁・自動充当なし)",
+                        "muted": true
                       }
                     },
                     {
@@ -230,6 +240,30 @@
                         "item_text": "{{kind}} {{amount}}",
                         "empty_text": "非公開ボードはまだありません(成立後・当事者2人のみ開きます)。"
                       }
+                    },
+                    {
+                      "id": "shipping-link-display",
+                      "type": "link",
+                      "props": {
+                        "tab_id": "2",
+                        "when": { "not_empty": "{{data.board.shipping_link.url}}" },
+                        "label": "共有された配送URL(匿名配送・住所非保持)を開く",
+                        "href": "{{data.board.shipping_link.url}}"
+                      }
+                    },
+                    {
+                      "id": "ship-link-form",
+                      "type": "form",
+                      "props": {
+                        "tab_id": "2",
+                        "when": { "eq": ["{{viewer.actor_id}}", "{{data.state.seller_id}}"] },
+                        "static": { "kind": "ship_link" }
+                      },
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "発送URLを共有しました" },
+                      "children": [
+                        { "id": "ship-link-url", "type": "field", "props": { "variant": "text", "name": "external_shipping_url", "label": "匿名配送URL(郵便局等の匿名配送サービスの追跡URL・入金確認後のみ送信可)", "required": true } },
+                        { "id": "ship-link-submit", "type": "button", "props": { "type": "submit", "label": "発送URLを共有する(出品者)", "variant": "secondary" } }
+                      ]
                     },
                     {
                       "id": "btn-pay-declare",
@@ -365,6 +399,7 @@
     { "from": "btn-pay-confirm", "to_screen_id": "market-trade", "label": "入金確認後に再読込" },
     { "from": "btn-ship", "to_screen_id": "market-trade", "label": "発送後に再読込" },
     { "from": "btn-receive", "to_screen_id": "market-trade", "label": "受取確定後に再読込" },
-    { "from": "create-listing-form", "to_screen_id": "market-trade", "label": "下書き作成後に再読込" }
+    { "from": "create-listing-form", "to_screen_id": "market-trade", "label": "下書き作成後に再読込" },
+    { "from": "ship-link-form", "to_screen_id": "market-trade", "label": "発送URL共有後に再読込" }
   ]
 }

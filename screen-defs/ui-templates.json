@@ -17,6 +17,11 @@
             { "id": "title", "type": "heading", "props": { "text_key": "ui-templates.title.text", "text": "UI テンプレート", "level": 1 } },
             { "id": "lead", "type": "text", "props": { "text_key": "ui-templates.lead.text", "text": "今の画面構成をテンプレートとして保存し、他の人と共有できます。", "muted": true } },
             {
+              "id": "builder-link",
+              "type": "link",
+              "props": { "label_key": "ui-templates.builder-link.label", "label": "3ペインの組み立て（Puckビルダー）を開く", "href": "/fork#ui-templates" }
+            },
+            {
               "id": "save-form",
               "type": "form",
               "action": { "kind": "api", "method": "POST", "path": "/api/v1/builder/canvas", "body_from": "save-form" },

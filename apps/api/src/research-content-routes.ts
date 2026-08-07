@@ -8,7 +8,7 @@
 import { Hono } from "hono";
 import { TruthStore, ulid, cosineSimilarity, sha256Hex, computeLineageMeta, type LineageMeta } from "@ihl/truth";
 import type { Bindings, Variables } from "./env";
-import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN, PAPER_SECTIONS } from "./research-constants";
+import { AI_TAGS_MAX, RAG_PRIORITY, EMBEDDING_SIMILARITY_MIN, PAPER_SECTIONS, PAPER_SECTION_LABELS_JA } from "./research-constants";
 import { computeSectionsCompleteness, type SectionState } from "./paper-match";
 import { citeUrl, type CiteRef } from "./plaza-routes";
 import { projectReferenceCounter } from "./reference-counter";
@@ -319,8 +319,18 @@ researchContentRoutes.get("/research/content/:id", async (c) => {
   if (!ev) return c.json({ error: "CONTENT_NOT_FOUND" }, 404);
   const data = dataOf(ev);
   const tags = await aggregateContentTags(store(c), id);
-  const extra = data.sections
-    ? { sections_completeness_pct: computeSectionsCompleteness(data.sections as Record<string, SectionState>) }
+  // paper-detail.json の sections ノードは list vocab(bind_items=配列前提)で描画するため、
+  // data.sections(オブジェクト・PPR-03書込形状)とは別に配列投影を1つ足す(既存のsections
+  // 自体はAPI応答形状として不変・投影追加のみ。screen-defs\paper-detail.json:6の気づき是正)。
+  const sectionsObj = data.sections as Record<string, SectionState> | undefined;
+  const extra = sectionsObj
+    ? {
+        sections_completeness_pct: computeSectionsCompleteness(sectionsObj),
+        sections_list: PAPER_SECTIONS.filter((key) => sectionsObj[key]).map((key) => ({
+          label: PAPER_SECTION_LABELS_JA[key],
+          text: sectionsObj[key].text ?? "",
+        })),
+      }
     : {};
   return c.json({ ...data, tags, ...extra });
 });

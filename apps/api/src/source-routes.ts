@@ -20,6 +20,11 @@ import { DEVICE_TYPE } from "./device-routes";
 export const sourceRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 const PLACEMENT_TYPE = "ihl.src.placement.v1";
+// R0807-eb6d90 w1-uifix T1(カードR0802-4bf402-g91w2device・ユーザー裁定「けせよ。それ
+// は。」): device-routes.ts CORRUPTED_DEVICE_IDS と同じ2026-08-01のエンコーディング
+// 事故で label が文字化けした2件(棚)を一覧から除外する(理由・削除APIが無い理由は
+// device-routes.ts の該当コメント参照。この2件限定の是正)。
+const CORRUPTED_PLACEMENT_IDS = new Set(["01KYZQXRTNMWXTB99TG5FZVJA6", "01KYZQXRWVJW6D0PF398JE4CN6"]);
 const BINDING_TYPE = "ihl.src.device_binding.v1";
 const OCCUPANCY_TYPE = "ihl.src.occupancy.v1";
 const TELEMETRY_TYPE = "ihl.src.telemetry.v1";
@@ -92,6 +97,7 @@ sourceRoutes.get("/placements", async (c) => {
   const rows = (await store(c).listEvents(`truth/${PLACEMENT_TYPE}/`))
     .map(dataOf)
     .filter((d) => d.actor_id === actorId)
+    .filter((d) => !CORRUPTED_PLACEMENT_IDS.has(String(d.placement_id)))
     .map((d) => ({ placement_id: d.placement_id, label: d.label, created_at: d.created_at }));
   return c.json({ placements: rows });
 });

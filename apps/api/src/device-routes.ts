@@ -23,6 +23,13 @@ export const deviceRoutes = new Hono<{ Bindings: Bindings; Variables: Variables 
 export const DEVICE_TYPE = "ihl.obs.device.v1";
 const DEVICE_SCHEMA = "schemas/events/obs-device.schema.json";
 
+// R0807-eb6d90 w1-uifix T1(カードR0802-4bf402-g91w2device・ユーザー裁定「けせよ。それ
+// は。」): 2026-08-01の動作確認時、PowerShellのエンコーディング事故で display_name が
+// 文字化けした2件が append-only ストア(TruthStoreにdeleteEvent無し・不変条項①)へ
+// 誤って永続化された。削除APIが存在しないため、既知の2件をIDで一覧から除外する
+// (新しい汎用の文字化け検出は作らない — この2件限定の是正)。
+const CORRUPTED_DEVICE_IDS = new Set(["01KYZQXRXN4TZB2BMVXX908RZ2", "01KYZQXRXYBV7SEMZMFY7J7RAF"]);
+
 function store(c: { env: Bindings }): TruthStore {
   return new TruthStore(c.env.TRUTH);
 }
@@ -98,6 +105,7 @@ deviceRoutes.get("/devices", async (c) => {
   const rows = (await store(c).listEvents(`truth/${DEVICE_TYPE}/`))
     .map(dataOf)
     .filter((d) => d.actor_id === actorId) // 本人スコープ
+    .filter((d) => !CORRUPTED_DEVICE_IDS.has(String(d.device_id)))
     .map((d) => ({
       device_id: d.device_id,
       display_name: d.display_name,

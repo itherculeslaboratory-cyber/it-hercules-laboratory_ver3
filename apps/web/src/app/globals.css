@@ -734,8 +734,15 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 4px 8px;
     border-bottom: none;
+    /* R0807-eb6d90 w1-uifix T4(カードR0802-f03c9b-w2research・ユーザー指摘
+     * 「文字がはみ出している」research-search結果表の一致チャネル等セル):
+     * 値側は幅未指定の flex item のため、区切り文字はあってもスペースの無い
+     * 長い値(例: "summary,payload")は折り返せず横にはみ出す。既存の
+     * .civ-text と同じ対処(line 303 参照)をここにも適用する。 */
+    overflow-wrap: anywhere;
   }
   .civ-table td::before {
     content: attr(data-label);

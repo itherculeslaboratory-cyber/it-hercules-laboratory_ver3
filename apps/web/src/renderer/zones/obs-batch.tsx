@@ -567,39 +567,47 @@ function BatchRosterNode() {
   const [clutches, setClutches] = useState<ClutchRow[]>([]);
   const [placements, setPlacements] = useState<PlacementRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      // HDR-1第2スライス(A1#4): SearchNavigatorNode(obs-search)と同型 — /individuals・
-      // /clutches の両方をヘッダー観測対象で絞る(/placements は物理什器なので対象外)。
-      const [ind, cl, pl] = await Promise.all([
-        execute({
-          kind: "api",
-          method: "GET",
-          path: appendHeaderScope("/api/v1/individuals", headerScope),
-        }) as Promise<{ individuals?: IndividualRow[] } | undefined>,
-        execute({
-          kind: "api",
-          method: "GET",
-          path: appendHeaderScope("/api/v1/clutches", headerScope),
-        }) as Promise<{ clutches?: ClutchRow[] } | undefined>,
-        execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
-          { placements?: PlacementRow[] } | undefined
-        >,
-      ]);
-      if (!alive) return;
-      setIndividuals((ind?.individuals ?? []).map((i) => ({ ...i, label: safeLabel(i.label, i.species) })));
-      setClutches(cl?.clutches ?? []);
-      setPlacements(pl?.placements ?? []);
-      setLoaded(true);
+      setLoadError(null);
+      try {
+        // HDR-1第2スライス(A1#4): SearchNavigatorNode(obs-search)と同型 — /individuals・
+        // /clutches の両方をヘッダー観測対象で絞る(/placements は物理什器なので対象外)。
+        const [ind, cl, pl] = await Promise.all([
+          execute({
+            kind: "api",
+            method: "GET",
+            path: appendHeaderScope("/api/v1/individuals", headerScope),
+          }) as Promise<{ individuals?: IndividualRow[] } | undefined>,
+          execute({
+            kind: "api",
+            method: "GET",
+            path: appendHeaderScope("/api/v1/clutches", headerScope),
+          }) as Promise<{ clutches?: ClutchRow[] } | undefined>,
+          execute({ kind: "api", method: "GET", path: "/api/v1/placements" }) as Promise<
+            { placements?: PlacementRow[] } | undefined
+          >,
+        ]);
+        if (!alive) return;
+        setIndividuals((ind?.individuals ?? []).map((i) => ({ ...i, label: safeLabel(i.label, i.species) })));
+        setClutches(cl?.clutches ?? []);
+        setPlacements(pl?.placements ?? []);
+      } catch (e) {
+        if (alive) setLoadError(errorText(e));
+      } finally {
+        if (alive) setLoaded(true);
+      }
     })();
     return () => {
       alive = false;
     };
     // headerScope の primitives のみを deps にする(SearchNavigatorNode と同じ規約)。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headerScope.species, headerScope.lineageId]);
+  }, [headerScope.species, headerScope.lineageId, retryTick]);
 
   const placementLabel = useCallback(
     (id: string | null | undefined) => placements.find((p) => p.placement_id === id)?.label ?? "",
@@ -829,6 +837,24 @@ function BatchRosterNode() {
       <p className="civ-text" data-muted="true">
         読み込み中…
       </p>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="civ-empty">
+        <p className="civ-text">読み込みに失敗しました。({loadError})</p>
+        <button
+          type="button"
+          className={cn("civ-interactive", "civ-button")}
+          data-variant="secondary"
+          onClick={() => {
+            setLoaded(false);
+            setRetryTick((t) => t + 1);
+          }}
+        >
+          再試行
+        </button>
+      </div>
     );
   }
 
@@ -1410,7 +1436,7 @@ function BatchSummaryNode() {
           checked={registerSchedule}
           onChange={(e) => setRegisterSchedule(e.target.checked)}
         />
-        <span className="civ-label">次の目安を登録</span>
+        <span className="civ-label">次の観測目安を登録</span>
       </label>
       <button
         type="button"
@@ -1432,7 +1458,7 @@ function BatchSummaryNode() {
 }
 
 // F6b: バッチ保存後の完了表示。行ごとの Δ + クラッチ結果(照合/昇格・すでに
-// 直接コミット済みの行も表示)+ 次の目安の事後表示。部分失敗(batch-commit の
+// 直接コミット済みの行も表示)+ 次の観測目安の事後表示。部分失敗(batch-commit の
 // results に error)があれば行ごとに「保存できませんでした」を表示する
 // (部分失敗を隠さない)。
 function BatchDoneNode() {
@@ -1507,7 +1533,7 @@ function BatchDoneNode() {
       </ul>
       {results.scheduledAt && measureCount > 0 && (
         <p className="civ-text">
-          ✓ 次の目安 登録済み — {measureCount}件 → {results.scheduledAt} 頃(間隔30日)
+          ✓ 次の観測目安 登録済み — {measureCount}件 → {results.scheduledAt} 頃(間隔30日)
         </p>
       )}
       <div className="civ-roster-row">

@@ -132,9 +132,9 @@ function paymentHtml(d) {
       ${declareBtn}
     </div>
     <div class="method">
-      <div class="m-head">💳 カード払い(PAY.JP) <span class="m-tag opt">オプション</span> <span class="m-tag soon">準備中</span></div>
+      <div class="m-head">💳 カード払い(PAY.JP) <span class="m-tag opt">オプション</span> <span class="m-tag soon">提供終了</span></div>
       <div class="m-body">カードで支払うと、システム維持費<b>5%が自動で差し引かれ</b>残りが相手へ振り込まれます(相手はテナント本人確認が必要)。
-        <div class="caution-item" style="margin-top:10px;"><span class="ci-tag">△</span>この方式は<b>まだ使えません</b>。PAY.JP Platformの申込・審査・本番鍵の投入・資金移動業の法的確認が済んでから開放します(準備は完了・テストモードで検証済み)。</div>
+        <div class="caution-item" style="margin-top:10px;"><span class="ci-tag">△</span>この方式は<b>提供しないことになりました(2026-08-07)</b>。お支払いは銀行振込のみです。</div>
       </div>
     </div>
   </div>

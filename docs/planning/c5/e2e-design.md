@@ -106,7 +106,7 @@ C5 執筆時点の本設計書は observation/ugc-translate/market/ledger/spec-t
 | `knowledge-thread.spec.ts` | 知の広場スレッド: 閲覧(avatar/body/cite)→返信→stance投票→スレ主resolve |
 | `market-trade-lifecycle.spec.ts` | market-trade 2アクター通貫: draft→publish→apply(match)→pay_declare→pay_confirm→ship→receive |
 | `obs-register-batch.spec.ts` | 観測登録スライス2: F3(割り出し)→F4(まとめて記録)→F5b(確認)→F6b(完了) |
-| `obs-register.spec.ts` | 観測登録スライス1: F1(検索)→F2(Δ)→F5→F6(Δ+次の目安)→F1(候補チップ) |
+| `obs-register.spec.ts` | 観測登録スライス1: F1(検索)→F2(Δ)→F5→F6(Δ+次の観測目安)→F1(候補チップ) |
 | `obs-search.spec.ts` | 検索スライスA: 着地→絞り込み(体長レンジ)→0件緩和→保存検索→バスケット→計測グリッドへ |
 | `screen-sweep.spec.ts` | 全screen-def横断スイープ(resource-load エラー検出) |
 

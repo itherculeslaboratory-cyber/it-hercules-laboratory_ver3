@@ -34,7 +34,8 @@ import { govRoutes } from "./gov-routes";
 import { settingsRoutes } from "./settings-routes";
 import { themeRoutes } from "./theme-routes";
 import { marketRatingRoutes } from "./market-rating-routes";
-import { marketPaymentGuidanceRoutes } from "./market-payment-guidance-routes";
+// 2026-08-07裁定: V3-MKT-64退役(V3-MKT-62 Platformオプション撤回に伴い発火条件消滅)。route非公開・importはコメントアウト(ファイルは削除しない)。
+// import { marketPaymentGuidanceRoutes } from "./market-payment-guidance-routes";
 import { marketCommentRoutes } from "./market-comment-routes";
 import { marketIndividualOfferRoutes } from "./market-individual-offer-routes";
 import { researchStoreRoutes } from "./research-store-routes";
@@ -413,7 +414,8 @@ app.route("/api/v1", marketBlockRoutes);
 app.route("/api/v1", marketFlagRoutes);
 
 // V3-MKT-64 プリカ案内(静的・照会結果非依存): GET /market/payment-guidance。全て保護。
-app.route("/api/v1", marketPaymentGuidanceRoutes);
+// 2026-08-07裁定でV3-MKT-64退役のためroute非公開(削除ではなくコメントアウト)。
+// app.route("/api/v1", marketPaymentGuidanceRoutes);
 
 // V3-MKT-03 公開Q&A + ほめボード(マッチング前の公開面): POST/GET
 // /market/listings/{id}/comments。全て保護・kind=answer は出品者のみ。

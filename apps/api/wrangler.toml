@@ -12,6 +12,18 @@ compatibility_date = "2026-07-01"
 binding = "TRUTH"
 bucket_name = "ihl-ver3-truth-dev"
 
+# 失効 denylist(V3-AUT-03)+ レート制限(V3-SEC-14/V3-SEC-58)用 Workers KV。
+# ID は hg-03/hg-04(2026-08-07・kits\lane-madoguchi\R0806-d81e35-REQUIREMENTS-hg03-hg04-kv-complete-2026-08-07.md)
+# でユーザーが実施した `wrangler kv namespace create` の出力そのもの。未バインド時は
+# 各利用側(denylist.ts / rate-limit.ts)が no-op degrade する規約は env.ts 記載のとおり。
+[[kv_namespaces]]
+binding = "AUTH_DENYLIST"
+id = "ded7f6aafd1a467e81bc3270a059ccf7"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "91990cb9c5a44ca883e8b1acdf3f0c49"
+
 # C5 K3 月次経済 cron（design-k3 §2.6 / V3-KRM-03/11/12・V3-MKT-04/10）。日次起動
 # "0 15 * * *"（UTC15:00 = JST0:00）を handleScheduled が受け、毎月 25 日基準で月次処理。
 # V3-SEC-52 unconsented-cron GATE の承認は config/consented-crons.json（human consent
@@ -38,3 +50,65 @@ crons = []
 [[env.staging.r2_buckets]]
 binding = "TRUTH"
 bucket_name = "ihl-ver3-truth-dev"
+
+# ── env.staging の kv_namespaces 明示追加(2026-08-07 ORDER-2026-08-07-release-fixes T3) ──
+# production と同じ理由(wrangler 4.86実測: kv_namespaces/r2_bucketsはトップレベルから
+# named environmentへ継承されない)。AUTH_DENYLIST/RATE_LIMIT はトップレベル/production
+# と同じID(hg-03/hg-04でユーザーが作成した共用namespace)。
+[[env.staging.kv_namespaces]]
+binding = "AUTH_DENYLIST"
+id = "ded7f6aafd1a467e81bc3270a059ccf7"
+
+[[env.staging.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "91990cb9c5a44ca883e8b1acdf3f0c49"
+
+# ── [env.production]（本番・8/8 cutover 予定）─────────────────────────────
+# ★訂正(2026-08-07・kits\lane-audit\R0807-9ae8f3-REPORT-2026-08-07-w1-final.md §5実測):
+# 本コメントは元々「8/7時点では準備のみ・deployはしない」としていたが、現物と食い違っていた。
+# 実測では本番Worker ihl-api-ver3-production は既に2026-08-07T00:06:50Z(JST09:06)にデプロイ済み
+# (SESSION_SECRETもJST09:40/09:42に投入済み)。ただし現行デプロイ版のバインドはKV2本のみで
+# 下記のR2 TRUTHは未反映(ローカルtomlにしか存在しない)。8/8の残作業= `wrangler deploy
+# --env production` の再実行1回(人間ゲート)。★2026-08-08 HQ裁定
+# (R0807-e00be6発注)により R2 binding の起票自体は今日行う(可逆なファイル編集の
+# ため。禁じられているのは deploy 実行のみ — R0807-c55da0 の ifNo 本文は「今日
+# wrangler.toml への追記まで行う」と明記)。詳細=下記 [[env.production.r2_buckets]]
+# コメント。deploy(=binding を実際に有効化する操作)は引き続き cutover 時のみ
+# （docs/ops/runbook.md:106・cutover-readiness.md §4手順1・人間ゲート）。
+# 下記2条件は kits/lane-think/R0807-c55da0-REPORT-2026-08-07-cutover-scope.md
+# §2-1c「1c を事前実行してよい条件(2つとも必須)」の裏取り済み事故防止策:
+#   1. crons = [] を明示上書き（トップレベル [triggers] の継承事故を staging と同様に防ぐ）
+#   2. workers_dev = false を明示（既定値が repo 内で確定できないため明示で論点を消す）
+[env.production]
+name = "ihl-api-ver3-production"
+workers_dev = false
+
+[env.production.triggers]
+crons = []
+
+# ── env.production の kv_namespaces 明示追加(2026-08-07 c6deploy 実機確認) ──
+# wrangler 4.86 実測: kv_namespaces / r2_buckets はトップレベルから named
+# environment へ継承されない(`wrangler deploy --dry-run --env production` が
+# "kv_namespaces exists at the top level, but not on env.production. Please
+# add kv_namespaces to env.production" と警告し、実際 bindings=0件だった —
+# triggers は継承されるため staging と同様に空配列上書きだけで済んだが、
+# kv_namespaces/r2_buckets は継承されないため個別に書く必要がある)。
+# AUTH_DENYLIST/RATE_LIMIT はトップレベルと同じ ID(hg-03/hg-04 でユーザーが
+# 作成した本番共用の namespace)。
+[[env.production.kv_namespaces]]
+binding = "AUTH_DENYLIST"
+id = "ded7f6aafd1a467e81bc3270a059ccf7"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "91990cb9c5a44ca883e8b1acdf3f0c49"
+
+# R2 TRUTH 本番バインド(2026-08-08 HQ裁定 R0807-e00be6: kits\lane-audit\R0807-526317
+# 重大1の指摘=未起票を受け、read-only確認〔`wrangler r2 bucket list`〕でバケット実在
+# `ihl-ver3-truth-prod`(creation_date=2026-08-06T16:16:26.375Z)を確認した上で起票。
+# バインド名 "TRUTH" はトップレベル/staging と同一。deploy 実行自体は別途人間ゲート
+# — cutover-readiness.md §4手順1のとおり `wrangler deploy --env production` は
+# ここでは打たない。
+[[env.production.r2_buckets]]
+binding = "TRUTH"
+bucket_name = "ihl-ver3-truth-prod"

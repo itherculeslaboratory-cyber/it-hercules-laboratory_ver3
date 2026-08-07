@@ -1,11 +1,19 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { ScreenDef } from "@/renderer/types";
 
-// screen-defs/ is the repo-root SSOT (design-c2 §4.5). Server components and
-// vitest both run with cwd = apps/web, so ../../screen-defs resolves for both.
-// ponytail: fs read in a server context — no bundler outside-root import needed.
-const SCREENDEFS_DIR = join(process.cwd(), "..", "..", "screen-defs");
+// screen-defs/ is the repo-root SSOT (design-c2 §4.5). ../../screen-defs resolves
+// fine for local dev/vitest (cwd = apps/web, repo checkout intact) but a Pages
+// build artifact doesn't contain anything outside apps/web (ORDER-2026-08-07-
+// release-fixes T4 / docs/planning/c6/webdeploy-design.md §3 案A). `npm run
+// predev`/`prebuild` copies screen-defs/*.json into apps/web/screendefs-data/
+// (scripts/copy-screendefs.mjs) — prefer that local copy when present, else
+// fall back to the repo-root SSOT (keeps a checkout that hasn't run
+// predev/prebuild, e.g. a bare `vitest run`, working unchanged).
+const LOCAL_SCREENDEFS_DIR = join(process.cwd(), "screendefs-data");
+const SCREENDEFS_DIR = existsSync(LOCAL_SCREENDEFS_DIR)
+  ? LOCAL_SCREENDEFS_DIR
+  : join(process.cwd(), "..", "..", "screen-defs");
 
 export function loadScreenDef(id: string): ScreenDef {
   return JSON.parse(

@@ -1278,7 +1278,7 @@ describe("V3-AIP-101 個体詳細スライスA: GET /individuals/{id}/profile", 
     expect(body.status).toBe("alive");
   });
 
-  it("schedule: 次の目安(中立表示専用)を返す・未登録は null", async () => {
+  it("schedule: 次の観測目安(中立表示専用)を返す・未登録は null", async () => {
     const { env } = ctx();
     const id = await createInd(env);
     let body = (await (await get(`/api/v1/individuals/${id}/profile`, env)).json()) as {

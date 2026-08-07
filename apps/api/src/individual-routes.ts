@@ -510,6 +510,13 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
   };
   const weights: number[] = [];
   const lengths: number[] = [];
+  // R0807-92d58e w1-small T2: 胸角(長さ)の極値。item名 "horn_length" は
+  // freetext-parser.ts の既存語彙をそのまま流用(新規語彙の発明ではない)。
+  // obs-capture.schema.json の measurements[].item は自由文字列(enum無し)なので
+  // スキーマ変更なしで読める。「胸角の太さ(width)」は本コードベースのどこにも
+  // item名・スキーマフィールドが存在しない(grep実測=0件)ため実装していない
+  // (産地層別統計と同型の「捏造せず見送り」・下の再現できない要素に明記)。
+  const hornLengths: number[] = [];
   for (const cap of caps) {
     const ms = Array.isArray(cap.measurements) ? (cap.measurements as Record<string, unknown>[]) : [];
     for (const m of ms) {
@@ -520,9 +527,13 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
         if (instar && instar in instarWeights) instarWeights[instar].push(m.value);
       } else if (m.item === "length") {
         lengths.push(m.value);
+      } else if (m.item === "horn_length") {
+        hornLengths.push(m.value);
       }
     }
   }
+  const minMax = (xs: number[]): { min: number | null; max: number | null } =>
+    xs.length ? { min: Math.min(...xs), max: Math.max(...xs) } : { min: null, max: null };
 
   // g80-uibatch4 T3: color_reproducibility = 親個体のLabと子個体群のLabのΔE76
   // 由来類似度の平均(親子の色遺伝再現性)。ihl.obs.color.v1 は既存個体には
@@ -607,10 +618,24 @@ export async function projectCross(s: TruthStore, id: string, metric?: string) {
       third_early: avg(instarWeights.third_early),
       third_late: avg(instarWeights.third_late),
     },
+    // R0807-92d58e w1-small T2: 令(=世代)ごとの最大・最小体重。既存の
+    // weight_by_instar(平均のみ)と同じバケツ(instarWeights)を再利用し、
+    // avgに加えてmin/maxを追加しただけ(新しい「世代」概念の発明はしていない
+    // — instarが本コードベース既存の唯一の世代区分)。
+    weight_by_instar_extremes: {
+      first: minMax(instarWeights.first),
+      second: minMax(instarWeights.second),
+      third_early: minMax(instarWeights.third_early),
+      third_late: minMax(instarWeights.third_late),
+    },
     size_extremes: {
       max_weight: weights.length ? Math.max(...weights) : null,
       max_length: lengths.length ? Math.max(...lengths) : null,
       min_length: lengths.length ? Math.min(...lengths) : null,
+      // R0807-92d58e w1-small T2: 胸角(長さ)の極値。太さ(width)はitem名が
+      // 存在しないため実装していない(上のコメント参照)。
+      max_horn_length: hornLengths.length ? Math.max(...hornLengths) : null,
+      min_horn_length: hornLengths.length ? Math.min(...hornLengths) : null,
     },
     rates,
     // g80-uibatch4 T3: color_reproducibility の内訳(何件の色イベントから算出したか)。
@@ -1136,7 +1161,7 @@ export async function projectIndividualProfile(s: TruthStore, id: string, actorI
     }
   }
 
-  // 次の目安(中立表示専用・「予定」ではない — ユーザー裁定2026-07-12第1陣②)。
+  // 次の観測目安(中立表示専用・「予定」ではない — ユーザー裁定2026-07-12第1陣②)。
   // 直近登録された ihl.obs.schedule.v1 の next_observation_at のみ返す。起点の
   // from/間隔日数は ihl.obs.schedule.v1 に保存されない(POST /observation/schedule
   // は都度計算した next_observation_at だけを INSERT する設計・home-routes.ts)

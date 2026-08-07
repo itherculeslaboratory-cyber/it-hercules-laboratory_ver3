@@ -850,7 +850,7 @@ function IndividualProfileNode() {
         )}
         {profile.schedule && (
           <p className="civ-text" data-muted="true">
-            次の目安 {formatDateJa(profile.schedule.next_observation_at)} 頃
+            次の観測目安 {formatDateJa(profile.schedule.next_observation_at)} 頃
           </p>
         )}
         <SurvivalCorrectionLink profile={profile} onChanged={refresh} />
