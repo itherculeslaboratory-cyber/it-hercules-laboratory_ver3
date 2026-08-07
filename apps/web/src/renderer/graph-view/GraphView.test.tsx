@@ -147,6 +147,8 @@ describe("GraphView — カメラ初期フレーミング(g82-camerafit T2・zoo
         });
         g.cameraPosition = cameraPosition.mockImplementation(() => g);
         g.zoomToFit = zoomToFit.mockImplementation(() => g);
+        g.camera = vi.fn(() => ({ position: { x: 0, y: 0, z: 0 } }));
+        g.graph2ScreenCoords = vi.fn(() => ({ x: 0, y: 0 }));
         g.controls = vi.fn(() => ({}));
         return g;
       },
