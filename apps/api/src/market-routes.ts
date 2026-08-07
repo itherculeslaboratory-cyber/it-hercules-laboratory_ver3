@@ -886,9 +886,19 @@ async function settleFeeObligation(
   if (amount <= 0) return; // schema: amount exclusiveMinimum 0
 
   const id = ulid();
+  // ★不変条項: Truth キー == data.obligation_id。gmo-obligation.schema.json の description が
+  // 「Truth キー truth/ihl.gmo.obligation.v1/<obligation_id>.json」と宣言しており、読み取り側
+  // (fee-routes.ts:68 / payjp-checkout-routes.ts:39 の loadObligation)はこの前提で O(1) 直読みする。
+  // 以前はキー=mkt-fee-<listingId>・data.obligation_id=ulid() で不一致だったため、/me/fees が返した
+  // obligation_id で invoice / checkout-session / 両 webhook を呼ぶと必ず 404 になっていた(2026-08-08
+  // 実測 R0808-579005 / 設計 R0808-60f0bb)。キー側は 1 文字も変えず(= put-if-absent による
+  // 「1 listing = 1 obligation」の冪等をそのまま保つ)、data.obligation_id をキーと同一の決定論値へ
+  // 合わせることで是正する。envelope.id は CloudEvents 用の ULID のまま(変更しない)。
+  // safeKeyPart は許可集合 [A-Za-z0-9_-] への写像で冪等なので safeKeyPart(obligationId) === obligationId。
+  const obligationId = `mkt-fee-${safeKeyPart(listingId)}`;
   const dueDate = new Date(new Date(settledAt).getTime() + TAX_GRACE_DAYS * DAY_MS).toISOString();
   const data: Record<string, unknown> = {
-    obligation_id: id,
+    obligation_id: obligationId,
     actor_id: sellerId,
     transfer_code: await deriveTransferCode(sellerId),
     amount,
@@ -897,7 +907,7 @@ async function settleFeeObligation(
     created_at: new Date().toISOString(),
     schema_version: "1",
   };
-  await s.putEventAt(`truth/${OBLIGATION_TYPE}/mkt-fee-${safeKeyPart(listingId)}.json`, {
+  await s.putEventAt(`truth/${OBLIGATION_TYPE}/${obligationId}.json`, {
     specversion: "1.0",
     id,
     source: "apps/api",

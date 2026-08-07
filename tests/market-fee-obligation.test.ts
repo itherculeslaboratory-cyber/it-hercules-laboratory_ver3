@@ -141,4 +141,42 @@ describe("V3-MKT-10 取引成立時の 5% 維持費税自動計上", () => {
     const body = (await (await myFees(env, sellerH)).json()) as { items: FeeItem[] };
     expect(body.items).toHaveLength(1); // receive/rate 両方が settled トリガーを呼んでも1件だけ
   });
+
+  // ★契約テスト(2026-08-08 設計 R0808-60f0bb): 書いたキーで読めること(write→read 往復)。
+  // 既存の fee-routes / payjp-checkout-routes の TC は putEvent(envelope.id 由来キー)で
+  // 自前 seed するため「本物の書き込み器(settleFeeObligation の putEventAt)で書いたものを
+  // 本物の読み取り器(loadObligation の O(1) 直読み)で読む」経路が一度もテストされておらず、
+  // 100% 再現する全断バグ(/me/fees が返す obligation_id で invoice/checkout-session/webhook が
+  // 必ず 404)がテスト緑のまま出荷された。この TC はその往復だけを固定する。
+  // 決済コネクタを呼ばない /invoice を代表経路に使う(checkout-session・両 webhook も同一の
+  // loadObligation を通るため、この不変条項が守られていれば同時に守られる)。
+  it("契約: /me/fees が返した obligation_id で /fees/{id}/invoice が引ける(書いたキーで読める)", async () => {
+    const env = makeEnv(new FakeR2Bucket());
+    const sellerH = bearer(await issueSessionToken("fo-seller5", SESSION_SECRET));
+    const buyerH = bearer(await issueSessionToken("fo-buyer5", SESSION_SECRET));
+    const id = ulid();
+    await createListing(env, sellerH, id, 4000);
+    await transition(env, sellerH, id, { kind: "list_fixed" });
+    await sleep(2);
+    await transition(env, buyerH, id, { kind: "match" });
+    await sleep(2);
+    await transition(env, sellerH, id, { kind: "ship" });
+    await sleep(2);
+    await transition(env, buyerH, id, { kind: "receive" });
+    await sleep(2);
+    await transition(env, buyerH, id, { kind: "rate" });
+
+    const fees = (await (await myFees(env, sellerH)).json()) as { items: FeeItem[] };
+    expect(fees.items).toHaveLength(1);
+    const obligationId = fees.items[0].obligation_id;
+
+    const invoice = await app.request(
+      `/api/v1/fees/${obligationId}/invoice`,
+      { method: "POST", headers: sellerH },
+      env,
+    );
+    // 404 OBLIGATION_NOT_FOUND ならキー不一致の再発。
+    expect(invoice.status).toBe(201);
+    expect(await invoice.json()).toMatchObject({ obligation_id: obligationId, amount: 200 });
+  });
 });
