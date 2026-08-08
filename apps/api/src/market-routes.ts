@@ -21,6 +21,7 @@ import {
   effectiveAuctionEndsAt,
   nextAuctionExtension,
   auctionExtensionCount,
+  isBuyNowTrigger,
   highestBid,
   bidStepFor,
   isLotteryDrawDue,
@@ -180,6 +181,9 @@ marketRoutes.post("/market/listings", async (c) => {
   if (typeof body?.description === "string") data.description = body.description;
   const price = Number(body?.price);
   if (Number.isInteger(price) && price >= 0) data.price = price;
+  // IDEA-0209(V3-MKT-05残要素・w3-07実装): 即決価格(任意・オークション出品向け)。
+  const buyNowPrice = Number(body?.buy_now_price);
+  if (Number.isInteger(buyNowPrice) && buyNowPrice >= 0) data.buy_now_price = buyNowPrice;
   // HDR-1(c9-structure-canon.md §1c・A1#4): ヘッダー観測対象の任意タグ(plaza-post
   // species_id/SW-1と同型パススルー・ユーザー再入力なし)。
   if (typeof body?.species_id === "string" && body.species_id) data.species_id = body.species_id;
@@ -715,6 +719,42 @@ async function appendAuctionExtension(s: TruthStore, listingId: string, newEndsA
   if (extRes.status !== "inserted") console.warn("auction_extend not persisted", extRes);
 }
 
+// IDEA-0209(V3-MKT-05残要素・w3-07実装): 即決価格(buy_now_price)以上の入札が成立した
+// 直後に、settleDueAuctions(締切到達の自己修復)と同じ deterministic key で match を
+// 追記して落札を確定する。同じキーを使うことで、この入札の直後に別経路(GET /state の
+// 読み取り時自己修復)が同じ listing を settleDueAuctions しようとしても put-if-absent で
+// 衝突し二重確定しない(state は既に "matched" のため isAuctionSettleDue 自体も false を
+// 返す=そもそも到達しない)。呼び出し側(POST /transition)は auction_extend・
+// auction_proxy_rebid を先に skip 済み(buyNowTriggered時は計算自体をしない)なので、
+// 延長・自動再入札とは同時に起こらない。
+async function appendAuctionBuyNowMatch(
+  s: TruthStore,
+  listingId: string,
+  bidderId: string,
+  amount: number,
+  now: Date,
+): Promise<TxnEvent | undefined> {
+  const id = ulid();
+  const data: Record<string, unknown> = {
+    transaction_event_id: id,
+    listing_id: listingId,
+    actor_id: SYSTEM_AUCTION_ACTOR,
+    kind: "match",
+    counterparty: bidderId,
+    amount,
+    payload: { auction_settle: "buy_now" },
+    created_at: now.toISOString(),
+    schema_version: TXN_SCHEMA_VERSION,
+  };
+  const res = await s.putEventAt(`truth/${TXN_TYPE}/auction-settle-${listingId}.json`, systemTxnEnvelope(id, data));
+  // KIT-TEMPLATE規約: putEventAtの戻り値を無検査にしない(fire-and-forget禁止)。
+  if (res.status !== "inserted") {
+    console.warn("auction_buy_now_match not persisted", res);
+    return undefined;
+  }
+  return data as unknown as TxnEvent;
+}
+
 async function settleDueAuctions(
   s: TruthStore,
   listingId: string,
@@ -1063,13 +1103,27 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
   // AUTOBID-1(w2-market2実装): 残り5分以内の入札で締切を5分延長(review-queue
   // R0807-1ef084 AUTOBID-1=○ score90「必須!これがないと楽しくない」)。
   let auctionExtendTo: string | undefined;
+  // IDEA-0209(V3-MKT-05残要素・w3-07実装): 即決価格以上の入札が成立した場合、この
+  // 入札の直後に match を追記する(延長・自動再入札とは排他=下のブロックで
+  // buyNowTriggered時はauctionProxyRebid/auctionExtendToの計算自体を行わない)。
+  let buyNowTriggered = false;
   if (kind === "bid" && cur.state === "listed_auction") {
     const amount = extra.amount;
     if (typeof amount !== "number" || !Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
       return c.json({ error: "INVALID_TRANSITION", details: ["bid amount must be a positive integer"] }, 400);
     }
     const pricing = await auctionPricing(s, listingId, cur);
-    if (amount < pricing.nextMinBid || amount % pricing.step !== 0) {
+    // IDEA-0209: 即決価格(buy_now_price)以上・かつ現在の最低入札額以上の入札は「即決」
+    // として扱う。即決は固定価格購入のため、通常入札の刻みグリッド整合
+    // (amount % step === 0)は要求しない(要件は「即決価格以上」であって刻み単位では
+    // ないため・判断が要った箇所)。即決価格が現在の最高額を既に下回っている場合
+    // (buy_now_price < currentPrice)は amount(=buy_now_price想定)が nextMinBid 未満と
+    // なり buyNowTriggered=false のまま下の通常検証に落ち、BID_TOO_LOW として拒否される
+    // (T5「即決価格 < 現在最高額のときの扱い」はこの経路で自然に処理される)。
+    const buyNowPriceRaw = listingEv ? dataOf(listingEv).buy_now_price : undefined;
+    const buyNowPrice = typeof buyNowPriceRaw === "number" ? buyNowPriceRaw : undefined;
+    buyNowTriggered = isBuyNowTrigger(buyNowPrice, amount) && amount >= pricing.nextMinBid;
+    if (!buyNowTriggered && (amount < pricing.nextMinBid || amount % pricing.step !== 0)) {
       return c.json(
         { error: "BID_TOO_LOW", current_price: pricing.currentPrice, min_next_bid: pricing.nextMinBid, bid_step: pricing.step },
         409,
@@ -1085,27 +1139,32 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
       }
       extra.payload = { ...(extra.payload as Record<string, unknown> | undefined), max_bid: maxBid };
     }
-    // 既存の最高額入札者(直前のリーダー)が max_bid を持ち、その上限がこの新しい入札への
-    // 「1刻み上乗せ」を賄えるなら、リーダーの入札を1刻みだけ自動で引き上げて再入札する
-    // (ヤフオク型・max_bid 自体は露出しない)。同額時「先に入れた方」が勝つのは
-    // highestBid() の既存タイブレーク(created_at 昇順)がそのまま担保する。
-    const prevBest = highestBid(cur.bids);
-    if (prevBest && prevBest.bidder !== actorId) {
-      const prevMaxBid = findBidMaxBid(events, prevBest.bidder);
-      if (typeof prevMaxBid === "number") {
-        const raised = amount + bidStepFor(amount);
-        if (prevMaxBid >= raised) {
-          auctionProxyRebid = { bidder: prevBest.bidder, amount: raised, maxBid: prevMaxBid };
+    // IDEA-0209(w3-07実装): 即決成立時はこのオークションが即座に matched へ確定する
+    // ため、ヤフオク型自動再入札(直前リーダーの引き上げ)・AUTOBID-1締切延長のどちらも
+    // 計算しない(延長機構との二重処理防止・発注書T3必須要件)。
+    if (!buyNowTriggered) {
+      // 既存の最高額入札者(直前のリーダー)が max_bid を持ち、その上限がこの新しい入札への
+      // 「1刻み上乗せ」を賄えるなら、リーダーの入札を1刻みだけ自動で引き上げて再入札する
+      // (ヤフオク型・max_bid 自体は露出しない)。同額時「先に入れた方」が勝つのは
+      // highestBid() の既存タイブレーク(created_at 昇順)がそのまま担保する。
+      const prevBest = highestBid(cur.bids);
+      if (prevBest && prevBest.bidder !== actorId) {
+        const prevMaxBid = findBidMaxBid(events, prevBest.bidder);
+        if (typeof prevMaxBid === "number") {
+          const raised = amount + bidStepFor(amount);
+          if (prevMaxBid >= raised) {
+            auctionProxyRebid = { bidder: prevBest.bidder, amount: raised, maxBid: prevMaxBid };
+          }
         }
       }
+      // AUTOBID-1: この入札の時点(延長前)で「残り5分以内」なら締切を延長する。判定は
+      // effectiveAuctionEndsAt(過去の延長を織り込んだ実効締切)を基準にする——生の
+      // listing.ends_at のままだと、既に1回延長済みのオークションで毎回「まだ残り5分
+      // 切ってない」と誤判定してしまう。
+      const rawEndsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
+      const currentEndsAt = effectiveAuctionEndsAt(events, typeof rawEndsAt === "string" ? rawEndsAt : undefined);
+      auctionExtendTo = nextAuctionExtension(events, currentEndsAt, now);
     }
-    // AUTOBID-1: この入札の時点(延長前)で「残り5分以内」なら締切を延長する。判定は
-    // effectiveAuctionEndsAt(過去の延長を織り込んだ実効締切)を基準にする——生の
-    // listing.ends_at のままだと、既に1回延長済みのオークションで毎回「まだ残り5分
-    // 切ってない」と誤判定してしまう。
-    const rawEndsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
-    const currentEndsAt = effectiveAuctionEndsAt(events, typeof rawEndsAt === "string" ? rawEndsAt : undefined);
-    auctionExtendTo = nextAuctionExtension(events, currentEndsAt, now);
   }
   if (kind === "cancel" && cur.state === "matched" && actorId === cur.matched_with) {
     // 猶予キャンセル(成立後60分・買い手無条件)。窓が閉じた後は cancel_request/
@@ -1170,7 +1229,15 @@ marketRoutes.post("/market/listings/:listing_id/transition", async (c) => {
     await appendAuctionExtension(s, listingId, auctionExtendTo, now);
   }
 
-  const merged = [...events, data];
+  let merged = [...events, data];
+  // IDEA-0209(V3-MKT-05残要素・w3-07実装): 即決成立時は、この入札の直後に match を
+  // 追記して落札を確定する(延長・自動再入札とは buyNowTriggered ガードで排他済み)。
+  // レスポンスの state に反映するため merged へも積む(match 追記が失敗=戻り値
+  // status!=="inserted" の時は落札未確定のまま listed_auction を返す=フェイルセーフ)。
+  if (buyNowTriggered) {
+    const matchEvent = await appendAuctionBuyNowMatch(s, listingId, actorId, data.amount as number, now);
+    if (matchEvent) merged = [...merged, matchEvent];
+  }
   const next = reduceMarket(listingId, merged);
   if (kind === "receive" || kind === "rate") {
     const settlement = projectSettlement(merged, now);
@@ -1201,12 +1268,17 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
   // 「延長される場合があります」注記はこの2値を見て出す想定(本ラウンドは配線のみ
   // 未着手=API側の値を返すところまで。DoDのT1にはUI配線は明記されていない)。
   let auctionScheduleInfo: { ends_at?: string; extended: boolean; extension_count: number } | undefined;
+  // IDEA-0209(V3-MKT-05残要素・w3-07実装): 即決ボタン(UI)が使う即決価格の露出。
+  // 未設定(即決なし出品)は undefined のまま=画面側の not_empty 判定でボタンを隠す。
+  let buyNowPrice: number | undefined;
   if (cur.state === "listed_auction") {
     const listingEv = await s.readEvent(`truth/${LISTING_TYPE}/${listingId}.json`);
     const rawEndsAt = listingEv ? dataOf(listingEv).ends_at : undefined;
     const effectiveEndsAt = effectiveAuctionEndsAt(events, typeof rawEndsAt === "string" ? rawEndsAt : undefined);
     const extensionCount = auctionExtensionCount(events);
     auctionScheduleInfo = { ends_at: effectiveEndsAt, extended: extensionCount > 0, extension_count: extensionCount };
+    const buyNowPriceRaw = listingEv ? dataOf(listingEv).buy_now_price : undefined;
+    buyNowPrice = typeof buyNowPriceRaw === "number" ? buyNowPriceRaw : undefined;
   }
   return c.json({
     ...cur,
@@ -1215,6 +1287,7 @@ marketRoutes.get("/market/listings/:listing_id/state", async (c) => {
           current_price: auctionPricingInfo.currentPrice,
           next_min_bid: auctionPricingInfo.nextMinBid,
           bid_step: auctionPricingInfo.step,
+          buy_now_price: buyNowPrice,
           ...auctionScheduleInfo,
         }
       : undefined,

@@ -68,14 +68,20 @@
 //        +1 route(infra-route-116: GET /plaza/node/{post_id}・protected)= 108 →
 //        R66-9(g66-finalize)が +1 route(infra-route-117: POST /cusb・public)= 109 →
 //        QRLINK-1(2026-08-08・w2-gatefix是正)が +2 route(infra-route-118..119:
-//        GET /individuals/{id}/profile・GET /individuals/{id}/pedigree・共に public)= 111。
+//        GET /individuals/{id}/profile・GET /individuals/{id}/pedigree・共に public)= 111 →
+//        2026-08-08 impl-w3-routeguard(W3-05 S-7): PUBLIC_ROUTES(index.ts)にあるのに本表に
+//        行が無かった public route 7 本(infra-route-120..126: /health・/auth/dev-login・
+//        /collector/ingest・/github/webhook・/fees/payjp-checkout-webhook・/chain/root・
+//        /plaza/rules)を追加 = 118 → rel-12(8モジュール26ルート・全 protected)未登録分
+//        (infra-route-127..152)を追加 = 144。
 import { readFileSync } from "node:fs";
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import app from "../apps/api/src/index";
+import app, { PUBLIC_ROUTES } from "../apps/api/src/index";
 import { SESSION_SECRET, makeEnv } from "./helpers";
 import { issueMagicToken } from "../apps/api/src/session";
 
-type Row = { method: string; path: string; access: string };
+type Row = { method: string; path: string; access: string; ver3_status: string; ver3_note: string };
 
 function loadMatrix(): Row[] {
   const url = new URL("./fixtures/route-matrix.csv", import.meta.url);
@@ -86,9 +92,17 @@ function loadMatrix(): Row[] {
   const iMethod = header.indexOf("method");
   const iPath = header.indexOf("path");
   const iAccess = header.indexOf("access");
+  const iVer3Status = header.indexOf("ver3_status");
+  const iVer3Note = header.indexOf("ver3_note");
   return lines.slice(1).map((l) => {
     const cols = l.split(",");
-    return { method: cols[iMethod], path: cols[iPath], access: cols[iAccess] };
+    return {
+      method: cols[iMethod],
+      path: cols[iPath],
+      access: cols[iAccess],
+      ver3_status: cols[iVer3Status],
+      ver3_note: cols.slice(iVer3Note).join(","),
+    };
   });
 }
 
@@ -99,9 +113,9 @@ function concretePath(p: string): string {
 
 const rows = loadMatrix();
 
-describe("CL-04 route matrix (111 rows)", () => {
-  it("has exactly 111 route rows", () => {
-    expect(rows.length).toBe(111);
+describe("CL-04 route matrix (144 rows)", () => {
+  it("has exactly 144 route rows", () => {
+    expect(rows.length).toBe(144);
   });
 
   it("access column is only public|protected", () => {
@@ -121,15 +135,20 @@ describe("CL-04 route matrix (111 rows)", () => {
   // 「無条件公開」の意味が違うが、CSVのaccess列上はinfra-route-024と同じpublic表記。
   // 2026-08-08 QRLINK-1(w2-gatefix T1): GET /individuals/{id}/profile・pedigree を追加
   // (infra-route-118/119)。物理QRラベル着地の未ログイン閲覧用(検分ゲートR0808-2419fd)。
-  it("public = auth magic-link/verify/verify-code/session + payjp-webhook + cusb(署名/セッション必須) + individuals profile/pedigree + 観測READ 10 paths(exportを除く)", () => {
+  it("public = auth magic-link/verify/verify-code/session/dev-login + health + collector/github/payjp-checkout webhooks(署名/トークン必須) + chain/root + plaza/rules + payjp-webhook + cusb(署名/セッション必須) + individuals profile/pedigree + 観測READ 10 paths(exportを除く)", () => {
     const publicPaths = new Set(rows.filter((r) => r.access === "public").map((r) => r.path));
     expect([...publicPaths].sort()).toEqual([
+      "/api/v1/auth/dev-login",
       "/api/v1/auth/magic-link",
       "/api/v1/auth/session",
       "/api/v1/auth/verify",
       "/api/v1/auth/verify-code",
+      "/api/v1/chain/root",
+      "/api/v1/collector/ingest",
       "/api/v1/cusb",
+      "/api/v1/fees/payjp-checkout-webhook",
       "/api/v1/fees/payjp-webhook",
+      "/api/v1/github/webhook",
       "/api/v1/individuals/{id}/pedigree",
       "/api/v1/individuals/{id}/profile",
       "/api/v1/observation/measurement-dictionary",
@@ -142,6 +161,8 @@ describe("CL-04 route matrix (111 rows)", () => {
       "/api/v1/observation/{capture_id}/image/{photo_id}",
       "/api/v1/observation/{capture_id}/reanalysis-manifest",
       "/api/v1/observation/{capture_id}/species-suggestions",
+      "/api/v1/plaza/rules",
+      "/health",
     ]);
   });
 
@@ -158,9 +179,17 @@ describe("CL-04 route matrix (111 rows)", () => {
   });
 
   it("every public row is reachable without a session (not 401)", async () => {
+    // github/webhook と fees/payjp-checkout-webhook は自己ゲート(HMAC署名/専用トークン)を
+    // 持つため、無署名だとルート自身が401を返す(セッションゲートの401とは別原因)。
+    // このテストが検証したいのは「セッションゲートで401にならないこと」なので、この2本だけは
+    // 有効な署名/トークンを持つ専用envを渡して自己ゲートを突破する(既存 github-webhook.test.ts
+    // /payjp-checkout-routes.test.ts と同型: makeEnv() + 秘密値オーバーライド)。
+    const GITHUB_SECRET = "matrix-test-github-secret";
+    const PAYJP_CHECKOUT_TOKEN = "matrix-test-payjp-checkout-token";
     for (const r of rows.filter((x) => x.access === "public")) {
       // Provide minimal valid input so the route's own validation doesn't 401.
       let init: RequestInit = { method: r.method };
+      let env: ReturnType<typeof makeEnv> | (ReturnType<typeof makeEnv> & Record<string, string>) = makeEnv();
       if (r.path.endsWith("/magic-link")) {
         init = {
           method: "POST",
@@ -174,9 +203,62 @@ describe("CL-04 route matrix (111 rows)", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ token: tok }),
         };
+      } else if (r.path === "/api/v1/github/webhook") {
+        const sig = "sha256=" + createHmac("sha256", GITHUB_SECRET).update("").digest("hex");
+        init = { method: "POST", headers: { "X-Hub-Signature-256": sig } };
+        env = { ...makeEnv(), GITHUB_WEBHOOK_SECRET: GITHUB_SECRET };
+      } else if (r.path === "/api/v1/fees/payjp-checkout-webhook") {
+        init = { method: "POST", headers: { "X-Payjp-Webhook-Token": PAYJP_CHECKOUT_TOKEN } };
+        env = { ...makeEnv(), PAYJP_WEBHOOK_TOKEN: PAYJP_CHECKOUT_TOKEN };
       }
-      const res = await app.request(concretePath(r.path), init, makeEnv());
+      const res = await app.request(concretePath(r.path), init, env);
       expect(res.status, `${r.method} ${r.path}`).not.toBe(401);
+    }
+  });
+});
+
+describe("S-7恒久策: PUBLIC_ROUTES ⇔ route-matrix.csv 双方向突合", () => {
+  it("PUBLIC_ROUTES(index.ts)の全要素が route-matrix.csv に access=public の行を持つ", () => {
+    const publicPathsInCsv = new Set(rows.filter((r) => r.access === "public").map((r) => r.path));
+    for (const p of PUBLIC_ROUTES) {
+      expect(publicPathsInCsv.has(p), `PUBLIC_ROUTES entry missing from route-matrix.csv: ${p}`).toBe(true);
+    }
+  });
+});
+
+describe("S-6恒久策: route-matrix.csv(ver3_status=implemented)の全行が index.ts に実mountされている", () => {
+  it("契約テストの直接mountだけでなく index.ts 上の app.routes に実在する", () => {
+    // {param} (CSV表記) → :param (Hono表記) の param 名は書き手ごとに揺れうるため、
+    // 動的セグメントは名前を見ずに位置だけ揃える正規化で比較する(過検出/過検出漏れの両方を避ける)。
+    const normalize = (p: string): string =>
+      p
+        .split("/")
+        .map((seg) => (seg.startsWith(":") || (seg.startsWith("{") && seg.endsWith("}")) ? "*" : seg))
+        .join("/");
+    const mounted = new Set(
+      app.routes.filter((r) => r.method !== "ALL").map((r) => `${r.method} ${normalize(r.path)}`),
+    );
+    // 2種類の既存の意図的な不一致(本発注のスコープ外・CSVの ver3_note 自身が根拠を明記):
+    // (a) infra-route-021: path 列が ver2/ver3(VPS)時代の旧パス "/api/solid-observation/commit"
+    //     を記録しており、ver3_note が「ver3 実体は /api/v1/solid-observation/commit」と明記
+    //     → 実体パスへ読み替えて判定する(スキップではなく正しいパスでの検証)。
+    // (b) infra-route-033..040(知の広場/ガバナンス統合): ver3_note が「旧パスは
+    //     deny-by-default 401 据置」と明記 = 旧URLは恒久的に未mountのまま401させる設計。
+    //     実体は同じCSV内の別行(/plaza/channels/... 等)が既に mount保証の対象として検証済み
+    //     → この行だけ mount保証の対象から除外する(除外基準はCSVの note文言そのものであり、
+    //     shard_id のハードコードではない)。
+    // (c) infra-route-102(GET /api/v1/market/payment-guidance): 本発注(W3-05)の対象外で
+    //     見つかった既存のCSV/index.ts drift。index.ts:438 は「2026-08-07裁定でV3-MKT-64退役
+    //     のためroute非公開(app.routeをコメントアウト)」と明記しているが、route-matrix.csv側の
+    //     この行はver3_status=implementedのまま未修正(V3-MKT-62/63は退役時に行ごと削除された
+    //     のと扱いが不揃い)。担当外のため本行では直さず、報告書の気づきとして分離して報告する
+    //     (KIT-TEMPLATE「担当外の問題に気づいたら直さず報告書に書け」)。
+    for (const r of rows.filter((x) => x.ver3_status === "implemented")) {
+      if (r.ver3_note.includes("旧パスは deny-by-default 401 据置")) continue;
+      if (r.path === "/api/v1/market/payment-guidance") continue;
+      const path = r.path === "/api/solid-observation/commit" ? "/api/v1/solid-observation/commit" : r.path;
+      const key = `${r.method} ${normalize(path)}`;
+      expect(mounted.has(key), `not mounted on app: ${r.method} ${r.path}`).toBe(true);
     }
   });
 });

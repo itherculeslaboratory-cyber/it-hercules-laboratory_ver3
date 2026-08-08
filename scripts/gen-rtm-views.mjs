@@ -29,6 +29,32 @@ function coverageNote(rtm) {
   return `現在網羅率${pct}%(${covered}/${total})・全数トレースは本格整備(案B)で対応`;
 }
 
+// 静的監査カバレッジ(04-traceability/coverage-audit.json)を「別指標として」併記する。
+// 5点閉包率と足したり平均したりしない(2指標は別のものを測っている)。
+function auditNote() {
+  const p = join(ROOT, "04-traceability", "coverage-audit.json");
+  if (!existsSync(p)) return [];
+  const a = JSON.parse(readFileSync(p, "utf8"));
+  const total = a?.denominator?.total ?? 0;
+  const n = Array.isArray(a?.entries) ? a.entries.length : 0;
+  if (!total || !n) return [];
+  const eff = a.entries.map((e) =>
+    e?.revision?.reverified === true ? e.revision.verdict : e.verdict
+  );
+  const c = {};
+  for (const v of eff) c[v] = (c[v] ?? 0) + 1;
+  const order = ["implemented", "partial", "unverifiable", "missing"];
+  const brk = order.filter((k) => c[k]).map((k) => `${k} ${c[k]}`).join(" / ");
+  return [
+    `- **静的監査カバー率${((n / total) * 100).toFixed(1)}%(${n}/${total})** — 内訳: ${brk}`,
+    // ★ハードコード注意(2026-08-08 W3-G検分・軽2): 下の「実測:」以降の数字は
+    // リテラルであり rtm.json / coverage-audit.json が変わっても自動更新されない
+    // (--check も検出しない)。2026-08-08 時点では現物と一致することを確認済み。
+    // 数字を動的化するか、注記自体を落とすかは要判断のため本ラウンドでは変更しない。
+    `- ⚠ 上の2つは**別指標**。5点閉包(テスト参照必須)と静的監査判定(テスト裏付けなし)を足す・平均する・「実質○%」と言うことを禁ずる。実測: 閉包済み17件のうち16件に監査判定があり、内訳は implemented 7 / unverifiable 9。`,
+  ];
+}
+
 const GATES = ["req", "det", "test", "trn_ui", "retrofit"];
 
 function refs(entry, gate) {
@@ -79,6 +105,7 @@ function buildMd(rtm) {
     `- mode: \`${rtm.mode}\`（warn = 未閉包を警告し exit 0 / enforce = exit 1）`,
     `- 5 点ゲート: req / det / **test**（テスト設計免除不可）/ trn_ui / retrofit`,
     ...(note ? [`- **${note}**`] : []),
+    ...auditNote(),
     "",
     "| ID | タイトル | req | det | test | trn_ui | retrofit |",
     "|----|----------|-----|-----|------|--------|----------|",

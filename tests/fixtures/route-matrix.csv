@@ -81,7 +81,14 @@
 #   登録されていない。退役後は「実装に無い route は本表にも無い」で整合するため、行は追加しない。
 #   行数は 109 のまま(cl-04-route-matrix.test.ts の rows.length 主張と一致)。
 # その後 2026-08-08 に infra-route-118/119(GET /individuals/{id}/profile・pedigree・QRLINK-1)を
-#   追加したため、現在の行数は 111(cl-04-route-matrix.test.ts の rows.length 主張も111へ更新済み)。
+#   追加したため、行数は 111 になった。
+# 2026-08-08 impl-w3-routeguard(W3-05 S-7): PUBLIC_ROUTES(index.ts:95-129・12要素)と本表を
+#   突合し、行が無い public route 7 本(infra-route-120..126: /health・/auth/dev-login・
+#   /collector/ingest・/github/webhook・/fees/payjp-checkout-webhook・/chain/root・/plaza/rules)
+#   を追加 → 118 rows。あわせて rel-12(2026-08-08 HQ適用済み・8モジュール26ルート: knowledge-article・
+#   market-intl-shipping・market-platinum-symbol・plaza-activity・plaza-dm・plaza-stats・
+#   plaza-template・sandbox-realm)が本表に未登録だったため infra-route-127..152(全 protected)を
+#   追加 → 144 rows(cl-04-route-matrix.test.ts の rows.length 主張も144へ更新済み)。
 feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_status,ver3_note
 —,GET,/api/v1/auth/session,VPS,Workers,W2,infra-route-001,public,implemented,
 —,POST,/api/v1/auth/magic-link,VPS,Workers,W2,infra-route-002,public,implemented,
@@ -194,3 +201,36 @@ feature,method,path,ver3_host,ver4_host,migration_wave,shard_id,access,ver3_stat
 —,POST,/api/v1/cusb,VPS,Workers,W2,infra-route-117,public,implemented,V3-OBS-70 段階1 C-USB device-signature push。認証ゲート層ではPUBLIC_READ_ROUTES登録によりpublic(R66-1)だが、route冒頭で署名3点かセッションのどちらか必須のガードを持つ(R66-9・未提示は401 AUTH_REQUIRED)。access=publicはinfra-route-024と同じ「ゲート免除だがroute自身は無条件公開ではない」型
 —,GET,/api/v1/individuals/{id}/profile,VPS,Workers,W2,infra-route-118,public,implemented,QRLINK-1(2026-08-08): 個体QR(物理ラベル)基本動線。PUBLIC_READ_ROUTES登録により未ログイン/観測者本人以外でも詳細画面を見られる。visibility:private/uid_linkedのcaptureはroute内のcaptureVisibleTo()で除外される(「routeがpublic」と「データがpublic」は別)
 —,GET,/api/v1/individuals/{id}/pedigree,VPS,Workers,W2,infra-route-119,public,implemented,QRLINK-1: 詳細画面の血縁レール表示に必要(profileと同じ理由)。individual_id/known/parent_roleのみを返し、観測データ・actor_idは含まない
+—,GET,/health,VPS,Workers,W2,infra-route-120,public,implemented,ヘルスチェック(契約正本 schemas/api/health.schema.json)。PUBLIC_ROUTES登録済みだが本表に行が無かった欠落を追加(2026-08-08 impl-w3-routeguard S-7)
+—,POST,/api/v1/auth/dev-login,VPS,Workers,W2,infra-route-121,public,implemented,dev限定1-clickログイン(V3-AUT-05)。DEV_TOKEN未設定時は404で経路自体が存在しない。PUBLIC_ROUTES登録済みだが本表に行が無かった欠落を追加
+—,POST,/api/v1/collector/ingest,VPS,Workers,W2,infra-route-122,public,implemented,collector ingest(design-c3 §3)。Ed25519署名が資格情報の自己ゲート(未署名/偽造は401)。PUBLIC_ROUTES登録済みだが本表に行が無かった欠落を追加
+—,POST,/api/v1/github/webhook,VPS,Workers,W2,infra-route-123,public,implemented,GitHub webhook(V3-KRM-13)。X-Hub-Signature-256 HMACが資格情報の自己ゲート(偽造/欠如は401)。PUBLIC_ROUTES登録済みだが本表に行が無かった欠落を追加
+—,POST,/api/v1/fees/payjp-checkout-webhook,VPS,Workers,W2,infra-route-124,public,implemented,PAY.JP Checkout v2完了通知webhook。X-Payjp-Webhook-Tokenヘッダ一致が自己ゲート(不一致/欠如は401)。PUBLIC_ROUTES登録済みだが本表に行が無かった欠落を追加
+—,GET,/api/v1/chain/root,VPS,Workers,W2,infra-route-125,public,implemented,日次ルートR_D読み出し(R74-2)。PUBLIC_ROUTES登録済みだが本表に行が無かった欠落を追加
+—,GET,/api/v1/plaza/rules,VPS,Workers,W2,infra-route-126,public,implemented,知の広場ルールJSON全公開(V3-WIK-30)。PUBLIC_ROUTES登録済みだが本表に行が無かった欠落を追加
+—,POST,/api/v1/knowledge/article-pack,VPS,Workers,W2,infra-route-127,protected,implemented,rel-12 mount(2026-08-08 Wave3・8モジュール26ルート)knowledge-article-routes.ts
+—,POST,/api/v1/market/intl-shipping/rates,VPS,Workers,W2,infra-route-128,protected,implemented,rel-12 mount market-intl-shipping-routes.ts
+—,GET,/api/v1/market/intl-shipping/rates,VPS,Workers,W2,infra-route-129,protected,implemented,rel-12 mount market-intl-shipping-routes.ts
+—,POST,/api/v1/market/listings/{listing_id}/intl,VPS,Workers,W2,infra-route-130,protected,implemented,rel-12 mount market-intl-shipping-routes.ts
+—,GET,/api/v1/market/listings/{listing_id}/total-price,VPS,Workers,W2,infra-route-131,protected,implemented,rel-12 mount market-intl-shipping-routes.ts
+—,POST,/api/v1/market/platinum-symbols,VPS,Workers,W2,infra-route-132,protected,implemented,rel-12 mount market-platinum-symbol-routes.ts(requireRole operator/admin)
+—,GET,/api/v1/market/platinum-symbols,VPS,Workers,W2,infra-route-133,protected,implemented,rel-12 mount market-platinum-symbol-routes.ts
+—,POST,/api/v1/market/platinum-symbols/{symbol_id}/purchase-right,VPS,Workers,W2,infra-route-134,protected,implemented,rel-12 mount market-platinum-symbol-routes.ts
+—,GET,/api/v1/market/platinum-symbols/{symbol_id},VPS,Workers,W2,infra-route-135,protected,implemented,rel-12 mount market-platinum-symbol-routes.ts
+—,GET,/api/v1/plaza/activity-stream,VPS,Workers,W2,infra-route-136,protected,implemented,rel-12 mount plaza-activity-routes.ts
+—,GET,/api/v1/plaza/activity-domains,VPS,Workers,W2,infra-route-137,protected,implemented,rel-12 mount plaza-activity-routes.ts
+—,POST,/api/v1/plaza/dm/threads,VPS,Workers,W2,infra-route-138,protected,implemented,rel-12 mount plaza-dm-routes.ts(V3-BBS-19)
+—,GET,/api/v1/plaza/dm/threads,VPS,Workers,W2,infra-route-139,protected,implemented,rel-12 mount plaza-dm-routes.ts
+—,GET,/api/v1/plaza/dm/threads/{thread_id}/messages,VPS,Workers,W2,infra-route-140,protected,implemented,rel-12 mount plaza-dm-routes.ts
+—,POST,/api/v1/plaza/dm/threads/{thread_id}/messages,VPS,Workers,W2,infra-route-141,protected,implemented,rel-12 mount plaza-dm-routes.ts
+—,GET,/api/v1/plaza/stats/board/{channel},VPS,Workers,W2,infra-route-142,protected,implemented,rel-12 mount plaza-stats-routes.ts
+—,GET,/api/v1/plaza/stats/global,VPS,Workers,W2,infra-route-143,protected,implemented,rel-12 mount plaza-stats-routes.ts
+—,POST,/api/v1/plaza/templates,VPS,Workers,W2,infra-route-144,protected,implemented,rel-12 mount plaza-template-routes.ts
+—,POST,/api/v1/plaza/templates/{template_id}/fork,VPS,Workers,W2,infra-route-145,protected,implemented,rel-12 mount plaza-template-routes.ts
+—,POST,/api/v1/plaza/templates/{template_id}/copy,VPS,Workers,W2,infra-route-146,protected,implemented,rel-12 mount plaza-template-routes.ts
+—,GET,/api/v1/plaza/templates/{template_id}/lineage,VPS,Workers,W2,infra-route-147,protected,implemented,rel-12 mount plaza-template-routes.ts
+—,GET,/api/v1/plaza/templates,VPS,Workers,W2,infra-route-148,protected,implemented,rel-12 mount plaza-template-routes.ts
+—,GET,/api/v1/sandbox-realm,VPS,Workers,W2,infra-route-149,protected,implemented,rel-12 mount sandbox-realm-routes.ts(V3-FND-31)
+—,POST,/api/v1/sandbox-realm/fork,VPS,Workers,W2,infra-route-150,protected,implemented,rel-12 mount sandbox-realm-routes.ts
+—,DELETE,/api/v1/sandbox-realm/{realm_id},VPS,Workers,W2,infra-route-151,protected,implemented,rel-12 mount sandbox-realm-routes.ts
+—,POST,/api/v1/sandbox-realm/{realm_id}/promote,VPS,Workers,W2,infra-route-152,protected,implemented,rel-12 mount sandbox-realm-routes.ts(role=administrator)

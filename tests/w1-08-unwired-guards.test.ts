@@ -195,3 +195,78 @@ describe("V3-IND-30 T2: redactForPublicをGET /individuals/{individual_id}/obser
     expect(body.observations[0].note).not.toContain("090-1234-5678");
   });
 });
+
+// W3-08(2026-08-08 order-w3-pii T1・R0808-0877e1 §T4是正): GET /individuals/{id}/profile は
+// PUBLIC_READ_ROUTES(index.ts:164・QRLINK-1)で匿名到達可能だが、observations[].note に
+// redactForPublicが配線されておらず、既存の同種経路(GET /observation/{capture_id}・
+// GET /individuals/{id}/observations)とマスク有無が割れていた。QRSCOPE-1=○90(基本情報・
+// 生活史・温度などの全公開)は維持したまま、noteだけ揃える是正。
+describe("W3-08: redactForPublicをGET /individuals/{id}/profileへ配線", () => {
+  it("匿名(未ログイン)のprofile閲覧: observationsのnoteはマスクされ、種等の基本情報はそのまま見える", async () => {
+    const { env } = ctx();
+    const indRes = await post("/api/v1/individuals", { species: "Dynastes hercules" }, env);
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+    await post(
+      "/api/v1/observation/captures",
+      { domain: "biology", subject_ref: `individual/${individualId}`, note: "電話 090-1234-5678 です" },
+      env,
+    );
+    const res = await app.request(`/api/v1/individuals/${individualId}/profile`, {}, env);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { observations: { note: string }[]; species: string | null };
+    expect(body.observations).toHaveLength(1);
+    expect(body.observations[0].note).toContain("{{PII:PHONE_JP}}");
+    expect(body.observations[0].note).not.toContain("090-1234-5678");
+    // QRSCOPE-1(○90=全公開): noteとは別の基本情報フィールドは匿名でもマスクなしで見える。
+    expect(body.species).toBe("Dynastes hercules");
+  });
+
+  it("所有者本人(観測者=capture作成者と同一actor)には生のnoteが返る", async () => {
+    const { env } = ctx();
+    const indRes = await post("/api/v1/individuals", {}, env);
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+    await post(
+      "/api/v1/observation/captures",
+      { domain: "biology", subject_ref: `individual/${individualId}`, note: "電話 090-1234-5678 です" },
+      env,
+    );
+    // AUTH = DEV_TOKEN → DEV_ACTOR = 上記captureのactor_idと同一(POSTはセッションの
+    // actorIdを強制付与する既存契約)。observation-routes.ts:1634-1636と同じ「本人には生」規約。
+    const res = await get(`/api/v1/individuals/${individualId}/profile`, env);
+    const body = (await res.json()) as { observations: { note: string }[] };
+    expect(body.observations[0].note).toContain("090-1234-5678");
+    expect(body.observations[0].note).not.toContain("{{PII:PHONE_JP}}");
+  });
+
+  it("note以外(生活史・温度)は匿名でも見える(QRSCOPE-1=全公開の維持)", async () => {
+    const { env } = ctx();
+    const indRes = await post("/api/v1/individuals", {}, env);
+    const individualId = ((await indRes.json()) as { individual_id: string }).individual_id;
+    await post(
+      `/api/v1/individuals/${individualId}/life-events`,
+      { kind: "molt", at: "2026-02-01T00:00:00Z", detail: { to_stage: "third_late" } },
+      env,
+    );
+    const place = ((await (await post("/api/v1/placements", { label: "Shelf A" }, env)).json()) as {
+      placement_id: string;
+    }).placement_id;
+    await post("/api/v1/occupancy", { placement_id: place, subject_ref: `individual/${individualId}` }, env);
+    await post("/api/v1/device-bindings", { device_id: "dev-w3pii-1", placement_id: place }, env);
+    await post(
+      "/api/v1/telemetry",
+      { rows: [{ device_id: "dev-w3pii-1", ts_ms: 0, metric: "temp", value: 28 }] },
+      env,
+    );
+
+    const anonRes = await app.request(`/api/v1/individuals/${individualId}/profile`, {}, env);
+    expect(anonRes.status).toBe(200);
+    const body = (await anonRes.json()) as {
+      stage: string | null;
+      life_events: { kind: string }[];
+      environment: { metric: string; mean: number }[];
+    };
+    expect(body.stage).toBe("third_late");
+    expect(body.life_events.map((e) => e.kind)).toContain("molt");
+    expect(body.environment.some((e) => e.metric === "temp" && e.mean === 28)).toBe(true);
+  });
+});

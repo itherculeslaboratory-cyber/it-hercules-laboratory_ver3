@@ -211,4 +211,39 @@ describe("V3-BBS-06/08 board dispute via /gov/disputes category=board (migrated 
     expect(view.participants.respondent).toBe("rated-user");
     expect(view.subject_ref).toEqual({ type: "market_rating", id: "rating-1" });
   });
+
+  // W3-06 恒久策(a): respondent_id 形式検証。本番実体は deriveActorId() の sha256 hex 64。
+  it("accepts the production-shaped respondent_id (sha256 hex 64) and round-trips it", async () => {
+    const env = makeEnv();
+    const respondent = await deriveActorId("respondent@example.test");
+    expect(respondent).toMatch(/^[0-9a-f]{64}$/); // 前提の固定: 本番の実体は hex64
+    const res = await openDispute(env, { category: "market", respondent_id: respondent });
+    expect(res.status).toBe(201);
+    const { dispute_id } = (await res.json()) as { dispute_id: string };
+    const view = (await (await getDispute(env, dispute_id)).json()) as { participants: { respondent: string } };
+    expect(view.participants.respondent).toBe(respondent);
+  });
+
+  it("keeps accepting hyphenated ids used by dev seed and existing fixtures", async () => {
+    const env = makeEnv();
+    for (const id of ["e2e-buyer", "gov10-board-respondent", "rated-user"]) {
+      const res = await openDispute(env, { category: "market", respondent_id: id });
+      expect(res.status).toBe(201);
+    }
+  });
+
+  it("rejects malformed respondent_id (separator / control char / oversize) with 400", async () => {
+    const env = makeEnv();
+    const bad = [
+      "../../etc/passwd", // path separator
+      "truth/ihl.gov.dispute.v1", // key-shaped
+      "bob\nX-Injected: 1", // control char
+      "a".repeat(129), // over the 128 cap
+    ];
+    for (const id of bad) {
+      const res = await openDispute(env, { category: "market", respondent_id: id });
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe("INVALID_DISPUTE");
+    }
+  });
 });

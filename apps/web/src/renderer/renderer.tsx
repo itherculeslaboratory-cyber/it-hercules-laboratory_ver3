@@ -348,7 +348,7 @@ export function ButtonNode({ node }: { node: ScreenNode }) {
         aria-invalid={error ? true : undefined}
         onClick={node.action ? onClick : undefined}
       >
-        {displayText(resolve, p.label_key, p.label, node.id)}
+        {interpolate(displayText(resolve, p.label_key, p.label, node.id), scope)}
       </button>
       {error && (
         <span role="alert" className="civ-field-error">

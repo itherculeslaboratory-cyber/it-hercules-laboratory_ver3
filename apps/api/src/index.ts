@@ -74,6 +74,16 @@ import { checkRateLimit, clientIp, WRITE_RATE_LIMIT_PER_MINUTE, WRITE_QUOTA_PER_
 import { responseEnvelope } from "./response-envelope-middleware";
 import { crossSearchRoutes } from "./cross-search-routes";
 import { researchManifestRoutes } from "./research-manifest-routes";
+// rel-12: 未マウントだったルートモジュールの mount(2026-08-08 Wave3)。
+// nodeRoutes(/node/:node_id)は裁定 R66-3「mountしない(到達画面が無い)」により意図的に除外する。
+import { knowledgeArticleRoutes } from "./knowledge-article-routes";
+import { marketIntlShippingRoutes } from "./market-intl-shipping-routes";
+import { marketPlatinumSymbolRoutes } from "./market-platinum-symbol-routes";
+import { plazaActivityRoutes } from "./plaza-activity-routes";
+import { plazaDmRoutes } from "./plaza-dm-routes";
+import { plazaStatsRoutes } from "./plaza-stats-routes";
+import { plazaTemplateRoutes } from "./plaza-template-routes";
+import { sandboxRealmRoutes } from "./sandbox-realm-routes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 app.use("*", responseEnvelope());
@@ -664,6 +674,17 @@ app.route("/api/v1", crossSearchRoutes);
 // manifest配信のみ(generation番号取得+parquetバイト列配信)。SQL実行はブラウザ内
 // duckdb-wasm側(apps/web/src/research/)。Protected(PUBLIC_ROUTES非登録)。
 app.route("/api/v1", researchManifestRoutes);
+
+// rel-12: 未マウント26ルート(8モジュール)の mount。全て PUBLIC_ROUTES 非登録 = Protected。
+// nodeRoutes は裁定 R66-3 により意図的に mount しない(到達画面が無い)。
+app.route("/api/v1", knowledgeArticleRoutes);
+app.route("/api/v1", marketIntlShippingRoutes);
+app.route("/api/v1", marketPlatinumSymbolRoutes);
+app.route("/api/v1", plazaActivityRoutes);
+app.route("/api/v1", plazaDmRoutes);
+app.route("/api/v1", plazaStatsRoutes);
+app.route("/api/v1", plazaTemplateRoutes);
+app.route("/api/v1", sandboxRealmRoutes);
 
 // T-71 恒久硬化(R91 承認・修正層裁定 = 自己サービス型 allowlist・参照:
 // docs/planning/c9/design-events-allowlist.md)。POST /events は薄い汎用 Truth-append

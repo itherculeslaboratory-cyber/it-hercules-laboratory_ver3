@@ -23,6 +23,7 @@ import { projectOpenBindings, projectCurrentOwner } from "./source-routes";
 import { computeNextObservationAt } from "./home-routes";
 import { aggregateTags } from "./tag-routes";
 import { loadVector, EMBEDDING_DIM, captureVisibleTo } from "./observation-routes";
+import { redactForPublic } from "./pii.mjs";
 
 export const individualRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -1690,7 +1691,14 @@ individualRoutes.get("/individuals/:id/profile", async (c) => {
     actorId == null
       ? proj.life_events.map((e) => ({ ...e, actor_id: undefined }))
       : proj.life_events;
-  return c.json({ ...proj, master, life_events, is_owner: actorId != null && owner === actorId });
+  // W3-08(2026-08-08 order-w3-pii T1): observation-routes.ts:1679-1683 と同じ規約
+  // (note は観測者本人=capture の actor_id にのみ生で返す。個体の所有者ではない)。
+  const observations = proj.observations.map((d) =>
+    typeof d.note === "string" && d.actor_id !== actorId
+      ? { ...d, note: redactForPublic(d.note).redacted }
+      : d,
+  );
+  return c.json({ ...proj, master, life_events, observations, is_owner: actorId != null && owner === actorId });
 });
 
 // POST /individuals/{id}/parents — append a blood link (IND-01/12). Key by

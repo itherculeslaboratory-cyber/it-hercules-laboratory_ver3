@@ -4981,7 +4981,7 @@
     "tc": [
       "tests/mkt-62-payjp-platform.test.ts"
     ],
-    "note": "w1-mktレーン(今回実装): fee-routes.tsへPOST /market/payjp/tenant(test-modeテナント作成)・POST /market/listings/{id}/payjp-charge(matched buyerがPAY.JP Platformカードで支払う経路)を新設。銀行振込(既定・既存)に加えPAY.JP Platformを選べるユーザー選択制が完成。tenant本人確認自体はtest-mode APIコールでありPAY.JP本番アカウント申込(V3-MKT-15の人間ゲート)とは別。8 TC新規・全通過。"
+    "note": "w1-mktレーン(今回実装): fee-routes.tsへPOST /market/payjp/tenant(test-modeテナント作成)・POST /market/listings/{id}/payjp-charge(matched buyerがPAY.JP Platformカードで支払う経路)を新設。銀行振込(既定・既存)に加えPAY.JP Platformを選べるユーザー選択制が完成。tenant本人確認自体はtest-mode APIコールでありPAY.JP本番アカウント申込(V3-MKT-15の人間ゲート)とは別。8 TC新規・全通過。 ★2026-08-08 lane-audit検分による追記: 2026-08-07裁定PAY-1(review-queue/R0807-054187-payjp-charge-route-2026-08-07.json ROUTE-1=○)によりPOST /market/payjp/tenant・POST /market/listings/{id}/payjp-charge の2routeは登録解除(退役)済み(apps/api/src/fee-routes.ts:215-220)。本noteが記す『PAY.JP Platformを選べるユーザー選択制が完成』は退役前の記述であり現状と食い違う。銀行振込のみが現行の稼働経路。status=doneの判定自体は銀行振込コアで妥当だが、noteは退役後の状態に更新が必要。"
   },
   {
     "id": "V3-MKT-63",

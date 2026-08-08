@@ -205,6 +205,18 @@
                       ]
                     },
                     {
+                      "id": "btn-buy-now",
+                      "type": "button",
+                      "props": {
+                        "tab_id": "1",
+                        "when": { "not_empty": "{{data.state.auction.buy_now_price}}" },
+                        "label": "即決価格({{data.state.auction.buy_now_price}}円)で今すぐ落札する",
+                        "variant": "primary",
+                        "static": { "kind": "bid", "listing_id": "{{params.listing_id}}", "amount": "{{data.state.auction.buy_now_price}}" }
+                      },
+                      "action": { "kind": "api", "method": "POST", "path": "/api/v1/market/listings/{{params.listing_id}}/transition", "toast": "即決で落札しました" }
+                    },
+                    {
                       "id": "btn-publish",
                       "type": "button",
                       "props": {
@@ -421,6 +433,7 @@
                 { "id": "new-photo", "type": "field", "props": { "variant": "photo", "name": "photo", "label": "個体写真(任意・「買う」タブの一覧に表示されます)" } },
                 { "id": "new-description", "type": "field", "props": { "variant": "textarea", "name": "description", "label": "説明(任意)" } },
                 { "id": "new-price", "type": "field", "props": { "variant": "number", "name": "price", "label": "希望価格(円・任意)" } },
+                { "id": "new-buy-now-price", "type": "field", "props": { "variant": "number", "name": "buy_now_price", "label": "即決価格(円・任意・オークション出品のみ有効。この価格以上の入札で即座に落札)" } },
                 {
                   "id": "new-accept-mode",
                   "type": "field",

@@ -220,6 +220,15 @@ export function nextAuctionExtension(
   return new Date(now.getTime() + AUCTION_EXTEND_BY_MINUTES * 60 * 1000).toISOString();
 }
 
+/** IDEA-0209(V3-MKT-05残要素・w3-07実装): 即決価格(buy_now_price)以上の入札かどうか。
+ * buyNowPrice 未設定(即決なし出品)は常に false(通常のオークション入札のまま)。
+ * 呼び出し側(market-routes.ts の bid 分岐)は true のとき延長(nextAuctionExtension)・
+ * ヤフオク型自動再入札(appendAuctionProxyRebid)を行わず、代わりに即座に match を
+ * 追記する(二重処理防止・AUTOBID-1延長機構との排他はここで担保する)。 */
+export function isBuyNowTrigger(buyNowPrice: number | undefined, bidAmount: number): boolean {
+  return typeof buyNowPrice === "number" && bidAmount >= buyNowPrice;
+}
+
 /** V3-MKT-07: 抽選(listed_lottery)締切(ends_at)経過時に決着すべきか。auction と
  * 同じ read-time 判定(ends_at 未設定なら締切なし=due にならない)。 */
 export function isLotteryDrawDue(state: string, endsAt: string | undefined, now: Date): boolean {

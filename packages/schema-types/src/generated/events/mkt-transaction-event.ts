@@ -21,7 +21,7 @@ export interface MktTransactionEvent {
    */
   actor_id: string;
   /**
-   * 取引アクション種別（許可辺 MARKET_EDGES 外の遷移は route が 409）。pay_declare/pay_confirm は round-16 決済裁定（銀行振込既定・IHL非関与）の状態遷移で、tax_* 同様 listing state を動かさない経済副次イベント（買主:振込済み申告→売主:入金確認、を都度投影で表示する）。pay_confirm の payload.mismatch(任意 partial|over)は round-15裁定 V3-MKT-13「金額相違」自己申告(部分入金=残債・過入金=クレジット記録のみ・自動制裁なし)。cancel は matched→cancelled の許可辺（猶予キャンセル/48h no-pay 自動キャンセル）。ship_link は round-15裁定 V3-MKT-20(匿名配送=外部URL中継)で売り手が入金確認後に payload.external_shipping_url を relay する経済副次イベント(住所非保持・システムは中継のみ)。cancel_request/cancel_approve/cancel_decline は HANDOFF §3.4「猶予キャンセル窓が閉じた後の相互承認制キャンセル依頼フロー」（当事者どちらでも request→相手方の approve=matched→cancelled 実遷移／decline=matched のまま却下、requester 本人は自分の request を承認/却下できない）。payload.reason(任意文字列)に依頼理由を持てる。dispute_resolved は V3-GOV-05(design35 §433)「二人部屋(gov-dispute category=market)の争いが解決した際の追記」— listing state を動かさない経済副次イベントで、payload.dispute_id/payload.resolution(任意)を持つ。発行トリガー(dispute close/vote_resolveの検知)はgov-routes.ts側(w-govのglob)がappendDisputeResolvedTradeEvent(market-routes.ts export)を呼ぶ形で連携する。
+   * 取引アクション種別（許可辺 MARKET_EDGES 外の遷移は route が 409）。pay_declare/pay_confirm は round-16 決済裁定（銀行振込既定・IHL非関与）の状態遷移で、tax_* 同様 listing state を動かさない経済副次イベント（買主:振込済み申告→売主:入金確認、を都度投影で表示する）。pay_confirm の payload.mismatch(任意 partial|over)は round-15裁定 V3-MKT-13「金額相違」自己申告(部分入金=残債・過入金=クレジット記録のみ・自動制裁なし)。cancel は matched→cancelled の許可辺（猶予キャンセル/48h no-pay 自動キャンセル）。ship_link は round-15裁定 V3-MKT-20(匿名配送=外部URL中継)で売り手が入金確認後に payload.external_shipping_url を relay する経済副次イベント(住所非保持・システムは中継のみ)。cancel_request/cancel_approve/cancel_decline は HANDOFF §3.4「猶予キャンセル窓が閉じた後の相互承認制キャンセル依頼フロー」（当事者どちらでも request→相手方の approve=matched→cancelled 実遷移／decline=matched のまま却下、requester 本人は自分の request を承認/却下できない）。payload.reason(任意文字列)に依頼理由を持てる。dispute_resolved は V3-GOV-05(design35 §433)「二人部屋(gov-dispute category=market)の争いが解決した際の追記」— listing state を動かさない経済副次イベントで、payload.dispute_id/payload.resolution(任意)を持つ。発行トリガー(dispute close/vote_resolveの検知)はgov-routes.ts側(w-govのglob)がappendDisputeResolvedTradeEvent(market-routes.ts export)を呼ぶ形で連携する。auction_extend は AUTOBID-1(w2-market2実装・review-queue R0807-1ef084 ○)「終了間際(残り5分以内)の入札で締切を5分延長」— listing state を動かさない経済副次イベントで、payload.new_ends_at(延長後の実効締切・RFC3339)/payload.reason(通常「snipe_guard」)を持つ。listing.ends_at 自体は書き換えず、market-settlement.ts の effectiveAuctionEndsAt がこのイベント列から実効締切を都度再計算する。
    */
   kind:
     | "list_fixed"
@@ -48,7 +48,8 @@ export interface MktTransactionEvent {
     | "cancel_request"
     | "cancel_approve"
     | "cancel_decline"
-    | "dispute_resolved";
+    | "dispute_resolved"
+    | "auction_extend";
   /**
    * 相手方 actor_id（offer/match/transfer 等・任意）。
    */

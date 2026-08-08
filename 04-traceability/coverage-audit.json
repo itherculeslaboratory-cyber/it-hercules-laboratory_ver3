@@ -1,0 +1,5061 @@
+{
+  "$comment": "静的監査カバレッジ台帳。これは V-model 5点閉包(04-traceability/rtm.json)ではない。ここに載る verdict は『8/9リリース監査で実施した静的スキャン+人手裏取りの判定』であり、テスト参照による裏付けは含まない。したがって本ファイルの件数を rtm.json の閉包件数と足したり平均したりしてはならない(2指標は別のものを測っている: 実測で rtm.json の閉包済み17件のうち16件に本ファイルの判定があり、その内訳は implemented 7 / unverifiable 9)。要件の属性(category/wave/req_status/hold/statement)は 01-requirements/registry.json が正本であり、本ファイルには複製しない(id で引くこと)。本ファイルは entries を丸ごと書き直す冪等な流し込みで更新する — 手編集するな。",
+  "schema_version": 1,
+  "generated_at": "2026-08-08",
+  "generated_by": "lane-implement R0808-fcf525(ORDER-2026-08-08-rtm-coverage-ingest.md)",
+  "denominator": {
+    "source": "01-requirements/registry.json",
+    "total": 773,
+    "note": "本ファイルの entries は 542件。残り231件は監査Aで out_of_scope_8_9(8/9リリース対象外)と分類されただけで実体判定が無いため収容しない。542+231=773。"
+  },
+  "verdict_definitions": {
+    "implemented": "静的スキャンで当該要件に対応する実装が見つかった。テストの存在は確認していない。",
+    "partial": "実装の一部だけが見つかった、または裏取りで implemented から降格した。",
+    "missing": "静的スキャンで対応する実装が見つからなかった。",
+    "unverifiable": "静的スキャンでは原理的に判定できない(運用要件・人間ゲート・外部サービス依存など)。"
+  },
+  "sources": [
+    {
+      "key": "A",
+      "lane": "reqcov-a",
+      "date": "2026-08-07",
+      "file": "D:\\claude\\00-hq\\kits\\lane-research\\R0807-f1aad5-reqcov-a-data.json",
+      "rows_in_file": 773,
+      "rows_used": 139,
+      "note": "registry全773件を走査。うち out_of_scope_8_9 634件は本ファイルに収容しない。"
+    },
+    {
+      "key": "B",
+      "lane": "reqcov-b",
+      "date": "2026-08-07",
+      "file": "D:\\claude\\00-hq\\kits\\lane-research\\R0807-9fd436-reqcov-b-data.json",
+      "rows_in_file": 215,
+      "rows_used": 215,
+      "note": "MKT/OBS/PPR/VID/WIK/KRM カテゴリの再監査。"
+    },
+    {
+      "key": "C",
+      "lane": "reqcov-c",
+      "date": "2026-08-07",
+      "file": "D:\\claude\\00-hq\\kits\\lane-research\\R0807-228da2-reqcov-c-data.json",
+      "rows_in_file": 188,
+      "rows_used": 188,
+      "note": "BBS/GOV/IND/SEC/UIX カテゴリの再監査。"
+    },
+    {
+      "key": "W1-09",
+      "lane": "close-or-confirm",
+      "date": "2026-08-07",
+      "file": "D:\\claude\\00-hq\\kits\\lane-research\\R0807-2cbf9b-close-or-confirm-data.json",
+      "rows_in_file": 64,
+      "rows_used": 64,
+      "note": "unverifiable 186件のうち64件を再検証。実際に個別再検証したのは reverified:true の7件のみ(57件は元判定の理由を据え置き)。報告書本文の『8件/56件』は data.json 実測(7件/57件)と1件ズレており、data.json を正とした。"
+    },
+    {
+      "key": "W1-10",
+      "lane": "evidence-audit",
+      "date": "2026-08-07",
+      "file": "D:\\claude\\00-hq\\kits\\lane-research\\R0807-35ce16-evidence-audit-data.json",
+      "rows_in_file": 45,
+      "rows_used": 45,
+      "note": "implemented 248件のうち45件の証拠を裏取り。22件(48.9%)が partial/unverifiable へ降格。"
+    }
+  ],
+  "known_gaps": [
+    "W1-09 の T1『実は閉じている4件』(V3-SEC-56 / V3-MKT-40 / V3-GOV-09 / V3-WIK-30)は機械可読データが存在せず報告書markdown本文にしかないため、本ファイルには取り込んでいない。この4件は base 判定 partial のままである。",
+    "A の unverifiable 82件にはカテゴリ単位の定型文が使い回されている行があり(例: V3-AIP-03 / -46 / -96 は evidence が一字一句同一)、件別の個別判断とは限らない。",
+    "本ファイルの entries は 00-hq 側のファイル(ihl-ver3 リポジトリ外)から流し込まれている。ihl-ver3 単独では再生成できない。"
+  ],
+  "entries": [
+    {
+      "id": "V3-AIP-01",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-02",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-03",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-04",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-05",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-06",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-07",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-08",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-09",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-10",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-101",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\batch-commit-routes.ts:1 他58箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-105",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-106",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-107",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-108",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\research-content-routes.ts:421 他2箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-109",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\research-content-routes.ts:460 他1箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-11",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-110",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-111",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-12",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-13",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-14",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-15",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-16",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-17",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-18",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-19",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-20",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-21",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-22",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-23",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-24",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-25",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-26",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-27",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-28",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-29",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-30",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-31",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\gov-routes.ts:884",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-32",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-33",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-34",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-35",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\intent.ts:1 他1箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-36",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-37",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-40",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\screendefs-data\\ai-profile-settings.json:6",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-41",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-43",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-44",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-45",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\reference-counter.ts:1 他1箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-46",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-48",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-49",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\e2e\\ledger.spec.ts:6 他1箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-50",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\src\\renderer\\screendef-snapshots.test.tsx:73 他1箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-52",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-53",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-54",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-55",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-56",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-57",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-59",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-60",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-61",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-63",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-64",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-65",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-66",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-67",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\ai-digest-routes.ts:1 他4箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-68",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-70",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-76",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\culture.ts:1",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-78",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-80",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-90",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-92",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-93",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-94",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AIP-96",
+      "verdict": "unverifiable",
+      "evidence": "category=AI運用/開発プロセス(このシステム自身の開発手法に関する要件)。ihl-ver3のapps/コード静的調査では原理的に検証対象にならない(検証対象は00-hq運用フリート自身の振る舞い)。コード内ID直接引用も0件",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-01",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\screendefs-data\\login.json:6",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-02",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\auth-routes.ts:89",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-03",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\denylist.ts:1 他7箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-04",
+      "verdict": "implemented",
+      "evidence": "magic-link関連の実装をauth-routes.ts, mail.ts, session.ts, account.ts等14ファイルで確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "mail.ts:15でPUBLIC_APP_URLを使ったマジックリンク生成は実装済み。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-AUT-05",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\auth-routes.ts:241 他4箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-06",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\consent-routes.ts:7 他5箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-08",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\account.ts:12 他5箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-09",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\account.ts:1 他3箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-10",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\account.ts:1 他14箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-11",
+      "verdict": "implemented",
+      "evidence": "screendefs-data/navigation.json が実在し、画面遷移を管理",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "screendefs-data/navigation.json:1-639にlogin→terms→home→setup-profile等のフローがedges配列で管理。604行に『login→setup-profile: middleware誘導』の記述。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-AUT-12",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\consent-routes.ts:3 他6箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-13",
+      "verdict": "implemented",
+      "evidence": "middleware.tsでデフォルトdeny+307リダイレクト(/login)を確認(79,88,97行)",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "middleware.ts:27,42-44,51-53,75-79でPUBLIC_PATHS={'/s/login','/s/login-sent','/s/terms'}によるdeny-by-default+307リダイレクトを確認。index.ts:84-147,208-209でAPI側PUBLIC_ROUTES/PUBLIC_READ_ROUTESも確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-AUT-14",
+      "verdict": "partial",
+      "evidence": "\"OBSERVATION_WRITE_PREFIXES\"という厳密名は0件。observation-routes.ts自体は実在し個別ルート単位の認可はあるが、統一的なdeny-list機構としての実装は本調査では確認できなかった",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-15",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\index.ts:114",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-16",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\cross-search-routes.ts:73",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-17",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\batch.ts:41 他64箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-18",
+      "verdict": "missing",
+      "evidence": "\"ihl://individual\"のdeep linkスキームはapps/全体で0件(公開Web到達先を作らない、という要件だが、QR自体の生成実装も含め該当コードが見つからない)",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-19",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\denylist.ts:18 他4箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-20",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\src\\lib\\error-messages.ts:33 他2箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-22",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\auth-routes.ts:35 他3箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-45",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\account.ts:69",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-AUT-46",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\auth-routes.ts:61 他8箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-01",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\account.ts, api\\src\\ai-digest-routes.ts, api\\src\\auth-routes.ts, api\\src\\batch-commit-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "knowledge.tsx:143-224で3柱ハブ機能自体は実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-BBS-02",
+      "verdict": "implemented",
+      "evidence": "term一致3/4件。代表ファイル: api\\src\\account.ts, api\\src\\ai-digest-routes.ts, api\\src\\auth-routes.ts, api\\src\\consent-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-03",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\authz.ts, api\\src\\batch.ts, api\\src\\contribution-krm.ts, api\\src\\contribution.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "board_kind enum(guide/complaint/improvement/engagement)が正本として実在。projectImprovementQueue(plaza-routes.ts:580-598)・FORK_RANKS・RANKING_WEIGHTSまで改善サイクルのデータ基盤は本物。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-BBS-04",
+      "verdict": "unverifiable",
+      "evidence": "抽出語6件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-05",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\home-routes.ts, api\\src\\index.ts, api\\src\\intent.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "plaza-routes.ts:3『INSERT ONLY』、237行tombstone実装、613行permalink不変確認、1242行>>N/post_id分離。thread-posts.tsxにtombstone表示コンポーネント。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-BBS-06",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-08",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-09",
+      "verdict": "unverifiable",
+      "evidence": "thread-posts.tsxは存在するが投稿者名readonly表示の実装詳細を時間内に読了できず未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-BBS-10",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\economy-constants.ts, api\\src\\plaza-routes.ts, web\\src\\renderer\\zones\\search.tsx",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "plaza-routes.ts:1004-1073で4層構造(post embedding/block embedding/current_summary+open_questions/diff履歴)のデータ構造自体は実装済み。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-BBS-11",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-12",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-14",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-BBS-15",
+      "verdict": "implemented",
+      "evidence": "term一致5/5件。代表ファイル: api\\src\\auth-routes.ts, api\\src\\batch-commit-routes.ts, api\\src\\batch-era-snapshot.ts, api\\src\\batch.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-16",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\index.ts, api\\src\\knowledge-graph.ts, api\\src\\plaza-file-board-registry.ts, web\\e2e-transitions-tmp\\transitions.spec.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "plaza-file-board-registry.ts:13-29でFILE_BOARD_LAYERS(B/P/V)・classifyFileBoardLayer純関数によるモジュール分類。同33-35 fileBoardChannel()決定論的channel導出。同81-99でGET /plaza/file-board/registry等。index.ts:29,446で実配線を確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-BBS-18",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\account.ts, api\\src\\ai-digest-routes.ts, api\\src\\auth-routes.ts, api\\src\\batch-commit-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-19",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\knowledge-lint.ts, api\\src\\plaza-dm-routes.ts, api\\src\\plaza-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-20",
+      "verdict": "implemented",
+      "evidence": "term一致3/4件。代表ファイル: api\\src\\clutch-routes.ts, api\\src\\gov-routes.ts, api\\src\\index.ts, api\\src\\knowledge-graph.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "plaza-routes.ts:88-142にCiteRef型・parseCiteTokens・mergeCiteRefs・citeUrl(全type網羅)が実装済み。knowledge-graph.tsからの再利用も確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-BBS-21",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-25",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\plaza-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-26",
+      "verdict": "implemented",
+      "evidence": "term一致6/12件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\auth-routes.ts, api\\src\\contribution-title.ts, api\\src\\contribution.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-28",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\engagement-routes.ts, api\\src\\index.ts, api\\src\\plaza-constants.ts, api\\src\\plaza-file-board-registry.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "engagement-routes.ts:39-45 classifyEngagementQuestion(決定論キーワード辞書)。同62-83 projectPraisePoints(変動係数から称賛ポイント自動抽出)。同100-114 projectPredictedQuestions。market-individual-offer-routes.ts:112,131・market-routes.ts:1182-1189でオファー/ラブレター実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-BBS-29",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-BBS-32",
+      "verdict": "unverifiable",
+      "evidence": "抽出語4件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-33",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-BBS-37",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-BBS-38",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\auth-routes.ts, api\\src\\contribution-title.ts, api\\src\\contribution.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "plaza-github-routes.ts:1-69でGitHub Issues/PR/Commits/Releasesの読み取りAPI(GET /plaza/github/activity)を実装済み。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-CST-01",
+      "verdict": "unverifiable",
+      "evidence": "運営コスト構造(月300〜1000円/従量課金回避)はインフラ契約・請求実績の確認が要り、apps/ソースの静的grepでは検証不能",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-CST-02",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\costs-routes.ts:1 他3箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-CST-04",
+      "verdict": "unverifiable",
+      "evidence": "インフラ調達(TLD/VPS/Cloudflareアカウント選定)の実際の契約確認が要り、apps/ソースの静的grepでは検証不能",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-CST-05",
+      "verdict": "unverifiable",
+      "evidence": "デプロイ/運用手順書・VPS実機設定の存在確認が要り、apps/ソースの静的grepでは検証不能(docs/運用手順ファイル未探索)",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-CST-09",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\truth-backup-connector.ts:1",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-FND-01",
+      "verdict": "implemented",
+      "evidence": "409 no-overwrite応答パターンを10ファイルで確認(例: batch-commit-routes.ts)",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "apps/api/packages/truth/src/store.ts:46-68 update/delete method無し、writeOnce()はR2 put-if-absent(etagDoesNotMatch:'*')でconflictを409扱い。409マッピングをclutch-routes.ts:245等10+ファイルで確認。pointer log方式もresearch-content-routes.ts:700-737で確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-FND-02",
+      "verdict": "implemented",
+      "evidence": "postgres/sqlite/pg-promise等の常駐DB参照は0件。R2Bucket/env.R2の直接利用を14ファイルで確認(source-routes.ts等)",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "apps/api/src/env.ts:1,7 TRUTH:R2BucketLiteバインディング。wrangler.toml:11-12,51,113にr2_buckets定義3箇所。apps/api/src配下でpostgres/sqlite/pg-promise/pgvector/Qdrant参照0件。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-FND-03",
+      "verdict": "implemented",
+      "evidence": "duckdb-client.ts, research-manifest-routes.ts, manifest-query-columns.ts でDuckDB+manifest方式を確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "research-manifest-routes.ts:1-65でParquet manifestをR2配信、ブラウザ内duckdb-wasmが読む設計。research-content-routes.ts:140-179でcosineSimilarity総当たり(FAISS不使用)を確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-FND-04",
+      "verdict": "implemented",
+      "evidence": "prevSnapshotVersion/OCCパターンを9ファイルで確認(source-routes.ts, individual-routes.ts等)",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "kernel.ts:43-71 reduce()自体はOCC/timestamp単調増加/削除禁止を正しく実装(純粋関数)。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-FND-05",
+      "verdict": "implemented",
+      "evidence": "chain-routes.ts等8ファイルでworldHash/prev_hash系の参照を確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "chain-routes.ts:1-77で日次ルート(R_D=sha256(R_{D-1}‖r_D))によるworldHash()実配線を確認。hash-chain.tsにeventHash/verifyChain/worldHashの純粋プリミティブ実装あり。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-FND-10",
+      "verdict": "unverifiable",
+      "evidence": "ver4のインフラ配置(Workers/VPS分離)方針であり、ver3自身が「暫定妥協構成」と明記。ver3のapps/コード静的調査では検証対象にならない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-FND-11",
+      "verdict": "partial",
+      "evidence": "env.tsにPUBLIC_APP_URLは存在するが、it-hercules.uk固定ドメイン/NEXT_PUBLIC_IHL_API_URLという変数名でのapps/内直叩き実装は未確認(0件)。デプロイ設定側の可能性があるが本調査(apps/静的grep)の範囲外",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-FND-12",
+      "verdict": "unverifiable",
+      "evidence": "依存方向(apps→libs一方向)は全import文の解析が要り、Grepベースの本調査の範囲を超える(重いimport-graph解析が必要)",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-FND-14",
+      "verdict": "implemented",
+      "evidence": "cusb-routes.ts含む4ファイルでC-USB関連の実装を確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "tests/fnd-14-cusb-manifest.test.ts:1-92でcusb_layer(5値)manifest検証gateは実在。apps/api/src/cusb-routes.ts:1-30,197-200でIN側取り込みAPIは実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-FND-15",
+      "verdict": "implemented",
+      "evidence": "parent_uuid/lineage_hash/ancestor_chainの参照をresearch-content-routes.ts, plaza-routes.tsで確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "packages/schema-types/src/generated/common/lineage-meta.ts:10-39にLineageMeta型(uuid/lineage_hash/content_hash/generation/parent_uuid/ancestor_chain/semantic_hash)。packages/truth/src/lineage.ts:28-44にcomputeLineageMeta()実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-FND-16",
+      "verdict": "unverifiable",
+      "evidence": "要件文自体が「Kernelのfork可否/OS差し替え単位の2点は本人未決のため確定を保留」と明記しており、コードで検証できる完了状態が定義されていない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-FND-17",
+      "verdict": "unverifiable",
+      "evidence": "リポジトリ統合方針(it-hercules-laboratory一本化)はリポジトリ構成全体の照合が要り、apps/内の静的grepだけでは判定できない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-FND-18",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\index.ts:621 他2箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-FND-19",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\e2e\\wasm-poc.spec.ts:4 他6箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-FND-20",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\script-driver-manifest.ts:1",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-FND-21",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\index.ts:635",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-FND-25",
+      "verdict": "partial",
+      "evidence": "第1波スコープの一部(観測/マーケット/カルマ/検索RAG)はroutes実在で裏付くが、「Builder」「設定」を含む全構成要素までは本調査で個別確認できていない",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-FND-30",
+      "verdict": "implemented",
+      "evidence": "要件本文中の2026-07-31裁定注記(「19ファイル・6,177行・テスト54本」)に加え、本調査でもmarket-*-routes.ts 14ファイル・gov-routes.ts(裁判関連)の実在を確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "index.tsで market/gov関連ルート12件(397,403,408,414,422,455,470,474,479,483,488,502行)が本番へ実配線されていることを確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-FND-32",
+      "verdict": "implemented",
+      "evidence": "QID/wikidata参照をresearch-constants.ts, observation-routes.ts, research-canonical-routes.ts等の実ソースで確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "research-canonical-routes.ts:1-6,77-101でQID↔専門DB対応をmapping_eventとしてappend-only記録(『使われた瞬間だけcanonical_mapイベントをappend』と一致)。research-constants.ts:39-48でDOMAIN_API_MAP(GBIF/NCBI/ICD-11)。observation-routes.ts:1021-1053でGBIF/Wikidataへの実ライブ呼び出し。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-GOV-01",
+      "verdict": "implemented",
+      "evidence": "gov-routes.ts: POST /gov/disputes, /gov/disputes/:id/messages, /gov/disputes/:id/close, /gov/disputes/:id/force-close で二人部屋+期限切れ強制クローズの主経路を実装確認。自動審理・階層審判のルートはgrep 0件(要件どおり不採用)",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-02",
+      "verdict": "unverifiable",
+      "evidence": "抽出語4件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-03",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-04",
+      "verdict": "partial",
+      "evidence": "dispute-roomの閲覧/投稿権限分離(第三者=閲覧のみ)はルート単位では確認できたが、投稿APIの権限チェック実装まではコード読解できず",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-05",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\auth-routes.ts, api\\src\\batch-commit-routes.ts, api\\src\\clutch-routes.ts, api\\src\\collector-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-06",
+      "verdict": "implemented",
+      "evidence": "gov-routes.ts:485 POST /gov/disputes/:dispute_id/force-close で強制クローズ実装確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-07",
+      "verdict": "implemented",
+      "evidence": "gov-routes.ts:614,676,603 vote/vote-resolve/vote-resultルートでプラチナ投票機構を実装確認(7日間・多数決の詳細値は未読了)",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-08",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-09",
+      "verdict": "partial",
+      "evidence": "gov-routes.ts:885 POST /gov/flags で不使用フラグ機構は実装確認。Δcount+10固定値の反映箇所は未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-10",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-GOV-11",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-GOV-12",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-GOV-13",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-GOV-14",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-15",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-16",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-17",
+      "verdict": "partial",
+      "evidence": "apps/api/src/settings-routes.ts, gov-routes-constants.tsに文明パラメータ調整の土台はあるが、管理者専用A9000系画面の実装はgrep 0件",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-18",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-19",
+      "verdict": "partial",
+      "evidence": "gov-routes.tsにprojectThreshold/routeApproval/milestoneKarmaSteps等の閾値投影ロジックは存在するが、ルール自体(ProjectRules/Governance/PlatinumCoinRules)をユーザー投票で改訂するUI/APIは未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-20",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-GOV-21",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-22",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-GOV-23",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-GOV-24",
+      "verdict": "missing",
+      "evidence": "OSDefinition.permissions/文明ごとの政治制度(封建制/共和制/民主制/無政府制)によるOSフォーク権限切替の実装がgrep 0件",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-25",
+      "verdict": "partial",
+      "evidence": "term一致4/10件のみ(部分一致)。代表ファイル: api\\src\\account.ts, api\\src\\ai-digest-routes.ts, api\\src\\batch.ts, api\\src\\cadence-routes.ts",
+      "source": "C",
+      "method": "auto-weak",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-26",
+      "verdict": "implemented",
+      "evidence": "term一致2/4件。代表ファイル: api\\src\\market-routes.ts, api\\src\\plaza-routes.ts, api\\src\\profile-routes.ts, api\\src\\social-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-27",
+      "verdict": "unverifiable",
+      "evidence": "抽出語3件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-GOV-31",
+      "verdict": "partial",
+      "evidence": "二人部屋機構自体はgov-routes.ts:303(disputes/:id/messages)で実装確認。ただし事実積み上げ/対称的身元開示という『作法』面はUX運用の話でコードの有無だけでは判定不能",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-I18-01",
+      "verdict": "implemented",
+      "evidence": "i18n.ts, i18n-resolve.ts, ugc-translate.ts等でi18n横断契約の実装を確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "i18n.ts/i18n-resolve.ts(UI)、auth-routes.ts:224,257-276(認証)、plaza-routes.ts:218-220(掲示板)、market-routes.ts、gov-routes.ts:321(裁判)の5領域でlocale接続を確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-I18-02",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\api\\src\\account.ts:64 他4箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-I18-03",
+      "verdict": "implemented",
+      "evidence": "viewer-locale.ts + viewer-locale.test.tsでlocale切替の実装・テストを確認",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "viewer-locale.ts:1-34でfetchViewerLocale()がGET /me/preferencesから毎回サーバ側再取得しcookie転送(再ログイン不要を実現)。settings-routes.ts:25,92,130,188でlocaleが独立フィールドでkarma/dispute関連ゲートがこのルートに存在しない。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-I18-04",
+      "verdict": "unverifiable",
+      "evidence": "ログインUI文言が「日本語中心」かは文言全数の内容精査が要り、screendefs-data/login.jsonの実在確認だけでは断定できない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-I18-06",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\e2e\\ugc-translate.spec.ts:4 他6箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-I18-08",
+      "verdict": "implemented",
+      "evidence": "コード内でID直接引用を確認: D:\\claude\\systems\\ihl-ver3\\apps\\web\\screendefs-data\\settings.json:6 他5箇所",
+      "source": "A",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-IND-01",
+      "verdict": "implemented",
+      "evidence": "term一致3/4件。代表ファイル: api\\src\\batch-commit-routes.ts, api\\src\\clutch-routes.ts, api\\src\\cohort-completeness.ts, api\\src\\contribution.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "individual-routes.ts:142-166 buildPedigree()(循環検知・深さ上限あり)。同575-585 sire_id/dam_id判定。observation-routes.ts:240-241 CAPTURE_FIELDSにsire_id/dam_id。ind-detail.tsx:329に観測履歴セクション。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-IND-02",
+      "verdict": "implemented",
+      "evidence": "term一致2/4件。代表ファイル: api\\src\\batch-commit-routes.ts, api\\src\\clutch-routes.ts, api\\src\\cohort-completeness.ts, api\\src\\contribution.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "individual-routes.ts全体でindividual_idが正本キーとして一貫使用。QR一括発行(observation-constants.ts:36、individual-routes.ts:2011-2018)。individual-routes.ts:1769で正本キー不変を明記。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-IND-03",
+      "verdict": "implemented",
+      "evidence": "term一致4/4件。代表ファイル: api\\src\\batch-commit-routes.ts, api\\src\\clutch-routes.ts, api\\src\\cohort-completeness.ts, api\\src\\contribution.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-04",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\auth-routes.ts, api\\src\\batch-commit-routes.ts, api\\src\\clutch-routes.ts, api\\src\\collector-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "individual-routes.ts:1725-1751 POST /individuals/:id/nameがINSERT ONLY追記。同284-301 projectNameで時点指定当時名を再現。同1891-1912でbrand_templateの論理削除実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-IND-05",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\individual-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-06",
+      "verdict": "implemented",
+      "evidence": "term一致3/4件。代表ファイル: api\\src\\batch-era-snapshot.ts, api\\src\\env-import-routes.ts, api\\src\\individual-routes.ts, api\\src\\market-pricing-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-07",
+      "verdict": "implemented",
+      "evidence": "term一致2/4件。代表ファイル: api\\src\\match-routes.ts, web\\public\\finder\\lib\\tabulator.min.js, web\\screendefs-data\\preference.json",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "match-routes.ts:67 w[i]=(w[i]??0)+LEARNING_RATE*y*x[i]で式通りのオンライン線形学習。同77-88 内積スコアランキング。同289でスコア非表示をコメント明記。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-IND-08",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-09",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-11",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-12",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-13",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-14",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-15",
+      "verdict": "partial",
+      "evidence": "apps/web/src/renderer/zones/ind-screens/ind-bio-card.tsx:118-137にQRラベル100/500/1000一括発行(GET /individuals/{id}/bio-card)を実装。ただしA-one/コクヨ91x55mm型番・A4シート3パターンの実装はgrep 0件、コード自身が『等倍印刷の物理的なズレ確認は人の目で行う』(同ファイル:137)と明記=自己申告未検証",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-16",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/individual-routes.ts, cohort-completeness.tsにbio.created/moved/scheduled/dead相当のイベントとspecimenフラグの実装痕跡",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-17",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\individual-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-18",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-19",
+      "verdict": "unverifiable",
+      "evidence": "抽出語3件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-20",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-21",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-23",
+      "verdict": "partial",
+      "evidence": "apps/api/src/project-routes.ts(project-hub.json screendefも存在)でプロジェクト単位の紐づけ機構はあるが、成果物バージョン管理(Ver1→1.1→2.0)の実装はgrep 0件",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-26",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\authz.ts, api\\src\\consent-routes.ts, api\\src\\costs-routes.ts, api\\src\\cross-search-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-28",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\auth-routes.ts, api\\src\\batch.ts, api\\src\\denylist.ts, api\\src\\env.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-29",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-30",
+      "verdict": "partial",
+      "evidence": "individual_id/bioId関連ロジックとPII(email等)はindividual-routes.ts / pii-routes.tsで別ファイルに分離されているが、bioIdを明示的に「マスク対象外」とする実装はgrep 0件",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-31",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-34",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-IND-35",
+      "verdict": "partial",
+      "evidence": "apps/api/src/market-reservation-routes.tsの存在を確認。親個体指定の事前予約+割り出し後自動マッチングの具体ロジックは未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-IND-36",
+      "verdict": "partial",
+      "evidence": "apps/api/src/clutch-routes.tsの存在を確認(クラッチ=繁殖ロット管理)。匿名count層からindividual層への昇格ロジックの詳細は未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-01",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/ledger-routes.ts fib()/fibPenalty()/projectLedger() splits value[-100,100 clamped]/count layers via TruthStore.putEvent append-only; economy-constants.ts KARMA_VALUE_MIN/MAX/INITIAL",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-02",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/ledger-routes.ts fib()/fibPenalty(n1,n2); economy-constants.ts FIB_PENALTY_ANCHOR_0_5=12/FIB_PENALTY_ANCHOR_5_10=131 match statement exactly; grantKarmaCountIncrease(steps) supports one-shot steps=5 for major fraud",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-03",
+      "verdict": "implemented",
+      "evidence": "economy-constants.ts MONTHLY_RECOVERY=10/RECOVERY_BASE_DAY=25; apps/api/src/batch.ts:118-138 runMonthlyBatch (count-1 if violated else value+10 capped) wired via handleScheduled()+wrangler.toml cron",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-04",
+      "verdict": "implemented",
+      "evidence": "economy-constants.ts KARMA_BAN_THRESHOLD=-100; apps/api/src/ledger-routes.ts isBanned()/grantKarmaCountIncrease() calls revokeActor on ban; profile-routes.ts PUBLIC_SAFETY_FIELDS includes \"karma\" always public",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-05",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/contribution.ts indulgenceStage() (init stage1,+1 per buy,-1 per UTC month,floor1) priced via fib(stage); economy-constants.ts INDULGENCE_INITIAL_PRICE_PT=1; screen-defs/platinum-shop.json",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-06",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/ledger-routes.ts appendKarma() guard: value increase forbidden unless reason_code='monthly_batch'; market-rating-routes.ts MISCONDUCT_TAGS gates karma deduction",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-08",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/market-rating-routes.ts:156-158 \"grade=bad かつ tags が問題行為に該当する時だけ減点\" explicit V3-KRM-08 comment citing 結果論/文化差/不可抗力 excluded",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-09",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/gov-routes.ts POST /gov/disputes/:id/force-close (1-month forced close), milestoneKarmaSteps() (delta-count only on 5-multiple), maybeChargeZombieDisputeFee() (30-count PT cost)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-10",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/contribution.ts projectContribution() 3-axis non-negative累積 (appendContribution delta>0 guard, applyContributionDelta throws on delta<0); contribution-routes.ts GET /me/pt is本人限定",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-11",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/contribution.ts applyContributionDelta/appendForkContribution implement UPSTREAM_PERCENT=10% additive-bonus-to-ancestors (per R142 correction), mintFromScore uses KRM-12 Fib formula per 2026-07-31 correction",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-12",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/contribution.ts mintFromScore() Fib(n)*100 threshold ladder(100,100,200,300,500...), non-decaying carry, uncapped while-loop mint; AXES=[research,capital,development] tracked independently; UTC month boundary via utcMonths()",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-13",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/github-webhook-routes.ts POST /github/webhook verifies HMAC(verifyHmacSha256), put-if-absent key gh-${X-GitHub-Delivery} for idempotency, weight table loaded from config/github-contribution-weights.json (not hardcoded), badgesForKey()",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-14",
+      "verdict": "partial",
+      "evidence": "apps/api/src/contribution-constants.ts defines DIRECT/INDIRECT_CONTRIBUTION_WEIGHTS matching statement values (paper:50,specimen:20,specimen_searched:1) but file's own header comment admits actual call sites (paper-match-routes.ts/individual-routes.ts) are not wired to contributionWeightFor()",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-15",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-agent-batch.ts explicitly cites V3-KRM-15 MinorGapDetector, DEFINED_VIEWPOINT_TAGS=[failure_case,ethics,cost], writes ihl.ppr.cycle_node.v1 node_type=\"research_gap\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-16",
+      "verdict": "partial",
+      "evidence": "apps/api/src/policy.ts resolvePolicyInt/parsePolicyCsv (config/economy-policy.csv append-only) and screen-defs/economy-status.json unified status screen exist, but profile-routes.ts comment states \"GUI 編集フォームは後波\" - no-code GUI editor itself deferred",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-17",
+      "verdict": "partial",
+      "evidence": "apps/api/src/contribution-title.ts implements 貢献軸 auto-grant (maybeGrantContributionTitle) and 他称軸 read-only count (countExternalVotes), but file header explicitly defers 自称(self-display show/hide) to lane-think; external-axis auto-threshold also undefined",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-18",
+      "verdict": "partial",
+      "evidence": "registry.json itself flags this as legacy(旧設計) with dep.why=\"新モデルへ移行済み\"; successor numerics implemented in V3-KRM-01/02/03/05/11/12, but literal \"violation+1/+5 flat + single GUI-editable kernel\" unit was not built as such",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-19",
+      "verdict": "implemented",
+      "evidence": "all economy events (karma_event/coin_event/contribution_event/title/pt_event) written append-only via TruthStore.putEvent (no UPDATE/DELETE); apps/api/src/ledger-audit-routes.ts GET /ledger/audit public double-entry audit report",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-20",
+      "verdict": "implemented",
+      "evidence": "economy-constants.ts SOCIAL_EVAL_LAYER_MAX=3/LAYER4_FIXED_ASSET=4; apps/api/src/social-routes.ts:71,143-144,231-234 enforce layer0-3 eval/vote scope and 403 on layer4 favorite/vote; plaza-routes.ts:950 自然淘汰ランキング aggregation",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-21",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/profile-routes.ts PUBLIC_SAFETY_FIELDS=[trade_record,karma,bad_reviews,public_optin_appeal] always public (canSetPrivate rejects), CONFIGURABLE_FIELDS=[country,language,culture_tags,bio,icon], intl_trust clamped[0,100] separate from karma",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-22",
+      "verdict": "partial",
+      "evidence": "apps/api/src/market-rating-routes.ts implements bidirectional trade rating(tags+reason); apps/api/src/contribution-krm.ts implements krm-feedback and preference_template, but header admits feedback treated as single scalar (x=[1]) because separate decision/creation/style self-improvement models NOT implemented",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-23",
+      "verdict": "missing",
+      "evidence": "repo-wide grep for 共有NGタグ/no_share/野生の天才/golden-ratio(99%/1%) found zero matches outside registry.json itself; culture.ts only implements template versioning/fork, not personal-vs-shared data isolation/golden-ratio mechanism",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-24",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/proposal-routes.ts Rank=official|recommended|popular|beginner|minor, ProposalState=draft|hypothesis|supported|rejected, CONVERGE_MIN_VOTES/SUPPORT_TRUST=0.6/LOW_TRUST=0.4 convergence thresholds, fork auto-sets rank=beginner",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-25",
+      "verdict": "partial",
+      "evidence": "apps/api/src/social-routes.ts OFFICIAL_THRESHOLD_KEY + projectPlatinumVoteTally() computes candidate=true at threshold(1 coin=1 vote, public totals), but comment explicitly states \"実昇格=人間ゲート\" - automatic promotion to official default deliberately deferred; 本人通知 not found",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-28",
+      "verdict": "partial",
+      "evidence": "apps/api/src/observation-routes.ts:1532/1535 (observation_saved+5/with_photo+3) and individual-routes.ts:1241 (individual_created+10) wired; but repo-wide grep for FR-SBX-52/community_vote sandbox linkage found no matches in sandbox-routes.ts",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-29",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/contribution.ts tier()/tierOf() (3-tier from axis thresholds KRM29_PRO_RESEARCHER_THRESHOLD=1000/KRM29_CITIZEN_SCIENTIST_THRESHOLD=100); gov-routes.ts:467-476 routeApproval()/canApprove()",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-32",
+      "verdict": "partial",
+      "evidence": "apps/api/src/ledger-routes.ts grantPlatinum() is server-only append function (coin_event, grant_amount>=0) with no client-facing transfer/sell/exchange route found (implicit non-tradability by omission); explicit reward triggers named in requirement have no distinct wired source",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-KRM-35",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/contribution.ts appendCohortTerminalContribution() (death/eclosion/lost terminal handling, evidenceGrade A/B/C, GRADE_COEF, first-instar exclusion, cohort-completeness ratio, log2-diminishing group increment), explicitly cites RULING-2026-08-01-gen75-hqrulings.md R75-1/2/3",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-01",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:39-85 MARKET_EDGES non-escrow P2P; market-routes.ts:151-208 POST/GET /market/listings",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-02",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:39-99 MARKET_EDGES+isAllowedEdge; market-routes.ts:854-856 409 on illegal transition; reduceMarket pure projection",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-03",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:87-94 stageOf/STAGE1/STAGE2; market-routes.ts:1012-1038 GET board (stage<2 404, non-party 403); auction match skips Stage1",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-04",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:236-261 projectSettlement (receive&&rate=settled, auto_good_due 30日); market-routes.ts:977-982 settleFeeObligation on settle",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-05",
+      "verdict": "partial",
+      "evidence": "market-settlement.ts:152-178 isAuctionSettleDue/highestBid + market-routes.ts:599 settleDueAuctions implement auto-close incl. no-bid delist; but price-tier bid increments (Y10/100/250/500) and auto-rebid/instant-buy not found",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-06",
+      "verdict": "implemented",
+      "evidence": "market-individual-offer-routes.ts full offer-policy(open/closed/research_only)+direct-offer+love_letter",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-07",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:167-188 pickLotteryWinner(CSPRNG injected); market-routes.ts:903-912 1-bid/actor+no-price enforced",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-08",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:214-222 rankPlatinumPriority; market-routes.ts:913-921 min=current-top,1PT刻み enforced",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-09",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:444-481 computePreferenceScore/preferenceHighlights; market-routes.ts:262-290 POST preference-sort",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-10",
+      "verdict": "implemented",
+      "evidence": "economy-constants.ts:31,35 FEE_MAINTENANCE_TAX_RATE=0.05,TAX_GRACE_DAYS=30; market-settlement.ts:258 fee_unpaid_started_at",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-11",
+      "verdict": "implemented",
+      "evidence": "economy-constants.ts:31 comment \"旧8%から引き下げ...ヤフオクのおよそ半額\" FEE_MAINTENANCE_TAX_RATE=0.05",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-12",
+      "verdict": "implemented",
+      "evidence": "packages/truth/src/contracts.ts:66-73 deriveTransferCode matches spec exactly (SHA-256->uint24->Base36->U-prefix, pad4/trunc6)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-13",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:266-307 projectPayment mismatch=partial|over, no auto-refund/auto-apply (matches \"ゆる運用\")",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-15",
+      "verdict": "unverifiable",
+      "evidence": "human-gate/prod-key policy item, sandbox-key state not statically confirmable; also references PAY.JP now retired per today's MKT-62 ruling, adding ambiguity static read can't resolve",
+      "source": "B",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-MKT-16",
+      "verdict": "partial",
+      "evidence": "economy-constants.ts:71 NO_PAY_CANCEL_HOURS=48 implemented (auto-cancel leg only); no 2週間(336h)/manual-close leg found; 第22回裁定(2026-07-31)hybrid not reflected in code",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-17",
+      "verdict": "partial",
+      "evidence": "market-routes.ts:935-947 cancel_request/cancel_approve mutual flow (no karma) + rating exist, but no distinct labeled \"一方的中止\" category, disputes reuse generic gov-routes.ts precedent system (not verified market-specific)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-18",
+      "verdict": "implemented",
+      "evidence": "gov-routes.ts:542-569,601-699 dispute publicize/vote/vote-resolve, GOV_DISPUTE_VOTE_WINDOW_DAYS=7, loser count+5, precedent R2 append",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-19",
+      "verdict": "unverifiable",
+      "evidence": "philosophy/design-principle statement without a single discrete testable artifact; diffused across karma/rating/no-pay mechanisms covered by other IDs",
+      "source": "B",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-MKT-20",
+      "verdict": "implemented",
+      "evidence": "market-routes.ts ship_link kind+projectShippingLink(market-settlement.ts:355-365); no address fields anywhere in schema",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-21",
+      "verdict": "implemented",
+      "evidence": "market-intl-shipping-routes.ts:87-165 by-pair rates, specimen_dried enforced(400 INTL_LIVE_FORBIDDEN), total-price endpoint",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-22",
+      "verdict": "implemented",
+      "evidence": "market-template-routes.ts fork/forked_from lineage, RANKING_WEIGHTS 40/20/20/10/10(rankingScore)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-23",
+      "verdict": "implemented",
+      "evidence": "market-pricing-routes.ts:88-165 buildListingDraft/autoDeriveIndividualObs (individual_ids only->auto-fill+pedigree+photos)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-24",
+      "verdict": "implemented",
+      "evidence": "market-routes.ts:1076-1226 relist-policy+autoRelistIfDelisted, nextRelistPrice(market-settlement.ts:200-212) floor logic",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-25",
+      "verdict": "implemented",
+      "evidence": "market-pricing-routes.ts:27-69 recommendPrice(weighted_mean/median, sources public, embedding_used default false)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-26",
+      "verdict": "partial",
+      "evidence": "market-comment-routes.ts question/answer(seller-only)/praise implemented and always public; but \"質問ボタンでまずRAGが類似質問と回答を提示する2段階\" と「AIは分類のみで評価せず矛盾通知」 not found",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-27",
+      "verdict": "partial",
+      "evidence": "market-rating-routes.ts:45-93 good/normal/bad+lowRatingFlag(bad>=5||karma<=0||star_avg<=2) implemented, but GET /market/listings(market-routes.ts:221-253) has no low-rating exclusion filter wired in",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-28",
+      "verdict": "implemented",
+      "evidence": "market-pii-routes.ts profile PUT/DELETE(tombstone)+grants(owner-only,counterparty-only viewer)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-29",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:395-412 projectOwnershipLineage; payload.external===true excludes carried_observations",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-34",
+      "verdict": "implemented",
+      "evidence": "market-platinum-symbol-routes.ts purchase-right(100PT fixed)+auto-forfeit via KARMA_BAN_THRESHOLD reuse",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-35",
+      "verdict": "implemented",
+      "evidence": "social-routes.ts:210-240 POST /economy/vote layer0-4, 403 LAYER4_NOT_VOTABLE, reason required",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-36",
+      "verdict": "implemented",
+      "evidence": "market-settlement.ts:483-498 computeFees(civilization 3%/maintenance_tax 5%/fork_rebate 10%)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-39",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/policy.ts tradePolicyResolver reads market_governance CSV, latest-timestamp-per-policy_key",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-40",
+      "verdict": "partial",
+      "evidence": "TruthStore append-only R2 architecture is pervasive (putEvent/putEventAt = insert-only), but no explicit double-entry Sigma-debit=Sigma-credit bookkeeping module, no client-supplied idempotency_key UNIQUE mechanism specifically named for market ledger",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-41",
+      "verdict": "implemented",
+      "evidence": "02-design/adr/adr-v3-mkt-41-market-listing-unauth-boundary.md + tests/mkt-41-unauth-boundary.test.ts, deny-by-default PUBLIC_ROUTES confirmed(no market path in it)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-42",
+      "verdict": "missing",
+      "evidence": "market is implemented as fully separate ihl.mkt.* event types + 16 dedicated market-*.ts route files, not as a search \"プリセット\" over a shared掲示板/論文/マーケット entity; no type=listing generic-search-preset architecture found",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-44",
+      "verdict": "implemented",
+      "evidence": "market-product-node-routes.ts ProductNode success/failure-rate projection, affiliate self/operator modes; no ad-related code found anywhere in apps/web or apps/api",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-45",
+      "verdict": "implemented",
+      "evidence": "research-store-routes.ts:1-167 project-linked store, 3 payment methods, inventory-check+auto-decrement, external EC sync degrades gracefully(documented)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-47",
+      "verdict": "partial",
+      "evidence": "fork/lineage_hash/content_hash mechanism exists in plaza-routes.ts(observation extensions, lines ~818-881) but is not wired as Market cards with いいね/プラチナ/フォーク count, no WorldTemplate demo-launch-from-market was found",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-49",
+      "verdict": "implemented",
+      "evidence": "costs-routes.ts:1-91 GET /costs (VPS+R2 running-cost transparency, manual fallback, never 500s)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-52",
+      "verdict": "partial",
+      "evidence": "market-routes.ts:221-253 country+lang filters+cursor pagination implemented (composite fields); \"intlOnly\" dimension of the required country+intlOnly+language composite not found",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-55",
+      "verdict": "partial",
+      "evidence": "docs/legal/market-transparency-clause.md explicitly self-declares code-side projectId wiring = 0件(\"文字通りのprojectId結線は0件\") - doc-only, code side pending per its own text",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-56",
+      "verdict": "missing",
+      "evidence": "no evidence anywhere (apps/web/src, screen-defs/*) of the 3-tab sales-method consolidation(auction/lottery/platinum, template-tab removal), Stage3 GMO inline payment integration, 06soc screen removal, or 06b stepper 3101-only prototype; screen-defs/market-trade.json's 3 tabs are detail/browse/create, a different tab set",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-59",
+      "verdict": "missing",
+      "evidence": "no code or documentation reference found anywhere in the workspace (grep for 商標/trademark/使用許諾 = 0 hits in apps/)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-61",
+      "verdict": "implemented",
+      "evidence": "market-block-routes.ts:50-54 isBlockedPair wired into offer(market-routes.ts:1060-1061,individual-offer:121)/match(885)/bid(900)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-62",
+      "verdict": "partial",
+      "evidence": "bank_transfer P2P core implemented(fee-routes.ts, market-payment-guidance-routes.ts); but PAY.JP Platform charge route(fee-routes.ts:214-310, POST payjp-charge) still live despite 2026-08-07 \"superseded\" retirement ruling - code not yet updated",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-63",
+      "verdict": "implemented",
+      "evidence": "economy-constants.ts FEE_MAINTENANCE_TAX_RATE soft collection via fee_unpaid/tax_pay events, deriveTransferCode reuse(V3-MKT-12); PayPay correctly absent from code(matches\"保留\")",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-64",
+      "verdict": "partial",
+      "evidence": "market-payment-guidance-routes.ts:1-35 static prepaid-card guidance fully implemented, but targets the PAY.JP Platform card option which MKT-62's own text says is retired as of today - now orphaned feature pending removal/reconciliation",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-65",
+      "verdict": "missing",
+      "evidence": "no regulation/terms-of-service text found anywhere prohibiting P2P remittance apps(PayPay etc.) for user-to-user settlement(grep across apps/web and apps/api = 0 hits)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-66",
+      "verdict": "partial",
+      "evidence": "market-reservation-routes.ts implements only the単価固定(unit-price) reservation mode(desired_unit_price/desired_count); ラブレター形式 and 貢献度優先 modes are not integrated into the reservation flow as parallel selectable options",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-MKT-67",
+      "verdict": "implemented",
+      "evidence": "market-platinum-symbol-routes.ts:82 requireRole(\"operator\",\"admin\") restricts platinum-symbol-shop listing creation to operators only",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-01",
+      "verdict": "implemented",
+      "evidence": "obs-capture.schema.json domain enum \"biology|mineral|digital|place|custom\" (packages/schema-types/.../obs-capture.ts:22); navigator (OBS-02) uses domain as first branch",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-02",
+      "verdict": "implemented",
+      "evidence": "observation-routes.ts GET /observation/targets/catalog + POST /observation/targets/search (name/tree/yesno modes, lines 1272-1349); NAVIGATOR_TARGET_QUESTIONS {min:7,max:12} in observation-constants.ts:54",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-03",
+      "verdict": "implemented",
+      "evidence": "subspeciesGateError()/species_confirmed_by:\"user\" const gate (observation-routes.ts:56-61,1500); heuristicSpeciesCandidatesFromVector/suggestSpeciesCandidates only ever suggest, never write species_confirmed_by",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-04",
+      "verdict": "implemented",
+      "evidence": "lookupGbifCanonicalId/lookupWikidataQid + GET /observation/species-candidates/external-ids (observation-routes.ts:982-1024); species_candidate_gbif_id/wikidata_qid stored as candidate-only fields (obs-capture.ts:42-46). progress.md:516 still lists this \"todo\" - likely stale tracker vs actual code",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-05",
+      "verdict": "implemented",
+      "evidence": "TruthStore only exposes putEvent/putEventAt (insert-only, no update/delete route); corrections modeled as new POST /observation/{id}/reanalyze appends (line 1445), never mutate prior analysis",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-06",
+      "verdict": "implemented",
+      "evidence": "VALUE_ORIGINS from CONFIDENCE_ORDER's 9 keys; measurementValueOriginError() gate + MEASUREMENT_VALUE_ORIGIN_REQUIRED enforced in POST /observation/measurements (observation-routes.ts:1240-1243)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-07",
+      "verdict": "implemented",
+      "evidence": "CONFIDENCE_ORDER 上位/中位/下位 mapping (observation-constants.ts:130-140); tagRemeasured() called on every reanalyze (observation-routes.ts:1441)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-08",
+      "verdict": "implemented",
+      "evidence": "components/obs-manifest/run.py run_manifest(): input_manifest.json/output_manifest.json(required)/run_info.json/errors.jsonl, FileExistsError on re-run of same run_id, run_id/schema_version/input_hash/provenance stamped",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-09",
+      "verdict": "implemented",
+      "evidence": "obs-manifest/run.py EmbeddingBackend Protocol, embed_dummy default (sha256->RNG->L2-normalize, no NaN, no torch), _embed_dinov2 explicit later-wave stub (raises), IHL_EMBEDDING_BACKEND env switch (run.py:15-175)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-10",
+      "verdict": "implemented",
+      "evidence": "POST /observation/search 3-rung ladder whitelist->subset->embedding with ladder_stage field, no FAISS/resident index, query self-exclusion (observation-routes.ts:719-892)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-11",
+      "verdict": "implemented",
+      "evidence": "compositeScore() with RERANK_WEIGHTS {embedding:.5,color:.2,size:.2,lineage:.1} sum=1.0 (observation-constants.ts:8-16), aggregateIndividual max/mean_top3/weighted_latest (observation-routes.ts:313-331)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-12",
+      "verdict": "implemented",
+      "evidence": "BOOTH_TYPES=[\"fixed\",\"portable\"], CAPTURE_VIEWS=[\"top\",\"front\",\"back\",\"left\",\"right\"], file_kind raw/jpg, booth_id/booth_type on /observation/upload (observation-routes.ts:478-494, observation-constants.ts:142-147); physical chamber hardware itself is explicit human-gate per requirement text",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-13",
+      "verdict": "implemented",
+      "evidence": "BPCMS_VERSION=\"1.0\" frozen; correctLabViaGreycard() writes separate derived-layer event (ihl.obs.color.v1), raw capture image untouched; deltaE76 fixed to CIE76 (observation-constants.ts:150-190)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-14",
+      "verdict": "partial",
+      "evidence": "Real client-side per-region Lab/HSV extraction exists (color-analysis.ts rgbToLab + region-bounded analyzeRegionColor); but DINOv2/CLIP/ViT embedding vector itself is deterministic sha256-seeded dummy placeholder server-side - real dinov2 explicitly raises \"later wave, OFF by default\" (obs-manifest/run.py:98-104)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-15",
+      "verdict": "implemented",
+      "evidence": "deriveEnvironmentValues() computes dew point/VPD/abs humidity at query time only, never persisted (observation-constants.ts:103-122); csv-import.ts SWITCHBOT_METRIC_HEADERS keeps externally-computed DPT/VPD/AbsHumidity columns as-is per 2026-07-31 ruling",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-16",
+      "verdict": "partial",
+      "evidence": "environment_snapshot vs photo_conditions structurally distinct vocab (renderer.tsx GROUP_LABEL); could not locate server-side rule removing snapshot when photo exists nor explicit ban on server-secret snapshot retrieval - grep for \"OBS-16\"/\"Bモデル\" in apps/api/src = 0 hits despite progress.md:526 marking \"done\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-17",
+      "verdict": "implemented",
+      "evidence": "deriveDeviceBindingsForCapture() auto-derives DeviceBinding/Occupancy from commit body.devices[] (source-routes.ts:439-532), called from writeCaptureFromCommitBody (observation-routes.ts:1541-1546)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-18",
+      "verdict": "implemented",
+      "evidence": "Template forking (forked_from/scope fields), item_hash dictionary + POST /observation/dictionary-extensions (once/always modes, observation-routes.ts:1198-1228), free item/unit addition in MeasurementTableNode (renderer.tsx:1673+)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-19",
+      "verdict": "partial",
+      "evidence": "WorkflowContext exists as HeaderScope (species/lineageId single-select global switch feeding individuals/market/plaza/research/tags - context.ts:114-116); life_stage_candidate carries stage forward. But single-value selection, NOT \"subscription model, min unit=subspecies, multi-subscribe\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-20",
+      "verdict": "implemented",
+      "evidence": "POST /individuals/{id}/qr + GET /qr/:token with prefill chain, placement QR fallback with qr_placement_multi for 2+ occupants (observation-routes.ts:1877-1989, source-routes.ts:534-566); explicit matId/lotId \"research mat\" QR variant not separately found",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-21",
+      "verdict": "implemented",
+      "evidence": "GET /home/summary classifies overdue/near/observing from next_observation_at (home-routes.ts:117-151), stage-based schedule POST derives next_observation_at via SCHEDULE_STAGE_INTERVAL_DAYS (individual-routes.ts:2157-2172, observation-constants.ts:38-51)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-22",
+      "verdict": "implemented",
+      "evidence": "FR-MVP-01~05 scope present (POST captures, POST upload, GET detail view obs-detail.json, sire_id/dam_id parent links, OBS-20 QR); Phase2+ exclusions honored - no real DINOv2, no server cron poll",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-23",
+      "verdict": "implemented",
+      "evidence": "generateThumbnail (EXIF transpose/512px/JPEG, observation-routes.ts:533-596); no bulk raw-download route exists, raw image stored unmodified",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-24",
+      "verdict": "implemented",
+      "evidence": "screen-defs/obs-detail.json: hero image, structured photo_conditions card, measurement-table readonly with value_origin badges (OBS-27 reuse), notes cite similar-individual sidebar via OBS-11 rerank reuse",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-25",
+      "verdict": "implemented",
+      "evidence": "screen-defs obs-register(select)->obs-register-entry(input, navigate only)->obs-register-confirm(single submit -> POST /solid-observation/commit)->obs-register-done; CTA wording is \"保存\" not literally \"登録する\" but single-commit-button requirement holds",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-26",
+      "verdict": "implemented",
+      "evidence": "MeasurementTableNode: item select(+free-add)/number value/unit select(+free-add)/method select, one row per measurement (renderer.tsx:1623-1699 + obs-register-entry.json/obs-templates.json)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-27",
+      "verdict": "implemented",
+      "evidence": "Explicitly cited \"V3-OBS-27 StructuredRow統一\" (renderer.tsx:1633): measurement/photo_condition/environment_snapshot rows share one component distinguished only by tpl.group; auto-sourced rows render locked with origin badge",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-28",
+      "verdict": "partial",
+      "evidence": "Photo-time snapshot capture + threshold alert (CONDITION_LIMITS) + placeholder-spoof rejection implemented (observation-routes.ts:364-398); generic obs-datasources registration/manual execute implemented. But continuous cron polling at 5/10/30/60-min intervals explicitly NOT implemented server-side - comment: \"本番cronの定期実行配線はHQ担当・この艦の対象外\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-29",
+      "verdict": "implemented",
+      "evidence": "Server never stores/derives provider API key anywhere (device-routes.ts:1-14 cites V3-SEC-03/第20回裁定DK-1 explicitly abolishing prior server AES-GCM storage); key supplied per-request only, never persisted; manual CSV Export/Import path exists",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-30",
+      "verdict": "implemented",
+      "evidence": "resolvePollIntervalSec(): 4-tier resolution (individual override > global override > default; cloud providers return null); PUT /devices/poll-interval supports global/individual/multi_select scopes (device-routes.ts:119-224)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-31",
+      "verdict": "implemented",
+      "evidence": "POST /devices rejects individual-binding (bindsIndividual() -> 400), display_name used instead of raw device ID, no server-held API key, POST /devices/:id/test does per-request dummy auto-discovery (device-routes.ts:52-98,235-248)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-32",
+      "verdict": "implemented",
+      "evidence": "csv-import.ts: SwitchBot header auto-preset + generic EnvCsvOverride column_mapping, CSV_MAX_BYTES=16MB, CSV_MAX_ROWS=200,000, append/diff via put-if-absent keyed on (device_id,metric,bucket_ts,source)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-33",
+      "verdict": "implemented",
+      "evidence": "shouldInsertTelemetryBucket(): conditional insert on value-change OR heartbeat-interval-exceeded (TELEMETRY_HEARTBEAT_MS=12x5min=1h), differential-insert applied to Tier B only, excluded for source=\"csv\" bulk import (source-routes.ts:660-779)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-34",
+      "verdict": "implemented",
+      "evidence": "projectEnvironmentForObservation+GET /observation/:capture_id/environment apps/api/src/observation-routes.ts:1661,1680; progress.json V3-OBS-34 status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-38",
+      "verdict": "implemented",
+      "evidence": "MEDIA_CACHE_MAX_AGE_SEC/TELEMETRY_RETENTION_MONTHS/isTelemetryStale apps/api/src/observation-constants.ts:199-210; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-40",
+      "verdict": "implemented",
+      "evidence": "POST /solid-observation/commit (obs-routes.ts:1554) returns backend ULID capture_id read by same-prefix GET /observation/search; progress.json status=done, test obs-w2-wave2.test.ts",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-42",
+      "verdict": "implemented",
+      "evidence": "passesPreferenceFilters/preferenceScore/personalize apps/api/src/observation-routes.ts:199-313 wired into POST /observation/search; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-43",
+      "verdict": "implemented",
+      "evidence": "subspeciesGateError+species/subspecies_confirmed_by (observation-routes.ts:56-238), lineage_id (individual-routes.ts:1212), header scope switch (scope.ts,context.ts); progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-44",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/cusb-routes.ts POST /cusb (6 input_kinds, validate/lineage/semantic), mounted index.ts:360; progress.json status=done tests/cusb.test.ts",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-45",
+      "verdict": "partial",
+      "evidence": "SCALE_PAPER/calibratedRealLengthMm done, corner-detection.ts uses threshold+centroid (not true Canny/Hough) and untested on real camera images (synthetic only); progress.json status=in_progress",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-46",
+      "verdict": "partial",
+      "evidence": "backend POST /observation/annotations append-only AST+ast_sha256 (observation-routes.ts:1374) done; no LabelMe iframe/postMessage integration found anywhere in apps/web/src; progress.json status=in_progress \"LabelMe iframe統合...未着手\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-47",
+      "verdict": "partial",
+      "evidence": "color-analysis.ts implements rgbToHsv/rgbToLab/Otsu bbox size estimate; damage/凹凸 detection explicitly not implemented; progress.json status=in_progress",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-48",
+      "verdict": "implemented",
+      "evidence": "writeAnalysisFromReanalyzeBody+POST /observation/:capture_id/reanalyze+GET reanalysis-manifest apps/api/src/observation-routes.ts:1412-1475; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-50",
+      "verdict": "implemented",
+      "evidence": "Species(taxon-routes.ts SPECIES_TYPE)/Form(MORPH_TYPE)/Individual(individual-routes.ts MASTER_TYPE)/Observation(CAPTURE_TYPE) 4-layer confirmed by regression; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-51",
+      "verdict": "missing",
+      "evidence": "progress.json status=todo explicit \"apps/api/src grep=0件\"; 2次(会話ログ)~4次(画像/動画生成)層 design未確定・未着手, confirmed no code found in apps",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-52",
+      "verdict": "implemented",
+      "evidence": "observation-routes.ts:501 putBlob to media/photo/ (R2, not RDB), 1:N via photo event linked to capture_id; progress.json status=done tests/observation.test.ts",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-53",
+      "verdict": "partial",
+      "evidence": "calibratedRealLengthMm apps/api/src/observation-constants.ts + mm-precision.ts implemented+tested, but depends on OBS-45's unfinished real-camera corner detection; progress.json status=in_progress (same commit as OBS-45)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-54",
+      "verdict": "partial",
+      "evidence": "captureVisibleTo() gate applied at search/detail/image routes (observation-routes.ts:251+,736,1586,1605,1637); unauthenticated public-read not yet reachable and no forgery/plagiarism-beyond-hash detection; progress.json status=in_progress",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-55",
+      "verdict": "partial",
+      "evidence": "lab-environment API (source-routes.ts, projectLabEnvironmentAt) supports extensible room_label/hvac_profile/sensor_position schema, but requirement's actual physical research-room facility (24h ventilation/UPS等) is outside software scope; progress.json's own note calls it \"物理施設要件そのものはソフトウェア対象外\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-56",
+      "verdict": "partial",
+      "evidence": "components/obs-manifest/searchable_capture_set.py implements fixed-column-order Parquet + append-only snapshot + latest.json pointer, but actual join of captures+thumbnail+embedding manifest data explicitly deferred to another wave; progress.json status=done despite this gap",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-57",
+      "verdict": "implemented",
+      "evidence": "heuristicSpeciesCandidatesFromVector+suggestSpeciesCandidates (heuristic->clip->vision degraded chain) apps/api/src/observation-routes.ts:913-972 + GET /observation/:capture_id/species-suggestions; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-58",
+      "verdict": "partial",
+      "evidence": "computeQcFlag apps/api/src/observation-constants.ts:212-247 implements scale+exposure/background proxy only; blur/occlusion pixel analysis explicitly unimplemented (qc_score=0.5 neutral placeholder); progress.json status=done but note documents the gap",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-61",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/freetext-parser.ts parseObservationFreetext + POST /observation/parse-freetext observation-routes.ts:1356; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-62",
+      "verdict": "partial",
+      "evidence": "subspeciesGateError implements userId->species->subspecies-confirm->QR/manual->template->R2-insert-only gate; progress.json explicitly says ローカル解析(OBS-47)/LabelMeテンプレ適用(OBS-46) remain unimplemented so \"10秒End-to-End主張は本レーン単独ではクローズできない\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-63",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/tag-routes.ts TAG_TYPE append-only tag_event + strong/weak/disputed aggregation lines 68-95/195; progress.json status=done tests/tags.test.ts",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-64",
+      "verdict": "partial",
+      "evidence": "POST/GET /observation/datasources + POST /observation/datasources/:id/execute (observation-routes.ts:1796-1859) with headersContainSecret() hard gate; Law node explicitly out of scope, parser-specific parsing not implemented (raw save only), no prod cron/e2e; progress.json status=in_progress",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-65",
+      "verdict": "implemented",
+      "evidence": "sha256 dedup on photo upload apps/api/src/observation-routes.ts:505-511 (priorSameHash excludes own actor_id); progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-66",
+      "verdict": "implemented",
+      "evidence": "GET /observation/activity-log apps/api/src/observation-routes.ts:1172-1196 lists capture/photo/analysis/annotation by actor; progress.json status=done, economy/karma history explicitly out of scope",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-67",
+      "verdict": "implemented",
+      "evidence": "measurements[] structure spans 0 items(light) to N items(20-item heavy) in same capture schema, confirmed by regression test; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-69",
+      "verdict": "partial",
+      "evidence": "GET /individuals/:individual_id/stats-projection apps/api/src/observation-routes.ts:1758 implements projectGrowthRate/pearsonCorrelation/groupMeanByField; survival rate and research-gap screen explicitly out of scope/deferred to Wave4; progress.json status=in_progress",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-70",
+      "verdict": "missing",
+      "evidence": "progress.json status=todo explicit \"★差し戻し:...Docker中間層の実装方法自体が未設計...lane-thinkへ差し戻す\"; cusb-routes.ts only has prep Ed25519 signature-auth scaffolding, no actual Docker mod-extensibility container",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-71",
+      "verdict": "implemented",
+      "evidence": "selectObservationFieldsInRange+GET /individuals/:individual_id/observations/print apps/api/src/observation-routes.ts:1123-1166; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-72",
+      "verdict": "implemented",
+      "evidence": "GET /individuals/:individual_id/lab-environment apps/api/src/observation-routes.ts:1647 + projectLabEnvironmentAt(source-routes.ts); progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-73",
+      "verdict": "implemented",
+      "evidence": "GET /export/facts.csv (structured facts, no image binary) + image-separated layer apps/api/src/individual-routes.ts:1920-1966; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-74",
+      "verdict": "partial",
+      "evidence": "S1 received_at + S2 index/receipt + S3 daily chain (index-entry.ts:22-23,97-101 claimed_at/received_at fields; chain-routes.ts computeDayRoot/GET /chain/root) done, but claimed_at always null in practice - no envelope producer sets it (comment: \"署名機構が未実装\")",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OBS-75",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/cadence-routes.ts POST /observation/cadence + deriveCadenceGaps, mounted via obsRoutes.route(\"/\",cadenceRoutes) observation-routes.ts:43; chain-routes.ts computeDailyGapSummary surfaced in GET /chain/root; progress.json status=done",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-OTH-01",
+      "verdict": "unverifiable",
+      "evidence": "コア思想の宣言文(10年コスト最小/フォーク文化)であり、単体のコード実装物として検証できる性質のものではない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-OTH-02",
+      "verdict": "unverifiable",
+      "evidence": "OSS/フォーク文化の思想表明。1コンポーネント=1ディレクトリ(manifest/run.py/tests/golden/README)規約はlibs/datalake配下に部分的な類似構成(manifest.py)はあるが、要件が指す全体規約としての遵守は本調査では判定できない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-OTH-03",
+      "verdict": "unverifiable",
+      "evidence": "リポジトリ自己完結方針の確認は市場/掲示板機能のimport依存を civilization-os から辿る必要があり、Grepベースの本調査の範囲を超える",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-OTH-05",
+      "verdict": "unverifiable",
+      "evidence": "スキーマ設計の汎用性(自由キー構造)は設計方針の記述であり、静的grepで実装有無を機械的に判定しにくい",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-OTH-06",
+      "verdict": "implemented",
+      "evidence": "ヘラクレス/Herculesのブランディング文言をweb/src配下8ファイルで確認(layout.tsx, manifest.ts等)",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "manifest.ts:12(name:'IT Hercules Laboratory')、layout.tsx:5-8(description記載)でPWAマニフェスト・meta descriptionに英語表記のHerculesは存在。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-OTH-07",
+      "verdict": "unverifiable",
+      "evidence": "運営思想(少人数×物量)の宣言文であり、単体のコード実装物として検証できる性質のものではない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-OTH-10",
+      "verdict": "unverifiable",
+      "evidence": "valuePreset/valueCheckSearchBoost等の具体語での実装が0件。検索スコア順序ロジックの実装有無は個別ファイルの精読が必要で本調査のGrep範囲では確認できなかった",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-OTH-12",
+      "verdict": "implemented",
+      "evidence": "apps/api/src配下でMath.random()の使用が0件(非決定的処理を排除している傍証)。ただしフロントエンド側は未走査",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "partial",
+        "evidence": "apps/api/src配下でMath.random()使用0件を確認(サーバ側はクリーン)。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-OTH-27",
+      "verdict": "unverifiable",
+      "evidence": "根本ビジョンの宣言文であり、単体のコード実装物として検証できる性質のものではない",
+      "source": "A",
+      "method": null,
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-PPR-01",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:35-114 matchConditions/hintsForMissing; paper-match-routes.ts:126-158 POST /research/paper-match (llm_advice default off); screen-defs/paper-match.json wired",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-02",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:76-90 conditionVector() (key+value+unit+missing flag)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-03",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-constants.ts:9-20 PAPER_SECTIONS/labels; paper-match.ts:150-154 computeSectionsCompleteness; research-content-routes.ts:109/230-245 LATEX_FORBIDDEN write-side validation",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-04",
+      "verdict": "implemented",
+      "evidence": "content.schema.json has no draft/status field (append-only by construction); research-content-routes.ts:210-293 POST /research/content is straight INSERT-ONLY append; screen-defs/paper-match.json 1-click hypothesis append button",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-05",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:486-522 reviewPipeline() (stages 1-5 deterministic); paper-match-routes.ts:392-399 POST /research/review; stage6 kept separate as llm_advice",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-06",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:596-618 gapAnalysis(); paper-match-routes.ts:162-174 POST /research/gap (cross-species, neighbors unfiltered)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-07",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:303-380 quadrantAnalysis/derivePropositions/hypothesisDraftsForGaps; paper-match-routes.ts:183-205 POST /research/quadrant",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-08",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:620-639 buildCitationEdges (tombstone); paper-match-routes.ts:436-451 GET .../citation-graph; research-content-routes.ts:435-476 cited-by-posts/citation-count (INSERT ONLY)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-09",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/project-routes.ts:190-260 reanalysisManifest/bundle (run_id, input_hash, scaleTemplateId, value_origin); GET /research/content/:id/bundle",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-10",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/observation-constants.ts:149-171 BPCMS_VERSION=\"1.0\" frozen, CIE76 fixed formula; observation-routes.ts:1458-1470 GET reanalysis-manifest lists every analysis per capture, never overwritten",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-11",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-content-routes.ts:826-884 buildPublicDataset()/GET /research/dataset (public_user_id anonymization reuse, CC0, engine_version filter)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-12",
+      "verdict": "partial",
+      "evidence": "client-side Lab/BPCMS compute (color-analysis.ts, ROI) and CSV/JSON export via duckdb-wasm (ResearchPanel.tsx, result-export.ts) exist; but no \"Recompute All: 1000枚一括\" batch re-analysis trigger found anywhere (grep Recompute/一括再解析 = 0 relevant hits)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-13",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-canonical-routes.ts full file: mapping_event append-only, internalIndex(), categoryTree(); research-constants.ts:38-49 DOMAIN_API_MAP covers ICD-11/ATC/ClinicalTrials.gov, HuggingFace/PapersWithCode, Materials Project/PubChem, NOAA/Copernicus, Wikidata/GBIF/NCBI",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-14",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:425-463 computeLivingPaperGraph(); paper-match-routes.ts:228-245 POST /research/graph/update, :253-323 fork-template, :327-333 GET update-history",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-15",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:534-571 computeConfidence() (exact f_data/f_consistency/f_votes formula+weights), canTransitionHypothesis(), promoteRepresentativeHypothesis(); paper-match-routes.ts:403-430",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-16",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/project-routes.ts:61-176(projectHub), :117-180(bestVersion), :322-346(Ver branch); screen-defs/project-hub.json (lot QR node bound to data.project.project.lots.0.qr_url)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-17",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-agent-batch.ts full file: generateTaskNodes/generateNewspaper/taskTree, NEWSPAPER_CRON_UTC (JST 06:00); screen-defs/research-newspaper.json UI (cron itself human-gated per code comment, code path complete)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-18",
+      "verdict": "partial",
+      "evidence": "apps/api/src/project-routes.ts:356-404 POST /research/citations grants contribution points on data-provision (implemented); but \"グラフへの自動追加・相関係数の自動算出\" - no correlation-coefficient computation found anywhere (grep correlation/相関係数 = only 1 unrelated hit)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-19",
+      "verdict": "unverifiable",
+      "evidence": "stated editorial/policy stance (third-party experience reviews never adopted as content + open-access position), not a discrete feature; static code search found no review-type content schema present or explicitly rejected, so no artifact to confirm or refute",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-20",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/paper-match.ts:175-239 summarizeUnifiedMeasurements/autoGeneratePaperDraft(); paper-match-routes.ts:210-217 POST /research/auto-draft; fork-template route reused",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-21",
+      "verdict": "missing",
+      "evidence": "searched for 4群/理想環境/低温/狭小/同腹個体/未完レポート - no matches beyond one unrelated test-file token collision; no code/schema represents annual 4-group comparison design or \"未完レポート\" no-conclusion annual report artifact",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-23",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-content-routes.ts:70-80 PAPER_CITATION_TYPES enum (observation/paper/url/book) enforced at write; :360-406 renderContentHtml()/GET .../export?format=html (PDF via browser print reuse, documented as deliberate reuse-first choice)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-24",
+      "verdict": "partial",
+      "evidence": "apps/api/src/paper-match-routes.ts:52-65,335-379 generic ppr-cycle-node backend covers review/hypothesis/replication_proposal/replication_result/research_gap/comment/correction_note/knowledge_evidence (append-only); but no dedicated frontend \"Debate\" comparison screen or Evidence multi-view UI found in screen-defs/ (grep cycle-node/Debate/knowledge_evidence = 0 hits)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-25",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-content-routes.ts:482-487 comment + structural absence of update/delete routes; paper-match-routes.ts correction_note node_type in CYCLE_NODE_TYPES enforces \"correction post, not edit\" doctrine structurally (store.ts has no update/delete methods)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-PPR-30",
+      "verdict": "partial",
+      "evidence": "apps/api/src/paper-match.ts:247-271 autoFillDescriptor() correctly implemented and reuses matchConditions; BUT screen-defs/data-descriptor.json's own notes document a wiring bug: the form POSTs to /api/v1/research/content (plain create), not /api/v1/research/paper-match (the route that calls autoFillDescriptor) - claims preview table always empty, explicitly \"スコープ外のため実装はせず\"",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-01",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-02",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "collector-routes.ts:26 crypto.subtle.importKey(...,{name:\"Ed25519\"},...,[\"verify\"]) / :64-65 crypto.subtle.verify(\"Ed25519\",...) — Ed25519署名検証を実装確認",
+        "source": "W1-09",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-SEC-03",
+      "verdict": "implemented",
+      "evidence": "term一致3/4件。代表ファイル: api\\src\\csv-import.ts, api\\src\\cusb-routes.ts, api\\src\\device-routes.ts, api\\src\\env-import-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "device-routes.ts:4-8『サーバは鍵を暗号化有無にかかわらず一切保持しない』と明記。同64-67,229-245でヘッダ/body経由の都度受け渡しのみ。csv-import.ts:14-128でCSVインポート実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-SEC-04",
+      "verdict": "partial",
+      "evidence": "term一致2/6件のみ(部分一致)。代表ファイル: api\\src\\contribution.ts, api\\src\\costs-routes.ts, api\\src\\cusb-routes.ts, api\\src\\env.ts",
+      "source": "C",
+      "method": "auto-weak",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-05",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-SEC-06",
+      "verdict": "implemented",
+      "evidence": "term一致4/6件。代表ファイル: api\\src\\fee-routes.ts, api\\src\\gmo-connector.ts, api\\src\\index.ts, api\\src\\key-bundle-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "fee-routes.ts:214-260でPOST /market/payjp/tenant、口座情報を永続化しない旨明記(224行)。payjp-connector.ts:1-23実装。SETTLEMENT_ACCRUAL_RATE=0.05(economy-constants.ts:17)。deriveTransferCode(truth/contracts.ts:61-66)。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-SEC-07",
+      "verdict": "partial",
+      "evidence": "term一致2/5件のみ(部分一致)。代表ファイル: api\\src\\account.ts, api\\src\\ai-digest-routes.ts, api\\src\\auth-routes.ts, api\\src\\batch-commit-routes.ts",
+      "source": "C",
+      "method": "auto-weak",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-08",
+      "verdict": "implemented",
+      "evidence": "term一致4/4件。代表ファイル: api\\src\\chain-routes.ts, api\\src\\cross-search-routes.ts, api\\src\\cusb-routes.ts, api\\src\\github-webhook-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-10",
+      "verdict": "partial",
+      "evidence": "apps/api/src/sandbox-routes.ts, sandbox-realm-routes.tsでサンドボックス機構は存在するが、ユーザーID連番再割り当て+ローカル暗号化ストレージの具体実装は未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-11",
+      "verdict": "partial",
+      "evidence": "apps/api/src/market-intl-shipping-routes.ts, market-settlement.tsに配送/住所関連ロジックは存在するが、郵便局留めヒント(post-office-hold-hint)固有機能はgrep 0件",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-12",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-13",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-SEC-14",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/auth-routes.ts:63-127 POST /magic-linkでcheckRateLimit()呼び出しを確認(具体的な20回/60秒等の閾値定数までは未読了)",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-15",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "missing",
+        "evidence": "apps/web/src/middleware.ts:76-79 は/s/loginへリダイレクトのみでnext=パラメータの読取・検証コードが存在しない(grep 0件)。open-redirectガード自体が未実装",
+        "source": "W1-09",
+        "reverified": true,
+        "raw_verdict": "missing"
+      }
+    },
+    {
+      "id": "V3-SEC-16",
+      "verdict": "implemented",
+      "evidence": "apps/web/src/middleware.test.ts の存在を確認(未ログイン時にmiddlewareが実際に弾かれるかのe2e/testが用意されている)",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-17",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": "policy.ts:85,95-96にIHL_AUTH_REQUIRED環境変数チェックは実在するが、画像取得routeへの実際の適用箇所までは時間内に追跡できず(なお unverifiable)",
+        "source": "W1-09",
+        "reverified": true,
+        "raw_verdict": "unverifiable"
+      }
+    },
+    {
+      "id": "V3-SEC-19",
+      "verdict": "implemented",
+      "evidence": "term一致4/4件。代表ファイル: api\\src\\policy.ts, web\\public\\assets\\theme.js, web\\public\\finder\\lib\\tabulator.min.js, web\\src\\lib\\screendefs.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": "policy.ts:84-101にcheckProdAuthEnv()関数がIHL_AUTH_REQUIRED/IHL_AUTH_BYPASS/IHL_WEB_AUTH_BYPASSを読む実装はあるが、同コメント(85-88)で『現行の実運用ゲート(deny-by-default方式)はこれらの変数名を実際には見ていない(該当変数名の参照はコード中ゼロ件・2026-07-31実測)』と自己申告。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "unverifiable"
+      }
+    },
+    {
+      "id": "V3-SEC-20",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\consent-routes.ts, api\\src\\index.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "middleware.ts:27でPUBLIC_PATHSに/s/terms(未認証全文閲覧可)。renderer.tsx:668で未同意時送信disabled。consent-routes.ts:77-88でPOST /onboarding/agree、両方未同意なら400 MUST_AGREE_TO_TERMS。同91-115でconsent-record 2件をTruthStoreへappend-only永続化。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-SEC-21",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-22",
+      "verdict": "implemented",
+      "evidence": "term一致4/5件。代表ファイル: api\\src\\consent-routes.ts, api\\src\\policy.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-23",
+      "verdict": "unverifiable",
+      "evidence": "抽出語4件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-24",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": "human-review/HUMAN-02-LEGALはconsent-routes.ts等12ファイルにヒットするが、要件は「AIが利用規約を自律変更しない」という運用制約でありコードで強制する類ではない(なお unverifiable・型:法務レビュー要)",
+        "source": "W1-09",
+        "reverified": true,
+        "raw_verdict": "unverifiable"
+      }
+    },
+    {
+      "id": "V3-SEC-25",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-26",
+      "verdict": "unverifiable",
+      "evidence": "ToS/Privacy文言の記載内容の適否は法務文書レビューが必要で、静的コード調査の範囲外",
+      "source": "C",
+      "method": "manual",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-SEC-27",
+      "verdict": "unverifiable",
+      "evidence": "抽出語4件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-29",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-30",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\mail.ts, api\\src\\source-routes.ts, web\\e2e\\obs-qr-resume-multi.spec.ts, web\\e2e\\obs-r4-qr-link.spec.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "リポジトリルートLICENSEはApache2.0全文が存在。2026-07-31第22回裁定で著作権者名『IT Hercules Laboratory』確定は文書上明記。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-SEC-31",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件すべてgrep 0件だが、語自体が複合語(スラッシュ結合等)で誤抽出の可能性があり手動未確認",
+      "source": "C",
+      "method": "auto-none-unchecked",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "リポジトリ直下: MANIFESTO.md/CONTRIBUTING.md/CODE_OF_CONDUCT.md/README.md は実在(4/5)。LICENSEのみ直下に無い(node_modules配下のサードパーティ分のみ)",
+        "source": "W1-09",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-SEC-34",
+      "verdict": "partial",
+      "evidence": "github-issues-connector.ts/plaza-github-routes.tsでGitHub連携は実装。OAuth許可レイヤー・Notion/GoogleDrive/YouTube connector・scraping/robots.txt禁止の強制はgrep 0件(gmo-connector.ts:95のコメントも『本番OAuth/OIDCは未実装、ゲート通過後に差し込む』と自己申告)",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-35",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-37",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-39",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-41",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": "preference.json:6にValueCheckの設計メモ言及はあるが、JWTと組み合わせた検索ブーストの実装コード(route側)は未特定(なお unverifiable)",
+        "source": "W1-09",
+        "reverified": true,
+        "raw_verdict": "unverifiable"
+      }
+    },
+    {
+      "id": "V3-SEC-42",
+      "verdict": "implemented",
+      "evidence": "term一致2/4件。代表ファイル: api\\src\\chain-routes.ts, api\\src\\cusb-routes.ts, api\\src\\gmo-webhook.ts, api\\src\\hmac.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "observation-routes.ts:514で元画像sha256Hex。同1425-1427でROIマスク(AST)sha256(『V3-SEC-42』とコード内コメントで明記)。同1466-1468で解析結果JSON sha256。chain-routes.ts:1-11,64-92でworldHash Merkle的root実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-SEC-43",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-44",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\collector-routes.ts, api\\src\\cusb-routes.ts, api\\src\\env.ts, api\\src\\hmac-qr.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-45",
+      "verdict": "implemented",
+      "evidence": "term一致6/10件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\authz.ts, api\\src\\batch.ts, api\\src\\contribution-krm.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "sandbox-routes.ts:50-96にWhitelist照合+production書込拒否+network拒否+CPU/メモリ宣言値検証の事前ゲート実装。400応答も実装。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-SEC-46",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-SEC-47",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-48",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\ai-kernel.ts, api\\src\\costs-routes.ts, api\\src\\env.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-50",
+      "verdict": "missing",
+      "evidence": "protected_assets.json/A110/NGアセット設定画面の実装がgrep 0件",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-52",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-SEC-56",
+      "verdict": "partial",
+      "evidence": "requireRole()使用ファイルをgrepすると6件(sandbox-realm-routes.ts/gov-routes.ts/authz.ts/market-platinum-symbol-routes.ts/market-flag-routes.ts/ai-digest-routes.ts)のみで、market-routes.ts(主要出品ルート)は含まれない=要件文自身が『既知セキュリティギャップ』と明記した内容と実測が一致",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-57",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\economy-constants.ts, api\\src\\gmo-routes.ts, api\\src\\index.ts, api\\src\\key-bundle-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-58",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-59",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-SEC-60",
+      "verdict": "implemented",
+      "evidence": "term一致3/5件。代表ファイル: api\\src\\chain-routes.ts, api\\src\\contribution.ts, api\\src\\observation-constants.ts, api\\src\\observation-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-01",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-02",
+      "verdict": "implemented",
+      "evidence": "term一致2/4件。代表ファイル: api\\src\\account.ts, web\\e2e\\fork-ab-shots.spec.ts, web\\e2e\\individual-detail.spec.ts, web\\e2e\\obs-r4-qr-link.spec.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "navigation.json:359コメントに過去の手動監査(3クリック実測)の記録が残る。個別導線の改善は実在。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-UIX-03",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-04",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-05",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-06",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": "Primary CTA/primaryCta/primary_cta のgrep 0件。ただしscreendefs-data各ファイルのボタン数を1件ずつ数える必要がありコード不在=未実装と断定できない(なお unverifiable・型:デザイン原則で単体アーティファクト無し)",
+        "source": "W1-09",
+        "reverified": true,
+        "raw_verdict": "unverifiable"
+      }
+    },
+    {
+      "id": "V3-UIX-08",
+      "verdict": "implemented",
+      "evidence": "term一致2/4件。代表ファイル: api\\src\\device-routes.ts, api\\src\\gmo-connector.ts, api\\src\\home-routes.ts, api\\src\\index.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "fork/builder.tsx:1-20 Puck(既製OSS)採用、fork中心。puck.config.tsx:1-24,36-53でパレットは既存部品のみ、新規API/ルート生成機能なし。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-UIX-09",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\contribution-title.ts, api\\src\\contribution.ts, api\\src\\costs-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-10",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-11",
+      "verdict": "unverifiable",
+      "evidence": "抽出語3件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-12",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\collector-routes.ts, api\\src\\cusb-routes.ts, api\\src\\env.ts, api\\src\\index.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-14",
+      "verdict": "unverifiable",
+      "evidence": "抽出語3件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-16",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\home-routes.ts, api\\src\\settings-routes.ts, api\\src\\theme-routes.ts, web\\e2e\\c8-showcase-screens.spec.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "theme-routes.ts:12-13,23-24 built-in light/dark 2パック。同37-64 fork系譜投影。--civ-*トークンが13ファイルで横断使用。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-UIX-17",
+      "verdict": "implemented",
+      "evidence": "term一致3/5件。代表ファイル: api\\src\\consent-routes.ts, api\\src\\contribution-routes.ts, api\\src\\contribution.ts, api\\src\\device-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "renderer.tsx(単一Renderer)、screendefs.ts(JSON読込)、app/s/[screen]/page.tsx(単一動的ルート=ページ追加=JSON追加)、fork/builder.tsx:2でPuck採用によるUIノード保存/fork。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-UIX-18",
+      "verdict": "implemented",
+      "evidence": "term一致5/6件。代表ファイル: api\\src\\ai-digest-routes.ts, api\\src\\auth-routes.ts, api\\src\\consent-routes.ts, api\\src\\contribution-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "register-all.tsで9ゾーンがregisterNode()により登録。node-view.tsx:13,31-49でlookupNode()による汎用ディスパッチ。ScreenDef JSON(screen-defs/*.json)が唯一の正本として画面組立を確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-UIX-19",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-21",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-22",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\auth-routes.ts, api\\src\\batch-commit-routes.ts, api\\src\\clutch-routes.ts, api\\src\\collector-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-23",
+      "verdict": "implemented",
+      "evidence": "term一致2/2件。代表ファイル: api\\src\\csv-import.ts, api\\src\\match-routes.ts, web\\public\\finder\\lib\\tabulator.min.js, web\\screendefs-data\\preference.json",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-24",
+      "verdict": "implemented",
+      "evidence": "apps/web/src/renderer/zones/ind-screens/pref-pairwise.tsxにサンプルデータ表示マーカーを確認(-iグレップでヒット)",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-25",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\chain-routes.ts, api\\src\\gov-routes.ts, api\\src\\home-routes.ts, api\\src\\observation-constants.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "implemented",
+        "evidence": "home-routes.ts:1-53 GET /home/summary(純投影・審理本体は別画面へ委譲)。renderer/zones/home.tsx:1-58でtoday_lines/judicial_inbox配線を確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "implemented"
+      }
+    },
+    {
+      "id": "V3-UIX-26",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-27",
+      "verdict": "implemented",
+      "evidence": "term一致3/3件。代表ファイル: api\\src\\batch-commit-routes.ts, api\\src\\batch.ts, api\\src\\cadence-routes.ts, api\\src\\chain-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "home-routes.ts:96-97 HOME_TODAY_LINES_MAX=3。同104-115 todayLineViewでdays算出・deep_link生成。home.tsx:216-228でtoday_lines描画とdeep_linkボタンを確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-UIX-28",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-29",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-31",
+      "verdict": "unverifiable",
+      "evidence": "dead-end/breadcrumb導線の有無は全画面のUI遷移を目視トレースしないと判定できず、静的grep調査の範囲を超える(遷移クリック全数検証は別艦impl-transitions-verifyの担当領域)",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-32",
+      "verdict": "unverifiable",
+      "evidence": "抽出語3件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-33",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-35",
+      "verdict": "unverifiable",
+      "evidence": "デザイン制作プロセスの方針(モック→UIビルダー部品への変換手順)であり成果物の質を静的grepで判定できない",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-36",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-37",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-38",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-39",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-40",
+      "verdict": "partial",
+      "evidence": "apps/web/src/renderer/zones/search.tsx + graph-view/GraphView.tsxで検索/グラフ表示は実装。色検索(スポイト/px指定)の実装はgrep 0件",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-42",
+      "verdict": "partial",
+      "evidence": "apps/web/screendefs-data/notification-settings.jsonの存在を確認。15種カテゴリ別ON/OFF・DND時間帯(22:00-07:00)の内容詳細は未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-43",
+      "verdict": "implemented",
+      "evidence": "term一致4/4件。代表ファイル: api\\src\\ai-kernel.ts, api\\src\\batch-commit-routes.ts, api\\src\\batch.ts, api\\src\\cadence-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "settings-routes.ts:176-190で/me/settingsにlocale・ui_exposure・push設定集約(V3-UIX-43とコード内コメントで明記)。device-routes.tsに観測機器連携基盤。truth-backup-connector.tsにバックアップアダプタ。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-UIX-44",
+      "verdict": "partial",
+      "evidence": "apps/web/src/lib/theme.ts, apps/api/src/theme-routes.tsの存在を確認。light/dark/アクセントカラー等の全項目はスキーマ未確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-45",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-46",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\collector-routes.ts, api\\src\\cusb-routes.ts, api\\src\\env.ts, api\\src\\index.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-47",
+      "verdict": "missing",
+      "evidence": "要件文自身が『現状は/dev/world-routingのみでギャップ』と明記。3クリック以内到達可能な一般ユーザー向けUI選択画面は要件文中で未実装と自己申告",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-50",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-51",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-53",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-55",
+      "verdict": "partial",
+      "evidence": "term一致2/5件のみ(部分一致)。代表ファイル: api\\src\\match-routes.ts, api\\src\\truth-backup-connector.ts, web\\public\\finder\\lib\\3d-force-graph.min.js, web\\src\\renderer\\renderer.test.tsx",
+      "source": "C",
+      "method": "auto-weak",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-58",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\consent-routes.ts, api\\src\\cusb-routes.ts, api\\src\\index.ts, api\\src\\individual-routes.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-59",
+      "verdict": "implemented",
+      "evidence": "term一致4/4件。代表ファイル: api\\src\\plaza-file-board-registry.ts, web\\e2e-transitions-tmp\\transitions.spec.ts, web\\screendefs-data\\ai-profile-settings.json, web\\screendefs-data\\ai-sessions.json",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "app-shell.tsx:362-500 PageInfoPanelでpurpose/how_to/faq表示+『この画面について話す』からchannel自動刻印投稿(434行)。50画面でtalk_channel:true確認。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-UIX-61",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-67",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-68",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-71",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-75",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-76",
+      "verdict": "implemented",
+      "evidence": "term一致2/3件。代表ファイル: api\\src\\auth-routes.ts, api\\src\\authz.ts, api\\src\\cusb-routes.ts, api\\src\\economy-constants.ts",
+      "source": "C",
+      "method": "auto-strong",
+      "revision": {
+        "verdict": "partial",
+        "evidence": "fork市場が実データで稼働(fork-zone.tsx:68,179,246)。レイヤー4(固定資産)は投票・fork不可制約も実装済み(social-routes.ts:231-236)。",
+        "source": "W1-10",
+        "reverified": true,
+        "raw_verdict": "partial"
+      }
+    },
+    {
+      "id": "V3-UIX-78",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-79",
+      "verdict": "unverifiable",
+      "evidence": "抽出語1件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-80",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-82",
+      "verdict": "implemented",
+      "evidence": "apps/web/src/renderer/graph-view/GraphView.tsx, GraphView.test.tsx, 3d-force-graph.d.tsの存在を確認",
+      "source": "C",
+      "method": "manual",
+      "revision": null
+    },
+    {
+      "id": "V3-UIX-83",
+      "verdict": "unverifiable",
+      "evidence": "抽出語2件中1件のみ単発一致(単一の一般語一致は誤検知の可能性が高く部分実装の根拠にならない。手動未確認)",
+      "source": "C",
+      "method": "auto-single-hit",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-UIX-84",
+      "verdict": "unverifiable",
+      "evidence": "統治/方針記述で固有識別子が無く、時間内に個別コードレビューを実施できなかった(自動term抽出=該当語なし)",
+      "source": "C",
+      "method": "auto-no_terms",
+      "revision": {
+        "verdict": "unverifiable",
+        "evidence": null,
+        "source": "W1-09",
+        "reverified": false,
+        "raw_verdict": "なお unverifiable(元データの理由を採用・個別再検証未実施)"
+      }
+    },
+    {
+      "id": "V3-VID-01",
+      "verdict": "missing",
+      "evidence": "no video_generator screen/pipeline anywhere in apps/web|apps/api; progress.md:593 status=todo (scope=best-effort)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-02",
+      "verdict": "missing",
+      "evidence": "no step-gated 台本->音声->画像->合成 pipeline found; progress.md:594 status=todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-03",
+      "verdict": "missing",
+      "evidence": "no CLIP/embedding image-reuse or StyleProfile/LoRA logic in apps (CLIP hits only in observation-routes.ts OBS-57 species-candidate chain, unrelated); progress.md:595 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-07",
+      "verdict": "missing",
+      "evidence": "no daily short-video auto-post/n8n stack found; progress.md:596 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-08",
+      "verdict": "missing",
+      "evidence": "no multi-platform simultaneous video distribution logic found; progress.md:597 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-09",
+      "verdict": "missing",
+      "evidence": "no CTA-text-ban enforcement tied to video output found; progress.md:598 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-11",
+      "verdict": "missing",
+      "evidence": "no Twin-discontinuation/archive markers (\"Twin\",\"design/archive\",\"410\") found anywhere in apps/; progress.md:599 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-12",
+      "verdict": "missing",
+      "evidence": "no shooting-chamber capture spec/validation code found; progress.md:600 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-13",
+      "verdict": "missing",
+      "evidence": "no series/episode-split/playlist logic found; progress.md:601 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-15",
+      "verdict": "missing",
+      "evidence": "no SoulProfile system-prompt injection code found; progress.md:602 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-16",
+      "verdict": "missing",
+      "evidence": "no VideoPlatformMetrics ingestion found; progress.md:603 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-17",
+      "verdict": "missing",
+      "evidence": "no article->script auto-generation or videoUrl embed field found in apps/web/src or apps/api/src; progress.md:604 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-18",
+      "verdict": "missing",
+      "evidence": "no n8n/video_pipeline/voice_pipeline/VOICEVOX/ffmpeg integration found anywhere in apps/; progress.md:605 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-19",
+      "verdict": "missing",
+      "evidence": "no local-LLM ingest->script pipeline found (local-embedding.ts exists for unrelated embedding use, no video-script tie-in); progress.md:606 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-23",
+      "verdict": "missing",
+      "evidence": "no per-series short-intro/subtitle-pairing enforcement found; progress.md:607 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-27",
+      "verdict": "missing",
+      "evidence": "no batch-generation-ban / per-cut function constraint found in code; progress.md:608 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-28",
+      "verdict": "missing",
+      "evidence": "no video.model.json/videoEvaluator/video_history/ScriptPatch RAG script engine found; progress.md:609 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-29",
+      "verdict": "missing",
+      "evidence": "no video-critic-gate content-priority or 7-second-static-check logic found; progress.md:610 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-31",
+      "verdict": "missing",
+      "evidence": "no script-standard critic-gate check found; progress.md:611 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-32",
+      "verdict": "missing",
+      "evidence": "no CTA-phrase machine-detection gate found; progress.md:612 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-ROUTE-A",
+      "verdict": "missing",
+      "evidence": "no R2 latest.json/routing-table URL-permanence logic found; progress.md:613 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-ROUTE-B",
+      "verdict": "missing",
+      "evidence": "no video_routing/{screenId}.json or per-screen manual-video link mechanism found; progress.md:614 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-ROUTE-C",
+      "verdict": "missing",
+      "evidence": "no VideoRoutingRule/soul_alignment routing-decision logic or soul_profile consent-gate found; progress.md:615 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-VID-STORE",
+      "verdict": "missing",
+      "evidence": "no video-metadata-only storage constraint (external URL + routing table, no blob) implementation found; progress.md:616 todo",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-01",
+      "verdict": "implemented",
+      "evidence": "docs/knowledge/index.md + log.md + tools/knowledge_ingest.py implement persistent wiki layer; progress.json V3-WIK-01 status=done commit 33b8a6d",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-02",
+      "verdict": "implemented",
+      "evidence": "docs/knowledge/CLAUDE.md documents OKF v0.1 frontmatter/kebab-case/relative-link convention shared with D:\\notes (type-C doc requirement, no app code needed)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-03",
+      "verdict": "implemented",
+      "evidence": "tools/knowledge_search.py (index.md-only scoring, opens no files) + components/wiki-ingest/backends.py DummyBackend (sha256 bag-of-tokens, no torch/onnxruntime); tests tools/tests/test_knowledge_search.py, components/wiki-ingest/tests/test_dummy_backend.py",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-04",
+      "verdict": "implemented",
+      "evidence": "tools/knowledge_ingest.py (deterministic replay CLI, no model calls); commit b902af9",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-05",
+      "verdict": "implemented",
+      "evidence": "docs/knowledge/CLAUDE.md documents index.md update-on-create/rename rule + sub-index split-at-50k-tokens plan (type-C doc; split itself not yet triggered but pre-designed as required)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-06",
+      "verdict": "implemented",
+      "evidence": "docs/knowledge/CLAUDE.md operating rule + apps/api/src/plaza-routes.ts citeTargetExists (used by knowledge-lint.ts broken_link check) enforce citation existence",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-07",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/knowledge-lint.ts (runMonthlyLint: orphan/broken_link/contradiction/stale) mounted via knowledge-lint-routes.ts POST /wiki/lint, index.ts:441",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-08",
+      "verdict": "missing",
+      "evidence": "Searched whole workspace for self-verification/benchmark code (wiki経由 vs ベタ読み比較); none found. progress.json explicitly status=\"todo\" with note \"実測を伴わない実装は捏造になると判断し見送り\" - deliberately not implemented",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-09",
+      "verdict": "implemented",
+      "evidence": "docs/knowledge/CLAUDE.md:46 states Truth data (R2/captures/events) is append-only and only stable knowledge is distilled to wiki; boundary realized structurally by apps/api (Truth) vs docs/knowledge (wiki) split",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-13",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-content-routes.ts:121 (fulltext/tag/user/node 4-pillar index) and line 787 POST /research/search (RAG_PRIORITY-ordered unified search)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-14",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-content-routes.ts:87 aggregateContentTags + research-constants.ts RAG_PRIORITY (system->ai->user->...); tests/research-content.test.ts",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-16",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-content-routes.ts:2 (ihl.research.content.v1 + content_type enum article/blog/paper/chat_log, INSERT-ONLY)",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-18",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/knowledge-chunk.ts (chunkMiniAndTheme, buildSummaryDiff) - mini_chunk/theme_chunk 2-tier split with summary/design_conclusion/embedding empty slots as specified; tests/knowledge-chunk.test.ts",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-20",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/knowledge-graph.ts:101-143 KnowledgeCellLineage + projectKnowledgeCell (1-query intent+lineage+referenced_by across post/content/fork/template/proposal); commit 783b38f",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-21",
+      "verdict": "partial",
+      "evidence": "Only \"Global\"相当の基盤のみ存在: knowledge-timeline-routes.ts(実際はV3-BBS-37向けに構築); Global/User/Object 3層分割とVideoArchive(era_id/tags/category)はADR止まり: 02-design/adr/adr-v3-wik-21-timeline-archive.md(status:proposed,「実コードは依然0件」); progress.json status=in_progress",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-22",
+      "verdict": "partial",
+      "evidence": "docs/knowledge/spec-pattern-guide.md がEngineer-Spec-first 3パターンのdoc convention(type-C policy)を規定するが、progress.jsonのnoteが「既存全コンポーネントへの遡及整備は未実施」と明記",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-23",
+      "verdict": "partial",
+      "evidence": "apps/web/src/lib/local-embedding.ts が自己文書化(1-8行)で明示的プレースホルダ:「onnxruntime-webという新規npm依存を要し...今回は実装しない」; 決定論的char-ngramハッシュベクトルのみで実MiniLM/e5-small/MobileCLIP意味埋め込みは無い",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-24",
+      "verdict": "partial",
+      "evidence": "定数のみ存在: apps/api/src/plaza-constants.ts WIK_RAG_LAYERS/WIK_RAG_UPDATE_MODE(base/culture/predictive層名+バッチ更新モード定義); 実バッチRAGインデックス構築ロジックは未実装 - progress.json note:「実バッチロジックの実装は持ち越し」",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-29",
+      "verdict": "implemented",
+      "evidence": "apps/api/src/research-content-routes.ts:891-921 adaptGithubSource(anthropics/life-sciences型の外部GitHubリポジトリ取り込み) + POST /research/external-import; commit bc4f513",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-30",
+      "verdict": "partial",
+      "evidence": "apps/api/src/plaza-rules-routes.ts(buildPlazaRules; plaza-constants.tsの値をJSON化)はindex.ts:449でマウント済みだが、自身のヘッダコメントとindex.ts:445のコメントにより PUBLIC_ROUTES に未登録(「現状は保護既定のまま」) - 「誰でも読める」要件は未達",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-32",
+      "verdict": "partial",
+      "evidence": "apps/api/src/plaza-template-routes.ts はfork(public,forked_from lineage)+copy(private)+GET /plaza/templates/:id/lineage(projectTemplateLineage)を実装するが、要件文にある「マージ・輸入」は無い",
+      "source": "B",
+      "method": null,
+      "revision": null
+    },
+    {
+      "id": "V3-WIK-35",
+      "verdict": "partial",
+      "evidence": "アフィリエイト基盤部品は存在(apps/api/src/market-product-node-routes.ts affiliate_mode/affiliate_url,human-gated)だが、論文/観察/文化データからの初心者向け記事自動生成コードはapps/内に見つからず(ArticleNode/初心者向け/買う場所/愚痴スレッドをgrepしても0件); progress.json status=in_progress",
+      "source": "B",
+      "method": null,
+      "revision": null
+    }
+  ]
+}

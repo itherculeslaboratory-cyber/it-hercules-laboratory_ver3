@@ -43,6 +43,16 @@ const FLAG_TYPE = "ihl.gov.flag.v1";
 const FLAG_SCHEMA = "schemas/events/gov-flag.schema.json";
 const PT_SCHEMA = "schemas/events/economy-pt-event.schema.json";
 const SCHEMA_VERSION = "1";
+// respondent_id の許容形状(W3-06 恒久策(a))。実在の値域は3つ混在する:
+// 本番=deriveActorId() の sha256 hex 64文字小文字(contracts.ts:17)、dev seed=
+// "e2e-buyer" 等のハイフン入り(apps/api/scripts/seed-dev.mjs:103)、既存テスト=
+// "buyer-1"/"rated-user" 等。字種はこのリポジトリが既にキー用識別子の許容集合として
+// 使っている [A-Za-z0-9_-](gmo-routes.ts:64 safeKeyPart)に揃える(新語を作らない)。
+// 目的は相手の存在検証ではなく(それは本ファイルの責務外・:212-215 参照)、区切り文字・
+// 制御文字・過大長が下流のキー空間へ流れるのを止めること(force-close 経路で
+// respondent_id は denylist.ts:42 の kv.put() に生キーとして到達する)。
+// 上限128 = 本番実体64の2倍。
+const RESPONDENT_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 const TTL_MS = DISPUTE_TTL_DAYS * 24 * 60 * 60 * 1000;
 const GOV_DISPUTE_VOTE_WINDOW_MS = GOV_DISPUTE_VOTE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 const GOV06_FORCE_CLOSE_MS = GOV06_FORCE_CLOSE_DAYS * 24 * 60 * 60 * 1000;
@@ -223,6 +233,14 @@ govRoutes.post("/gov/disputes", async (c) => {
     }
   }
   if (!respondentId) return c.json({ error: "INVALID_DISPUTE", details: ["respondent_id required (open)"] }, 400);
+  // 呼び出し側供給・投稿からの導出の両経路がここで合流する。以降 data.respondent_id は
+  // 必ず RESPONDENT_ID_RE を満たす(下流のキー空間・ログを守る不変条件)。
+  if (!RESPONDENT_ID_RE.test(respondentId)) {
+    return c.json(
+      { error: "INVALID_DISPUTE", details: ["respondent_id must be 1-128 chars of [A-Za-z0-9_-]"] },
+      400,
+    );
+  }
   const disputeId = str(body?.dispute_id) || ulid();
   const eventId = ulid();
   const data: Record<string, unknown> = {

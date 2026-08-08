@@ -8,6 +8,8 @@
 - mode: `warn`（warn = 未閉包を警告し exit 0 / enforce = exit 1）
 - 5 点ゲート: req / det / **test**（テスト設計免除不可）/ trn_ui / retrofit
 - **現在網羅率2.2%(17/773)・全数トレースは本格整備(案B)で対応**
+- **静的監査カバー率70.1%(542/773)** — 内訳: implemented 227 / partial 93 / unverifiable 184 / missing 38
+- ⚠ 上の2つは**別指標**。5点閉包(テスト参照必須)と静的監査判定(テスト裏付けなし)を足す・平均する・「実質○%」と言うことを禁ずる。実測: 閉包済み17件のうち16件に監査判定があり、内訳は implemented 7 / unverifiable 9。
 
 | ID | タイトル | req | det | test | trn_ui | retrofit |
 |----|----------|-----|-----|------|--------|----------|

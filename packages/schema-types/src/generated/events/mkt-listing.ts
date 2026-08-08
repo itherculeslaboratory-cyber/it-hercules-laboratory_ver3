@@ -29,6 +29,10 @@ export interface MktListing {
    */
   price?: number;
   /**
+   * IDEA-0209（V3-MKT-05残要素・w3-07実装）: オークション（list_auction）の即決価格（円・任意）。この価格以上の入札（bid）は延長・ヤフオク型自動再入札より優先して即座に matched へ確定する（market-settlement.ts の isBuyNowTrigger）。省略時は即決なし（通常のオークションのまま）。
+   */
+  buy_now_price?: number;
+  /**
    * UGC 原文の作者言語タグ（BCP-47・actor locale 由来）。翻訳はしない＝I18-06。
    */
   lang?: string;
