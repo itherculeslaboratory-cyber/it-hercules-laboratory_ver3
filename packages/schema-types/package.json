@@ -2,6 +2,7 @@
   "name": "@ihl/schema-types",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "TS types generated from schemas/ (one-way codegen; do not edit generated files)",
   "main": "./src/generated/index.ts",
   "types": "./src/generated/index.ts",

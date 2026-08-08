@@ -2,6 +2,7 @@
   "name": "@ihl/web",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-duckdb-assets.mjs && node scripts/copy-screendefs.mjs",

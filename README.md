@@ -2,7 +2,7 @@
 id: V3-README
 title: it-hercules-laboratory_ver3 — 人間 spine 入口
 date: "2026-07-10"
-status: draft
+status: active
 ---
 
 # it-hercules-laboratory_ver3

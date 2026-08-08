@@ -2,7 +2,7 @@
 id: V3-CONTRIBUTING
 title: 貢献規約（最小）
 date: "2026-07-10"
-status: draft
+status: active
 requirement_ids: [V3-AIP-23]
 ---
 
