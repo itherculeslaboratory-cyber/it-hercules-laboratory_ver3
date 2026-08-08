@@ -6687,10 +6687,10 @@
     "tier": "B",
     "lane": "L4-knowledge",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [],
-    "note": "型C(文書型)。docs/knowledge/spec-pattern-guide.mdを新設 — Engineer Spec先行→human/AI最適化版を派生させる3パターン設計書の執筆規約と「わさおレベルの理解」の運用上の定義を明文化(lane-implement/legal R0731-9191c2)。★誇張ゼロ: 既存全コンポーネントへの遡及整備は未実施(規約のみ確立。今後の設計文書作成時に適用される)。"
+    "note": "型C(文書型)。docs/knowledge/spec-pattern-guide.mdを新設 — Engineer Spec先行→human/AI最適化版を派生させる3パターン設計書の執筆規約と「わさおレベルの理解」の運用上の定義を明文化(lane-implement/legal R0731-9191c2)。★誇張ゼロ: 既存全コンポーネントへの遡及整備は未実施(規約のみ確立。今後の設計文書作成時に適用される)。★2026-08-08 in_progressへ降格(根拠=00-hq/kits/lane-audit/R0808-709be7-REPORT-2026-08-08-w4-judge3.md T2: 要件の核心=既存コンポーネントが実際に3パターン設計書を持つ、が0件で実質未達。reqcov独立判定(B班)も partial=R0807-9fd436-reqcov-b-data.json:903-906)。"
   },
   {
     "id": "V3-WIK-30",
@@ -6804,12 +6804,12 @@
     "tier": "A",
     "lane": "L4-gov",
     "scope": "required",
-    "status": "done",
+    "status": "in_progress",
     "commits": [],
     "tc": [
       "tests/gov-vote-threshold.test.ts"
     ],
-    "note": "部分充足: gov-routes.ts:94-121 projectThreshold(投票で調整可能な汎用rule閾値機構)は稼働・テスト済み。ただしeconomy-constants.ts側の個別閾値(カルマ/プラチナ/貢献度の具体数値)がこの汎用機構に配線されているわけではない(economy-constants.tsはw1-mkt排他globにつき配線はw1-gov担当外)。汎用機構の存在をもって型C(思想)の充足根拠とした。"
+    "note": "部分充足: gov-routes.ts:94-121 projectThreshold(投票で調整可能な汎用rule閾値機構)は稼働・テスト済み。ただしeconomy-constants.ts側の個別閾値(カルマ/プラチナ/貢献度の具体数値)がこの汎用機構に配線されているわけではない(economy-constants.tsはw1-mkt排他globにつき配線はw1-gov担当外)。汎用機構の存在をもって型C(思想)の充足根拠とした。★2026-08-08 in_progressへ降格(根拠=00-hq/kits/lane-audit/R0808-709be7-REPORT-2026-08-08-w4-judge3.md T2: 実際のカルマ付与呼び出し=gov-routes.ts:533,727,933はハードコード定数を渡しており projectThreshold を未経由。reqcov独立判定(C班)も partial=R0807-228da2-reqcov-c-data.json:84-89)。"
   },
   {
     "id": "V3-GOV-20",
